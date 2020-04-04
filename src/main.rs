@@ -26,6 +26,15 @@ use rayon::prelude::*;
 // use std::io::BufReader;
 // use std::sync::Arc;
 
+fn construct_integrator(settings: &RenderSettings) -> Box<dyn Integrator> {
+    
+}
+
+fn construct_renderer(settings: &RenderSettings) -> Box<dyn Renderer> {
+    let integrator: Box<dyn Integrator> = construct_integrator(settings);
+    NaiveRenderer<integrator>();
+}
+
 fn render(renderer: &Renderer, film_settings: &RenderSettings) {
     let width = match film_settings.resolution {
         Some(res) => res.width,
@@ -64,7 +73,8 @@ fn main() -> () {
     //     None => PathTracingIntegrator(config),
     // };
     let world = World { bvh: 0 };
-    let renderer = Renderer { world };
+    // let integrator = PathTracingIntegrator {world};
+    // let renderer = Renderer { integrator, world };
     let settings_vec = config.render_settings.unwrap();
     // get settings for each film
     for film in settings_vec {

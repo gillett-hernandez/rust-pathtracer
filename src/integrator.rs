@@ -1,19 +1,19 @@
 use super::world::World;
-use crate::math::Vec3;
+use crate::math::{Float, Point3, Ray, Vec3, RGBColor};
 
-pub trait Color {
-    fn color(&self) -> Vec3;
+pub trait Integrator {
+    fn color(&self, r: Ray) -> RGBColor;
 }
 
-pub struct Integrator {
+pub struct PathTracingIntegrator {
     max_bounces: i16,
     world: World,
     // Config config;
 }
 
-impl Color for Integrator {
-    fn color(&self) -> Vec3 {
-        Vec3::ZERO
+impl Integrator for PathTracingIntegrator {
+    fn color(&self) -> RGBColor {
+        RGBColor::ZERO
     }
 }
 
