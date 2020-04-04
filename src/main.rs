@@ -2,6 +2,7 @@
 
 pub mod config;
 pub mod integrator;
+pub mod math;
 pub mod renderer;
 pub mod world;
 

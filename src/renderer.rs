@@ -1,6 +1,7 @@
 use std::vec::Vec;
 
 use crate::config::RenderSettings;
+use crate::integrator::Color;
 use crate::world::World;
 pub struct Film {
     pub buffer: Vec<u8>,
@@ -18,10 +19,13 @@ impl Film {
     }
 }
 
-pub struct Renderer {
+pub struct Renderer<I: Color> {
     pub world: World,
+    integrator: I,
 }
 
-impl Renderer {
-    pub fn render(&self, film: &Film, config: &RenderSettings) {}
+pub struct NaiveRenderer<I: Color> {}
+
+trait Render {
+    fn render(&self, film: &Film, config: &RenderSettings) {}
 }
