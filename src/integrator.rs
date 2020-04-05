@@ -1,5 +1,7 @@
 use super::world::World;
-use crate::math::{Float, Point3, Ray, Vec3, RGBColor};
+use crate::hittable::Hittable;
+use crate::math::{Point3, RGBColor, Ray, Vec3};
+use std::f32::INFINITY;
 
 pub trait Integrator {
     fn color(&self, r: Ray) -> RGBColor;
@@ -12,8 +14,18 @@ pub struct PathTracingIntegrator {
 }
 
 impl Integrator for PathTracingIntegrator {
-    fn color(&self) -> RGBColor {
-        RGBColor::ZERO
+    fn color(&self, r: Ray) -> RGBColor {
+        match (self.world.hit(r, 0.0, INFINITY)) {
+            Some(hit) => {
+                // RGBColor::new(1.0, 1.0, 1.0)
+                RGBColor::new(
+                    hit.point.x.max(0.0),
+                    hit.point.y.max(0.0),
+                    hit.point.z.max(0.0),
+                )
+            }
+            None => self.world.background,
+        }
     }
 }
 

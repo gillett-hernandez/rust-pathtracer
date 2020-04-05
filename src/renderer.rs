@@ -19,19 +19,21 @@ impl Film {
     }
 }
 
-// pub struct Renderer<I: Integrator> {
-//     pub world: World,
-//     integrator: I,
-// }
 
-pub struct NaiveRenderer<I: Integrator> {
-    integrator: I,
+pub struct NaiveRenderer {
+    integrator: Box<dyn Integrator>,
 }
 
-trait Renderer {
+impl NaiveRenderer {
+    pub fn new(integrator: Box<dyn Integrator>) -> NaiveRenderer {
+        NaiveRenderer { integrator }
+    }
+}
+
+pub trait Renderer {
     fn render(&self, film: &Film, config: &RenderSettings);
 }
 
-impl<I: Integrator> Renderer for NaiveRenderer<I> {
+impl Renderer for NaiveRenderer {
     fn render(&self, film: &Film, config: &RenderSettings) {}
 }

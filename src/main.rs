@@ -1,14 +1,18 @@
 #![allow(unused_imports, unused_variables, unused)]
 
 pub mod config;
+pub mod geometry;
+pub mod hittable;
 pub mod integrator;
 pub mod math;
 pub mod renderer;
 pub mod world;
 
 use config::{get_settings, RenderSettings, Settings};
-use integrator::Integrator;
-use renderer::{Film, Renderer};
+use geometry::Sphere;
+use integrator::{Integrator, PathTracingIntegrator};
+use math::*;
+use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
 use rayon::prelude::*;
@@ -26,21 +30,24 @@ use rayon::prelude::*;
 // use std::io::BufReader;
 // use std::sync::Arc;
 
-fn construct_integrator(settings: &RenderSettings) -> Box<dyn Integrator> {
-    
+fn construct_integrator(settings: &Settings, world: World) -> Box<dyn Integrator> {
+    Box::new(PathTracingIntegrator {
+        max_bounces: settings.max_bounces.unwrap_or(1),
+        world,
+    })
 }
 
-fn construct_renderer(settings: &RenderSettings) -> Box<dyn Renderer> {
-    let integrator: Box<dyn Integrator> = construct_integrator(settings);
-    NaiveRenderer<integrator>();
+fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
+    let integrator: Box<dyn Integrator> = construct_integrator(settings, world);
+    Box::new(NaiveRenderer::new(integrator))
 }
 
-fn render(renderer: &Renderer, film_settings: &RenderSettings) {
-    let width = match film_settings.resolution {
+fn render(renderer: &Box<dyn Renderer>, render_settings: &RenderSettings) {
+    let width = match render_settings.resolution {
         Some(res) => res.width,
         None => 512,
     };
-    let height = match film_settings.resolution {
+    let height = match render_settings.resolution {
         Some(res) => res.height,
         None => 512,
     };
@@ -49,7 +56,7 @@ fn render(renderer: &Renderer, film_settings: &RenderSettings) {
         width, height
     );
     let film = Film::new(width, height);
-    renderer.render(&film, film_settings);
+    renderer.render(&film, render_settings);
 }
 
 fn main() -> () {
@@ -72,10 +79,16 @@ fn main() -> () {
     //     Some(String::from("PT")) => PathTracingIntegrator(config),
     //     None => PathTracingIntegrator(config),
     // };
-    let world = World { bvh: 0 };
+    let world = World {
+        bvh: Box::new(Sphere {
+            radius: 1.0,
+            origin: Point3::ZERO,
+        }),
+        background: RGBColor::new(0.2, 0.3, 0.2),
+    };
     // let integrator = PathTracingIntegrator {world};
-    // let renderer = Renderer { integrator, world };
-    let settings_vec = config.render_settings.unwrap();
+    let settings_vec = &config.render_settings.unwrap();
+    let renderer = construct_renderer(&config, world);
     // get settings for each film
     for film in settings_vec {
         // render(integrator, &cam_setting);

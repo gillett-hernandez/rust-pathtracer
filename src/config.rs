@@ -30,6 +30,7 @@ pub struct RenderSettings {
 pub struct Settings {
     pub output_directory: Option<String>,
     pub integrator: Option<String>,
+    pub max_bounces: Option<i16>,
     pub render_threads: Option<i16>,
     pub render_settings: Option<Vec<RenderSettings>>,
 }
