@@ -1,4 +1,10 @@
 use crate::math::*;
+
+pub trait Camera {
+    fn get_ray(&self, s: f32, t: f32) -> Ray;
+}
+
+#[derive(Copy, Clone)]
 pub struct SimpleCamera {
     pub origin: Point3,
     pub direction: Vec3,
@@ -52,7 +58,9 @@ impl SimpleCamera {
             t1,
         }
     }
-    pub fn get_ray(&self, s: f32, t: f32) -> Ray {
+}
+impl Camera for SimpleCamera {
+    fn get_ray(&self, s: f32, t: f32) -> Ray {
         // circular aperture/lens
         let rd: Vec3 = self.lens_radius * random_in_unit_disk();
         let offset = self.u * rd.x + self.v * rd.y;

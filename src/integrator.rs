@@ -5,6 +5,7 @@ use std::f32::INFINITY;
 
 pub trait Integrator {
     fn color(&self, r: Ray) -> RGBColor;
+    fn get_world(&self) -> &World;
 }
 
 pub struct PathTracingIntegrator {
@@ -26,6 +27,9 @@ impl Integrator for PathTracingIntegrator {
             }
             None => self.world.background,
         }
+    }
+    fn get_world(&self) -> &World {
+        &self.world
     }
 }
 

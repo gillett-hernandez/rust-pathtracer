@@ -9,7 +9,7 @@ pub mod math;
 pub mod renderer;
 pub mod world;
 
-use camera::SimpleCamera;
+use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::Sphere;
 use integrator::{Integrator, PathTracingIntegrator};
@@ -45,7 +45,7 @@ fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
     Box::new(NaiveRenderer::new(integrator))
 }
 
-fn render(renderer: &Box<dyn Renderer>, render_settings: &RenderSettings) {
+fn render(renderer: &Box<dyn Renderer>, camera: SimpleCamera, render_settings: &RenderSettings) {
     let width = match render_settings.resolution {
         Some(res) => res.width,
         None => 512,
@@ -58,8 +58,9 @@ fn render(renderer: &Box<dyn Renderer>, render_settings: &RenderSettings) {
         "starting render with film resolution {:?}x{:?}",
         width, height
     );
-    let film = Film::new(width, height);
-    renderer.render(&film, render_settings);
+    let mut film = Film::new(width, height, RGBColor::ZERO);
+    renderer.render(&mut film, camera, render_settings);
+    // do stuff with film here
 }
 
 fn main() -> () {
@@ -91,10 +92,29 @@ fn main() -> () {
     };
     // let integrator = PathTracingIntegrator {world};
     // let settings_vec = &config.render_settings.unwrap();
+    let mut cameras = Vec::<SimpleCamera>::new();
+    // let mut cameras = Vec::<Box<dyn Camera>>::new();
+    // let camera = Box::new(SimpleCamera::new(
+    let camera = SimpleCamera::new(
+        Point3::new(-100.0, 0.0, 0.0),
+        Point3::ZERO,
+        Vec3::Z,
+        90.0,
+        1.619999,
+        100.0,
+        1.0,
+        0.0,
+        1.0,
+    );
+    cameras.push(camera);
     let renderer = construct_renderer(&config, world);
     // get settings for each film
+    (cameras[0]).get_ray(0.0, 0.0);
     for film in config.render_settings.unwrap() {
-        // render(integrator, &cam_setting);
-        render(&renderer, &film);
+        render(
+            &renderer,
+            cameras[film.camera_id.unwrap_or(0) as usize],
+            &film,
+        );
     }
 }

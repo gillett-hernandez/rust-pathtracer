@@ -1,24 +1,31 @@
 use std::vec::Vec;
 
+use crate::camera::{Camera, SimpleCamera};
 use crate::config::RenderSettings;
 use crate::integrator::Integrator;
+use crate::math::*;
 use crate::world::World;
-pub struct Film {
-    pub buffer: Vec<u8>,
+pub struct Film<T> {
+    pub buffer: Vec<T>,
+    pub width: usize,
+    pub height: usize,
 }
 
-impl Film {
-    pub fn new(width: usize, height: usize) -> Film {
+impl<T: Copy> Film<T> {
+    pub fn new(width: usize, height: usize, fill_value: T) -> Film<T> {
         // allocate with
-        let capacity: usize = (3 * width * height) as usize;
-        let mut buffer: Vec<u8> = Vec::with_capacity(capacity as usize);
+        let capacity: usize = (width * height) as usize;
+        let mut buffer: Vec<T> = Vec::with_capacity(capacity as usize);
         for _ in 0..capacity {
-            buffer.push(0);
+            buffer.push(fill_value);
         }
-        Film { buffer: buffer }
+        Film {
+            buffer,
+            width,
+            height,
+        }
     }
 }
-
 
 pub struct NaiveRenderer {
     integrator: Box<dyn Integrator>,
@@ -31,9 +38,22 @@ impl NaiveRenderer {
 }
 
 pub trait Renderer {
-    fn render(&self, film: &Film, config: &RenderSettings);
+    fn render(&self, film: &mut Film<RGBColor>, camera: SimpleCamera, config: &RenderSettings);
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, film: &Film, config: &RenderSettings) {}
+    fn render(&self, film: &mut Film<RGBColor>, camera: SimpleCamera, config: &RenderSettings) {
+        for y in 0..film.height {
+            for x in 0..film.width {
+                // gen ray for pixel x, y
+                // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
+                let r = camera.get_ray(
+                    (x as f32 + random()) / (film.width as f32),
+                    (y as f32 + random()) / (film.height as f32),
+                );
+                let color = self.integrator.color(r);
+                film.buffer[y * film.width + x] = color;
+            }
+        }
+    }
 }

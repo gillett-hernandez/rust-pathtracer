@@ -20,6 +20,9 @@ impl From<Vec3> for Point3 {
     }
 }
 
+pub trait Color {
+    fn to_rgb(&self) -> [f32; 3];
+}
 #[derive(Copy, Clone)]
 pub struct RGBColor {
     pub r: f32,
@@ -32,6 +35,12 @@ impl RGBColor {
         RGBColor { r, g, b }
     }
     pub const ZERO: RGBColor = RGBColor::new(0.0, 0.0, 0.0);
+}
+
+impl Color for RGBColor {
+    fn to_rgb(&self) -> [f32; 3] {
+        [self.r, self.g, self.b]
+    }
 }
 #[derive(Copy, Clone)]
 pub struct Ray {
