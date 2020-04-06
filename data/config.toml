@@ -1,16 +1,9 @@
-output_directory = "C:\\Users\\Gillette\\code\\renders"
+output_directory = "."
 integrator="PT"
 
 [[render_settings]]
 resolution.width = 1024
 resolution.height = 1024
-min_samples = 16
-max_samples = 16
-camera_id = 0
-
-[[render_settings]]
-resolution.width = 500
-resolution.height = 500
 min_samples = 16
 max_samples = 16
 camera_id = 0

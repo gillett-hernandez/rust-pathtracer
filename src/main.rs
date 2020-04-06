@@ -1,4 +1,5 @@
 #![allow(unused_imports, unused_variables, unused)]
+extern crate image;
 
 pub mod camera;
 pub mod config;
@@ -17,14 +18,10 @@ use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
+// use image::{GenericImageView, ImageBuffer};
+
 use rand::prelude::*;
 use rayon::prelude::*;
-// use std::error;
-// use std::error::Error;
-// use std::f32;
-// use std::fmt;
-// use std::env;
-// use std::fs;
 
 // use std::collections::HashMap;
 // use std::fmt;
@@ -49,7 +46,7 @@ fn render(
     renderer: &Box<dyn Renderer>,
     camera: &Box<dyn Camera>,
     render_settings: &RenderSettings,
-) {
+) -> Film<RGBColor> {
     let width = match render_settings.resolution {
         Some(res) => res.width,
         None => 512,
@@ -64,8 +61,7 @@ fn render(
     );
     let mut film = Film::new(width, height, RGBColor::ZERO);
     renderer.render(&mut film, camera, render_settings);
-    // do stuff with film here
-    
+    film
 }
 
 fn main() -> () {
@@ -104,8 +100,8 @@ fn main() -> () {
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
-        90.0,
-        1.619999,
+        5.0,
+        1.0,
         100.0,
         1.0,
         0.0,
@@ -116,11 +112,27 @@ fn main() -> () {
     let renderer = construct_renderer(&config, world);
     // get settings for each film
     // (cameras[0]).get_ray(0.0, 0.0);
-    for film in config.render_settings.unwrap() {
-        render(
+    let directory = config.output_directory.unwrap();
+    for render_settings in config.render_settings.unwrap() {
+        let film = render(
             &renderer,
-            &cameras[film.camera_id.unwrap_or(0) as usize],
-            &film,
+            &cameras[render_settings.camera_id.unwrap_or(0) as usize],
+            &render_settings,
         );
+
+        // do stuff with film here
+        let mut img: image::RgbImage =
+            image::ImageBuffer::new(film.width as u32, film.height as u32);
+        for (x, y, pixel) in img.enumerate_pixels_mut() {
+            let mut color = film.buffer[(y * film.width as u32 + x) as usize];
+            color /= (render_settings.min_samples.unwrap_or(1) as f32);
+            *pixel = image::Rgb([
+                (color.r * 255.0) as u8,
+                (color.g * 255.0) as u8,
+                (color.b * 255.0) as u8,
+            ]);
+        }
+        img.save(format!("{}/{}", directory, "test.png")).unwrap();
+        // img.save(directory.to_owned() + &"test.png").unwrap();
     }
 }

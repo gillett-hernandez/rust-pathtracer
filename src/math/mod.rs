@@ -6,6 +6,7 @@ pub use misc::*;
 pub use point::Point3;
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
+use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 pub use vec::Vec3;
 
 impl From<Point3> for Vec3 {
@@ -42,6 +43,22 @@ impl Color for RGBColor {
         [self.r, self.g, self.b]
     }
 }
+
+impl AddAssign for RGBColor {
+    fn add_assign(&mut self, other: RGBColor) {
+        self.r += other.r;
+        self.g += other.g;
+        self.b += other.b;
+    }
+}
+impl DivAssign<f32> for RGBColor {
+    fn div_assign(&mut self, other: f32) {
+        self.r /= other;
+        self.g /= other;
+        self.b /= other;
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct Ray {
     pub origin: Point3,
