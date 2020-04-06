@@ -45,13 +45,19 @@ impl Div<f32> for Vec3 {
         Vec3::new(self.x / other, self.y / other, self.z / other)
     }
 }
-
-impl Add<f32> for Vec3 {
-    type Output = Vec3;
-    fn add(self, other: f32) -> Vec3 {
-        Vec3::new(self.x + other, self.y + other, self.z + other)
-    }
-}
+// don't implement adding or subtracting floats from Point3
+// impl Add<f32> for Vec3 {
+//     type Output = Vec3;
+//     fn add(self, other: f32) -> Vec3 {
+//         Vec3::new(self.x + other, self.y + other, self.z + other)
+//     }
+// }
+// impl Sub<f32> for Vec3 {
+//     type Output = Vec3;
+//     fn sub(self, other: f32) -> Vec3 {
+//         Vec3::new(self.x - other, self.y - other, self.z - other)
+//     }
+// }
 
 impl Add for Vec3 {
     type Output = Vec3;
@@ -64,13 +70,6 @@ impl Neg for Vec3 {
     type Output = Vec3;
     fn neg(self) -> Vec3 {
         Vec3::new(-self.x, -self.y, -self.z)
-    }
-}
-
-impl Sub<f32> for Vec3 {
-    type Output = Vec3;
-    fn sub(self, other: f32) -> Vec3 {
-        Vec3::new(self.x - other, self.y - other, self.z - other)
     }
 }
 
@@ -107,5 +106,18 @@ impl Vec3 {
     pub fn normalized(&self) -> Self {
         let norm = self.norm();
         Vec3::new(self.x / norm, self.y / norm, self.z / norm)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vec() {
+        let v = Vec3::new(100.0, 0.2, 1.0);
+        assert!(v.norm() > 100.0);
+        assert!(v.norm_squared() > 10000.0);
+        assert!(v.normalized().norm() - 1.0 < 0.000001);
     }
 }

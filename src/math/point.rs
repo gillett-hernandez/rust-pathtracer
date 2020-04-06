@@ -18,13 +18,6 @@ impl Point3 {
     pub const Z: Point3 = Point3::new(0.0, 0.0, 1.0);
 }
 
-impl Add<f32> for Point3 {
-    type Output = Point3;
-    fn add(self, other: f32) -> Point3 {
-        Point3::new(self.x + other, self.y + other, self.z + other)
-    }
-}
-
 impl Add<Vec3> for Point3 {
     type Output = Point3;
     fn add(self, other: Vec3) -> Point3 {
@@ -39,12 +32,20 @@ impl Sub<Vec3> for Point3 {
     }
 }
 
-impl Sub<f32> for Point3 {
-    type Output = Point3;
-    fn sub(self, other: f32) -> Point3 {
-        Point3::new(self.x - other, self.y - other, self.z - other)
-    }
-}
+// don't implement adding or subtracting floats from Point3
+// impl Add<f32> for Point3 {
+//     type Output = Point3;
+//     fn add(self, other: f32) -> Point3 {
+//         Point3::new(self.x + other, self.y + other, self.z + other)
+//     }
+// }
+//
+// impl Sub<f32> for Point3 {
+//     type Output = Point3;
+//     fn sub(self, other: f32) -> Point3 {
+//         Point3::new(self.x - other, self.y - other, self.z - other)
+//     }
+// }
 
 impl Sub for Point3 {
     type Output = Vec3;

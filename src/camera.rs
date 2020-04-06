@@ -1,10 +1,10 @@
 use crate::math::*;
 pub struct SimpleCamera {
-    origin: Point3,
-    direction: Vec3,
+    pub origin: Point3,
+    pub direction: Vec3,
     lower_left_corner: Point3,
-    horizontal: Vec3,
-    vertical: Vec3,
+    pub horizontal: Vec3,
+    pub vertical: Vec3,
     u: Vec3,
     v: Vec3,
     w: Vec3,
@@ -25,15 +25,15 @@ impl SimpleCamera {
         t0: f32,
         t1: f32,
     ) -> SimpleCamera {
-        let direction = look_at - look_from;
+        let direction = (look_at - look_from).normalized();
         let lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
         let theta: f32 = vertical_fov * PI / 180.0;
         let half_height = (theta / 2.0).tan();
         let half_width = aspect_ratio * half_height;
-        let w = direction.normalized();
+        let w = -direction;
         let u = v_up.cross(w).normalized();
-        let v = w.cross(u);
+        let v = w.cross(u).normalized();
 
         SimpleCamera {
             origin: look_from,
@@ -59,8 +59,54 @@ impl SimpleCamera {
         let time: f32 = self.t0 + random() * (self.t1 - self.t0);
         Ray::new_with_time(
             self.origin + offset,
-            self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin - offset,
+            (self.lower_left_corner + s * self.horizontal + t * self.vertical
+                - self.origin
+                - offset)
+                .normalized(),
             time,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_camera() {
+        let camera: SimpleCamera = SimpleCamera::new(
+            Point3::new(-100.0, 0.0, 0.0),
+            Point3::ZERO,
+            Vec3::Z,
+            45.0,
+            0.6,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+        );
+        println!(
+            "camera origin {:?} {:?} {:?}",
+            camera.origin.x, camera.origin.y, camera.origin.z
+        );
+        println!(
+            "camera direction {:?} {:?} {:?}",
+            camera.direction.x, camera.direction.y, camera.direction.z
+        );
+        let s = random();
+        let t = random();
+        let r: Ray = camera.get_ray(s, t);
+        println!(
+            "ray origin {:?} {:?} {:?}",
+            r.origin.x, r.origin.y, r.origin.z
+        );
+        println!(
+            "ray direction{:?} {:?} {:?}",
+            r.direction.x, r.direction.y, r.direction.z
+        );
+        assert!(
+            r.direction * Vec3::X > 0.0,
+            "x component of direction of camera ray pointed wrong"
+        );
     }
 }
