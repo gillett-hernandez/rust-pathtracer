@@ -1,8 +1,11 @@
 // extern crate packed_simd;
+mod misc;
 mod point;
 mod vec;
+pub use misc::*;
 pub use point::Point3;
-use std::f32::INFINITY;
+pub use std::f32::consts::PI;
+pub use std::f32::INFINITY;
 pub use vec::Vec3;
 
 impl From<Point3> for Vec3 {
@@ -30,7 +33,7 @@ impl RGBColor {
     }
     pub const ZERO: RGBColor = RGBColor::new(0.0, 0.0, 0.0);
 }
-
+#[derive(Copy, Clone)]
 pub struct Ray {
     pub origin: Point3,
     pub direction: Vec3,
@@ -47,12 +50,26 @@ impl Ray {
             tmax: INFINITY,
         }
     }
+
     pub const fn new_with_time(origin: Point3, direction: Vec3, time: f32) -> Self {
         Ray {
             origin,
             direction,
             time,
             tmax: INFINITY,
+        }
+    }
+    pub const fn new_with_time_and_tmax(
+        origin: Point3,
+        direction: Vec3,
+        time: f32,
+        tmax: f32,
+    ) -> Self {
+        Ray {
+            origin,
+            direction,
+            time,
+            tmax: tmax,
         }
     }
     pub fn with_tmax(mut self, tmax: f32) -> Self {

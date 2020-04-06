@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use toml;
 
 #[derive(Deserialize, Copy, Clone)]
-
 pub struct Resolution {
     pub width: usize,
     pub height: usize,

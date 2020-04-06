@@ -1,5 +1,6 @@
 use crate::math::Vec3;
 use std::ops::{Add, Mul, Neg, Sub};
+#[derive(Copy, Clone)]
 pub struct Point3 {
     pub x: f32,
     pub y: f32,
@@ -28,6 +29,13 @@ impl Add<Vec3> for Point3 {
     type Output = Point3;
     fn add(self, other: Vec3) -> Point3 {
         Point3::new(self.x + other.x, self.y + other.y, self.z + other.z)
+    }
+}
+
+impl Sub<Vec3> for Point3 {
+    type Output = Point3;
+    fn sub(self, other: Vec3) -> Point3 {
+        Point3::new(self.x - other.x, self.y - other.y, self.z - other.z)
     }
 }
 

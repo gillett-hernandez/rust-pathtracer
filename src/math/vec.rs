@@ -1,5 +1,6 @@
 // use packed_simd::{f32x4, f32x8};
 use std::ops::{Add, Div, Mul, Neg, Sub};
+#[derive(Copy, Clone)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -28,6 +29,13 @@ impl Mul<f32> for Vec3 {
     type Output = Vec3;
     fn mul(self, other: f32) -> Vec3 {
         Vec3::new(self.x * other, self.y * other, self.z * other)
+    }
+}
+
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+    fn mul(self, other: Vec3) -> Vec3 {
+        other * self
     }
 }
 
@@ -76,5 +84,28 @@ impl Sub for Vec3 {
 impl From<f32> for Vec3 {
     fn from(s: f32) -> Vec3 {
         Vec3::new(s, s, s)
+    }
+}
+
+impl Vec3 {
+    pub fn cross(&self, other: Vec3) -> Self {
+        Vec3::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
+    }
+
+    pub fn norm_squared(&self) -> f32 {
+        (self.x * self.x + self.y * self.y + self.z * self.z)
+    }
+
+    pub fn norm(&self) -> f32 {
+        self.norm_squared().sqrt()
+    }
+
+    pub fn normalized(&self) -> Self {
+        let norm = self.norm();
+        Vec3::new(self.x / norm, self.y / norm, self.z / norm)
     }
 }

@@ -8,8 +8,8 @@ pub trait Integrator {
 }
 
 pub struct PathTracingIntegrator {
-    max_bounces: i16,
-    world: World,
+    pub max_bounces: i16,
+    pub world: World,
     // Config config;
 }
 

@@ -48,8 +48,8 @@ bool sphere::bounding_box(float t0, float t1, aabb &box) const
 }*/
 
 pub struct Sphere {
-    radius: f32,
-    origin: Point3,
+    pub radius: f32,
+    pub origin: Point3,
 }
 
 impl Hittable for Sphere {

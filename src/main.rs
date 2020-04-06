@@ -1,5 +1,6 @@
 #![allow(unused_imports, unused_variables, unused)]
 
+pub mod camera;
 pub mod config;
 pub mod geometry;
 pub mod hittable;
@@ -8,6 +9,7 @@ pub mod math;
 pub mod renderer;
 pub mod world;
 
+use camera::SimpleCamera;
 use config::{get_settings, RenderSettings, Settings};
 use geometry::Sphere;
 use integrator::{Integrator, PathTracingIntegrator};
@@ -15,6 +17,7 @@ use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
+use rand::prelude::*;
 use rayon::prelude::*;
 // use std::error;
 // use std::error::Error;
@@ -87,10 +90,10 @@ fn main() -> () {
         background: RGBColor::new(0.2, 0.3, 0.2),
     };
     // let integrator = PathTracingIntegrator {world};
-    let settings_vec = &config.render_settings.unwrap();
+    // let settings_vec = &config.render_settings.unwrap();
     let renderer = construct_renderer(&config, world);
     // get settings for each film
-    for film in settings_vec {
+    for film in config.render_settings.unwrap() {
         // render(integrator, &cam_setting);
         render(&renderer, &film);
     }
