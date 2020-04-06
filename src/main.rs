@@ -45,7 +45,11 @@ fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
     Box::new(NaiveRenderer::new(integrator))
 }
 
-fn render(renderer: &Box<dyn Renderer>, camera: SimpleCamera, render_settings: &RenderSettings) {
+fn render(
+    renderer: &Box<dyn Renderer>,
+    camera: &Box<dyn Camera>,
+    render_settings: &RenderSettings,
+) {
     let width = match render_settings.resolution {
         Some(res) => res.width,
         None => 512,
@@ -61,6 +65,7 @@ fn render(renderer: &Box<dyn Renderer>, camera: SimpleCamera, render_settings: &
     let mut film = Film::new(width, height, RGBColor::ZERO);
     renderer.render(&mut film, camera, render_settings);
     // do stuff with film here
+    
 }
 
 fn main() -> () {
@@ -92,10 +97,10 @@ fn main() -> () {
     };
     // let integrator = PathTracingIntegrator {world};
     // let settings_vec = &config.render_settings.unwrap();
-    let mut cameras = Vec::<SimpleCamera>::new();
-    // let mut cameras = Vec::<Box<dyn Camera>>::new();
-    // let camera = Box::new(SimpleCamera::new(
-    let camera = SimpleCamera::new(
+    // let mut cameras = Vec::<SimpleCamera>::new();
+    let mut cameras = Vec::<Box<dyn Camera>>::new();
+    let camera = Box::new(SimpleCamera::new(
+        // let camera = SimpleCamera::new(
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
@@ -105,15 +110,16 @@ fn main() -> () {
         1.0,
         0.0,
         1.0,
-    );
+    ));
+    // );
     cameras.push(camera);
     let renderer = construct_renderer(&config, world);
     // get settings for each film
-    (cameras[0]).get_ray(0.0, 0.0);
+    // (cameras[0]).get_ray(0.0, 0.0);
     for film in config.render_settings.unwrap() {
         render(
             &renderer,
-            cameras[film.camera_id.unwrap_or(0) as usize],
+            &cameras[film.camera_id.unwrap_or(0) as usize],
             &film,
         );
     }

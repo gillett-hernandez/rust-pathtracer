@@ -38,11 +38,11 @@ impl NaiveRenderer {
 }
 
 pub trait Renderer {
-    fn render(&self, film: &mut Film<RGBColor>, camera: SimpleCamera, config: &RenderSettings);
+    fn render(&self, film: &mut Film<RGBColor>, camera: &Box<dyn Camera>, config: &RenderSettings);
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, film: &mut Film<RGBColor>, camera: SimpleCamera, config: &RenderSettings) {
+    fn render(&self, film: &mut Film<RGBColor>, camera: &Box<dyn Camera>, config: &RenderSettings) {
         for y in 0..film.height {
             for x in 0..film.width {
                 // gen ray for pixel x, y
