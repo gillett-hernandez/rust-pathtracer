@@ -1,12 +1,12 @@
 use crate::material::{BRDF, PDF};
-use crate::materials::MatTableId;
+use crate::materials::MaterialId;
 use crate::math::*;
 
 pub struct HitRecord {
     pub time: f32,
     pub point: Point3,
     pub normal: Vec3,
-    pub material: MatTableId,
+    pub material: Option<MaterialId>,
 }
 
 pub trait Hittable {

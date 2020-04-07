@@ -1,8 +1,10 @@
 use crate::hittable::*;
+use crate::materials::MaterialTable;
 use crate::math::*;
 
 pub struct World {
     pub bvh: Box<dyn Hittable>,
+    pub materials: MaterialTable,
     pub background: RGBColor,
 }
 

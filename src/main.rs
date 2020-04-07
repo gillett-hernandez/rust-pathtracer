@@ -87,12 +87,15 @@ fn main() -> () {
     //     Some(String::from("PT")) => PathTracingIntegrator(config),
     //     None => PathTracingIntegrator(config),
     // };
+    let material = Box::new(Lambertian::new(RGBColor::new(0.9, 0.9, 0.9)));
     let world = World {
         bvh: Box::new(Sphere {
             radius: 1.0,
             origin: Point3::ZERO,
+            material_id: None,
         }),
-        background: RGBColor::new(0.2, 0.3, 0.2),
+        background: RGBColor::new(0.2, 0.2, 0.2),
+        materials: vec![material],
     };
     // let integrator = PathTracingIntegrator {world};
     // let settings_vec = &config.render_settings.unwrap();
@@ -103,7 +106,7 @@ fn main() -> () {
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
-        5.0,
+        3.0,
         1.0,
         100.0,
         1.0,

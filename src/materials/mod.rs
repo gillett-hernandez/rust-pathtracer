@@ -1,11 +1,17 @@
 // pub use crate::material::{BRDF, BTDF, BXDF, PDF};
-pub use crate::material::{BRDF, PDF};
+pub use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 
 pub mod lambertian;
 pub use lambertian::Lambertian;
 
-pub type MatTableId = u8;
+// type required for an id into the Material Table
+pub type MaterialId = u8;
+
+// pub struct MaterialTable {
+//     pub materials: Vec<Box<dyn Material>>,
+// }
+pub type MaterialTable = Vec<Box<dyn Material>>;
 
 #[cfg(test)]
 mod tests {

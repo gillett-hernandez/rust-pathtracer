@@ -1,4 +1,5 @@
 use crate::hittable::{HitRecord, Hittable};
+use crate::materials::MaterialId;
 use crate::math::*;
 
 /*
@@ -50,6 +51,7 @@ bool sphere::bounding_box(float t0, float t1, aabb &box) const
 pub struct Sphere {
     pub radius: f32,
     pub origin: Point3,
+    pub material_id: Option<MaterialId>,
 }
 
 impl Hittable for Sphere {
@@ -73,6 +75,7 @@ impl Hittable for Sphere {
                     time,
                     point,
                     normal,
+                    material: self.material_id,
                 });
             }
             time = (-b + discriminant.sqrt()) / a;
@@ -85,6 +88,7 @@ impl Hittable for Sphere {
                     time,
                     point,
                     normal,
+                    material: self.material_id,
                 });
             }
         }

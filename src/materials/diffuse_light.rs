@@ -1,17 +1,17 @@
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 #[derive(Debug)]
-pub struct Lambertian {
+pub struct DiffuseLight {
     pub color: RGBColor,
 }
 
-impl Lambertian {
-    pub fn new(color: RGBColor) -> Lambertian {
-        Lambertian { color }
+impl DiffuseLight {
+    pub fn new(color: RGBColor) -> DiffuseLight {
+        DiffuseLight { color }
     }
 }
 
-impl PDF for Lambertian {
+impl PDF for DiffuseLight {
     fn value(&self, wi: Vec3, wo: Vec3) -> f32 {
         1.0 / PI
     }
@@ -20,13 +20,13 @@ impl PDF for Lambertian {
     }
 }
 
-impl BRDF for Lambertian {
+impl BRDF for DiffuseLight {
     fn f(&self, wi: Vec3, wo: Vec3) -> RGBColor {
-        self.color / PI
+        RGBColor::ZERO
     }
     fn emission(&self, wi: Vec3, wo: Vec3) -> RGBColor {
-        RGBColor::ZERO
+        self.color
     }
 }
 
-impl Material for Lambertian {}
+impl Material for DiffuseLight {}

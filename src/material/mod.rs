@@ -1,6 +1,7 @@
 mod bxdf;
 mod pdf;
 
-pub use pdf::PDF;
-// pub use bxdf::{BXDF, BRDF, BTDF};
 pub use bxdf::BRDF;
+pub use pdf::PDF;
+
+pub trait Material: PDF + BRDF {}

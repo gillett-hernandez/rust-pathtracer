@@ -1,6 +1,6 @@
 use super::world::World;
 use crate::hittable::Hittable;
-use crate::math::{Point3, RGBColor, Ray, Vec3};
+use crate::math::*;
 use std::f32::INFINITY;
 
 pub trait Integrator {
@@ -16,17 +16,37 @@ pub struct PathTracingIntegrator {
 
 impl Integrator for PathTracingIntegrator {
     fn color(&self, r: Ray) -> RGBColor {
-        match (self.world.hit(r, 0.0, INFINITY)) {
-            Some(hit) => {
-                // RGBColor::new(1.0, 1.0, 1.0)
-                RGBColor::new(
-                    hit.point.x.max(0.0),
-                    hit.point.y.max(0.0),
-                    hit.point.z.max(0.0),
-                )
+        let mut ray = r;
+        let mut color: RGBColor = RGBColor::ZERO;
+        let mut beta = Vec3::new(1.0, 1.0, 1.0);
+        for _ in 0..self.max_bounces {
+            match (self.world.hit(ray, 0.0, INFINITY)) {
+                Some(hit) => {
+                    // RGBColor::new(1.0, 1.0, 1.0)
+                    // RGBColor::new(
+                    //     (1.0 + hit.normal.x) / 2.0,
+                    //     (1.0 + hit.normal.y) / 2.0,
+                    //     (1.0 + hit.normal.z) / 2.0,
+                    // )
+                    let id = match (hit.material) {
+                        Some(id) => id as usize,
+                        None => 0,
+                    };
+                    let cos_i = ray.direction.normalized() * hit.normal.normalized();
+                    let material = &self.world.materials[id as usize];
+                    let bounce = material.generate(Sample2D::new_random_sample(), ray.direction);
+                    let emission = material.emission(ray.direction, bounce);
+                    let pdf = material.value(ray.direction, bounce);
+                    color += beta * (emission + material.f(ray.direction, bounce));
+                    ray = Ray::new(hit.point, bounce);
+                }
+                None => {
+                    color += beta * self.world.background;
+                    break;
+                }
             }
-            None => self.world.background,
         }
+        color
     }
     fn get_world(&self) -> &World {
         &self.world

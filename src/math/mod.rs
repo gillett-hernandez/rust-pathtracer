@@ -1,14 +1,16 @@
 // extern crate packed_simd;
+mod color;
 mod misc;
 mod point;
 mod sample;
 mod vec;
+pub use color::RGBColor;
 pub use misc::*;
 pub use point::Point3;
 pub use sample::*;
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
-use std::ops::{AddAssign, Div, DivAssign, MulAssign, SubAssign};
+use std::ops::Mul;
 pub use vec::Vec3;
 
 impl From<Point3> for Vec3 {
@@ -26,51 +28,16 @@ impl From<Vec3> for Point3 {
 pub trait Color {
     fn to_rgb(&self) -> [u8; 3];
 }
-#[derive(Copy, Clone, Debug)]
-pub struct RGBColor {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-}
 
-impl RGBColor {
-    pub const fn new(r: f32, g: f32, b: f32) -> RGBColor {
-        RGBColor { r, g, b }
-    }
-    pub const ZERO: RGBColor = RGBColor::new(0.0, 0.0, 0.0);
-}
-
-impl Color for RGBColor {
-    fn to_rgb(&self) -> [u8; 3] {
-        [self.r as u8, self.g as u8, self.b as u8]
-    }
-}
-
-impl AddAssign for RGBColor {
-    fn add_assign(&mut self, other: RGBColor) {
-        self.r += other.r;
-        self.g += other.g;
-        self.b += other.b;
-    }
-}
-impl Div<f32> for RGBColor {
+impl Mul<RGBColor> for Vec3 {
     type Output = RGBColor;
-    fn div(mut self, other: f32) -> Self {
-        self.r /= other;
-        self.g /= other;
-        self.b /= other;
-        self
+    fn mul(mut self, other: RGBColor) -> RGBColor {
+        self.x *= other.r;
+        self.y *= other.g;
+        self.z *= other.b;
+        RGBColor::new(self.x, self.y, self.z)
     }
 }
-
-impl DivAssign<f32> for RGBColor {
-    fn div_assign(&mut self, other: f32) {
-        self.r /= other;
-        self.g /= other;
-        self.b /= other;
-    }
-}
-
 #[derive(Copy, Clone)]
 pub struct Ray {
     pub origin: Point3,

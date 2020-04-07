@@ -4,6 +4,6 @@ integrator="PT"
 [[render_settings]]
 resolution.width = 1024
 resolution.height = 1024
-min_samples = 16
+min_samples = 2
 max_samples = 16
 camera_id = 0
