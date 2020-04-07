@@ -1,6 +1,6 @@
 use crate::math::Vec3;
 use std::ops::{Add, Mul, Neg, Sub};
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Point3 {
     pub x: f32,
     pub y: f32,
@@ -32,20 +32,7 @@ impl Sub<Vec3> for Point3 {
     }
 }
 
-// don't implement adding or subtracting floats from Point3
-// impl Add<f32> for Point3 {
-//     type Output = Point3;
-//     fn add(self, other: f32) -> Point3 {
-//         Point3::new(self.x + other, self.y + other, self.z + other)
-//     }
-// }
-//
-// impl Sub<f32> for Point3 {
-//     type Output = Point3;
-//     fn sub(self, other: f32) -> Point3 {
-//         Point3::new(self.x - other, self.y - other, self.z - other)
-//     }
-// }
+// don't implement adding or subtracting floats from Point3, because that's equivalent to adding or subtracting a Vector with components f,f,f and why would you want to do that.
 
 impl Sub for Point3 {
     type Output = Vec3;

@@ -47,14 +47,16 @@ impl Renderer for NaiveRenderer {
             for x in 0..film.width {
                 // gen ray for pixel x, y
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
+                let mut temp_color = RGBColor::ZERO;
                 for s in 0..config.min_samples.unwrap_or(1) {
                     let r = camera.get_ray(
                         (x as f32 + random()) / (film.width as f32),
                         (y as f32 + random()) / (film.height as f32),
                     );
-                    let color = self.integrator.color(r);
-                    film.buffer[y * film.width + x] += color;
+                    temp_color += self.integrator.color(r);
                 }
+                film.buffer[y * film.width + x] =
+                    temp_color / (config.min_samples.unwrap_or(1) as f32);
             }
         }
     }

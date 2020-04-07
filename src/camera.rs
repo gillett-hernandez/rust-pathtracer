@@ -62,7 +62,7 @@ impl SimpleCamera {
 impl Camera for SimpleCamera {
     fn get_ray(&self, s: f32, t: f32) -> Ray {
         // circular aperture/lens
-        let rd: Vec3 = self.lens_radius * random_in_unit_disk();
+        let rd: Vec3 = self.lens_radius * random_in_unit_disk(Sample2D::new_random_sample());
         let offset = self.u * rd.x + self.v * rd.y;
         let time: f32 = self.t0 + random() * (self.t1 - self.t0);
         Ray::new_with_time(

@@ -6,6 +6,8 @@ pub mod config;
 pub mod geometry;
 pub mod hittable;
 pub mod integrator;
+pub mod material;
+pub mod materials;
 pub mod math;
 pub mod renderer;
 pub mod world;
@@ -14,6 +16,7 @@ use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::Sphere;
 use integrator::{Integrator, PathTracingIntegrator};
+use materials::Lambertian;
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
@@ -125,7 +128,7 @@ fn main() -> () {
             image::ImageBuffer::new(film.width as u32, film.height as u32);
         for (x, y, pixel) in img.enumerate_pixels_mut() {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
-            color /= (render_settings.min_samples.unwrap_or(1) as f32);
+
             *pixel = image::Rgb([
                 (color.r * 255.0) as u8,
                 (color.g * 255.0) as u8,
@@ -133,6 +136,5 @@ fn main() -> () {
             ]);
         }
         img.save(format!("{}/{}", directory, "test.png")).unwrap();
-        // img.save(directory.to_owned() + &"test.png").unwrap();
     }
 }
