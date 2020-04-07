@@ -52,3 +52,24 @@ impl DivAssign<f32> for RGBColor {
     }
 }
 
+impl Mul for RGBColor {
+    type Output = RGBColor;
+    fn mul(self, other: RGBColor) -> RGBColor {
+        RGBColor::new(self.r * other.r, self.g * other.g, self.b * other.b)
+    }
+}
+
+impl MulAssign for RGBColor {
+    fn mul_assign(&mut self, other: RGBColor) {
+        self.r *= other.r;
+        self.g *= other.g;
+        self.b *= other.b;
+    }
+}
+
+impl Mul<f32> for RGBColor {
+    type Output = RGBColor;
+    fn mul(self, other: f32) -> RGBColor {
+        RGBColor::new(self.r * other, self.g * other, self.b * other)
+    }
+}

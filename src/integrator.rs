@@ -18,7 +18,7 @@ impl Integrator for PathTracingIntegrator {
     fn color(&self, r: Ray) -> RGBColor {
         let mut ray = r;
         let mut color: RGBColor = RGBColor::ZERO;
-        let mut beta = Vec3::new(1.0, 1.0, 1.0);
+        let mut beta = RGBColor::new(1.0, 1.0, 1.0);
         for _ in 0..self.max_bounces {
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(hit) => {
@@ -35,9 +35,10 @@ impl Integrator for PathTracingIntegrator {
                     let cos_i = ray.direction.normalized() * hit.normal.normalized();
                     let material = &self.world.materials[id as usize];
                     let bounce = material.generate(Sample2D::new_random_sample(), ray.direction);
-                    let emission = material.emission(ray.direction, bounce);
+                    let emission: RGBColor = material.emission(ray.direction, bounce);
                     let pdf = material.value(ray.direction, bounce);
-                    color += beta * (emission + material.f(ray.direction, bounce));
+                    color += beta * emission;
+                    beta *= material.f(ray.direction, bounce) * cos_i / pdf;
                     ray = Ray::new(hit.point, bounce);
                 }
                 None => {

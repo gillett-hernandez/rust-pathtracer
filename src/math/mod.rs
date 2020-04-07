@@ -38,6 +38,13 @@ impl Mul<RGBColor> for Vec3 {
         RGBColor::new(self.x, self.y, self.z)
     }
 }
+
+impl From<RGBColor> for Vec3 {
+    fn from(c: RGBColor) -> Vec3 {
+        Vec3::new(c.r, c.g, c.b)
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct Ray {
     pub origin: Point3,
