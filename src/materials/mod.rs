@@ -5,6 +5,8 @@ use crate::math::*;
 pub mod lambertian;
 pub use lambertian::Lambertian;
 
+pub type MatTableId = u8;
+
 #[cfg(test)]
 mod tests {
     use super::*;
