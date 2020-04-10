@@ -14,7 +14,7 @@ impl Lambertian {
 
 impl PDF for Lambertian {
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
-        wi * hit.normal / PI
+        (wi * hit.normal).abs() / PI
     }
     fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Vec3 {
         random_cosine_direction(s)
@@ -23,7 +23,7 @@ impl PDF for Lambertian {
 
 impl BRDF for Lambertian {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
-        self.color * (wi * hit.normal) / PI
+        self.color * (wi * hit.normal).abs() / PI
     }
     fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
         RGBColor::ZERO

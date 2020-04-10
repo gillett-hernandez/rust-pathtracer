@@ -41,13 +41,13 @@ fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
 }
 
 fn construct_scene() -> World {
-    let lambertian = Box::new(Lambertian::new(RGBColor::new(0.4, 0.9, 0.9)));
-    let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 0.3)));
+    let lambertian = Box::new(Lambertian::new(RGBColor::new(0.9, 0.9, 0.9)));
+    let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(5.0, 5.0, 5.0)));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
-            Box::new(Sphere::new(49.0, Point3::new(0.0, 0.0, -100.0), Some(0))),
-            Box::new(Sphere::new(1.0, Point3::new(0.0, 0.0, 0.0), Some(1))),
+            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
+            Box::new(Sphere::new(1.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
         ])),
         background: RGBColor::new(0.2, 0.2, 0.2),
         materials: vec![lambertian, diffuse_light],
@@ -107,7 +107,7 @@ fn main() -> () {
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
-        20.0,
+        3.0,
         1.0,
         100.0,
         1.0,
@@ -132,7 +132,6 @@ fn main() -> () {
     cameras.push(camera2);
     let renderer = construct_renderer(&config, world);
     // get settings for each film
-    // (cameras[0]).get_ray(0.0, 0.0);
     let directory = config.output_directory.unwrap();
     for (render_id, render_settings) in config.render_settings.unwrap().iter().enumerate() {
         let camera_id = render_settings.camera_id.unwrap_or(0) as usize;

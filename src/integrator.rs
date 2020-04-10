@@ -24,12 +24,6 @@ impl Integrator for PathTracingIntegrator {
         for _ in 0..self.max_bounces {
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(hit) => {
-                    // RGBColor::new(1.0, 1.0, 1.0)
-                    // RGBColor::new(
-                    //     (1.0 + hit.normal.x) / 2.0,
-                    //     (1.0 + hit.normal.y) / 2.0,
-                    //     (1.0 + hit.normal.z) / 2.0,
-                    // )
                     let id = match (hit.material) {
                         Some(id) => id as usize,
                         None => 0,
@@ -40,10 +34,12 @@ impl Integrator for PathTracingIntegrator {
                         material.generate(&hit, Sample2D::new_random_sample(), ray.direction);
                     let emission = material.emission(&hit, ray.direction, bounce);
                     let pdf = material.value(&hit, ray.direction, bounce);
+                    assert!(pdf >= 0.0, "{}", pdf);
                     color += beta * emission;
                     if bounce.norm() < 0.0000001 || pdf < 0.000001 {
                         break;
                     }
+                    let bounce = bounce.normalized();
                     beta *= material.f(&hit, ray.direction, bounce) * cos_i / pdf;
                     ray = Ray::new(hit.point, bounce);
                 }

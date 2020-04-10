@@ -66,10 +66,11 @@ impl Hittable for HittableList {
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for hittable in &self.list {
-            hit_record = hittable.hit(r, t0, closest_so_far);
-            if let Some(hit) = &hit_record {
+            let tmp_hit_record = hittable.hit(r, t0, closest_so_far);
+            if let Some(hit) = &tmp_hit_record {
                 hit_anything = true;
                 closest_so_far = hit.time;
+                hit_record = tmp_hit_record;
             } else {
                 continue;
             }

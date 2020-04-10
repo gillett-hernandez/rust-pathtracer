@@ -4,12 +4,12 @@ pub trait HasBoundingBox {
     fn bounding_box(&self) -> AABB;
 }
 pub struct AABB {
-    pub min: Vec3,
-    pub max: Vec3,
+    pub min: Point3,
+    pub max: Point3,
 }
 
 impl AABB {
-    pub fn new(min: Vec3, max: Vec3) -> AABB {
+    pub fn new(min: Point3, max: Point3) -> AABB {
         AABB { min, max }
     }
     pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> bool {
