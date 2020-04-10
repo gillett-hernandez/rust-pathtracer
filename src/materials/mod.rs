@@ -2,7 +2,9 @@
 pub use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 
+pub mod diffuse_light;
 pub mod lambertian;
+pub use diffuse_light::DiffuseLight;
 pub use lambertian::Lambertian;
 
 // type required for an id into the Material Table

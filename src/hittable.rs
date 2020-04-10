@@ -12,3 +12,4 @@ pub struct HitRecord {
 pub trait Hittable {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord>;
 }
+

@@ -54,6 +54,16 @@ pub struct Sphere {
     pub material_id: Option<MaterialId>,
 }
 
+impl Sphere {
+    pub fn new(radius: f32, origin: Point3, material_id: Option<MaterialId>) -> Sphere {
+        Sphere {
+            radius,
+            origin,
+            material_id,
+        }
+    }
+}
+
 impl Hittable for Sphere {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let oc: Vec3 = r.origin - self.origin;
@@ -61,11 +71,12 @@ impl Hittable for Sphere {
         let b = oc * r.direction;
         let c = oc * oc - self.radius * self.radius;
         let discriminant = b * b - a * c;
+        let discriminant_sqrt = discriminant.sqrt();
         if discriminant > 0.0 {
             let mut time: f32;
             let point: Point3;
             let normal: Vec3;
-            time = (-b - discriminant.sqrt()) / a;
+            time = (-b - discriminant_sqrt) / a;
             if time < t1 && time > t0 {
                 point = r.point_at_parameter(time);
                 normal = (point - self.origin) / self.radius;
@@ -78,7 +89,7 @@ impl Hittable for Sphere {
                     material: self.material_id,
                 });
             }
-            time = (-b + discriminant.sqrt()) / a;
+            time = (-b + discriminant_sqrt) / a;
             if time < t1 && time > t0 {
                 point = r.point_at_parameter(time);
                 normal = (point - self.origin) / self.radius;

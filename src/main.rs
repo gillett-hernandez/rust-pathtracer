@@ -1,6 +1,7 @@
 #![allow(unused_imports, unused_variables, unused)]
 extern crate image;
 
+pub mod aabb;
 pub mod camera;
 pub mod config;
 pub mod geometry;
@@ -14,35 +15,44 @@ pub mod world;
 
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
-use geometry::Sphere;
+use geometry::{HittableList, Sphere};
 use integrator::{Integrator, PathTracingIntegrator};
-use materials::Lambertian;
+use materials::{DiffuseLight, Lambertian};
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
-// use image::{GenericImageView, ImageBuffer};
-
 use rand::prelude::*;
 use rayon::prelude::*;
 
-// use std::collections::HashMap;
-// use std::fmt;
-// use std::fs::File;
-// use std::io::prelude::*;
-// use std::io::BufReader;
-// use std::sync::Arc;
-
 fn construct_integrator(settings: &Settings, world: World) -> Box<dyn Integrator> {
-    Box::new(PathTracingIntegrator {
-        max_bounces: settings.max_bounces.unwrap_or(1),
-        world,
-    })
+    let max_bounces = settings.max_bounces.unwrap_or(1);
+    println!(
+        "constructing integrator, max bounces set to {}",
+        max_bounces
+    );
+    Box::new(PathTracingIntegrator { max_bounces, world })
 }
 
 fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
     let integrator: Box<dyn Integrator> = construct_integrator(settings, world);
+    println!("constructing renderer");
     Box::new(NaiveRenderer::new(integrator))
+}
+
+fn construct_scene() -> World {
+    let lambertian = Box::new(Lambertian::new(RGBColor::new(0.4, 0.9, 0.9)));
+    let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 0.3)));
+    let world = World {
+        bvh: Box::new(HittableList::new(vec![
+            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
+            Box::new(Sphere::new(49.0, Point3::new(0.0, 0.0, -100.0), Some(0))),
+            Box::new(Sphere::new(1.0, Point3::new(0.0, 0.0, 0.0), Some(1))),
+        ])),
+        background: RGBColor::new(0.2, 0.2, 0.2),
+        materials: vec![lambertian, diffuse_light],
+    };
+    world
 }
 
 fn render(
@@ -87,26 +97,17 @@ fn main() -> () {
     //     Some(String::from("PT")) => PathTracingIntegrator(config),
     //     None => PathTracingIntegrator(config),
     // };
-    let material = Box::new(Lambertian::new(RGBColor::new(0.9, 0.9, 0.9)));
-    let world = World {
-        bvh: Box::new(Sphere {
-            radius: 1.0,
-            origin: Point3::ZERO,
-            material_id: None,
-        }),
-        background: RGBColor::new(0.2, 0.2, 0.2),
-        materials: vec![material],
-    };
+    let world = construct_scene();
     // let integrator = PathTracingIntegrator {world};
     // let settings_vec = &config.render_settings.unwrap();
     // let mut cameras = Vec::<SimpleCamera>::new();
     let mut cameras = Vec::<Box<dyn Camera>>::new();
-    let camera = Box::new(SimpleCamera::new(
+    let camera1 = Box::new(SimpleCamera::new(
         // let camera = SimpleCamera::new(
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
-        3.0,
+        20.0,
         1.0,
         100.0,
         1.0,
@@ -114,17 +115,28 @@ fn main() -> () {
         1.0,
     ));
     // );
-    cameras.push(camera);
+    cameras.push(camera1);
+    let camera2 = Box::new(SimpleCamera::new(
+        // let camera = SimpleCamera::new(
+        Point3::new(100.0, 0.0, 0.0),
+        Point3::ZERO,
+        Vec3::Z,
+        50.0,
+        1.0,
+        100.0,
+        1.0,
+        0.0,
+        1.0,
+    ));
+    // );
+    cameras.push(camera2);
     let renderer = construct_renderer(&config, world);
     // get settings for each film
     // (cameras[0]).get_ray(0.0, 0.0);
     let directory = config.output_directory.unwrap();
-    for render_settings in config.render_settings.unwrap() {
-        let film = render(
-            &renderer,
-            &cameras[render_settings.camera_id.unwrap_or(0) as usize],
-            &render_settings,
-        );
+    for (render_id, render_settings) in config.render_settings.unwrap().iter().enumerate() {
+        let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
+        let film = render(&renderer, &cameras[camera_id], &render_settings);
 
         // do stuff with film here
         let mut img: image::RgbImage =
@@ -138,6 +150,11 @@ fn main() -> () {
                 (color.b * 255.0) as u8,
             ]);
         }
-        img.save(format!("{}/{}", directory, "test.png")).unwrap();
+        img.save(format!(
+            "{}/{}",
+            directory,
+            format!("test{}.png", render_id)
+        ))
+        .unwrap();
     }
 }

@@ -1,3 +1,4 @@
+use crate::hittable::HitRecord;
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 #[derive(Debug)]
@@ -12,19 +13,19 @@ impl Lambertian {
 }
 
 impl PDF for Lambertian {
-    fn value(&self, wi: Vec3, wo: Vec3) -> f32 {
-        wi * Vec3::Z / PI
+    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
+        wi * hit.normal / PI
     }
-    fn generate(&self, s: Sample2D, wi: Vec3) -> Vec3 {
+    fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Vec3 {
         random_cosine_direction(s)
     }
 }
 
 impl BRDF for Lambertian {
-    fn f(&self, wi: Vec3, wo: Vec3) -> RGBColor {
-        self.color / PI
+    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
+        self.color * (wi * hit.normal) / PI
     }
-    fn emission(&self, wi: Vec3, wo: Vec3) -> RGBColor {
+    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
         RGBColor::ZERO
     }
 }

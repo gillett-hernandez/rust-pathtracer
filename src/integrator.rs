@@ -1,5 +1,7 @@
 use super::world::World;
 use crate::hittable::Hittable;
+// use crate::materials::MaterialTable;
+use crate::material::Material;
 use crate::math::*;
 use std::f32::INFINITY;
 
@@ -33,12 +35,16 @@ impl Integrator for PathTracingIntegrator {
                         None => 0,
                     };
                     let cos_i = ray.direction.normalized() * hit.normal.normalized();
-                    let material = &self.world.materials[id as usize];
-                    let bounce = material.generate(Sample2D::new_random_sample(), ray.direction);
-                    let emission: RGBColor = material.emission(ray.direction, bounce);
-                    let pdf = material.value(ray.direction, bounce);
+                    let material: &Box<dyn Material> = &self.world.materials[id as usize];
+                    let bounce =
+                        material.generate(&hit, Sample2D::new_random_sample(), ray.direction);
+                    let emission = material.emission(&hit, ray.direction, bounce);
+                    let pdf = material.value(&hit, ray.direction, bounce);
                     color += beta * emission;
-                    beta *= material.f(ray.direction, bounce) * cos_i / pdf;
+                    if bounce.norm() < 0.0000001 || pdf < 0.000001 {
+                        break;
+                    }
+                    beta *= material.f(&hit, ray.direction, bounce) * cos_i / pdf;
                     ray = Ray::new(hit.point, bounce);
                 }
                 None => {
@@ -53,5 +59,3 @@ impl Integrator for PathTracingIntegrator {
         &self.world
     }
 }
-
-// vec3 color(ray &r, int depth, long *bounce_count, path *_path, bool skip_light_hit = false) = 0;

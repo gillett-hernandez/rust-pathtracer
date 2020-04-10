@@ -1,3 +1,4 @@
+use crate::hittable::HitRecord;
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 #[derive(Debug)]
@@ -12,19 +13,19 @@ impl DiffuseLight {
 }
 
 impl PDF for DiffuseLight {
-    fn value(&self, wi: Vec3, wo: Vec3) -> f32 {
-        1.0 / PI
+    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
+        0.0
     }
-    fn generate(&self, s: Sample2D, wi: Vec3) -> Vec3 {
-        random_cosine_direction(s)
+    fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Vec3 {
+        Vec3::ZERO
     }
 }
 
 impl BRDF for DiffuseLight {
-    fn f(&self, wi: Vec3, wo: Vec3) -> RGBColor {
+    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
         RGBColor::ZERO
     }
-    fn emission(&self, wi: Vec3, wo: Vec3) -> RGBColor {
+    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
         self.color
     }
 }
