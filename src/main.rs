@@ -1,5 +1,6 @@
 #![allow(unused_imports, unused_variables, unused)]
 extern crate image;
+extern crate packed_simd;
 
 pub mod aabb;
 pub mod camera;

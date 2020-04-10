@@ -1,4 +1,5 @@
 // use packed_simd::{f32x4, f32x8};
+use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {
