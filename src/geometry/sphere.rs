@@ -1,52 +1,7 @@
+use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
 use crate::materials::MaterialId;
 use crate::math::*;
-
-/*
-class sphere : public hittable
-{
-public:
-    sphere() {}
-
-    sphere(vec3 cen, float r, material *m)
-        : center(cen), radius(r), mat_ptr(m){};
-
-    virtual bool hit(const ray &r, float tmin, float tmax, hit_record &rec) const;
-    virtual bool bounding_box(float t0, float t1, aabb &box) const;
-    virtual float pdf_value(const vec3 &o, const vec3 &v) const
-    {
-        hit_record rec;
-        if (this->hit(ray(o, v), 0.001, FLT_MAX, rec))
-        {
-            float cos_theta_max = sqrt(1 - radius * radius / (center - o).squared_length());
-            float solid_angle = 2 * M_PI * (1 - cos_theta_max);
-            return 1 / solid_angle;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-    virtual vec3 random(const vec3 &o) const
-    {
-        vec3 direction = center - o;
-        float distance_squared = direction.squared_length();
-        onb uvw;
-        uvw.build_from_w(direction);
-        return uvw.local(random_to_sphere(radius, distance_squared));
-    }
-    vec3 center;
-    float radius;
-    material *mat_ptr;
-};
-
-
-bool sphere::bounding_box(float t0, float t1, aabb &box) const
-{
-    box = aabb(center - vec3(radius, radius, radius),
-               center + vec3(radius, radius, radius));
-    return true;
-}*/
 
 pub struct Sphere {
     pub radius: f32,
@@ -104,5 +59,14 @@ impl Hittable for Sphere {
             }
         }
         None
+    }
+}
+
+impl HasBoundingBox for Sphere {
+    fn bounding_box(&self) -> AABB {
+        AABB::new(
+            self.origin - Vec3::new(self.radius, self.radius, self.radius),
+            self.origin + Vec3::new(self.radius, self.radius, self.radius),
+        )
     }
 }

@@ -16,7 +16,7 @@ impl PDF for DiffuseLight {
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
         0.0
     }
-    fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Vec3 {
+    fn generate(&self, hit: &HitRecord, s: &Box<dyn Sampler>, wi: Vec3) -> Vec3 {
         Vec3::ZERO
     }
 }
