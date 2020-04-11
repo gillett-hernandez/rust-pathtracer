@@ -1,50 +1,63 @@
 // use packed_simd::{f32x4, f32x8};
 use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+// #[derive(Copy, Clone, Debug)]
+// pub struct Vec3 {
+//     pub x: f32,
+//     pub y: f32,
+//     pub z: f32,
+//     pub w: f32,
+// }
 #[derive(Copy, Clone, Debug)]
-pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
-}
+pub struct Vec3(f32x4);
 
 impl Vec3 {
     pub const fn new(x: f32, y: f32, z: f32) -> Vec3 {
-        Vec3 { x, y, z, w: 0.0 }
+        // Vec3 { x, y, z, w: 0.0 }
+        Vec3(f32x4::new(x, y, z, 0.0))
     }
-    pub const ZERO: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+    pub const fn from_raw(v: f32x4) -> Vec3 {
+        Vec3(v)
+    }
+    // pub const ZERO: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+    pub const ZERO: Vec3 = Vec3::new(f32x4::ZERO);
     pub const X: Vec3 = Vec3::new(1.0, 0.0, 0.0);
     pub const Y: Vec3 = Vec3::new(0.0, 1.0, 0.0);
     pub const Z: Vec3 = Vec3::new(0.0, 0.0, 1.0);
 }
 
+impl Vec3 {
+    
+}
+
 impl Mul for Vec3 {
     type Output = f32;
     fn mul(self, other: Vec3) -> f32 {
-        self.x * other.x + self.y * other.y + self.z * other.z
+        // self.x * other.x + self.y * other.y + self.z * other.z
+        (self.0 * other.0).sum()
     }
 }
 
 impl MulAssign for Vec3 {
     fn mul_assign(&mut self, other: Vec3) {
-        self.x *= other.x;
-        self.y *= other.y;
-        self.z *= other.z;
+        // self.x *= other.x;
+        // self.y *= other.y;
+        // self.z *= other.z;
+        self.0 = self.0 * other.0
     }
 }
 
 impl Mul<f32> for Vec3 {
     type Output = Vec3;
     fn mul(self, other: f32) -> Vec3 {
-        Vec3::new(self.x * other, self.y * other, self.z * other)
+        Vec3::from_raw(self.0 * other)
     }
 }
 
 impl Mul<Vec3> for f32 {
     type Output = Vec3;
     fn mul(self, other: Vec3) -> Vec3 {
-        other * self
+        Vec3::from_raw(self.0 * other.0)
     }
 }
 
