@@ -49,7 +49,7 @@ fn construct_scene() -> World {
             Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
             Box::new(Sphere::new(1.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
         ])),
-        background: RGBColor::new(0.2, 0.2, 0.2),
+        background: RGBColor::new(0.0, 0.0, 0.0),
         materials: vec![lambertian, diffuse_light],
     };
     world
