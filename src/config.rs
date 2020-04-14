@@ -19,7 +19,7 @@ pub struct Resolution {
 
 #[derive(Deserialize, Copy, Clone)]
 pub struct RenderSettings {
-    pub resolution: Option<Resolution>,
+    pub resolution: Resolution,
     pub min_samples: Option<u16>,
     pub max_samples: Option<u16>,
     pub camera_id: Option<u16>,

@@ -73,3 +73,10 @@ impl Mul<f32> for RGBColor {
         RGBColor::new(self.r * other, self.g * other, self.b * other)
     }
 }
+
+impl Mul<RGBColor> for f32 {
+    type Output = RGBColor;
+    fn mul(self, other: RGBColor) -> RGBColor {
+        RGBColor::new(other.r * self, other.g * self, other.b * self)
+    }
+}

@@ -23,6 +23,8 @@ use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
+use std::time::Instant;
+
 use rand::prelude::*;
 use rayon::prelude::*;
 
@@ -47,10 +49,12 @@ fn construct_scene() -> World {
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
-            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
-            Box::new(Sphere::new(1.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
+            // Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
+            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(0))),
+            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
         ])),
-        background: RGBColor::new(0.2, 0.2, 0.2),
+        // background: RGBColor::new(0.0, 0.0, 0.0),
+        background: RGBColor::new(1.0, 1.0, 1.0),
         materials: vec![lambertian, diffuse_light],
     };
     world
@@ -61,19 +65,11 @@ fn render(
     camera: &Box<dyn Camera>,
     render_settings: &RenderSettings,
 ) -> Film<RGBColor> {
-    let width = match render_settings.resolution {
-        Some(res) => res.width,
-        None => 512,
-    };
-    let height = match render_settings.resolution {
-        Some(res) => res.height,
-        None => 512,
-    };
-    println!(
-        "starting render with film resolution {:?}x{:?}",
-        width, height
+    let mut film = Film::new(
+        render_settings.resolution.width,
+        render_settings.resolution.height,
+        RGBColor::ZERO,
     );
-    let mut film = Film::new(width, height, RGBColor::ZERO);
     renderer.render(&mut film, camera, render_settings);
     film
 }
@@ -108,7 +104,7 @@ fn main() -> () {
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
-        3.0,
+        8.0,
         1.0,
         100.0,
         1.0,
@@ -136,7 +132,18 @@ fn main() -> () {
     let directory = config.output_directory.unwrap();
     for (render_id, render_settings) in config.render_settings.unwrap().iter().enumerate() {
         let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
+
+        println!(
+            "starting render with film resolution {}x{}",
+            render_settings.resolution.width, render_settings.resolution.height
+        );
+
+        let now = Instant::now();
         let film = render(&renderer, &cameras[camera_id], &render_settings);
+        let total_pixels = film.width * film.height;
+        let total_camera_rays = total_pixels * (render_settings.max_samples.unwrap() as usize);
+        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(config.render_threads.unwrap() as f32));
 
         // do stuff with film here
         let mut img: image::RgbImage =
@@ -146,7 +153,7 @@ fn main() -> () {
         for y in 0..film.height {
             for x in 0..film.width {
                 let color = film.buffer[(y * film.width + x) as usize];
-                let lum = Vec3::from(color).norm();
+                let lum = Vec3::from(color).0.max_element();
                 if lum > max_luminance {
                     max_luminance = lum;
                 }
