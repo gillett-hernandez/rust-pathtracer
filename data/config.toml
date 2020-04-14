@@ -1,17 +1,17 @@
 output_directory = "."
 integrator="PT"
-max_bounces=8
+max_bounces=2
 
 [[render_settings]]
 resolution.width = 512
 resolution.height = 512
-min_samples = 10
-max_samples = 10
+min_samples = 1
+max_samples = 1
 camera_id = 0
 
 [[render_settings]]
 resolution.width = 512
 resolution.height = 512
-min_samples = 10
-max_samples = 10
+min_samples = 1
+max_samples = 1
 camera_id = 1

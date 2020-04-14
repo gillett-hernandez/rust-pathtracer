@@ -18,7 +18,7 @@ pub struct PathTracingIntegrator {
 
 impl Integrator for PathTracingIntegrator {
     fn color(&self, r: Ray) -> RGBColor {
-        let russian_roulette = true;
+        const RUSSIAN_ROULETTE: bool = false;
         let mut ray = r;
         let mut color: RGBColor = RGBColor::ZERO;
         let mut beta = RGBColor::new(1.0, 1.0, 1.0);
@@ -31,31 +31,39 @@ impl Integrator for PathTracingIntegrator {
                         None => 0,
                     };
                     let wi = -ray.direction;
+
                     let cos_i = wi.normalized() * hit.normal.normalized();
                     let material: &Box<dyn Material> = &self.world.materials[id as usize];
-                    let wo = material.generate(&hit, &sampler, wi);
-                    let emission = material.emission(&hit, wi, wo);
-                    let pdf = material.value(&hit, wi, wo);
-                    assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
+
+                    let maybe_wo: Option<Vec3> = material.generate(&hit, &sampler, wi);
+                    let emission = material.emission(&hit, wi, maybe_wo);
+
                     color += beta * emission;
-                    if pdf < 0.0000001 || wo.norm() < 0.00000001 {
+                    if let Some(wo) = maybe_wo {
+                        let pdf = material.value(&hit, wi, wo);
+                        assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
+                        if pdf < 0.0000001 {
+                            break;
+                        }
+                        if RUSSIAN_ROULETTE {
+                            // let attenuation = Vec3::from(beta).norm();
+                            let attenuation = Vec3::from(beta).0.max_element();
+                            if attenuation < 1.0 && 0.001 < attenuation {
+                                if sampler.draw_1d().x > attenuation {
+                                    break;
+                                }
+
+                                beta = beta / attenuation;
+                            }
+                        }
+                        let wo = wo.normalized();
+                        // beta *= material.f(&hit, wi, wo) * cos_i.abs();
+                        beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
+                        // add normal to avoid self intersection
+                        ray = Ray::new(hit.point + hit.normal * 0.00001, wo);
+                    } else {
                         break;
                     }
-                    if russian_roulette {
-                        let attenuation = Vec3::from(beta).norm();
-                        if attenuation < 1.0 && 0.001 < attenuation {
-                            if sampler.draw_1d().x > attenuation {
-                                break;
-                            }
-
-                            beta = beta / attenuation;
-                        }
-                    }
-                    let wo = wo.normalized();
-                    // beta *= material.f(&hit, wi, wo) * cos_i.abs();
-                    beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
-                    // add normal to avoid self intersection
-                    ray = Ray::new(hit.point + hit.normal * 0.000001, wo);
                 }
                 None => {
                     color += beta * self.world.background;

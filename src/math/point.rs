@@ -59,6 +59,6 @@ impl Sub for Point3 {
     type Output = Vec3;
     fn sub(self, other: Point3) -> Vec3 {
         // Vec3::new(self.x - other.x, self.y - other.y, self.z - other.z)
-        Vec3::from_raw(self.0 - other.0)
+        Vec3::from_raw((self.0 - other.0) * f32x4::new(1.0, 1.0, 1.0, 0.0))
     }
 }

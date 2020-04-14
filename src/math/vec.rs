@@ -121,7 +121,7 @@ impl Sub for Vec3 {
 
 impl From<f32> for Vec3 {
     fn from(s: f32) -> Vec3 {
-        Vec3::from_raw(f32x4::splat(s))
+        Vec3::from_raw(f32x4::splat(s) * f32x4::new(1.0, 1.0, 1.0, 0.0))
     }
 }
 

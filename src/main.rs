@@ -18,6 +18,7 @@ use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::{HittableList, Sphere};
 use integrator::{Integrator, PathTracingIntegrator};
+use material::{Material, BRDF, PDF};
 use materials::{DiffuseLight, Lambertian};
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
@@ -41,6 +42,29 @@ fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
     let integrator: Box<dyn Integrator> = construct_integrator(settings, world);
     println!("constructing renderer");
     Box::new(NaiveRenderer::new(integrator))
+}
+
+fn white_furnace_test(material: Box<dyn Material>) -> World {
+    let world = World {
+        bvh: Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
+        background: RGBColor::new(1.0, 1.0, 1.0),
+        materials: vec![material],
+    };
+    world
+}
+
+fn lambertian_under_lamp(color: RGBColor) -> World {
+    let lambertian = Box::new(Lambertian::new(color));
+    let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
+    let world = World {
+        bvh: Box::new(HittableList::new(vec![
+            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
+            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
+        ])),
+        background: RGBColor::new(0.0, 0.0, 0.0),
+        materials: vec![lambertian, diffuse_light],
+    };
+    world
 }
 
 fn construct_scene() -> World {
