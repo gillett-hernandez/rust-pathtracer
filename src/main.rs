@@ -68,8 +68,9 @@ fn lambertian_under_lamp(color: RGBColor) -> World {
 }
 
 fn construct_scene() -> World {
-    // let lambertian = Box::new(Lambertian::new(RGBColor::new(1.0, 1.0, 1.0)));
-    // let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
+    let white = RGBColor::new(1.0, 1.0, 1.0);
+    // let lambertian = Box::new(Lambertian::new(white));
+    // let diffuse_light = Box::new(DiffuseLight::new());
     // let world = World {
     //     bvh: Box::new(HittableList::new(vec![
     //         Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
@@ -78,12 +79,13 @@ fn construct_scene() -> World {
     //         Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
     //     ])),
     //     // background: RGBColor::new(0.0, 0.0, 0.0),
-    //     background: RGBColor::new(1.0, 1.0, 1.0),
+    //     background: white,
     //     materials: vec![lambertian, diffuse_light],
     // };
     // world
-    let lambertian = Box::new(Lambertian::new(RGBColor::new(1.0, 1.0, 1.0)));
-    white_furnace_test(lambertian)
+    // let lambertian = Box::new(Lambertian::new(white));
+    // white_furnace_test(lambertian)
+    lambertian_under_lamp(white)
 }
 
 fn render(

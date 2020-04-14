@@ -36,6 +36,7 @@ impl Integrator for PathTracingIntegrator {
                     let cos_i = wi.z();
                     let material: &Box<dyn Material> = &self.world.materials[id as usize];
 
+                    // wo is generated in tangent space.
                     let maybe_wo: Option<Vec3> = material.generate(&hit, &sampler, wi);
                     let emission = material.emission(&hit, wi, maybe_wo);
 
@@ -59,7 +60,9 @@ impl Integrator for PathTracingIntegrator {
                         }
                         // beta *= material.f(&hit, wi, wo) * cos_i.abs();
                         beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
+                        // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection
+                        // also convert wo back to world space when spawning the new ray
                         ray = Ray::new(hit.point + hit.normal * 0.00001, frame.to_world(&wo));
                     } else {
                         break;

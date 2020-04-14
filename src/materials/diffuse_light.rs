@@ -13,6 +13,7 @@ impl DiffuseLight {
 }
 
 impl PDF for DiffuseLight {
+    // PDF has a different meaning for light sources.
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
         0.0
     }
