@@ -3,6 +3,7 @@ mod color;
 mod misc;
 mod point;
 mod sample;
+mod tangent_frame;
 mod vec;
 pub use color::RGBColor;
 pub use misc::*;
@@ -11,17 +12,20 @@ pub use sample::*;
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 use std::ops::Mul;
+pub use tangent_frame::TangentFrame;
 pub use vec::Vec3;
 
 impl From<Point3> for Vec3 {
     fn from(p: Point3) -> Self {
-        Vec3::new(p.x, p.y, p.z)
+        // Vec3::new(p.x, p.y, p.z)
+        Vec3::from_raw(p.0.replace(3, 0.0))
     }
 }
 
 impl From<Vec3> for Point3 {
     fn from(v: Vec3) -> Point3 {
-        Point3::new(v.x, v.y, v.z)
+        // Point3::from_raw(v.0.replace(3, 1.0))
+        Point3::from_raw(v.0).normalize()
     }
 }
 
@@ -32,10 +36,7 @@ pub trait Color {
 impl Mul<RGBColor> for Vec3 {
     type Output = RGBColor;
     fn mul(mut self, other: RGBColor) -> RGBColor {
-        self.x *= other.r;
-        self.y *= other.g;
-        self.z *= other.b;
-        RGBColor::new(self.x, self.y, self.z)
+        RGBColor::new(self.x() * other.r, self.y() * other.g, self.z() * other.b)
     }
 }
 
@@ -81,7 +82,7 @@ impl Ray {
             origin,
             direction,
             time,
-            tmax: tmax,
+            tmax,
         }
     }
     pub fn with_tmax(mut self, tmax: f32) -> Self {

@@ -63,7 +63,7 @@ impl Camera for SimpleCamera {
     fn get_ray(&self, s: f32, t: f32) -> Ray {
         // circular aperture/lens
         let rd: Vec3 = self.lens_radius * random_in_unit_disk(Sample2D::new_random_sample());
-        let offset = self.u * rd.x + self.v * rd.y;
+        let offset = self.u * rd.x() + self.v * rd.y();
         let time: f32 = self.t0 + random() * (self.t1 - self.t0);
         Ray::new_with_time(
             self.origin + offset,
@@ -93,25 +93,13 @@ mod tests {
             0.0,
             1.0,
         );
-        println!(
-            "camera origin {:?} {:?} {:?}",
-            camera.origin.x, camera.origin.y, camera.origin.z
-        );
-        println!(
-            "camera direction {:?} {:?} {:?}",
-            camera.direction.x, camera.direction.y, camera.direction.z
-        );
+        println!("camera origin {:?}", camera.origin);
+        println!("camera direction {:?}", camera.direction);
         let s = random();
         let t = random();
         let r: Ray = camera.get_ray(s, t);
-        println!(
-            "ray origin {:?} {:?} {:?}",
-            r.origin.x, r.origin.y, r.origin.z
-        );
-        println!(
-            "ray direction{:?} {:?} {:?}",
-            r.direction.x, r.direction.y, r.direction.z
-        );
+        println!("ray origin {:?}", r.origin);
+        println!("ray direction {:?}", r.direction);
         assert!(
             r.direction * Vec3::X > 0.0,
             "x component of direction of camera ray pointed wrong"
