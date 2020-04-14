@@ -30,9 +30,10 @@ impl Integrator for PathTracingIntegrator {
                         Some(id) => id as usize,
                         None => 0,
                     };
-                    let wi = -ray.direction;
+                    let frame = TangentFrame::from_normal(hit.normal);
+                    let wi = frame.to_local(&-ray.direction);
 
-                    let cos_i = wi.normalized() * hit.normal.normalized();
+                    let cos_i = wi.z();
                     let material: &Box<dyn Material> = &self.world.materials[id as usize];
 
                     let maybe_wo: Option<Vec3> = material.generate(&hit, &sampler, wi);
@@ -56,17 +57,18 @@ impl Integrator for PathTracingIntegrator {
                                 beta = beta / attenuation;
                             }
                         }
-                        let wo = wo.normalized();
                         // beta *= material.f(&hit, wi, wo) * cos_i.abs();
                         beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
                         // add normal to avoid self intersection
-                        ray = Ray::new(hit.point + hit.normal * 0.00001, wo);
+                        ray = Ray::new(hit.point + hit.normal * 0.00001, frame.to_world(&wo));
                     } else {
                         break;
                     }
                 }
                 None => {
+                    // color += beta * self.world.background * 2.0 * PI * PI;
                     color += beta * self.world.background;
+                    // color += beta * self.world.background * 4.0 * PI;
                     break;
                 }
             }

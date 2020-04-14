@@ -68,20 +68,22 @@ fn lambertian_under_lamp(color: RGBColor) -> World {
 }
 
 fn construct_scene() -> World {
-    let lambertian = Box::new(Lambertian::new(RGBColor::new(0.5, 0.5, 0.5)));
-    let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
-    let world = World {
-        bvh: Box::new(HittableList::new(vec![
-            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
-            // Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
-            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(0))),
-            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
-        ])),
-        // background: RGBColor::new(0.0, 0.0, 0.0),
-        background: RGBColor::new(1.0, 1.0, 1.0),
-        materials: vec![lambertian, diffuse_light],
-    };
-    world
+    // let lambertian = Box::new(Lambertian::new(RGBColor::new(1.0, 1.0, 1.0)));
+    // let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
+    // let world = World {
+    //     bvh: Box::new(HittableList::new(vec![
+    //         Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
+    //         // Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
+    //         Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(0))),
+    //         Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
+    //     ])),
+    //     // background: RGBColor::new(0.0, 0.0, 0.0),
+    //     background: RGBColor::new(1.0, 1.0, 1.0),
+    //     materials: vec![lambertian, diffuse_light],
+    // };
+    // world
+    let lambertian = Box::new(Lambertian::new(RGBColor::new(1.0, 1.0, 1.0)));
+    white_furnace_test(lambertian)
 }
 
 fn render(
@@ -169,20 +171,28 @@ fn main() -> () {
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(config.render_threads.unwrap() as f32));
 
+        let now = Instant::now();
         // do stuff with film here
         let mut img: image::RgbImage =
             image::ImageBuffer::new(film.width as u32, film.height as u32);
 
         let mut max_luminance = 0.0;
+        let mut total_luminance = 0.0;
         for y in 0..film.height {
             for x in 0..film.width {
                 let color = film.buffer[(y * film.width + x) as usize];
                 let lum = Vec3::from(color).0.max_element();
+                total_luminance += lum;
                 if lum > max_luminance {
                     max_luminance = lum;
                 }
             }
         }
+        let avg_luminance = total_luminance / total_pixels as f32;
+        println!(
+            "computed tonemapping: max luminance {}, avg luminance {}",
+            max_luminance, avg_luminance
+        );
         for (x, y, pixel) in img.enumerate_pixels_mut() {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
 
@@ -195,11 +205,13 @@ fn main() -> () {
                 (color.b * 255.0) as u8,
             ]);
         }
+        println!("saving image...");
         img.save(format!(
             "{}/{}",
             directory,
             format!("test{}.png", render_id)
         ))
         .unwrap();
+        println!("took {}s", (now.elapsed().as_millis() as f32) / 1000.0);
     }
 }

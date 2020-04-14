@@ -2,9 +2,9 @@ use crate::math::*;
 
 // also known as an orthonormal basis.
 pub struct TangentFrame {
-    tangent: Vec3,
-    bitangent: Vec3,
-    normal: Vec3,
+    pub tangent: Vec3,
+    pub bitangent: Vec3,
+    pub normal: Vec3,
 }
 
 impl TangentFrame {

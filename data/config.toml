@@ -5,13 +5,13 @@ max_bounces=2
 [[render_settings]]
 resolution.width = 512
 resolution.height = 512
-min_samples = 1
-max_samples = 1
+min_samples = 10
+max_samples = 10
 camera_id = 0
 
 [[render_settings]]
 resolution.width = 512
 resolution.height = 512
-min_samples = 1
-max_samples = 1
-camera_id = 1
+min_samples = 100
+max_samples = 100
+camera_id = 0
