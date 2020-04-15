@@ -45,12 +45,7 @@ impl Hittable for Sphere {
                 normal = (point - self.origin) / self.radius;
                 //         rec.mat_ptr = mat_ptr;
                 //         rec.primitive = (hittable *)this;
-                return Some(HitRecord {
-                    time,
-                    point,
-                    normal,
-                    material: self.material_id,
-                });
+                return Some(HitRecord::new(time, point, normal, self.material_id));
             }
             time = (-b + discriminant_sqrt) / a;
             if time < t1 && time > t0 {
@@ -60,12 +55,7 @@ impl Hittable for Sphere {
                 normal = (point - self.origin) / self.radius;
                 //         rec.mat_ptr = mat_ptr;
                 //         rec.primitive = (hittable *)this;
-                return Some(HitRecord {
-                    time,
-                    point,
-                    normal,
-                    material: self.material_id,
-                });
+                return Some(HitRecord::new(time, point, normal, self.material_id));
             }
         }
         None

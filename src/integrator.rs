@@ -23,7 +23,7 @@ impl Integrator for PathTracingIntegrator {
         let mut color: RGBColor = RGBColor::ZERO;
         let mut beta = RGBColor::new(1.0, 1.0, 1.0);
         let sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-        for _ in 0..self.max_bounces {
+        for current_bounce in 0..self.max_bounces {
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(hit) => {
                     let id = match (hit.material) {
@@ -31,9 +31,16 @@ impl Integrator for PathTracingIntegrator {
                         None => 0,
                     };
                     let frame = TangentFrame::from_normal(hit.normal);
-                    let wi = frame.to_local(&-ray.direction);
+                    let wi = frame.to_local(&-ray.direction).normalized();
+                    // assert!(
+                    //     wi.z() > 0.0,
+                    //     "point: {:?}, normal {:?}, incoming: {:?}, in local space: {:?}",
+                    //     hit.point,
+                    //     hit.normal,
+                    //     -ray.direction,
+                    //     wi
+                    // );
 
-                    let cos_i = wi.z();
                     let material: &Box<dyn Material> = &self.world.materials[id as usize];
 
                     // wo is generated in tangent space.
@@ -58,20 +65,21 @@ impl Integrator for PathTracingIntegrator {
                                 beta = beta / attenuation;
                             }
                         }
-                        // beta *= material.f(&hit, wi, wo) * cos_i.abs();
+                        let cos_i = wo.z();
                         beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
-                        // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
+                        debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
-                        ray = Ray::new(hit.point + hit.normal * 0.00001, frame.to_world(&wo));
+                        ray = Ray::new(
+                            hit.point + hit.normal * 0.001,
+                            frame.to_world(&wo).normalized(),
+                        );
                     } else {
                         break;
                     }
                 }
                 None => {
-                    // color += beta * self.world.background * 2.0 * PI * PI;
-                    color += beta * self.world.background / (4.0 * PI);
-                    // color += beta * self.world.background * 4.0 * PI;
+                    color += beta * self.world.background;
                     break;
                 }
             }

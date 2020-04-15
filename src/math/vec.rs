@@ -139,7 +139,7 @@ impl Vec3 {
     }
 
     pub fn norm_squared(&self) -> f32 {
-        (self.0 * self.0).sum()
+        (self.0 * self.0 * f32x4::new(1.0, 1.0, 1.0, 0.0)).sum()
     }
 
     pub fn norm(&self) -> f32 {
