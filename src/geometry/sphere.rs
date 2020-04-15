@@ -36,7 +36,7 @@ impl Hittable for Sphere {
                 point = r.point_at_parameter(time);
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
-                normal = (point - self.origin) / self.radius;
+                normal = ((point - self.origin) / self.radius).normalized();
                 //         rec.mat_ptr = mat_ptr;
                 //         rec.primitive = (hittable *)this;
                 return Some(HitRecord {
@@ -51,7 +51,7 @@ impl Hittable for Sphere {
                 point = r.point_at_parameter(time);
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
-                normal = (point - self.origin) / self.radius;
+                normal = ((point - self.origin) / self.radius).normalized();
                 //         rec.mat_ptr = mat_ptr;
                 //         rec.primitive = (hittable *)this;
                 return Some(HitRecord {

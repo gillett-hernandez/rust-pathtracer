@@ -14,12 +14,14 @@ impl Lambertian {
 
 impl PDF for Lambertian {
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
-        let cosine = wi.z();
-        if cosine > 0.0 {
+        let cosine = wo.z();
+        if cosine * wi.z() > 0.0 {
             cosine / PI
         } else {
+            // -cosine / PI
             0.0
         }
+        // cosine.abs() / PI
     }
     fn generate(&self, hit: &HitRecord, s: &Box<dyn Sampler>, wi: Vec3) -> Option<Vec3> {
         Some(random_cosine_direction(s.draw_2d()))

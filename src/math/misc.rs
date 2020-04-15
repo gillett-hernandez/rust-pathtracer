@@ -22,8 +22,9 @@ pub fn random_cosine_direction(r: Sample2D) -> Vec3 {
     let r2: f32 = r.y;
     let z: f32 = (1.0 - r2).sqrt();
     let phi: f32 = 2.0 * PI * r1;
-    let x: f32 = phi.cos() * r2.sqrt();
-    let y: f32 = phi.sin() * r2.sqrt();
+    let (mut x, mut y) = phi.sin_cos();
+    x *= r2.sqrt();
+    y *= r2.sqrt();
     Vec3::new(x, y, z)
 }
 
