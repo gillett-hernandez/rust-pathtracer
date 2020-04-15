@@ -43,7 +43,8 @@ impl TangentFrame {
 
     pub fn from_normal(normal: Vec3) -> Self {
         // let n2 = Vec3::from_raw(normal.0 * normal.0);
-        let (x, y, z) = (normal.x(), normal.y(), normal.z());
+        // let (x, y, z) = (normal.x(), normal.y(), normal.z());
+        let [x, y, z, _]: [f32; 4] = normal.0.into();
         let sign = (1.0 as f32).copysign(z);
         let a = -1.0 / (sign + z);
         let b = x * y * a;

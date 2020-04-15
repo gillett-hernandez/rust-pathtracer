@@ -36,13 +36,14 @@ pub trait Color {
 impl Mul<RGBColor> for Vec3 {
     type Output = RGBColor;
     fn mul(mut self, other: RGBColor) -> RGBColor {
-        RGBColor::new(self.x() * other.r, self.y() * other.g, self.z() * other.b)
+        // RGBColor::new(self.x() * other.r, self.y() * other.g, self.z() * other.b)
+        RGBColor::from_raw(self.0 * other.0)
     }
 }
 
 impl From<RGBColor> for Vec3 {
     fn from(c: RGBColor) -> Vec3 {
-        Vec3::new(c.r, c.g, c.b)
+        Vec3::from_raw(c.0)
     }
 }
 

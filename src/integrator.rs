@@ -48,6 +48,7 @@ impl Integrator for PathTracingIntegrator {
                     let emission = material.emission(&hit, wi, maybe_wo);
 
                     color += beta * emission;
+                    if emission.0.max_element() > 0.0 {}
                     if let Some(wo) = maybe_wo {
                         let pdf = material.value(&hit, wi, wo);
                         assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
