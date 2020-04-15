@@ -30,7 +30,7 @@ impl From<Vec3> for Point3 {
 }
 
 pub trait Color {
-    fn to_rgb(&self) -> [u8; 3];
+    fn to_rgb(&self) -> [f32; 3];
 }
 
 impl Mul<RGBColor> for Vec3 {

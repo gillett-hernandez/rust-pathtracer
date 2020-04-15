@@ -3,14 +3,6 @@ use crate::math::*;
 use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, SubAssign};
 
-// impl Color for RGBColor {
-//     fn to_rgb(&self) -> [u8; 3] {
-
-//         let [r, g, b, _]: [f32; 4] = color.0.into();
-//         [self.r as u8, self.g as u8, self.b as u8]
-//     }
-// }
-
 #[derive(Copy, Clone, Debug)]
 pub struct RGBColor(pub f32x4);
 
@@ -37,6 +29,13 @@ impl RGBColor {
     #[inline(always)]
     pub fn b(&self) -> f32 {
         unsafe { self.0.extract_unchecked(2) }
+    }
+}
+
+impl Color for RGBColor {
+    fn to_rgb(&self) -> [f32; 3] {
+        let [r, g, b, _]: [f32; 4] = color.0.into();
+        [r, g, b]
     }
 }
 
