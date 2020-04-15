@@ -23,7 +23,7 @@ impl Integrator for PathTracingIntegrator {
         let mut color: RGBColor = RGBColor::ZERO;
         let mut beta = RGBColor::new(1.0, 1.0, 1.0);
         let sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-        for _ in 0..self.max_bounces {
+        for current_bounce in 0..self.max_bounces {
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(hit) => {
                     let id = match (hit.material) {
@@ -70,6 +70,12 @@ impl Integrator for PathTracingIntegrator {
                 }
                 None => {
                     // color += beta * self.world.background * 2.0 * PI * PI;
+                    if current_bounce > 0 {
+                        // hit env after bouncing
+                        // beta = beta * (4.0 * PI);
+                    } else {
+                        // hit env straight away
+                    }
                     color += beta * self.world.background;
                     // color += beta * self.world.background * 4.0 * PI;
                     break;

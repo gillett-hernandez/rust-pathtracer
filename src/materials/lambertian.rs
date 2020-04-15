@@ -28,6 +28,7 @@ impl PDF for Lambertian {
 
 impl BRDF for Lambertian {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
+        // 1.66018 * self.color / PI
         self.color / PI
     }
     fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> RGBColor {
