@@ -83,9 +83,9 @@ fn construct_scene() -> World {
     //     materials: vec![lambertian, diffuse_light],
     // };
     // world
-    let lambertian = Box::new(Lambertian::new(white));
-    white_furnace_test(lambertian)
-    // lambertian_under_lamp(white)
+    // let lambertian = Box::new(Lambertian::new(white));
+    // white_furnace_test(lambertian)
+    lambertian_under_lamp(white)
 }
 
 fn render(

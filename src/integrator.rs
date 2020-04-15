@@ -66,9 +66,8 @@ impl Integrator for PathTracingIntegrator {
                             }
                         }
                         let cos_i = wo.z();
-                        // beta *= material.f(&hit, wi, wo) * cos_i.abs();
                         beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
-                        // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
+                        debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
                         ray = Ray::new(
