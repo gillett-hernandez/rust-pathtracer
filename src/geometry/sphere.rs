@@ -1,5 +1,5 @@
 use crate::aabb::{HasBoundingBox, AABB};
-use crate::hittable::{HitRecord, Hittable};
+use crate::hittable::{HitRecord, Hittable, Samplable};
 use crate::materials::MaterialId;
 use crate::math::*;
 
@@ -16,6 +16,12 @@ impl Sphere {
             origin,
             material_id,
         }
+    }
+
+    fn solid_angle(&self, point: Point3, wi: Vec3) -> f32 {
+        let cos_theta_max =
+            (1.0 - self.radius * self.radius / (self.origin - point).norm_squared()).sqrt();
+        2.0 * PI * (1.0 - cos_theta_max)
     }
 }
 
@@ -72,5 +78,14 @@ impl HasBoundingBox for Sphere {
             self.origin - Vec3::new(self.radius, self.radius, self.radius),
             self.origin + Vec3::new(self.radius, self.radius, self.radius),
         )
+    }
+}
+
+impl Samplable for Sphere {
+    fn sample(&self, point: Point3) -> Vec3 {
+        Vec3::ZERO
+    }
+    fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
+        1.0 / self.solid_angle(point, wi)
     }
 }

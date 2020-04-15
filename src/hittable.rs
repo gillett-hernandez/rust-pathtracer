@@ -17,5 +17,5 @@ pub trait Samplable {
     // method that should implement sampling a direction subtended by the solid angle of Self from point P
     fn sample(&self, point: Point3) -> Vec3;
     // method that should implement evaluating the pdf value of that sample having occurred, assuming random hemisphere sampling.
-    fn pdf(&self, wo: Vec3) -> f32;
+    fn pdf(&self, point: Point3, wi: Vec3) -> f32;
 }

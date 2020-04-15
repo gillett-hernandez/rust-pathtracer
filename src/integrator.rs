@@ -70,7 +70,7 @@ impl Integrator for PathTracingIntegrator {
                 }
                 None => {
                     // color += beta * self.world.background * 2.0 * PI * PI;
-                    color += beta * self.world.background;
+                    color += beta * self.world.background / (4.0 * PI);
                     // color += beta * self.world.background * 4.0 * PI;
                     break;
                 }
