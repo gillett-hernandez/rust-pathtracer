@@ -27,36 +27,46 @@ impl<T: Copy> Film<T> {
     }
 }
 
-pub struct NaiveRenderer {
-    integrator: Box<dyn Integrator>,
-}
+pub struct NaiveRenderer {}
 
 impl NaiveRenderer {
-    pub fn new(integrator: Box<dyn Integrator>) -> NaiveRenderer {
-        NaiveRenderer { integrator }
+    pub fn new() -> NaiveRenderer {
+        NaiveRenderer {}
     }
 }
 
 pub trait Renderer {
-    fn render(&self, film: &mut Film<RGBColor>, camera: &Box<dyn Camera>, config: &RenderSettings);
+    fn render(
+        &self,
+        integrator: Box<dyn Integrator>,
+        camera: &Box<dyn Camera>,
+        settings: &RenderSettings,
+        film: &mut Film<RGBColor>,
+    );
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, film: &mut Film<RGBColor>, camera: &Box<dyn Camera>, config: &RenderSettings) {
+    fn render(
+        &self,
+        integrator: Box<dyn Integrator>,
+        camera: &Box<dyn Camera>,
+        settings: &RenderSettings,
+        film: &mut Film<RGBColor>,
+    ) {
         for y in 0..film.height {
             for x in 0..film.width {
                 // gen ray for pixel x, y
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
                 let mut temp_color = RGBColor::ZERO;
-                for s in 0..config.min_samples.unwrap_or(1) {
+                for s in 0..settings.min_samples.unwrap_or(1) {
                     let r = camera.get_ray(
                         (x as f32 + random()) / (film.width as f32),
                         (y as f32 + random()) / (film.height as f32),
                     );
-                    temp_color += self.integrator.color(r);
+                    temp_color += integrator.color(r);
                 }
                 film.buffer[y * film.width + x] =
-                    temp_color / (config.min_samples.unwrap_or(1) as f32);
+                    temp_color / (settings.min_samples.unwrap_or(1) as f32);
             }
         }
     }

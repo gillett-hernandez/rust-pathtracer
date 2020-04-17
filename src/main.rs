@@ -24,24 +24,31 @@ use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
+use std::sync::Arc;
 use std::time::Instant;
 
 use rand::prelude::*;
 use rayon::prelude::*;
 
-fn construct_integrator(settings: &Settings, world: World) -> Box<dyn Integrator> {
+fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn Integrator> {
     let max_bounces = settings.max_bounces.unwrap_or(1);
+    let russian_roulette = settings.russian_roulette.unwrap_or(true);
+    let light_samples = settings.light_samples.unwrap_or(1);
     println!(
-        "constructing integrator, max bounces set to {}",
-        max_bounces
+        "constructing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
+        max_bounces, russian_roulette, light_samples
     );
-    Box::new(PathTracingIntegrator { max_bounces, world })
+    Box::new(PathTracingIntegrator {
+        max_bounces,
+        world,
+        russian_roulette,
+        light_samples,
+    })
 }
 
-fn construct_renderer(settings: &Settings, world: World) -> Box<dyn Renderer> {
-    let integrator: Box<dyn Integrator> = construct_integrator(settings, world);
+fn construct_renderer(settings: &Settings) -> Box<dyn Renderer> {
     println!("constructing renderer");
-    Box::new(NaiveRenderer::new(integrator))
+    Box::new(NaiveRenderer::new())
 }
 
 fn white_furnace_test(material: Box<dyn Material>) -> World {
@@ -92,13 +99,16 @@ fn render(
     renderer: &Box<dyn Renderer>,
     camera: &Box<dyn Camera>,
     render_settings: &RenderSettings,
+    world: &Arc<World>,
 ) -> Film<RGBColor> {
     let mut film = Film::new(
         render_settings.resolution.width,
         render_settings.resolution.height,
         RGBColor::ZERO,
     );
-    renderer.render(&mut film, camera, render_settings);
+    let world_ref: Arc<World> = Arc::clone(world);
+    let integrator: Box<dyn Integrator> = construct_integrator(render_settings, world_ref);
+    renderer.render(integrator, camera, render_settings, &mut film);
     film
 }
 
@@ -111,8 +121,6 @@ fn main() -> () {
             return;
         }
     };
-    assert!(config.output_directory != None);
-    assert!(config.render_threads.unwrap() > 0);
 
     // let (renderer, integrator) = construct_renderer_and_integrator_from_config(config);
     // do_prerender_steps(config);
@@ -122,10 +130,8 @@ fn main() -> () {
     //     Some(String::from("PT")) => PathTracingIntegrator(config),
     //     None => PathTracingIntegrator(config),
     // };
-    let world = construct_scene();
-    // let integrator = PathTracingIntegrator {world};
-    // let settings_vec = &config.render_settings.unwrap();
-    // let mut cameras = Vec::<SimpleCamera>::new();
+    let world = Arc::new(construct_scene());
+
     let mut cameras = Vec::<Box<dyn Camera>>::new();
     let camera1 = Box::new(SimpleCamera::new(
         // let camera = SimpleCamera::new(
@@ -155,10 +161,10 @@ fn main() -> () {
     ));
     // );
     cameras.push(camera2);
-    let renderer = construct_renderer(&config, world);
+    let renderer = construct_renderer(&config);
     // get settings for each film
-    let directory = config.output_directory.unwrap();
-    for (render_id, render_settings) in config.render_settings.unwrap().iter().enumerate() {
+    for (render_id, render_settings) in config.render_settings.iter().enumerate() {
+        let directory = render_settings.output_directory.as_ref();
         let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
 
         println!(
@@ -167,11 +173,14 @@ fn main() -> () {
         );
 
         let now = Instant::now();
-        let film = render(&renderer, &cameras[camera_id], &render_settings);
+
+        let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
+
         let total_pixels = film.width * film.height;
         let total_camera_rays = total_pixels * (render_settings.max_samples.unwrap() as usize);
+
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(config.render_threads.unwrap() as f32));
+        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
 
         let now = Instant::now();
         // do stuff with film here
@@ -207,7 +216,7 @@ fn main() -> () {
         println!("saving image...");
         img.save(format!(
             "{}/{}",
-            directory,
+            directory.unwrap().clone(),
             format!("test{}.png", render_id)
         ))
         .unwrap();

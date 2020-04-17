@@ -34,7 +34,7 @@ impl RGBColor {
 
 impl Color for RGBColor {
     fn to_rgb(&self) -> [f32; 3] {
-        let [r, g, b, _]: [f32; 4] = color.0.into();
+        let [r, g, b, _]: [f32; 4] = self.0.into();
         [r, g, b]
     }
 }

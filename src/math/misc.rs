@@ -22,18 +22,20 @@ pub fn random_cosine_direction(r: Sample2D) -> Vec3 {
     let r2: f32 = r.y;
     let z: f32 = (1.0 - r2).sqrt();
     let phi: f32 = 2.0 * PI * r1;
-    let (mut x, mut y) = phi.sin_cos();
+    let (mut y, mut x) = phi.sin_cos();
     x *= r2.sqrt();
     y *= r2.sqrt();
     Vec3::new(x, y, z)
 }
 
-// pub fn random_to_sphere(radius: f32, distance_squared: f32) -> Vec3 {
-//     let r1: f32 = random();
-//     let r2: f32 = random();
-//     let z: f32 = 1 + r2 * (sqrt(1 - radius * radius / distance_squared) - 1);
-//     let phi: f32 = 2 * M_PI * r1;
-//     let x: f32 = cos(phi) * sqrt(1 - z * z);
-//     let y: f32 = sin(phi) * sqrt(1 - z * z);
-//     return vec3(x, y, z);
-// }
+pub fn random_to_sphere(r: Sample2D, radius: f32, distance_squared: f32) -> Vec3 {
+    let r1 = r.x;
+    let r2 = r.y;
+    let z = 1.0 + r2 * ((1.0 - radius * radius / distance_squared).sqrt() - 1.0);
+    let phi = 2.0 * PI * r1;
+    let (mut y, mut x) = phi.sin_cos();
+    let sqrt_1_z2 = (1.0 - z * z).sqrt();
+    x *= sqrt_1_z2;
+    y *= sqrt_1_z2;
+    return Vec3::new(x, y, z);
+}

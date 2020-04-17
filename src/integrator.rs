@@ -1,9 +1,10 @@
 use super::world::World;
+use crate::config::Settings;
 use crate::hittable::Hittable;
-// use crate::materials::MaterialTable;
 use crate::material::Material;
 use crate::math::*;
 use std::f32::INFINITY;
+use std::sync::Arc;
 
 pub trait Integrator {
     fn color(&self, r: Ray) -> RGBColor;
@@ -11,14 +12,14 @@ pub trait Integrator {
 }
 
 pub struct PathTracingIntegrator {
-    pub max_bounces: i16,
-    pub world: World,
-    // Config config;
+    pub max_bounces: u16,
+    pub world: Arc<World>,
+    pub russian_roulette: bool,
+    pub light_samples: u16,
 }
 
 impl Integrator for PathTracingIntegrator {
     fn color(&self, r: Ray) -> RGBColor {
-        const RUSSIAN_ROULETTE: bool = false;
         let mut ray = r;
         let mut color: RGBColor = RGBColor::ZERO;
         let mut beta = RGBColor::new(1.0, 1.0, 1.0);
@@ -47,15 +48,26 @@ impl Integrator for PathTracingIntegrator {
                     let maybe_wo: Option<Vec3> = material.generate(&hit, &sampler, wi);
                     let emission = material.emission(&hit, wi, maybe_wo);
 
-                    color += beta * emission;
-                    if emission.0.max_element() > 0.0 {}
+                    if emission.0.max_element() > 0.0 {
+                        color += beta * emission;
+                        // check stuff here
+                        /*if last_bsdf_pdf <= 0 {
+                            color += beta * emission
+                        } else {
+                            let pdf = hit.primitive.pdf(hit.point, ray.direction);
+                            let weight = power_heuristic(last_bsdf_pdf, pdf);
+                            color += beta * emission * weight;
+                        }*/
+                    }
+                    let mut light_contribution = RGBColor::ZERO;
+                    for i in 0..self.light_samples {}
                     if let Some(wo) = maybe_wo {
                         let pdf = material.value(&hit, wi, wo);
                         assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
                         if pdf < 0.0000001 {
                             break;
                         }
-                        if RUSSIAN_ROULETTE {
+                        if self.russian_roulette {
                             // let attenuation = Vec3::from(beta).norm();
                             let attenuation = Vec3::from(beta).0.max_element();
                             if attenuation < 1.0 && 0.001 < attenuation {

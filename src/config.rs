@@ -17,21 +17,23 @@ pub struct Resolution {
     pub height: usize,
 }
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct RenderSettings {
+    pub output_directory: Option<String>,
     pub resolution: Resolution,
+    pub integrator: Option<String>,
+    pub max_bounces: Option<u16>,
+    pub threads: Option<u16>,
     pub min_samples: Option<u16>,
     pub max_samples: Option<u16>,
     pub camera_id: Option<u16>,
+    pub russian_roulette: Option<bool>,
+    pub light_samples: Option<u16>,
 }
 
 #[derive(Deserialize, Clone)]
 pub struct Settings {
-    pub output_directory: Option<String>,
-    pub integrator: Option<String>,
-    pub max_bounces: Option<i16>,
-    pub render_threads: Option<i16>,
-    pub render_settings: Option<Vec<RenderSettings>>,
+    pub render_settings: Vec<RenderSettings>,
 }
 
 pub fn get_settings(filepath: String) -> Result<Settings, toml::de::Error> {
@@ -43,12 +45,14 @@ pub fn get_settings(filepath: String) -> Result<Settings, toml::de::Error> {
         .unwrap();
     // uncomment the following line to print out the raw contents
     // println!("{:?}", input);
-    let mut settings: Settings = toml::from_str(&input)?;
     let num_cpus = num_cpus::get();
-    settings.render_threads = match settings.render_threads {
-        Some(expr) => Some(expr),
-        None => Some(num_cpus as i16),
-    };
+    let mut settings: Settings = toml::from_str(&input)?;
+    for render_settings in settings.render_settings.iter_mut() {
+        render_settings.threads = match render_settings.threads {
+            Some(expr) => Some(expr),
+            None => Some(num_cpus as u16),
+        };
+    }
     return Ok(settings);
 }
 

@@ -72,8 +72,17 @@ impl HasBoundingBox for Sphere {
 }
 
 impl Samplable for Sphere {
-    fn sample(&self, point: Point3) -> Vec3 {
-        Vec3::ZERO
+    fn sample(&self, s: &Box<dyn Sampler>, point: Point3) -> Vec3 {
+        /*
+        vec3 direction = center - o;
+        float distance_squared = direction.squared_length();
+        onb uvw;
+        uvw.build_from_w(direction);
+        return uvw.local(random_to_sphere(radius, distance_squared));
+        */
+        let direction = self.origin - point;
+
+        random_to_sphere(s.draw_2d(), self.radius, direction.norm_squared())
     }
     fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
         1.0 / self.solid_angle(point, wi)

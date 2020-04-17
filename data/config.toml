@@ -1,8 +1,9 @@
+
+
+[[render_settings]]
 output_directory = "."
 integrator="PT"
 max_bounces=2
-
-[[render_settings]]
 resolution.width = 512
 resolution.height = 512
 min_samples = 10
@@ -10,6 +11,9 @@ max_samples = 10
 camera_id = 0
 
 [[render_settings]]
+output_directory = "."
+integrator="PT"
+max_bounces=2
 resolution.width = 512
 resolution.height = 512
 min_samples = 100
