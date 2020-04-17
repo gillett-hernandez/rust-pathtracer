@@ -1,6 +1,7 @@
 use crate::math::*;
+use std::marker::{Send, Sync};
 
-pub trait Camera {
+pub trait Camera: Send + Sync {
     fn get_ray(&self, s: f32, t: f32) -> Ray;
 }
 
@@ -59,6 +60,10 @@ impl SimpleCamera {
         }
     }
 }
+
+unsafe impl Send for SimpleCamera {}
+unsafe impl Sync for SimpleCamera {}
+
 impl Camera for SimpleCamera {
     fn get_ray(&self, s: f32, t: f32) -> Ray {
         // circular aperture/lens

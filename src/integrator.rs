@@ -6,7 +6,7 @@ use crate::math::*;
 use std::f32::INFINITY;
 use std::sync::Arc;
 
-pub trait Integrator {
+pub trait Integrator: Sync + Send {
     fn color(&self, r: Ray) -> RGBColor;
     fn get_world(&self) -> &World;
 }

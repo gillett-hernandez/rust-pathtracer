@@ -20,7 +20,9 @@ impl HitRecord {
     }
 }
 
-pub trait Hittable {
+use std::marker::{Send, Sync};
+
+pub trait Hittable: Send + Sync {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord>;
 }
 

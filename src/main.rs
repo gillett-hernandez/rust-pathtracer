@@ -107,8 +107,10 @@ fn render(
         RGBColor::ZERO,
     );
     let world_ref: Arc<World> = Arc::clone(world);
-    let integrator: Box<dyn Integrator> = construct_integrator(render_settings, world_ref);
-    renderer.render(integrator, camera, render_settings, &mut film);
+    let integrator: Arc<Box<dyn Integrator>> =
+        Arc::new(construct_integrator(render_settings, world_ref));
+    let camera_ref = camera.clone();
+    renderer.render(integrator.clone(), camera, render_settings, &mut film);
     film
 }
 

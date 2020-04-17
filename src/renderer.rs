@@ -1,10 +1,13 @@
-use std::vec::Vec;
-
 use crate::camera::{Camera, SimpleCamera};
 use crate::config::RenderSettings;
 use crate::integrator::Integrator;
 use crate::math::*;
 use crate::world::World;
+
+use std::sync::Arc;
+use std::vec::Vec;
+
+use rayon::prelude::*;
 pub struct Film<T> {
     pub buffer: Vec<T>,
     pub width: usize,
@@ -38,7 +41,7 @@ impl NaiveRenderer {
 pub trait Renderer {
     fn render(
         &self,
-        integrator: Box<dyn Integrator>,
+        integrator: Arc<Box<dyn Integrator>>,
         camera: &Box<dyn Camera>,
         settings: &RenderSettings,
         film: &mut Film<RGBColor>,
@@ -48,26 +51,34 @@ pub trait Renderer {
 impl Renderer for NaiveRenderer {
     fn render(
         &self,
-        integrator: Box<dyn Integrator>,
+        integrator: Arc<Box<dyn Integrator>>,
         camera: &Box<dyn Camera>,
         settings: &RenderSettings,
         film: &mut Film<RGBColor>,
     ) {
-        for y in 0..film.height {
-            for x in 0..film.width {
+        // for y in 0..film.height {
+        //     for x in 0..film.width {
+        let width = film.width;
+        let height = film.height;
+        film.buffer
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(pixel_index, pixel_ref)| {
+                let y: usize = pixel_index / width;
+                let x: usize = pixel_index - width * y;
                 // gen ray for pixel x, y
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
                 let mut temp_color = RGBColor::ZERO;
                 for s in 0..settings.min_samples.unwrap_or(1) {
                     let r = camera.get_ray(
-                        (x as f32 + random()) / (film.width as f32),
-                        (y as f32 + random()) / (film.height as f32),
+                        (x as f32 + random()) / (width as f32),
+                        (y as f32 + random()) / (height as f32),
                     );
                     temp_color += integrator.color(r);
                 }
-                film.buffer[y * film.width + x] =
-                    temp_color / (settings.min_samples.unwrap_or(1) as f32);
-            }
-        }
+                // unsafe {
+                *pixel_ref = temp_color / (settings.min_samples.unwrap_or(1) as f32);
+                // }
+            });
     }
 }
