@@ -1,5 +1,5 @@
 use crate::aabb::{HasBoundingBox, AABB};
-use crate::hittable::{HitRecord, Hittable, Samplable};
+use crate::hittable::{HitRecord, Hittable};
 use crate::materials::MaterialId;
 use crate::math::*;
 
@@ -60,18 +60,6 @@ impl Hittable for Sphere {
         }
         None
     }
-}
-
-impl HasBoundingBox for Sphere {
-    fn bounding_box(&self) -> AABB {
-        AABB::new(
-            self.origin - Vec3::new(self.radius, self.radius, self.radius),
-            self.origin + Vec3::new(self.radius, self.radius, self.radius),
-        )
-    }
-}
-
-impl Samplable for Sphere {
     fn sample(&self, s: &Box<dyn Sampler>, point: Point3) -> Vec3 {
         /*
         vec3 direction = center - o;
@@ -86,5 +74,14 @@ impl Samplable for Sphere {
     }
     fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
         1.0 / self.solid_angle(point, wi)
+    }
+}
+
+impl HasBoundingBox for Sphere {
+    fn bounding_box(&self) -> AABB {
+        AABB::new(
+            self.origin - Vec3::new(self.radius, self.radius, self.radius),
+            self.origin + Vec3::new(self.radius, self.radius, self.radius),
+        )
     }
 }

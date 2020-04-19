@@ -1,25 +1,7 @@
-use crate::hittable::{HitRecord, Hittable};
+use crate::hittable::{HitRecord, Hittable, Indexable};
 use crate::math::*;
 
 /*
-bool hittable_list::hit(const ray &r, float t_min, float t_max,
-                        hit_record &rec) const
-{
-
-    hit_record temp_rec;
-    bool hit_anything = false;
-    double closest_so_far = t_max;
-    for (int i = 0; i < list_size; i++)
-    {
-        if (list[i]->hit(r, t_min, closest_so_far, temp_rec))
-        {
-            hit_anything = true;
-            closest_so_far = temp_rec.t;
-            rec = temp_rec;
-        }
-    }
-    return hit_anything;
-}
 
 bool hittable_list::bounding_box(float t0, float t1, aabb &box) const
 {
@@ -76,5 +58,17 @@ impl Hittable for HittableList {
             }
         }
         hit_record
+    }
+    fn sample(&self, s: &Box<dyn Sampler>, point: Point3) -> Vec3 {
+        unimplemented!();
+    }
+    fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
+        unimplemented!();
+    }
+}
+
+impl Indexable for HittableList {
+    fn get_primitive(&self, index: usize) -> &Box<dyn Hittable> {
+        &self.list[index]
     }
 }

@@ -53,7 +53,12 @@ fn construct_renderer(settings: &Settings) -> Box<dyn Renderer> {
 
 fn white_furnace_test(material: Box<dyn Material>) -> World {
     let world = World {
-        bvh: Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
+        bvh: Box::new(HittableList::new(vec![Box::new(Sphere::new(
+            5.0,
+            Point3::new(0.0, 0.0, 0.0),
+            Some(0),
+        ))])),
+        lights: vec![],
         background: RGBColor::new(1.0, 1.0, 1.0),
         materials: vec![material],
     };
@@ -68,6 +73,7 @@ fn lambertian_under_lamp(color: RGBColor) -> World {
             Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
             Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
         ])),
+        lights: vec![0],
         background: RGBColor::new(0.0, 0.0, 0.0),
         materials: vec![lambertian, diffuse_light],
     };
