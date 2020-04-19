@@ -10,9 +10,14 @@ pub struct World {
 }
 
 impl World {
-    pub fn pick_random_light(&self, s: &Box<dyn Sampler>) -> &Box<dyn Hittable> {
-        let index = (s.draw_1d().x * (self.lights.len() as f32)) as usize;
-        self.bvh.get_primitive(index)
+    pub fn pick_random_light(&self, s: &Box<dyn Sampler>) -> Option<&Box<dyn Hittable>> {
+        let length = self.lights.len();
+        if length == 0 {
+            None
+        } else {
+            let idx = (length as f32 * s.draw_1d().x) as usize;
+            self.bvh.get_primitive(self.lights[idx])
+        }
     }
 }
 
