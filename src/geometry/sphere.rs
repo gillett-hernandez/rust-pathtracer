@@ -90,7 +90,7 @@ impl Hittable for Sphere {
         }
         None
     }
-    fn sample(&self, s: &Box<dyn Sampler>, point: Point3) -> Vec3 {
+    fn sample(&self, s: &Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
         /*
         vec3 direction = center - o;
         float distance_squared = direction.squared_length();
@@ -98,16 +98,28 @@ impl Hittable for Sphere {
         uvw.build_from_w(direction);
         return uvw.local(random_to_sphere(radius, distance_squared));
         */
-        let direction = self.origin - point;
+        // let direction = self.origin - point;
 
-        TangentFrame::from_normal(direction).to_local(&random_to_sphere(
-            s.draw_2d(),
-            self.radius,
-            direction.norm_squared(),
-        ))
+        // TangentFrame::from_normal(direction).to_local(&random_to_sphere(
+        //     s.draw_2d(),
+        //     self.radius,
+        //     direction.norm_squared(),
+        // ))
+        let normal = random_on_unit_sphere(s.draw_2d());
+        let point_on_sphere = self.origin + self.radius * normal;
+        let direction = point_on_sphere - from;
+        let pdf = direction.norm_squared()
+            / ((normal * direction.normalized()).abs() * self.radius * self.radius * 4.0 * PI);
+        // let pdf = 1.0;
+        // / 1.0;
+        (direction.normalized(), pdf)
     }
-    fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
-        1.0 / self.solid_angle(point, wi)
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+        let direction = (to - from);
+        let distance_squared = direction.norm_squared();
+        distance_squared
+            / ((normal * direction.normalized()) * self.radius * self.radius * 4.0 * PI)
+        // 1.0
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id

@@ -77,14 +77,14 @@ impl Hittable for HittableList {
         }
         hit_record
     }
-    fn sample(&self, s: &Box<dyn Sampler>, point: Point3) -> Vec3 {
-        unimplemented!();
+    fn sample(&self, s: &Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+        unimplemented!()
     }
-    fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
-        unimplemented!();
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+        unimplemented!()
     }
     fn get_instance_id(&self) -> usize {
-        unimplemented!();
+        unimplemented!()
     }
 }
 

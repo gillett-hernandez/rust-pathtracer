@@ -56,7 +56,7 @@ impl Integrator for PathTracingIntegrator {
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // println!("{:?}", hit);
-                            let pdf = hit_primitive.pdf(ray.origin, ray.direction);
+                            let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf, pdf);
                             assert!(!pdf.is_nan() && !weight.is_nan(), "{}, {}", pdf, weight);
                             color += beta * emission * weight;
@@ -70,7 +70,7 @@ impl Integrator for PathTracingIntegrator {
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             let pick_pdf = self.world.lights.len() as f32;
                             // sample the primitive from hit_point
-                            let direction = light.sample(&sampler, hit.point).normalized();
+                            let (direction, light_pdf) = light.sample(&sampler, hit.point);
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
                             let wo = frame.to_local(&direction);
@@ -93,7 +93,8 @@ impl Integrator for PathTracingIntegrator {
                                 // note: changed t0 to 0.0. change back to hit.time maybe?
                                 //
                                 // maybe if the instance that was hit was a light as well, redo the sampling calculations for that light instead?
-                                let light_pdf = light.pdf(hit.point, direction);
+                                // let light_pdf =
+                                //     light.pdf(light_hit.normal, hit.point, light_hit.point);
                                 let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
                                 let weight = power_heuristic(light_pdf, scatter_pdf_for_light_ray);
                                 if light_hit.instance_id == light.get_instance_id() {
