@@ -73,7 +73,7 @@ fn lambertian_under_lamp(color: RGBColor) -> World {
     let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
-            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1), 0)),
+            Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(1), 0)),
             Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0), 1)),
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
