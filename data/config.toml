@@ -7,9 +7,11 @@ integrator="PT"
 max_bounces=2
 resolution.width = 512
 resolution.height = 512
-min_samples = 1
-max_samples = 1
+min_samples = 16
+max_samples = 16
 camera_id = 0
+direct_illumination = true
+light_samples = 4
 
 [[render_settings]]
 threads=22
@@ -18,6 +20,19 @@ integrator="PT"
 max_bounces=2
 resolution.width = 512
 resolution.height = 512
-min_samples = 100
-max_samples = 100
+min_samples = 1024
+max_samples = 1024
 camera_id = 0
+light_samples = 0
+
+[[render_settings]]
+threads=22
+output_directory = "."
+integrator="PT"
+max_bounces=2
+resolution.width = 512
+resolution.height = 512
+min_samples = 50
+max_samples = 50
+camera_id = 1
+light_samples = 0

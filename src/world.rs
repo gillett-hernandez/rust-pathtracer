@@ -1,3 +1,4 @@
+use crate::aabb::*;
 use crate::hittable::*;
 use crate::materials::MaterialTable;
 use crate::math::*;
@@ -22,6 +23,12 @@ impl World {
 
     pub fn get_primitive(&self, index: usize) -> &Box<dyn Hittable> {
         self.bvh.get_primitive(index)
+    }
+}
+
+impl HasBoundingBox for World {
+    fn bounding_box(&self) -> AABB {
+        self.bvh.bounding_box()
     }
 }
 

@@ -32,6 +32,15 @@ impl Sphere {
     }
 }
 
+impl HasBoundingBox for Sphere {
+    fn bounding_box(&self) -> AABB {
+        AABB::new(
+            self.origin - Vec3::from(self.radius),
+            self.origin + Vec3::from(self.radius),
+        )
+    }
+}
+
 impl Hittable for Sphere {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let oc: Vec3 = r.origin - self.origin;
@@ -44,6 +53,7 @@ impl Hittable for Sphere {
             let mut time: f32;
             let point: Point3;
             let normal: Vec3;
+            // time = r.time + (-b - discriminant_sqrt) / a;
             time = (-b - discriminant_sqrt) / a;
             if time < t1 && time > t0 {
                 point = r.point_at_parameter(time);
@@ -60,6 +70,7 @@ impl Hittable for Sphere {
                     self.instance_id,
                 ));
             }
+            // time = r.time + (-b + discriminant_sqrt) / a;
             time = (-b + discriminant_sqrt) / a;
             if time < t1 && time > t0 {
                 point = r.point_at_parameter(time);
@@ -89,21 +100,16 @@ impl Hittable for Sphere {
         */
         let direction = self.origin - point;
 
-        random_to_sphere(s.draw_2d(), self.radius, direction.norm_squared())
+        TangentFrame::from_normal(direction).to_local(&random_to_sphere(
+            s.draw_2d(),
+            self.radius,
+            direction.norm_squared(),
+        ))
     }
     fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
         1.0 / self.solid_angle(point, wi)
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id
-    }
-}
-
-impl HasBoundingBox for Sphere {
-    fn bounding_box(&self) -> AABB {
-        AABB::new(
-            self.origin - Vec3::new(self.radius, self.radius, self.radius),
-            self.origin + Vec3::new(self.radius, self.radius, self.radius),
-        )
     }
 }

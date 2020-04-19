@@ -15,6 +15,7 @@ pub struct PathTracingIntegrator {
     pub world: Arc<World>,
     pub russian_roulette: bool,
     pub light_samples: u16,
+    pub direct_illumination: bool,
 }
 
 impl Integrator for PathTracingIntegrator {
@@ -49,9 +50,8 @@ impl Integrator for PathTracingIntegrator {
                     let emission = material.emission(&hit, wi, maybe_wo);
 
                     if emission.0.max_element() > 0.0 {
-                        color += beta * emission;
                         // check stuff here
-                        if last_bsdf_pdf <= 0.0 {
+                        if last_bsdf_pdf <= 0.0 || self.light_samples == 0 {
                             color += beta * emission
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
@@ -66,7 +66,6 @@ impl Integrator for PathTracingIntegrator {
                     let mut successful_light_samples = 0;
                     for i in 0..self.light_samples {
                         if let Some(light) = self.world.pick_random_light(&sampler) {
-                            assert!(light.get_instance_id() == 0);
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             let pick_pdf = self.world.lights.len() as f32;
@@ -79,16 +78,18 @@ impl Integrator for PathTracingIntegrator {
                                 hit.point + hit.normal * 0.01,
                                 direction,
                                 ray.time,
+                                // hit.time,
                             );
                             // note: time was changed to ray.time. change to hit.time?
                             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
                             let reflectance = material.f(&hit, wi, wo);
-                            if reflectance.0.max_element() < 0.00000001 {
-                                // if reflectance is 0 for all components, skip this light sample
-                                continue;
-                            }
+                            // if reflectance.0.max_element() < 0.00000001 {
+                            //     // if reflectance is 0 for all components, skip this light sample
+                            //     continue;
+                            // }
                             let dropoff = wo.z().max(0.0);
-                            if let Some(light_hit) = light.hit(light_ray, 0.0, INFINITY) {
+                            // let dropoff = wo.z().abs();
+                            if let Some(light_hit) = self.world.hit(light_ray, 0.0, INFINITY) {
                                 // note: changed t0 to 0.0. change back to hit.time maybe?
                                 //
                                 // maybe if the instance that was hit was a light as well, redo the sampling calculations for that light instead?
@@ -96,7 +97,6 @@ impl Integrator for PathTracingIntegrator {
                                 let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
                                 let weight = power_heuristic(light_pdf, scatter_pdf_for_light_ray);
                                 if light_hit.instance_id == light.get_instance_id() {
-                                    print!("*");
                                     let emission_material =
                                         &self.world.materials[light_hit.material.unwrap() as usize];
                                     let light_wi = TangentFrame::from_normal(light_hit.normal)
@@ -118,7 +118,12 @@ impl Integrator for PathTracingIntegrator {
                             break;
                         }
                     }
-                    color += light_contribution / (self.light_samples as f32);
+                    if self.light_samples > 0 {
+                        color += light_contribution / (self.light_samples as f32);
+                    }
+                    if self.direct_illumination {
+                        break;
+                    }
                     if let Some(wo) = maybe_wo {
                         let pdf = material.value(&hit, wi, wo);
                         assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);

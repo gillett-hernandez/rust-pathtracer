@@ -34,6 +34,7 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
     let max_bounces = settings.max_bounces.unwrap_or(1);
     let russian_roulette = settings.russian_roulette.unwrap_or(true);
     let light_samples = settings.light_samples.unwrap_or(4);
+    let direct_illumination = settings.direct_illumination.unwrap_or(false);
     println!(
         "constructing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
         max_bounces, russian_roulette, light_samples
@@ -43,6 +44,7 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
         world,
         russian_roulette,
         light_samples,
+        direct_illumination,
     })
 }
 
@@ -74,6 +76,7 @@ fn lambertian_under_lamp(color: RGBColor) -> World {
             Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1), 0)),
             Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0), 1)),
         ])),
+        // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
         background: RGBColor::new(0.0, 0.0, 0.0),
         materials: vec![lambertian, diffuse_light],
@@ -161,7 +164,7 @@ fn main() -> () {
         Point3::new(100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
-        50.0,
+        20.0,
         1.0,
         100.0,
         1.0,

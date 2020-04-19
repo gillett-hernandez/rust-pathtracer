@@ -1,3 +1,4 @@
+use crate::aabb::{HasBoundingBox, AABB};
 use crate::material::{BRDF, PDF};
 use crate::materials::MaterialId;
 use crate::math::*;
@@ -40,7 +41,7 @@ impl Debug for HitRecord {
 
 use std::marker::{Send, Sync};
 
-pub trait Hittable: Send + Sync {
+pub trait Hittable: Send + Sync + HasBoundingBox {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord>;
     // method that should implement sampling a direction subtended by the solid angle of Self from point P
     fn sample(&self, s: &Box<dyn Sampler>, point: Point3) -> Vec3;

@@ -1,3 +1,4 @@
+use crate::aabb::*;
 use crate::hittable::{HitRecord, Hittable, Indexable};
 use crate::math::*;
 
@@ -42,12 +43,29 @@ impl HittableList {
     }
 }
 
+impl HasBoundingBox for HittableList {
+    fn bounding_box(&self) -> AABB {
+        let mut bounding_box: Option<AABB> = None;
+        for hittable in &self.list {
+            if (&bounding_box).is_none() {
+                bounding_box = Some(hittable.bounding_box());
+            } else {
+                bounding_box = Some(bounding_box.unwrap().expand(hittable.bounding_box()));
+            }
+        }
+        bounding_box.unwrap()
+    }
+}
+
 impl Hittable for HittableList {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let mut hit_anything = false;
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for hittable in &self.list {
+            // if !hittable.bounding_box().hit(r, t0, closest_so_far) {
+            //     continue;
+            // }
             let tmp_hit_record = hittable.hit(r, t0, closest_so_far);
             if let Some(hit) = &tmp_hit_record {
                 hit_anything = true;

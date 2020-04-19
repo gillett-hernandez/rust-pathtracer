@@ -14,6 +14,7 @@ impl Vec3 {
         Vec3(v)
     }
     pub const ZERO: Vec3 = Vec3::from_raw(f32x4::splat(0.0));
+    pub const MASK: f32x4 = f32x4::new(1.0, 1.0, 1.0, 0.0);
     pub const X: Vec3 = Vec3::new(1.0, 0.0, 0.0);
     pub const Y: Vec3 = Vec3::new(0.0, 1.0, 0.0);
     pub const Z: Vec3 = Vec3::new(0.0, 0.0, 1.0);
@@ -121,7 +122,7 @@ impl Sub for Vec3 {
 
 impl From<f32> for Vec3 {
     fn from(s: f32) -> Vec3 {
-        Vec3::from_raw(f32x4::splat(s) * f32x4::new(1.0, 1.0, 1.0, 0.0))
+        Vec3::from_raw(f32x4::splat(s) * Vec3::MASK)
     }
 }
 
@@ -139,7 +140,7 @@ impl Vec3 {
     }
 
     pub fn norm_squared(&self) -> f32 {
-        (self.0 * self.0 * f32x4::new(1.0, 1.0, 1.0, 0.0)).sum()
+        (self.0 * self.0 * Vec3::MASK).sum()
     }
 
     pub fn norm(&self) -> f32 {
