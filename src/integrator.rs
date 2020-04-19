@@ -80,6 +80,7 @@ impl Integrator for PathTracingIntegrator {
                                 direction,
                                 ray.time,
                             );
+                            // note: time was changed to ray.time. change to hit.time?
                             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
                             let reflectance = material.f(&hit, wi, wo);
                             if reflectance.0.max_element() < 0.00000001 {
@@ -87,18 +88,15 @@ impl Integrator for PathTracingIntegrator {
                                 continue;
                             }
                             let dropoff = wo.z().max(0.0);
-                            if wo.z() > 0.0 {
-                                // sampled light direction is on the correct hemisphere wrt the surface normal
-                                // println!("{:?}", light_ray);
-                                // return RGBColor::ZERO;
-                            }
-
                             if let Some(light_hit) = light.hit(light_ray, 0.0, INFINITY) {
+                                // note: changed t0 to 0.0. change back to hit.time maybe?
+                                //
                                 // maybe if the instance that was hit was a light as well, redo the sampling calculations for that light instead?
                                 let light_pdf = light.pdf(hit.point, direction);
                                 let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
                                 let weight = power_heuristic(light_pdf, scatter_pdf_for_light_ray);
                                 if light_hit.instance_id == light.get_instance_id() {
+                                    print!("*");
                                     let emission_material =
                                         &self.world.materials[light_hit.material.unwrap() as usize];
                                     let light_wi = TangentFrame::from_normal(light_hit.normal)
