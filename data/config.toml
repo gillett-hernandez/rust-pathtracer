@@ -1,6 +1,18 @@
 
 
 [[render_settings]]
+threads=22
+output_directory = "."
+integrator="PT"
+max_bounces=2
+resolution.width = 512
+resolution.height = 512
+min_samples = 1
+max_samples = 1
+camera_id = 0
+
+[[render_settings]]
+threads=22
 output_directory = "."
 integrator="PT"
 max_bounces=2
@@ -8,14 +20,4 @@ resolution.width = 512
 resolution.height = 512
 min_samples = 100
 max_samples = 100
-camera_id = 0
-
-[[render_settings]]
-output_directory = "."
-integrator="PT"
-max_bounces=2
-resolution.width = 512
-resolution.height = 512
-min_samples = 1000
-max_samples = 1000
 camera_id = 0

@@ -7,14 +7,21 @@ pub struct Sphere {
     pub radius: f32,
     pub origin: Point3,
     pub material_id: Option<MaterialId>,
+    pub instance_id: usize,
 }
 
 impl Sphere {
-    pub fn new(radius: f32, origin: Point3, material_id: Option<MaterialId>) -> Sphere {
+    pub fn new(
+        radius: f32,
+        origin: Point3,
+        material_id: Option<MaterialId>,
+        instance_id: usize,
+    ) -> Sphere {
         Sphere {
             radius,
             origin,
             material_id,
+            instance_id,
         }
     }
 
@@ -45,7 +52,13 @@ impl Hittable for Sphere {
                 normal = (point - self.origin) / self.radius;
                 //         rec.mat_ptr = mat_ptr;
                 //         rec.primitive = (hittable *)this;
-                return Some(HitRecord::new(time, point, normal, self.material_id));
+                return Some(HitRecord::new(
+                    time,
+                    point,
+                    normal,
+                    self.material_id,
+                    self.instance_id,
+                ));
             }
             time = (-b + discriminant_sqrt) / a;
             if time < t1 && time > t0 {
@@ -55,7 +68,13 @@ impl Hittable for Sphere {
                 normal = (point - self.origin) / self.radius;
                 //         rec.mat_ptr = mat_ptr;
                 //         rec.primitive = (hittable *)this;
-                return Some(HitRecord::new(time, point, normal, self.material_id));
+                return Some(HitRecord::new(
+                    time,
+                    point,
+                    normal,
+                    self.material_id,
+                    self.instance_id,
+                ));
             }
         }
         None
@@ -74,6 +93,9 @@ impl Hittable for Sphere {
     }
     fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
         1.0 / self.solid_angle(point, wi)
+    }
+    fn get_instance_id(&self) -> usize {
+        self.instance_id
     }
 }
 

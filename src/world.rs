@@ -16,8 +16,12 @@ impl World {
             None
         } else {
             let idx = (length as f32 * s.draw_1d().x) as usize;
-            self.bvh.get_primitive(self.lights[idx])
+            Some(self.bvh.get_primitive(self.lights[idx]))
         }
+    }
+
+    pub fn get_primitive(&self, index: usize) -> &Box<dyn Hittable> {
+        self.bvh.get_primitive(index)
     }
 }
 
@@ -29,6 +33,9 @@ impl Hittable for World {
         unimplemented!();
     }
     fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
+        unimplemented!();
+    }
+    fn get_instance_id(&self) -> usize {
         unimplemented!();
     }
 }

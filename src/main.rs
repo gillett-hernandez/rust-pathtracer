@@ -33,7 +33,7 @@ use rayon::prelude::*;
 fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn Integrator> {
     let max_bounces = settings.max_bounces.unwrap_or(1);
     let russian_roulette = settings.russian_roulette.unwrap_or(true);
-    let light_samples = settings.light_samples.unwrap_or(1);
+    let light_samples = settings.light_samples.unwrap_or(4);
     println!(
         "constructing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
         max_bounces, russian_roulette, light_samples
@@ -57,6 +57,7 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
             5.0,
             Point3::new(0.0, 0.0, 0.0),
             Some(0),
+            0,
         ))])),
         lights: vec![],
         background: RGBColor::new(1.0, 1.0, 1.0),
@@ -70,8 +71,8 @@ fn lambertian_under_lamp(color: RGBColor) -> World {
     let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
-            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
-            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
+            Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1), 0)),
+            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0), 1)),
         ])),
         lights: vec![0],
         background: RGBColor::new(0.0, 0.0, 0.0),
@@ -129,20 +130,22 @@ fn main() -> () {
             return;
         }
     };
+    let threads = config
+        .render_settings
+        .iter()
+        .map(|i| &i.threads)
+        .fold(1, |a, &b| a.max(b.unwrap_or(1)));
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(threads as usize)
+        .build_global()
+        .unwrap();
 
-    // let (renderer, integrator) = construct_renderer_and_integrator_from_config(config);
     // do_prerender_steps(config);
 
-    // let cam_settings: &RenderSettings = &config.render_settings.unwrap()[0];
-    // let integrator: Integrator = match (config.integrator) {
-    //     Some(String::from("PT")) => PathTracingIntegrator(config),
-    //     None => PathTracingIntegrator(config),
-    // };
     let world = Arc::new(construct_scene());
 
     let mut cameras = Vec::<Box<dyn Camera>>::new();
     let camera1 = Box::new(SimpleCamera::new(
-        // let camera = SimpleCamera::new(
         Point3::new(-100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
@@ -153,10 +156,8 @@ fn main() -> () {
         0.0,
         1.0,
     ));
-    // );
     cameras.push(camera1);
     let camera2 = Box::new(SimpleCamera::new(
-        // let camera = SimpleCamera::new(
         Point3::new(100.0, 0.0, 0.0),
         Point3::ZERO,
         Vec3::Z,
@@ -167,7 +168,6 @@ fn main() -> () {
         0.0,
         1.0,
     ));
-    // );
     cameras.push(camera2);
     let renderer = construct_renderer(&config);
     // get settings for each film

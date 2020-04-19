@@ -62,6 +62,7 @@ impl Renderer for NaiveRenderer {
         let height = film.height;
         film.buffer
             .par_iter_mut()
+            // .iter_mut()
             .enumerate()
             .for_each(|(pixel_index, pixel_ref)| {
                 let y: usize = pixel_index / width;

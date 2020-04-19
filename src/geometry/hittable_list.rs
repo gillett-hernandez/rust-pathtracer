@@ -65,6 +65,9 @@ impl Hittable for HittableList {
     fn pdf(&self, point: Point3, wi: Vec3) -> f32 {
         unimplemented!();
     }
+    fn get_instance_id(&self) -> usize {
+        unimplemented!();
+    }
 }
 
 impl Indexable for HittableList {
