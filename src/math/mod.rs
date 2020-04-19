@@ -11,9 +11,11 @@ pub use point::Point3;
 pub use sample::*;
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
-use std::ops::Mul;
 pub use tangent_frame::TangentFrame;
 pub use vec::Vec3;
+
+use std::fmt::Debug;
+use std::ops::Mul;
 
 impl From<Point3> for Vec3 {
     fn from(p: Point3) -> Self {
@@ -47,7 +49,7 @@ impl From<RGBColor> for Vec3 {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Ray {
     pub origin: Point3,
     pub direction: Vec3,

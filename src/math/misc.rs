@@ -41,5 +41,5 @@ pub fn random_to_sphere(r: Sample2D, radius: f32, distance_squared: f32) -> Vec3
 }
 
 pub fn power_heuristic(a: f32, b: f32) -> f32 {
-    a / (a * a + b * b)
+    (a * a) / (a * a + b * b)
 }

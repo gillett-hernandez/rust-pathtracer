@@ -66,9 +66,11 @@ impl Integrator for PathTracingIntegrator {
                     let mut successful_light_samples = 0;
                     for i in 0..self.light_samples {
                         if let Some(light) = self.world.pick_random_light(&sampler) {
+                            assert!(light.get_instance_id() == 0);
                             // determine pick pdf
-                            // as of now the pick pdf is just 1 / num lights, however if it were to change this would be where it should change.
+                            // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             let pick_pdf = self.world.lights.len() as f32;
+                            // sample the primitive from hit_point
                             let direction = light.sample(&sampler, hit.point).normalized();
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
@@ -76,22 +78,28 @@ impl Integrator for PathTracingIntegrator {
                             let light_ray = Ray::new_with_time(
                                 hit.point + hit.normal * 0.01,
                                 direction,
-                                hit.time,
+                                ray.time,
                             );
                             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
-                            let dropoff = wo.z().max(0.0);
-                            if dropoff <= 0.0 {
+                            let reflectance = material.f(&hit, wi, wo);
+                            if reflectance.0.max_element() < 0.00000001 {
+                                // if reflectance is 0 for all components, skip this light sample
                                 continue;
                             }
+                            let dropoff = wo.z().max(0.0);
+                            if wo.z() > 0.0 {
+                                // sampled light direction is on the correct hemisphere wrt the surface normal
+                                // println!("{:?}", light_ray);
+                                // return RGBColor::ZERO;
+                            }
 
-                            if let Some(light_hit) = self.world.hit(light_ray, hit.time, INFINITY) {
+                            if let Some(light_hit) = light.hit(light_ray, 0.0, INFINITY) {
                                 // maybe if the instance that was hit was a light as well, redo the sampling calculations for that light instead?
-                                let pdf = light.pdf(hit.point, direction);
-                                let reflectance = material.f(&hit, wi, wo);
+                                let light_pdf = light.pdf(hit.point, direction);
                                 let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
-                                let weight = power_heuristic(pdf, scatter_pdf_for_light_ray);
+                                let weight = power_heuristic(light_pdf, scatter_pdf_for_light_ray);
                                 if light_hit.instance_id == light.get_instance_id() {
-                                    let emission_material: &Box<dyn Material> =
+                                    let emission_material =
                                         &self.world.materials[light_hit.material.unwrap() as usize];
                                     let light_wi = TangentFrame::from_normal(light_hit.normal)
                                         .to_local(&-direction);
@@ -104,7 +112,7 @@ impl Integrator for PathTracingIntegrator {
                                         * dropoff
                                         * sampled_light_emission
                                         * weight
-                                        / pdf
+                                        / light_pdf
                                         / pick_pdf;
                                 }
                             }
