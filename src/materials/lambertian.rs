@@ -23,7 +23,7 @@ impl PDF for Lambertian {
         }
         // cosine.abs() / PI
     }
-    fn generate(&self, hit: &HitRecord, s: &Box<dyn Sampler>, wi: Vec3) -> Option<Vec3> {
+    fn generate(&self, hit: &HitRecord, s: &mut Box<dyn Sampler>, wi: Vec3) -> Option<Vec3> {
         Some(random_cosine_direction(s.draw_2d()))
     }
 }

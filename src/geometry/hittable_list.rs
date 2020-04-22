@@ -77,7 +77,7 @@ impl Hittable for HittableList {
         }
         hit_record
     }
-    fn sample(&self, s: &Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
         unimplemented!()
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {

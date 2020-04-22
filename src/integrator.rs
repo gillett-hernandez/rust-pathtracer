@@ -7,7 +7,7 @@ use std::f32::INFINITY;
 use std::sync::Arc;
 
 pub trait Integrator: Sync + Send {
-    fn color(&self, r: Ray) -> RGBColor;
+    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor;
 }
 
 pub struct PathTracingIntegrator {
@@ -19,12 +19,12 @@ pub struct PathTracingIntegrator {
 }
 
 impl Integrator for PathTracingIntegrator {
-    fn color(&self, camera_ray: Ray) -> RGBColor {
+    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor {
         let mut ray = camera_ray;
         let mut color: RGBColor = RGBColor::ZERO;
         let mut beta = RGBColor::new(1.0, 1.0, 1.0);
         let mut last_bsdf_pdf = 0.0;
-        let sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+
         for current_bounce in 0..self.max_bounces {
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(hit) => {
@@ -46,7 +46,7 @@ impl Integrator for PathTracingIntegrator {
                     let material: &Box<dyn Material> = &self.world.materials[id as usize];
 
                     // wo is generated in tangent space.
-                    let maybe_wo: Option<Vec3> = material.generate(&hit, &sampler, wi);
+                    let maybe_wo: Option<Vec3> = material.generate(&hit, &mut sampler, wi);
                     let emission = material.emission(&hit, wi, maybe_wo);
 
                     if emission.0.max_element() > 0.0 {
@@ -65,12 +65,12 @@ impl Integrator for PathTracingIntegrator {
                     let mut light_contribution = RGBColor::ZERO;
                     let mut successful_light_samples = 0;
                     for i in 0..self.light_samples {
-                        if let Some(light) = self.world.pick_random_light(&sampler) {
+                        if let Some(light) = self.world.pick_random_light(&mut sampler) {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             let pick_pdf = self.world.lights.len() as f32;
                             // sample the primitive from hit_point
-                            let (direction, light_pdf) = light.sample(&sampler, hit.point);
+                            let (direction, light_pdf) = light.sample(&mut sampler, hit.point);
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
                             let wo = frame.to_local(&direction);

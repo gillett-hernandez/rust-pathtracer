@@ -90,7 +90,7 @@ impl Hittable for Sphere {
         }
         None
     }
-    fn sample(&self, s: &Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
         /*
         vec3 direction = center - o;
         float distance_squared = direction.squared_length();

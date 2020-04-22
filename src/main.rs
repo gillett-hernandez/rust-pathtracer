@@ -1,4 +1,5 @@
 #![allow(unused_imports, unused_variables, unused)]
+#![feature(clamp)]
 extern crate image;
 extern crate packed_simd;
 

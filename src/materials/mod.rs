@@ -30,13 +30,16 @@ mod tests {
             point: Point3::ZERO,
             normal: Vec3::Z,
             material: Some(0),
+            instance_id: 0,
         };
-        let sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-        let v = lambertian.generate(&hit, &sampler, incoming.direction);
-        println!("{:?}", lambertian.f(&hit, incoming.direction, v));
-        assert!(lambertian.value(&hit, incoming.direction, v) > 0.0);
-        println!("{:?}", v);
-        assert!(v * Vec3::Z > 0.0);
+        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let v = lambertian.generate(&hit, &mut sampler, incoming.direction);
+        assert!(v.is_some());
+        let V = v.unwrap();
+        println!("{:?}", lambertian.f(&hit, incoming.direction, V));
+        assert!(lambertian.value(&hit, incoming.direction, V) > 0.0);
+        println!("{:?}", V);
+        assert!(V * Vec3::Z > 0.0);
     }
     #[test]
     fn test_lambertian_integral() {
@@ -48,17 +51,19 @@ mod tests {
             point: Point3::ZERO,
             normal: Vec3::Z,
             material: Some(0),
+            instance_id: 0,
         };
-        let sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let mut pdf_sum = 0.0;
         let mut color_sum = RGBColor::ZERO;
         let N = 1000000;
         for i in 0..N {
-            let v = lambertian.generate(&hit, &sampler, -incoming.direction);
-            let reflectance = lambertian.f(&hit, -incoming.direction, v);
-            let pdf = lambertian.value(&hit, -incoming.direction, v);
+            let v = lambertian.generate(&hit, &mut sampler, -incoming.direction);
+            assert!(v.is_some());
+            let reflectance = lambertian.f(&hit, -incoming.direction, v.unwrap());
+            let pdf = lambertian.value(&hit, -incoming.direction, v.unwrap());
             assert!(pdf > 0.0);
-            assert!(v * Vec3::Z > 0.0);
+            assert!(v.unwrap() * Vec3::Z > 0.0);
             pdf_sum += pdf;
             color_sum += reflectance;
         }

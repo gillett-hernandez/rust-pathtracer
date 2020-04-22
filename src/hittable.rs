@@ -44,7 +44,7 @@ use std::marker::{Send, Sync};
 pub trait Hittable: Send + Sync + HasBoundingBox {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord>;
     // method that should implement sampling a direction subtended by the solid angle of Self from point P
-    fn sample(&self, s: &Box<dyn Sampler>, from: Point3) -> (Vec3, f32);
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32);
     // method that should implement evaluating the pdf value of that sample having occurred, assuming random hemisphere sampling.
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32;
     fn get_instance_id(&self) -> usize;

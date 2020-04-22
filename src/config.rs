@@ -71,7 +71,9 @@ mod tests {
                 return;
             }
         };
-        assert!(settings.output_directory != None);
-        assert!(settings.render_threads.unwrap() > 0)
+        for config in &settings.render_settings {
+            assert!(config.output_directory != None);
+            assert!(config.threads.unwrap() > 0)
+        }
     }
 }
