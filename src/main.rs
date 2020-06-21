@@ -98,12 +98,14 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
     world
 }
 
-fn lambertian_under_lamp(color: SDF) -> World {
+fn lambertian_under_lamp(color: SDF, world_strength: f32) -> World {
     //DiffuseLight::new(illuminants_and_colors::cie_e())
     //DiffuseLight::new(illuminants_and_colors::void())
-    let void = Box::new(DiffuseLight::new(illuminants_and_colors::void()));
     let lambertian = Box::new(Lambertian::new(color));
-    let diffuse_light = Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(100.0)));
+    let diffuse_light_world = Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(
+        world_strength,
+    )));
+    let diffuse_light100 = Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(100.0)));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
@@ -112,7 +114,7 @@ fn lambertian_under_lamp(color: SDF) -> World {
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
         background: 0,
-        materials: vec![void, lambertian, diffuse_light],
+        materials: vec![diffuse_light_world, lambertian, diffuse_light100],
     };
     world
 }
@@ -136,7 +138,7 @@ fn construct_scene() -> World {
     // world
     // let lambertian = Box::new(Lambertian::new(white));
     // white_furnace_test(lambertian)
-    lambertian_under_lamp(white)
+    lambertian_under_lamp(red, 10.0)
 }
 
 fn render(

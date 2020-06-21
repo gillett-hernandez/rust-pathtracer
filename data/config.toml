@@ -9,7 +9,7 @@ vfov = 6
 type="SimpleCamera"
 look_from = [100, 0, 0]
 look_at = [0, 0, 0]
-vfov = 20
+vfov = 45
 
 [[render_settings]]
 threads=22
@@ -19,7 +19,7 @@ max_bounces = 4
 resolution.width = 512
 resolution.height = 512
 min_samples = 100
-camera_id = 0
+camera_id = 1
 russian_roulette = true
 only_direct = false
 light_samples = 4
