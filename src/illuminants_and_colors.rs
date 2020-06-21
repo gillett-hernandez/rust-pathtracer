@@ -14,7 +14,7 @@ pub fn cie_e(power: f32) -> SDF {
 
 pub fn red(power: f32) -> SDF {
     SDF::Exponential {
-        signal: vec![(700.0, 100.0, 10.0 * 1.7 * power)],
+        signal: vec![(700.0, 300.0, 30.0 * 1.7 * power)],
     }
 }
 

@@ -201,8 +201,11 @@ impl SpectralResponseFunction for SDF {
                 for &(o, s, m) in signal {
                     val += w(lambda, m, o, s);
                 }
-                assert!(val <= 1.0);
-                val
+                if val < 1.0 {
+                    val
+                } else {
+                    1.0
+                }
             }
         }
     }
