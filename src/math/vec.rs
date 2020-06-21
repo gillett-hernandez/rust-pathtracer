@@ -18,6 +18,9 @@ impl Vec3 {
     pub const X: Vec3 = Vec3::new(1.0, 0.0, 0.0);
     pub const Y: Vec3 = Vec3::new(0.0, 1.0, 0.0);
     pub const Z: Vec3 = Vec3::new(0.0, 0.0, 1.0);
+    pub fn is_normal(&self) -> bool {
+        !(self.0.is_nan().any() || self.0.is_infinite().any())
+    }
 }
 
 impl Vec3 {

@@ -5,7 +5,6 @@ use crate::math::*;
 pub use crate::material::{Material, BRDF, PDF};
 
 mod diffuse_light;
-pub mod illuminants;
 mod lambertian;
 
 pub use diffuse_light::DiffuseLight;

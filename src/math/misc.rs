@@ -10,5 +10,5 @@ pub fn gaussian(x: f64, alpha: f64, mu: f64, sigma1: f64, sigma2: f64) -> f64 {
 }
 
 pub fn w(x: f32, mul: f32, offset: f32, sigma: f32) -> f32 {
-    (-(x - offset).powi(2) / sigma).exp() / (sigma * PI).sqrt()
+    mul * (-(x - offset).powi(2) / sigma).exp() / (sigma * PI).sqrt()
 }

@@ -198,7 +198,7 @@ impl SpectralResponseFunction for SDF {
             }
             SDF::Exponential { signal } => {
                 let mut val = 0.0f32;
-                for &(m, o, s) in signal {
+                for &(o, s, m) in signal {
                     val += w(lambda, m, o, s);
                 }
                 assert!(val <= 1.0);
@@ -224,7 +224,7 @@ impl SpectralPowerDistribution for SDF {
             }
             SDF::Exponential { signal } => {
                 let mut val = 0.0f32;
-                for &(m, o, s) in signal {
+                for &(o, s, m) in signal {
                     val += w(lambda, m, o, s);
                 }
                 val

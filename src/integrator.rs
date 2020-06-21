@@ -21,13 +21,16 @@ pub struct PathTracingIntegrator {
 impl Integrator for PathTracingIntegrator {
     fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor {
         let mut ray = camera_ray;
+        // println!("{:?}", ray);
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, 380.0, 780.0);
         let mut beta: SingleEnergy = SingleEnergy::ONE;
         let mut last_bsdf_pdf = 0.0;
 
         for current_bounce in 0..self.max_bounces {
+            // println!("whatever0");
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(mut hit) => {
+                    // println!("whatever1");
                     hit.lambda = sum.lambda;
                     let id = match (hit.material) {
                         Some(id) => id as usize,
@@ -56,7 +59,7 @@ impl Integrator for PathTracingIntegrator {
                             sum.energy += beta * emission
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
-                            // println!("{:?}", hit);
+                            // // println!("{:?}", hit);
                             let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf, pdf);
                             assert!(!pdf.is_nan() && !weight.is_nan(), "{}, {}", pdf, weight);
@@ -122,11 +125,13 @@ impl Integrator for PathTracingIntegrator {
                         }
                     }
                     if self.light_samples > 0 {
+                        // println!("light contribution: {:?}", light_contribution);
                         sum.energy += light_contribution / (self.light_samples as f32);
                     }
                     if self.only_direct {
                         break;
                     }
+                    // println!("whatever!");
                     if let Some(wo) = maybe_wo {
                         let pdf = material.value(&hit, wi, wo);
                         assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
@@ -150,6 +155,7 @@ impl Integrator for PathTracingIntegrator {
                         debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
+                        // println!("whatever!!");
                         ray = Ray::new(
                             hit.point + hit.normal * 0.001,
                             frame.to_world(&wo).normalized(),
@@ -169,7 +175,7 @@ impl Integrator for PathTracingIntegrator {
                     let world_material: &Box<dyn Material> = &self.world.materials[id as usize];
                     let world_emission =
                         world_material.emission(&fake_hit_record, Vec3::ZERO, None);
-                    // println!("{:?}, {:?}", beta, world_emission);
+                    // // println!("{:?}, {:?}", beta, world_emission);
                     sum.energy += beta * world_emission;
                     break;
                 }

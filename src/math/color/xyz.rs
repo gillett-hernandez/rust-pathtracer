@@ -109,12 +109,12 @@ impl Add for XYZColor {
         let sum = s1 + s2;
         // let xyY_mix = ((x1 + x2) / sum, (y1 + y2) / sum, sum);
         // let Yy = sum * sum / (y1 + y2);
-        let X = (x1 + x2) / (y1 + y2);
-        let Z = (sum - (x1 + x2) - (y1 + y2)) / (y1 + y2);
+        let x12 = x1 + x2;
+        let y12 = y1 + y2;
         if sum == 0.0 {
             XYZColor::ZERO
         } else {
-            XYZColor::new(X, 1.0, Z) * sum
+            XYZColor::new(x12 / y12, 1.0, (sum - (x12) - (y12)) / y12) * sum
         }
     }
 }

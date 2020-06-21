@@ -5,7 +5,7 @@ pub struct Bounds1D {
 }
 
 impl Bounds1D {
-    pub fn new(lower: f32, upper: f32) -> Self {
+    pub const fn new(lower: f32, upper: f32) -> Self {
         Bounds1D { lower, upper }
     }
 }

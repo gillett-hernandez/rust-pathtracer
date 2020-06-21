@@ -3,7 +3,7 @@
 type="SimpleCamera"
 look_from = [-100, 0, 0]
 look_at = [0, 0, 0]
-vfov = 8
+vfov = 6
 
 [[cameras]]
 type="SimpleCamera"
@@ -13,14 +13,13 @@ vfov = 20
 
 [[render_settings]]
 threads=22
-russian_roulette = false
 output_directory = "."
 integrator="PT"
-max_bounces=3
-resolution.width = 200
-resolution.height = 200
-min_samples = 10
-max_samples = 10
+max_bounces = 4
+resolution.width = 512
+resolution.height = 512
+min_samples = 100
 camera_id = 0
+russian_roulette = true
 only_direct = false
-light_samples = 2
+light_samples = 4

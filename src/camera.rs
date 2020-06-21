@@ -10,7 +10,7 @@ pub trait Camera: Send + Sync {
     fn modify_aspect_ratio(&mut self, aspect_ratio: f32);
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SimpleCamera {
     pub origin: Point3,
     pub direction: Vec3,
@@ -104,16 +104,17 @@ impl Camera for SimpleCamera {
         let rd: Vec3 = self.lens_radius * random_in_unit_disk(Sample2D::new_random_sample());
         let offset = self.u * rd.x() + self.v * rd.y();
         let time: f32 = self.t0 + random() * (self.t1 - self.t0);
-        Ray::new_with_time(
-            self.origin + offset,
-            (self.lower_left_corner + s * self.horizontal + t * self.vertical
-                - self.origin
-                - offset)
-                .normalized(),
-            time,
-        )
+        let ray_origin: Point3 = self.origin + offset;
+        // println!("{:?}", self);
+        let ray_direction = (self.lower_left_corner + s * self.horizontal + t * self.vertical
+            - ray_origin)
+            .normalized();
+        assert!(ray_origin.is_normal());
+        assert!(ray_direction.is_normal());
+        Ray::new_with_time(ray_origin, ray_direction, time)
     }
     fn modify_aspect_ratio(&mut self, aspect_ratio: f32) {
+        assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
         let theta: f32 = self.vfov * PI / 180.0;
         let half_height = (theta / 2.0).tan();
         let half_width = aspect_ratio * half_height;

@@ -8,6 +8,7 @@ pub mod camera;
 pub mod config;
 pub mod geometry;
 pub mod hittable;
+pub mod illuminants_and_colors;
 pub mod integrator;
 pub mod material;
 pub mod materials;
@@ -18,9 +19,9 @@ pub mod world;
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::{HittableList, Sphere};
+
 use integrator::{Integrator, PathTracingIntegrator};
 use material::{Material, BRDF, PDF};
-use materials::illuminants;
 use materials::{DiffuseLight, Lambertian};
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
@@ -62,7 +63,7 @@ fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
                     Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
                     cam.vfov,
                     1.0,
-                    cam.focal_distance.unwrap_or(0.0),
+                    cam.focal_distance.unwrap_or(10.0),
                     cam.aperture_size.unwrap_or(0.0),
                     shutter_open_time,
                     cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
@@ -90,7 +91,7 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
         lights: vec![],
         background: 0,
         materials: vec![
-            Box::new(DiffuseLight::new(illuminants::cie_e(1.0))),
+            Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(1.0))),
             material,
         ],
     };
@@ -98,11 +99,11 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
 }
 
 fn lambertian_under_lamp(color: SDF) -> World {
-    //DiffuseLight::new(illuminants::cie_e())
-    //DiffuseLight::new(illuminants::void())
-    let void = Box::new(DiffuseLight::new(illuminants::void()));
+    //DiffuseLight::new(illuminants_and_colors::cie_e())
+    //DiffuseLight::new(illuminants_and_colors::void())
+    let void = Box::new(DiffuseLight::new(illuminants_and_colors::void()));
     let lambertian = Box::new(Lambertian::new(color));
-    let diffuse_light = Box::new(DiffuseLight::new(illuminants::cie_e(1.0)));
+    let diffuse_light = Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(100.0)));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
@@ -110,14 +111,15 @@ fn lambertian_under_lamp(color: SDF) -> World {
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
-        background: 2,
+        background: 0,
         materials: vec![void, lambertian, diffuse_light],
     };
     world
 }
 
 fn construct_scene() -> World {
-    let white = illuminants::cie_e(1.0);
+    let white = illuminants_and_colors::cie_e(1.0);
+    let red = illuminants_and_colors::red(1.0);
     // let lambertian = Box::new(Lambertian::new(white));
     // let diffuse_light = Box::new(DiffuseLight::new());
     // let world = World {
@@ -134,7 +136,7 @@ fn construct_scene() -> World {
     // world
     // let lambertian = Box::new(Lambertian::new(white));
     // white_furnace_test(lambertian)
-    lambertian_under_lamp(white)
+    lambertian_under_lamp(red)
 }
 
 fn render(
@@ -200,7 +202,10 @@ fn main() -> () {
         let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
 
         let total_pixels = film.width * film.height;
-        let total_camera_rays = total_pixels * (render_settings.max_samples.unwrap() as usize);
+        let total_camera_rays = total_pixels
+            * (render_settings
+                .max_samples
+                .unwrap_or(render_settings.min_samples) as usize);
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
@@ -231,7 +236,7 @@ fn main() -> () {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
 
             //apply tonemap here
-            color = color / max_luminance;
+            color.0 = color.0.replace(1, color.y() / max_luminance);
             let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
