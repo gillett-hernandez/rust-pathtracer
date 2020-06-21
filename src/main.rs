@@ -136,7 +136,7 @@ fn construct_scene() -> World {
     // world
     // let lambertian = Box::new(Lambertian::new(white));
     // white_furnace_test(lambertian)
-    lambertian_under_lamp(red)
+    lambertian_under_lamp(white)
 }
 
 fn render(
@@ -236,7 +236,7 @@ fn main() -> () {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
 
             //apply tonemap here
-            color.0 = color.0.replace(1, color.y() / max_luminance);
+            // color.0 = color.0.replace(1, color.y() / max_luminance);
             let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
