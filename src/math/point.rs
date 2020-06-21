@@ -62,3 +62,9 @@ impl Sub for Point3 {
         Vec3::from_raw((self.0 - other.0) * f32x4::new(1.0, 1.0, 1.0, 0.0))
     }
 }
+
+impl From<[f32; 3]> for Point3 {
+    fn from(other: [f32; 3]) -> Point3 {
+        Point3::new(other[0], other[1], other[2])
+    }
+}

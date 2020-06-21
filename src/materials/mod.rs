@@ -1,10 +1,13 @@
 // pub use crate::material::{BRDF, BTDF, BXDF, PDF};
 use crate::hittable::HitRecord;
-pub use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 
-pub mod diffuse_light;
-pub mod lambertian;
+pub use crate::material::{Material, BRDF, PDF};
+
+mod diffuse_light;
+pub mod illuminants;
+mod lambertian;
+
 pub use diffuse_light::DiffuseLight;
 pub use lambertian::Lambertian;
 
@@ -25,13 +28,7 @@ mod tests {
         let lambertian = Lambertian::new(RGBColor::new(0.9, 0.2, 0.9));
         // simulate incoming ray from directly above
         let incoming: Ray = Ray::new(Point3::new(0.0, 0.0, 10.0), -Vec3::Z);
-        let hit = HitRecord {
-            time: 0.0,
-            point: Point3::ZERO,
-            normal: Vec3::Z,
-            material: Some(0),
-            instance_id: 0,
-        };
+        let hit = HitRecord::new(0.0, Point3::ZERO, 0.0, Vec3::Z, Some(0), 0);
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let v = lambertian.generate(&hit, &mut sampler, incoming.direction);
         assert!(v.is_some());
@@ -46,13 +43,7 @@ mod tests {
         let lambertian = Lambertian::new(RGBColor::new(1.0, 1.0, 1.0));
         // simulate incoming ray from directly above
         let incoming: Ray = Ray::new(Point3::new(0.0, 0.0, 10.0), -Vec3::Z);
-        let hit = HitRecord {
-            time: 0.0,
-            point: Point3::ZERO,
-            normal: Vec3::Z,
-            material: Some(0),
-            instance_id: 0,
-        };
+        let hit = HitRecord::new(0.0, Point3::ZERO, 0.0, Vec3::Z, Some(0), 0);
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let mut pdf_sum = 0.0;
         let mut color_sum = RGBColor::ZERO;

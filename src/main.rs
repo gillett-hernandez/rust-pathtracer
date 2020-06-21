@@ -15,11 +15,12 @@ pub mod math;
 pub mod renderer;
 pub mod world;
 
-use camera::{Camera, SimpleCamera};
+use camera::{Camera, CameraResize, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::{HittableList, Sphere};
 use integrator::{Integrator, PathTracingIntegrator};
 use material::{Material, BRDF, PDF};
+use materials::illuminants;
 use materials::{DiffuseLight, Lambertian};
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
@@ -49,6 +50,30 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
     })
 }
 
+fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
+    let cameras = Vec::<Box<dyn Camera>>::new();
+    for camera_config in settings.cameras {
+        let camera: Box<dyn Camera> = match camera_config {
+            config::CameraSettings::SimpleCamera(cam) => {
+                let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
+                Box::new(SimpleCamera::new(
+                    Point3::from(cam.look_from),
+                    Point3::from(cam.look_at),
+                    Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
+                    cam.vfov,
+                    1.0,
+                    cam.focal_distance.unwrap_or(0.0),
+                    cam.aperture_size.unwrap_or(0.0),
+                    shutter_open_time,
+                    cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
+                ))
+            }
+        };
+        cameras.push(camera);
+    }
+    cameras
+}
+
 fn construct_renderer(settings: &Settings) -> Box<dyn Renderer> {
     println!("constructing renderer");
     Box::new(NaiveRenderer::new())
@@ -59,34 +84,35 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
         bvh: Box::new(HittableList::new(vec![Box::new(Sphere::new(
             5.0,
             Point3::new(0.0, 0.0, 0.0),
-            Some(0),
+            Some(1),
             0,
         ))])),
         lights: vec![],
-        background: RGBColor::new(1.0, 1.0, 1.0),
-        materials: vec![material],
+        background: 0,
+        materials: vec![Box::new(illuminants::DiffuseLightE), material],
     };
     world
 }
 
-fn lambertian_under_lamp(color: RGBColor) -> World {
+fn lambertian_under_lamp(color: SDF) -> World {
+    let void = Box::new(illuminants::DiffuseVoid);
     let lambertian = Box::new(Lambertian::new(color));
-    let diffuse_light = Box::new(DiffuseLight::new(RGBColor::new(1.0, 1.0, 1.0)));
+    let diffuse_light = Box::new(illuminants::DiffuseLightE);
     let world = World {
         bvh: Box::new(HittableList::new(vec![
-            Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(1), 0)),
-            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0), 1)),
+            Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
+            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(1), 1)),
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
-        background: RGBColor::new(0.0, 0.0, 0.0),
-        materials: vec![lambertian, diffuse_light],
+        background: 0,
+        materials: vec![void, lambertian, diffuse_light],
     };
     world
 }
 
 fn construct_scene() -> World {
-    let white = RGBColor::new(1.0, 1.0, 1.0);
+    let white = illuminants::E();
     // let lambertian = Box::new(Lambertian::new(white));
     // let diffuse_light = Box::new(DiffuseLight::new());
     // let world = World {
@@ -111,11 +137,11 @@ fn render(
     camera: &Box<dyn Camera>,
     render_settings: &RenderSettings,
     world: &Arc<World>,
-) -> Film<RGBColor> {
-    let mut film = Film::new(
+) -> Film<XYZColor> {
+    let mut film: Film<XYZColor> = Film::new(
         render_settings.resolution.width,
         render_settings.resolution.height,
-        RGBColor::ZERO,
+        XYZColor::BLACK,
     );
     let world_ref: Arc<World> = Arc::clone(world);
     let integrator: Arc<Box<dyn Integrator>> =
@@ -148,45 +174,29 @@ fn main() -> () {
 
     let world = Arc::new(construct_scene());
 
-    let mut cameras = Vec::<Box<dyn Camera>>::new();
-    let camera1 = Box::new(SimpleCamera::new(
-        Point3::new(-100.0, 0.0, 0.0),
-        Point3::ZERO,
-        Vec3::Z,
-        8.0,
-        1.0,
-        100.0,
-        1.0,
-        0.0,
-        1.0,
-    ));
-    cameras.push(camera1);
-    let camera2 = Box::new(SimpleCamera::new(
-        Point3::new(100.0, 0.0, 0.0),
-        Point3::ZERO,
-        Vec3::Z,
-        20.0,
-        1.0,
-        100.0,
-        1.0,
-        0.0,
-        1.0,
-    ));
-    cameras.push(camera2);
+    let cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
     let renderer = construct_renderer(&config);
     // get settings for each film
     for (render_id, render_settings) in config.render_settings.iter().enumerate() {
         let directory = render_settings.output_directory.as_ref();
         let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
 
-        println!(
-            "starting render with film resolution {}x{}",
-            render_settings.resolution.width, render_settings.resolution.height
+        let (width, height) = (
+            render_settings.resolution.width,
+            render_settings.resolution.height,
         );
+        println!("starting render with film resolution {}x{}", width, height);
+
+        let aspect_ratio = width as f32 / height as f32;
 
         let now = Instant::now();
 
-        let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
+        let film = render(
+            &renderer,
+            &cameras[camera_id].with_aspect_ratio(aspect_ratio),
+            &render_settings,
+            &world,
+        );
 
         let total_pixels = film.width * film.height;
         let total_camera_rays = total_pixels * (render_settings.max_samples.unwrap() as usize);
@@ -204,7 +214,7 @@ fn main() -> () {
         for y in 0..film.height {
             for x in 0..film.width {
                 let color = film.buffer[(y * film.width + x) as usize];
-                let lum = Vec3::from(color).0.max_element();
+                let lum = color.y();
                 total_luminance += lum;
                 if lum > max_luminance {
                     max_luminance = lum;

@@ -1,13 +1,12 @@
 use crate::hittable::HitRecord;
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
-#[derive(Debug)]
 pub struct DiffuseLight {
-    pub color: RGBColor,
+    pub color: SDF,
 }
 
 impl DiffuseLight {
-    pub fn new(color: RGBColor) -> DiffuseLight {
+    pub fn new(color: SDF) -> DiffuseLight {
         DiffuseLight { color }
     }
 }
@@ -23,11 +22,11 @@ impl PDF for DiffuseLight {
 }
 
 impl BRDF for DiffuseLight {
-    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> RGBColor {
-        RGBColor::ZERO
+    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+        SingleEnergy::ZERO
     }
-    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> RGBColor {
-        self.color
+    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
+        SingleEnergy::new(self.color.evaluate_power(hit.lambda))
     }
 }
 

@@ -1,14 +1,13 @@
-
 use crate::aabb::*;
 use crate::hittable::*;
-use crate::materials::MaterialTable;
+use crate::materials::{MaterialId, MaterialTable};
 use crate::math::*;
 
 pub struct World {
     pub bvh: Box<dyn Indexable>,
     pub lights: Vec<usize>,
     pub materials: MaterialTable,
-    pub background: RGBColor,
+    pub background: MaterialId,
 }
 
 impl World {

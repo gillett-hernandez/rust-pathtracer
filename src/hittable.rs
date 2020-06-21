@@ -7,6 +7,7 @@ use std::fmt::Debug;
 pub struct HitRecord {
     pub time: f32,
     pub point: Point3,
+    pub lambda: f32,
     pub normal: Vec3,
     pub material: Option<MaterialId>,
     pub instance_id: usize,
@@ -16,6 +17,7 @@ impl HitRecord {
     pub fn new(
         time: f32,
         point: Point3,
+        lambda: f32,
         normal: Vec3,
         material: Option<MaterialId>,
         instance_id: usize,
@@ -23,6 +25,7 @@ impl HitRecord {
         HitRecord {
             time,
             point,
+            lambda,
             normal: normal.normalized(),
             material,
             instance_id,

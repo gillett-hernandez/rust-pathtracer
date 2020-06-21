@@ -1,14 +1,23 @@
 // extern crate packed_simd;
+mod bounds;
 mod color;
 mod misc;
 mod point;
+mod random;
 mod sample;
+mod spectral;
 mod tangent_frame;
 mod vec;
-pub use color::RGBColor;
+
+pub use bounds::Bounds1D;
+pub use color::*;
 pub use misc::*;
 pub use point::Point3;
+pub use random::*;
 pub use sample::*;
+pub use spectral::{
+    SingleEnergy, SingleWavelength, SpectralPowerDistribution, SpectralResponseFunction, SDF,
+};
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 pub use tangent_frame::TangentFrame;
@@ -29,10 +38,6 @@ impl From<Vec3> for Point3 {
         // Point3::from_raw(v.0.replace(3, 1.0))
         Point3::from_raw(v.0).normalize()
     }
-}
-
-pub trait Color {
-    fn to_rgb(&self) -> [f32; 3];
 }
 
 impl Mul<RGBColor> for Vec3 {

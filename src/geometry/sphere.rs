@@ -65,6 +65,7 @@ impl Hittable for Sphere {
                 return Some(HitRecord::new(
                     time,
                     point,
+                    0.0,
                     normal,
                     self.material_id,
                     self.instance_id,
@@ -82,6 +83,7 @@ impl Hittable for Sphere {
                 return Some(HitRecord::new(
                     time,
                     point,
+                    0.0,
                     normal,
                     self.material_id,
                     self.instance_id,

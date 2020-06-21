@@ -1,6 +1,14 @@
 use crate::math::*;
 use std::marker::{Send, Sync};
 
+pub enum FoV {
+    Horizontal(f32),
+    Vertical(f32),
+}
+
+pub trait CameraResize {
+    fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self;
+}
 pub trait Camera: Send + Sync {
     fn get_ray(&self, s: f32, t: f32) -> Ray;
 }
@@ -9,7 +17,9 @@ pub trait Camera: Send + Sync {
 pub struct SimpleCamera {
     pub origin: Point3,
     pub direction: Vec3,
+    focal_distance: f32,
     lower_left_corner: Point3,
+    vfov: f32,
     pub horizontal: Vec3,
     pub vertical: Vec3,
     u: Vec3,
@@ -31,13 +41,14 @@ impl SimpleCamera {
         aperture: f32,
         t0: f32,
         t1: f32,
-    ) -> SimpleCamera {
+    ) -> Self {
         let direction = (look_at - look_from).normalized();
         let lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
         let theta: f32 = vertical_fov * PI / 180.0;
         let half_height = (theta / 2.0).tan();
         let half_width = aspect_ratio * half_height;
+        // aspect ratio = half_width / half_height
         let w = -direction;
         let u = v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
@@ -45,10 +56,12 @@ impl SimpleCamera {
         SimpleCamera {
             origin: look_from,
             direction,
+            focal_distance: focus_dist,
             lower_left_corner: look_from
                 - u * half_width * focus_dist
                 - v * half_height * focus_dist
                 - w * focus_dist,
+            vfov: vertical_fov,
             horizontal: u * 2.0 * half_width * focus_dist,
             vertical: v * 2.0 * half_height * focus_dist,
             u,
@@ -59,6 +72,30 @@ impl SimpleCamera {
             t1,
         }
     }
+    // pub fn with_fov(&self, fov: FoV) -> Self {
+    //     let theta: f32;
+    //     let half_height:f32;
+    //     let half_width:f32;
+    //     match (fov) {
+    //         FoV::Vertical(fov_) => {
+    //             theta = fov_ * PI / 180.0;
+    //             half_height = (theta / 2.0).tan();
+    //             half_width = self.aspect_ratio * half_height;
+    //         }
+    //         FoV::Horizontal(fov_) => {
+    //             theta = fov_ * PI / 180.0;
+    //             half_width = (theta / 2.0).tan();
+    //             half_height = half_height / self.aspect_ratio;
+    //             vfov = fov_.tan();
+    //         }
+    //     }
+    //     SimpleCamera{
+    //         ..self,
+    //         lower_left_corner: self.origin - self.u * half_width * self.focal_distance - self.v * half_height * self.focal_distance - self.w * self.focal_distance,
+    //         horizontal: self.u * 2.0 * half_width * self.focal_distance,
+    //         vertical: self.v * 2.0 * half_height * self.focal_distance,
+    //     }
+    // }
 }
 
 unsafe impl Send for SimpleCamera {}
@@ -78,6 +115,23 @@ impl Camera for SimpleCamera {
                 .normalized(),
             time,
         )
+    }
+}
+
+impl CameraResize for SimpleCamera {
+    fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
+        let theta: f32 = self.vfov * PI / 180.0;
+        let half_height = (theta / 2.0).tan();
+        let half_width = aspect_ratio * half_height;
+        SimpleCamera {
+            lower_left_corner: self.origin
+                - self.u * half_width * self.focal_distance
+                - self.v * half_height * self.focal_distance
+                - self.w * self.focal_distance,
+            horizontal: self.u * 2.0 * half_width * self.focal_distance,
+            vertical: self.v * 2.0 * half_height * self.focal_distance,
+            ..*self
+        }
     }
 }
 

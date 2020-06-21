@@ -1,13 +1,13 @@
 use super::world::World;
 use crate::config::Settings;
-use crate::hittable::Hittable;
+use crate::hittable::{HitRecord, Hittable};
 use crate::material::Material;
 use crate::math::*;
 use std::f32::INFINITY;
 use std::sync::Arc;
 
 pub trait Integrator: Sync + Send {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor;
+    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> XYZColor;
 }
 
 pub struct PathTracingIntegrator {
@@ -19,10 +19,10 @@ pub struct PathTracingIntegrator {
 }
 
 impl Integrator for PathTracingIntegrator {
-    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor {
+    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> XYZColor {
         let mut ray = camera_ray;
-        let mut color: RGBColor = RGBColor::ZERO;
-        let mut beta = RGBColor::new(1.0, 1.0, 1.0);
+        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, 380.0, 780.0);
+        let mut beta: SingleEnergy = SingleEnergy::ZERO;
         let mut last_bsdf_pdf = 0.0;
 
         for current_bounce in 0..self.max_bounces {
@@ -49,20 +49,20 @@ impl Integrator for PathTracingIntegrator {
                     let maybe_wo: Option<Vec3> = material.generate(&hit, &mut sampler, wi);
                     let emission = material.emission(&hit, wi, maybe_wo);
 
-                    if emission.0.max_element() > 0.0 {
+                    if emission.0 > 0.0 {
                         // check stuff here
                         if last_bsdf_pdf <= 0.0 || self.light_samples == 0 {
-                            color += beta * emission
+                            sum.energy += beta * emission
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // println!("{:?}", hit);
                             let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf, pdf);
                             assert!(!pdf.is_nan() && !weight.is_nan(), "{}, {}", pdf, weight);
-                            color += beta * emission * weight;
+                            sum.energy += beta * emission * weight;
                         }
                     }
-                    let mut light_contribution = RGBColor::ZERO;
+                    let mut light_contribution = SingleEnergy::ZERO;
                     let mut successful_light_samples = 0;
                     for i in 0..self.light_samples {
                         if let Some(light) = self.world.pick_random_light(&mut sampler) {
@@ -104,7 +104,7 @@ impl Integrator for PathTracingIntegrator {
                                         .to_local(&-direction);
                                     let sampled_light_emission =
                                         emission_material.emission(&light_hit, light_wi, None);
-                                    assert!(sampled_light_emission.0.max_element() > 0.0);
+                                    assert!(sampled_light_emission.0 > 0.0);
                                     successful_light_samples += 1;
                                     light_contribution += reflectance
                                         * beta
@@ -120,7 +120,7 @@ impl Integrator for PathTracingIntegrator {
                         }
                     }
                     if self.light_samples > 0 {
-                        color += light_contribution / (self.light_samples as f32);
+                        sum.energy += light_contribution / (self.light_samples as f32);
                     }
                     if self.direct_illumination {
                         break;
@@ -133,7 +133,7 @@ impl Integrator for PathTracingIntegrator {
                         }
                         if self.russian_roulette {
                             // let attenuation = Vec3::from(beta).norm();
-                            let attenuation = Vec3::from(beta).0.max_element();
+                            let attenuation = beta.0;
                             if attenuation < 1.0 && 0.001 < attenuation {
                                 if sampler.draw_1d().x > attenuation {
                                     break;
@@ -157,11 +157,21 @@ impl Integrator for PathTracingIntegrator {
                     }
                 }
                 None => {
-                    color += beta * self.world.background;
+                    /*vec3 unit_direction = unit_vector(r.direction());
+                    // get phi and theta values for that direction, then convert to UV values for an environment map.
+                    float u = (M_PI + atan2(unit_direction.y(), unit_direction.x())) / TAU;
+                    float v = acos(unit_direction.z()) / M_PI;*/
+                    let fake_hit_record: HitRecord =
+                        HitRecord::new(0.0, Point3::ZERO, sum.lambda, Vec3::ZERO, None, 0);
+                    let id = self.world.background;
+                    let world_material: &Box<dyn Material> = &self.world.materials[id as usize];
+                    let world_emission =
+                        world_material.emission(&fake_hit_record, Vec3::ZERO, None);
+                    sum.energy += beta * world_emission;
                     break;
                 }
             }
         }
-        color
+        XYZColor::from(sum)
     }
 }

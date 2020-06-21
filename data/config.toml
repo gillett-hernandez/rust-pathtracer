@@ -1,4 +1,15 @@
 
+[[camera]]
+look_from = [-100, 0, 0]
+look_at = [0, 0, 0]
+vfov = 8
+
+[[camera]]
+look_from = [100, 0, 0]
+look_at = [0, 0, 0]
+vfov = 20
+
+
 
 [[render_settings]]
 threads=22
@@ -12,6 +23,7 @@ max_samples = 160
 camera_id = 0
 direct_illumination = true
 light_samples = 4
+
 
 [[render_settings]]
 threads=22

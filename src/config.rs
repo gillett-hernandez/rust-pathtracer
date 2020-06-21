@@ -17,6 +17,22 @@ pub struct Resolution {
     pub height: usize,
 }
 
+#[derive(Deserialize, Copy, Clone)]
+pub struct SimpleCameraSettings {
+    pub look_from: [f32; 3],
+    pub look_at: [f32; 3],
+    pub v_up: Option<[f32; 3]>,
+    pub vfov: f32,
+    pub focal_distance: Option<f32>,
+    pub aperture_size: Option<f32>,
+    pub shutter_open_time: Option<f32>,
+    pub shutter_close_time: Option<f32>,
+}
+
+#[derive(Deserialize, Copy, Clone)]
+pub enum CameraSettings {
+    SimpleCamera(SimpleCameraSettings),
+}
 #[derive(Deserialize, Clone)]
 pub struct RenderSettings {
     pub output_directory: Option<String>,
@@ -24,7 +40,7 @@ pub struct RenderSettings {
     pub integrator: Option<String>,
     pub max_bounces: Option<u16>,
     pub threads: Option<u16>,
-    pub min_samples: Option<u16>,
+    pub min_samples: u16,
     pub max_samples: Option<u16>,
     pub camera_id: Option<u16>,
     pub russian_roulette: Option<bool>,
@@ -34,6 +50,7 @@ pub struct RenderSettings {
 
 #[derive(Deserialize, Clone)]
 pub struct Settings {
+    pub cameras: Vec<CameraSettings>,
     pub render_settings: Vec<RenderSettings>,
 }
 

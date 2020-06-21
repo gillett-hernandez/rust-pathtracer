@@ -153,6 +153,12 @@ impl Vec3 {
     }
 }
 
+impl From<[f32; 3]> for Vec3 {
+    fn from(other: [f32; 3]) -> Vec3 {
+        Vec3::new(other[0], other[1], other[2])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

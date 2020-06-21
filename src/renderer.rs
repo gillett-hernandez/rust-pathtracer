@@ -44,7 +44,7 @@ pub trait Renderer {
         integrator: Arc<Box<dyn Integrator>>,
         camera: &Box<dyn Camera>,
         settings: &RenderSettings,
-        film: &mut Film<RGBColor>,
+        film: &mut Film<XYZColor>,
     );
 }
 
@@ -54,7 +54,7 @@ impl Renderer for NaiveRenderer {
         integrator: Arc<Box<dyn Integrator>>,
         camera: &Box<dyn Camera>,
         settings: &RenderSettings,
-        film: &mut Film<RGBColor>,
+        film: &mut Film<XYZColor>,
     ) {
         // for y in 0..film.height {
         //     for x in 0..film.width {
@@ -69,10 +69,10 @@ impl Renderer for NaiveRenderer {
                 let x: usize = pixel_index - width * y;
                 // gen ray for pixel x, y
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                let mut temp_color = RGBColor::ZERO;
+                let mut temp_color = XYZColor::BLACK;
                 let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                 // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                for s in 0..settings.min_samples.unwrap_or(1) {
+                for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
                     let r = camera.get_ray(
                         (x as f32 + sample.x) / (width as f32),
@@ -81,7 +81,7 @@ impl Renderer for NaiveRenderer {
                     temp_color += integrator.color(&mut sampler, r);
                 }
                 // unsafe {
-                *pixel_ref = temp_color / (settings.min_samples.unwrap_or(1) as f32);
+                *pixel_ref = temp_color / (settings.min_samples as f32);
                 // }
             });
     }
