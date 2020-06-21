@@ -106,7 +106,7 @@ fn lambertian_under_lamp(color: SDF) -> World {
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
-            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(2), 1)),
+            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(1), 1)),
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
@@ -231,7 +231,7 @@ fn main() -> () {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
 
             //apply tonemap here
-            // color = color / max_luminance;
+            color = color / max_luminance;
             let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);

@@ -6,7 +6,7 @@ pub struct XYZColor(pub f32x4);
 impl XYZColor {
     pub const fn new(x: f32, y: f32, z: f32) -> XYZColor {
         // XYZColor { x, y, z, w: 0.0 }
-        XYZColor(f32x4::new(z, y, z, 0.0))
+        XYZColor(f32x4::new(x, y, z, 0.0))
     }
     pub const fn from_raw(v: f32x4) -> XYZColor {
         XYZColor(v)
@@ -99,6 +99,7 @@ impl DivAssign<f32> for XYZColor {
 impl Add for XYZColor {
     type Output = XYZColor;
     fn add(self, other: XYZColor) -> XYZColor {
+        unimplemented!();
         let [x1, y1, _z1, _]: [f32; 4] = self.0.into();
         let s1 = self.0.sum();
         let [x2, y2, _z2, _]: [f32; 4] = other.0.into();
