@@ -182,5 +182,6 @@ impl Integrator for PathTracingIntegrator {
             }
         }
         sum.energy.0 * RGBColor::from(XYZColor::from(sum))
+        // XYZColor::from(sum)
     }
 }

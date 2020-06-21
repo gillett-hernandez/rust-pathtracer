@@ -232,11 +232,16 @@ fn main() -> () {
             "computed tonemapping: max luminance {}, avg luminance {}",
             max_luminance, avg_luminance
         );
+        let exposure = 1.0;
+        let gamma = 0.4;
+
         for (x, y, pixel) in img.enumerate_pixels_mut() {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
 
             //apply tonemap here
-            color.0 = color.0 / max_luminance;
+            let pixel_luminance = color.y();
+            let target_luminance = exposure * pixel_luminance.powf(gamma);
+            color.0 = color.0 * target_luminance / pixel_luminance;
             // color.0 = color.0.replace(1, color.y() / max_luminance);
             let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
