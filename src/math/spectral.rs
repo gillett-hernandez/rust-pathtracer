@@ -155,15 +155,16 @@ impl From<SingleWavelength> for XYZColor {
     }
 }
 
+pub enum SDF {
+    Linear { signal: Vec<f32>, bounds: Bounds1D },
+    Exponential { signal: Vec<(f32, f32, f32)> },
+    Blackbody { temperature: f32, boost: f32 },
+}
+
 pub trait SpectralResponseFunction {
     // MARK: HWSS
     fn evaluate(&self, lambda: f32) -> f32;
 }
-pub enum SDF {
-    Linear { signal: Vec<f32>, bounds: Bounds1D },
-    Exponential { signal: Vec<(f32, f32, f32)> },
-}
-
 pub trait SpectralPowerDistribution {
     fn evaluate_power(&self, lambda: f32) -> f32;
     fn convert_to_xyz(&self, integration_bounds: Bounds1D, step_size: f32) -> XYZColor {
@@ -211,6 +212,7 @@ impl SpectralResponseFunction for SDF {
                     1.0
                 }
             }
+            _ => 0.0,
         }
     }
 }
@@ -236,6 +238,7 @@ impl SpectralPowerDistribution for SDF {
                 }
                 val
             }
+            SDF::Blackbody { temperature, boost } => *boost * blackbody(*temperature, lambda),
         }
     }
 }

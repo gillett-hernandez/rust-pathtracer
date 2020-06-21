@@ -12,3 +12,12 @@ pub fn gaussian(x: f64, alpha: f64, mu: f64, sigma1: f64, sigma2: f64) -> f64 {
 pub fn w(x: f32, mul: f32, offset: f32, sigma: f32) -> f32 {
     mul * (-(x - offset).powi(2) / sigma).exp() / (sigma * PI).sqrt()
 }
+
+const HCC2: f32 = 1.1910429723971884140794892e-29;
+const HKC: f32 = 1.438777085924334052222404423195819240925e-2;
+
+pub fn blackbody(temperature: f32, lambda: f32) -> f32 {
+    let lambda = lambda * 1e-9;
+
+    lambda.powi(-5) * HCC2 / ((HKC / (lambda * temperature)).exp() - 1.0)
+}

@@ -12,6 +12,10 @@ pub fn cie_e(power: f32) -> SDF {
     }
 }
 
+pub fn blackbody(temperature: f32, boost: f32) -> SDF {
+    SDF::Blackbody { temperature, boost }
+}
+
 pub fn red(power: f32) -> SDF {
     SDF::Exponential {
         signal: vec![
