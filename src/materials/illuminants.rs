@@ -4,9 +4,9 @@ use super::DiffuseLight;
 use crate::math::SDF;
 use crate::math::*;
 
-pub fn E() -> SDF {
+pub fn cie_e(power: f32) -> SDF {
     SDF::Linear {
-        signal: vec![1.0],
+        signal: vec![power],
         bounds: Bounds1D::new(370.0, 790.0),
     }
 }

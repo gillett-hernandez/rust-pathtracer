@@ -79,7 +79,7 @@ impl Renderer for NaiveRenderer {
                         (x as f32 + sample.x) / (width as f32),
                         (y as f32 + sample.y) / (height as f32),
                     );
-                    temp_color += RGBColor::from(integrator.color(&mut sampler, r));
+                    temp_color += integrator.color(&mut sampler, r);
                 }
                 // unsafe {
                 *pixel_ref = XYZColor::from(temp_color / (settings.min_samples as f32));

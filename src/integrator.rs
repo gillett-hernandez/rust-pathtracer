@@ -7,7 +7,7 @@ use std::f32::INFINITY;
 use std::sync::Arc;
 
 pub trait Integrator: Sync + Send {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> XYZColor;
+    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor;
 }
 
 pub struct PathTracingIntegrator {
@@ -15,14 +15,14 @@ pub struct PathTracingIntegrator {
     pub world: Arc<World>,
     pub russian_roulette: bool,
     pub light_samples: u16,
-    pub direct_illumination: bool,
+    pub only_direct: bool,
 }
 
 impl Integrator for PathTracingIntegrator {
-    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> XYZColor {
+    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor {
         let mut ray = camera_ray;
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, 380.0, 780.0);
-        let mut beta: SingleEnergy = SingleEnergy::ZERO;
+        let mut beta: SingleEnergy = SingleEnergy::ONE;
         let mut last_bsdf_pdf = 0.0;
 
         for current_bounce in 0..self.max_bounces {
@@ -124,7 +124,7 @@ impl Integrator for PathTracingIntegrator {
                     if self.light_samples > 0 {
                         sum.energy += light_contribution / (self.light_samples as f32);
                     }
-                    if self.direct_illumination {
+                    if self.only_direct {
                         break;
                     }
                     if let Some(wo) = maybe_wo {
@@ -169,11 +169,12 @@ impl Integrator for PathTracingIntegrator {
                     let world_material: &Box<dyn Material> = &self.world.materials[id as usize];
                     let world_emission =
                         world_material.emission(&fake_hit_record, Vec3::ZERO, None);
+                    // println!("{:?}, {:?}", beta, world_emission);
                     sum.energy += beta * world_emission;
                     break;
                 }
             }
         }
-        XYZColor::from(sum)
+        sum.energy.0 * RGBColor::from(XYZColor::from(sum))
     }
 }

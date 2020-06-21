@@ -36,7 +36,7 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
     let max_bounces = settings.max_bounces.unwrap_or(1);
     let russian_roulette = settings.russian_roulette.unwrap_or(true);
     let light_samples = settings.light_samples.unwrap_or(4);
-    let direct_illumination = settings.direct_illumination.unwrap_or(false);
+    let only_direct = settings.only_direct.unwrap_or(false);
     println!(
         "constructing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
         max_bounces, russian_roulette, light_samples
@@ -46,7 +46,7 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
         world,
         russian_roulette,
         light_samples,
-        direct_illumination,
+        only_direct,
     })
 }
 
@@ -89,17 +89,20 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
         ))])),
         lights: vec![],
         background: 0,
-        materials: vec![Box::new(DiffuseLight::new(illuminants::E())), material],
+        materials: vec![
+            Box::new(DiffuseLight::new(illuminants::cie_e(1.0))),
+            material,
+        ],
     };
     world
 }
 
 fn lambertian_under_lamp(color: SDF) -> World {
-    //DiffuseLight::new(illuminants::E())
+    //DiffuseLight::new(illuminants::cie_e())
     //DiffuseLight::new(illuminants::void())
     let void = Box::new(DiffuseLight::new(illuminants::void()));
     let lambertian = Box::new(Lambertian::new(color));
-    let diffuse_light = Box::new(DiffuseLight::new(illuminants::E()));
+    let diffuse_light = Box::new(DiffuseLight::new(illuminants::cie_e(1.0)));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
@@ -114,7 +117,7 @@ fn lambertian_under_lamp(color: SDF) -> World {
 }
 
 fn construct_scene() -> World {
-    let white = illuminants::E();
+    let white = illuminants::cie_e(1.0);
     // let lambertian = Box::new(Lambertian::new(white));
     // let diffuse_light = Box::new(DiffuseLight::new());
     // let world = World {
@@ -228,7 +231,7 @@ fn main() -> () {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];
 
             //apply tonemap here
-            color = color / max_luminance;
+            // color = color / max_luminance;
             let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);

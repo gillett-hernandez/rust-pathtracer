@@ -46,7 +46,7 @@ pub struct RenderSettings {
     pub camera_id: Option<u16>,
     pub russian_roulette: Option<bool>,
     pub light_samples: Option<u16>,
-    pub direct_illumination: Option<bool>,
+    pub only_direct: Option<bool>,
 }
 
 #[derive(Deserialize, Clone)]

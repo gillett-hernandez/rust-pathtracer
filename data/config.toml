@@ -13,13 +13,14 @@ vfov = 20
 
 [[render_settings]]
 threads=22
+russian_roulette = false
 output_directory = "."
 integrator="PT"
-max_bounces=4
-resolution.width = 512
-resolution.height = 512
+max_bounces=3
+resolution.width = 200
+resolution.height = 200
 min_samples = 10
 max_samples = 10
-camera_id = 1
-direct_illumination = false
-light_samples = 4
+camera_id = 0
+only_direct = false
+light_samples = 2
