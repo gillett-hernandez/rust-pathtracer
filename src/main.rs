@@ -15,7 +15,7 @@ pub mod math;
 pub mod renderer;
 pub mod world;
 
-use camera::{Camera, CameraResize, SimpleCamera};
+use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::{HittableList, Sphere};
 use integrator::{Integrator, PathTracingIntegrator};
@@ -51,8 +51,8 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
 }
 
 fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
-    let cameras = Vec::<Box<dyn Camera>>::new();
-    for camera_config in settings.cameras {
+    let mut cameras = Vec::<Box<dyn Camera>>::new();
+    for camera_config in &settings.cameras {
         let camera: Box<dyn Camera> = match camera_config {
             config::CameraSettings::SimpleCamera(cam) => {
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
@@ -89,23 +89,25 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
         ))])),
         lights: vec![],
         background: 0,
-        materials: vec![Box::new(illuminants::DiffuseLightE), material],
+        materials: vec![Box::new(DiffuseLight::new(illuminants::E())), material],
     };
     world
 }
 
 fn lambertian_under_lamp(color: SDF) -> World {
-    let void = Box::new(illuminants::DiffuseVoid);
+    //DiffuseLight::new(illuminants::E())
+    //DiffuseLight::new(illuminants::void())
+    let void = Box::new(DiffuseLight::new(illuminants::void()));
     let lambertian = Box::new(Lambertian::new(color));
-    let diffuse_light = Box::new(illuminants::DiffuseLightE);
+    let diffuse_light = Box::new(DiffuseLight::new(illuminants::E()));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
-            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(1), 1)),
+            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(2), 1)),
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
-        background: 0,
+        background: 2,
         materials: vec![void, lambertian, diffuse_light],
     };
     world
@@ -174,7 +176,7 @@ fn main() -> () {
 
     let world = Arc::new(construct_scene());
 
-    let cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
+    let mut cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
     let renderer = construct_renderer(&config);
     // get settings for each film
     for (render_id, render_settings) in config.render_settings.iter().enumerate() {
@@ -191,12 +193,8 @@ fn main() -> () {
 
         let now = Instant::now();
 
-        let film = render(
-            &renderer,
-            &cameras[camera_id].with_aspect_ratio(aspect_ratio),
-            &render_settings,
-            &world,
-        );
+        &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
+        let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
 
         let total_pixels = film.width * film.height;
         let total_camera_rays = total_pixels * (render_settings.max_samples.unwrap() as usize);
@@ -231,7 +229,7 @@ fn main() -> () {
 
             //apply tonemap here
             color = color / max_luminance;
-            let [r, g, b, _]: [f32; 4] = color.0.into();
+            let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
         }

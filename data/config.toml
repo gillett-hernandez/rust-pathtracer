@@ -1,62 +1,25 @@
 
-[[camera]]
+[[cameras]]
+type="SimpleCamera"
 look_from = [-100, 0, 0]
 look_at = [0, 0, 0]
 vfov = 8
 
-[[camera]]
+[[cameras]]
+type="SimpleCamera"
 look_from = [100, 0, 0]
 look_at = [0, 0, 0]
 vfov = 20
 
-
-
 [[render_settings]]
 threads=22
 output_directory = "."
 integrator="PT"
-max_bounces=2
+max_bounces=4
 resolution.width = 512
 resolution.height = 512
-min_samples = 160
-max_samples = 160
-camera_id = 0
-direct_illumination = true
-light_samples = 4
-
-
-[[render_settings]]
-threads=22
-output_directory = "."
-integrator="PT"
-max_bounces=2
-resolution.width = 512
-resolution.height = 512
-min_samples = 3024
-max_samples = 3024
-camera_id = 0
-light_samples = 0
-
-[[render_settings]]
-threads=22
-output_directory = "."
-integrator="PT"
-max_bounces=2
-resolution.width = 512
-resolution.height = 512
-min_samples = 160
-max_samples = 160
-camera_id = 0
-light_samples = 4
-
-[[render_settings]]
-threads=22
-output_directory = "."
-integrator="PT"
-max_bounces=2
-resolution.width = 512
-resolution.height = 512
-min_samples = 500
-max_samples = 500
+min_samples = 10
+max_samples = 10
 camera_id = 1
-light_samples = 0
+direct_illumination = false
+light_samples = 4

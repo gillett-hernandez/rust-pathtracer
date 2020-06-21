@@ -69,19 +69,20 @@ impl Renderer for NaiveRenderer {
                 let x: usize = pixel_index - width * y;
                 // gen ray for pixel x, y
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                let mut temp_color = XYZColor::BLACK;
-                let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
-                // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                let mut temp_color = RGBColor::BLACK;
+                // let mut temp_color = XYZColor::BLACK;
+                // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+                let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
                 for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
                     let r = camera.get_ray(
                         (x as f32 + sample.x) / (width as f32),
                         (y as f32 + sample.y) / (height as f32),
                     );
-                    temp_color += integrator.color(&mut sampler, r);
+                    temp_color += RGBColor::from(integrator.color(&mut sampler, r));
                 }
                 // unsafe {
-                *pixel_ref = temp_color / (settings.min_samples as f32);
+                *pixel_ref = XYZColor::from(temp_color / (settings.min_samples as f32));
                 // }
             });
     }

@@ -184,14 +184,15 @@ impl SpectralResponseFunction for SDF {
     fn evaluate(&self, lambda: f32) -> f32 {
         match (&self) {
             SDF::Linear { signal, bounds } => {
-                let step_size = (bounds.upper - bounds.lower) / (signal.len() as f32);
-                let index = ((lambda - bounds.lower) / step_size) as usize;
                 assert!(
-                    index < signal.len(),
-                    "lambda was {}, bounds were {:?}",
+                    bounds.lower <= lambda && lambda < bounds.upper,
+                    "lambda was {:?}, bounds were {:?}",
                     lambda,
                     bounds
                 );
+                let step_size = (bounds.upper - bounds.lower) / (signal.len() as f32);
+                let index = ((lambda - bounds.lower) / step_size) as usize;
+
                 signal[index]
             }
             SDF::Exponential { signal } => {
@@ -199,6 +200,7 @@ impl SpectralResponseFunction for SDF {
                 for &(m, o, s) in signal {
                     val += w(lambda, m, o, s);
                 }
+                assert!(val <= 1.0);
                 val
             }
         }
@@ -209,14 +211,14 @@ impl SpectralPowerDistribution for SDF {
     fn evaluate_power(&self, lambda: f32) -> f32 {
         match (&self) {
             SDF::Linear { signal, bounds } => {
-                let step_size = (bounds.upper - bounds.lower) / (signal.len() as f32);
-                let index = ((lambda - bounds.lower) / step_size) as usize;
                 assert!(
-                    index < signal.len(),
-                    "lambda was {}, bounds were {:?}",
+                    bounds.lower <= lambda && lambda < bounds.upper,
+                    "lambda was {:?}, bounds were {:?}",
                     lambda,
                     bounds
                 );
+                let step_size = (bounds.upper - bounds.lower) / (signal.len() as f32);
+                let index = ((lambda - bounds.lower) / step_size) as usize;
                 signal[index]
             }
             SDF::Exponential { signal } => {

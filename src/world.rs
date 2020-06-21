@@ -33,6 +33,10 @@ impl World {
     pub fn get_primitive(&self, index: usize) -> &Box<dyn Hittable> {
         self.bvh.get_primitive(index)
     }
+
+    pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
+        self.bvh.hit(r, t0, t1)
+    }
 }
 
 impl HasBoundingBox for World {
@@ -41,17 +45,17 @@ impl HasBoundingBox for World {
     }
 }
 
-impl Hittable for World {
-    fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        self.bvh.hit(r, t0, t1)
-    }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
-        unimplemented!()
-    }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
-        unimplemented!()
-    }
-    fn get_instance_id(&self) -> usize {
-        unimplemented!()
-    }
-}
+// impl Hittable for World {
+//     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
+//         self.bvh.hit(r, t0, t1)
+//     }
+//     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+//         unimplemented!()
+//     }
+//     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+//         unimplemented!()
+//     }
+//     fn get_instance_id(&self) -> usize {
+//         unimplemented!()
+//     }
+// }

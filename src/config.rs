@@ -30,6 +30,7 @@ pub struct SimpleCameraSettings {
 }
 
 #[derive(Deserialize, Copy, Clone)]
+#[serde(tag = "type")]
 pub enum CameraSettings {
     SimpleCamera(SimpleCameraSettings),
 }

@@ -27,7 +27,8 @@ impl Integrator for PathTracingIntegrator {
 
         for current_bounce in 0..self.max_bounces {
             match (self.world.hit(ray, 0.0, INFINITY)) {
-                Some(hit) => {
+                Some(mut hit) => {
+                    hit.lambda = sum.lambda;
                     let id = match (hit.material) {
                         Some(id) => id as usize,
                         None => 0,
@@ -89,7 +90,8 @@ impl Integrator for PathTracingIntegrator {
                             // }
                             let dropoff = wo.z().max(0.0);
                             // let dropoff = wo.z().abs();
-                            if let Some(light_hit) = self.world.hit(light_ray, 0.0, INFINITY) {
+                            if let Some(mut light_hit) = self.world.hit(light_ray, 0.0, INFINITY) {
+                                light_hit.lambda = sum.lambda;
                                 // note: changed t0 to 0.0. change back to hit.time maybe?
                                 //
                                 // maybe if the instance that was hit was a light as well, redo the sampling calculations for that light instead?

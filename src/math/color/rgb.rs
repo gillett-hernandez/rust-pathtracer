@@ -12,6 +12,7 @@ impl RGBColor {
         RGBColor(v)
     }
     pub const ZERO: RGBColor = RGBColor::from_raw(f32x4::splat(0.0));
+    pub const BLACK: RGBColor = RGBColor::from_raw(f32x4::splat(0.0));
 }
 
 impl RGBColor {

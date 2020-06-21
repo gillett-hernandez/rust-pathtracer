@@ -5,12 +5,9 @@ pub enum FoV {
     Horizontal(f32),
     Vertical(f32),
 }
-
-pub trait CameraResize {
-    fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self;
-}
 pub trait Camera: Send + Sync {
     fn get_ray(&self, s: f32, t: f32) -> Ray;
+    fn modify_aspect_ratio(&mut self, aspect_ratio: f32);
 }
 
 #[derive(Copy, Clone)]
@@ -116,22 +113,16 @@ impl Camera for SimpleCamera {
             time,
         )
     }
-}
-
-impl CameraResize for SimpleCamera {
-    fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
+    fn modify_aspect_ratio(&mut self, aspect_ratio: f32) {
         let theta: f32 = self.vfov * PI / 180.0;
         let half_height = (theta / 2.0).tan();
         let half_width = aspect_ratio * half_height;
-        SimpleCamera {
-            lower_left_corner: self.origin
-                - self.u * half_width * self.focal_distance
-                - self.v * half_height * self.focal_distance
-                - self.w * self.focal_distance,
-            horizontal: self.u * 2.0 * half_width * self.focal_distance,
-            vertical: self.v * 2.0 * half_height * self.focal_distance,
-            ..*self
-        }
+        self.lower_left_corner = self.origin
+            - self.u * half_width * self.focal_distance
+            - self.v * half_height * self.focal_distance
+            - self.w * self.focal_distance;
+        self.horizontal = self.u * 2.0 * half_width * self.focal_distance;
+        self.vertical = self.v * 2.0 * half_height * self.focal_distance;
     }
 }
 
