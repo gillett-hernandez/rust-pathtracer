@@ -2,11 +2,12 @@ use crate::hittable::HitRecord;
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 pub struct DiffuseLight {
-    pub color: SDF,
+    // pub color: Box<dyn SpectralPowerDistribution>,
+    pub color: SPD,
 }
 
 impl DiffuseLight {
-    pub fn new(color: SDF) -> DiffuseLight {
+    pub fn new(color: SPD) -> DiffuseLight {
         DiffuseLight { color }
     }
 }

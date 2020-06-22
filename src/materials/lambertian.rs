@@ -2,11 +2,11 @@ use crate::hittable::HitRecord;
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
 pub struct Lambertian {
-    pub color: SDF,
+    pub color: SPD,
 }
 
 impl Lambertian {
-    pub fn new(color: SDF) -> Lambertian {
+    pub fn new(color: SPD) -> Lambertian {
         Lambertian { color }
     }
 }

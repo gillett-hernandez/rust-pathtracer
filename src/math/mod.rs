@@ -5,7 +5,7 @@ mod misc;
 mod point;
 mod random;
 mod sample;
-mod spectral;
+pub mod spectral;
 mod tangent_frame;
 mod vec;
 
@@ -15,9 +15,7 @@ pub use misc::*;
 pub use point::Point3;
 pub use random::*;
 pub use sample::*;
-pub use spectral::{
-    SingleEnergy, SingleWavelength, SpectralPowerDistribution, SpectralResponseFunction, SDF,
-};
+pub use spectral::{SingleEnergy, SingleWavelength, SpectralPowerDistributionFunction, SPD};
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 pub use tangent_frame::TangentFrame;

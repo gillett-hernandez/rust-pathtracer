@@ -155,18 +155,21 @@ impl From<SingleWavelength> for XYZColor {
     }
 }
 
-pub enum SDF {
+pub enum Op {
+    Add,
+    Mul,
+}
+
+pub enum SPD {
     Linear { signal: Vec<f32>, bounds: Bounds1D },
     Exponential { signal: Vec<(f32, f32, f32)> },
     InverseExponential { signal: Vec<(f32, f32, f32)> },
     Blackbody { temperature: f32, boost: f32 },
+    Machine { seed: f32, list: Vec<(Op, SPD)> },
 }
 
-pub trait SpectralResponseFunction {
-    // MARK: HWSS
+pub trait SpectralPowerDistributionFunction {
     fn evaluate(&self, lambda: f32) -> f32;
-}
-pub trait SpectralPowerDistribution {
     fn evaluate_power(&self, lambda: f32) -> f32;
     fn convert_to_xyz(&self, integration_bounds: Bounds1D, step_size: f32) -> XYZColor {
         let iterations =
@@ -187,48 +190,10 @@ pub trait SpectralPowerDistribution {
     }
 }
 
-impl SpectralResponseFunction for SDF {
-    fn evaluate(&self, lambda: f32) -> f32 {
-        match (&self) {
-            SDF::Linear { signal, bounds } => {
-                assert!(
-                    bounds.lower <= lambda && lambda < bounds.upper,
-                    "lambda was {:?}, bounds were {:?}",
-                    lambda,
-                    bounds
-                );
-                let step_size = (bounds.upper - bounds.lower) / (signal.len() as f32);
-                let index = ((lambda - bounds.lower) / step_size) as usize;
-
-                signal[index]
-            }
-            SDF::Exponential { signal } => {
-                let mut val = 0.0f32;
-                for &(o, s, m) in signal {
-                    val += w(lambda, m, o, s);
-                }
-                if val < 1.0 {
-                    val
-                } else {
-                    1.0
-                }
-            }
-            SDF::InverseExponential { signal } => {
-                let mut val = 1.0f32;
-                for &(o, s, m) in signal {
-                    val -= w(lambda, m, o, s);
-                }
-                val.clamp(0.0, 1.0)
-            }
-            _ => 0.0,
-        }
-    }
-}
-
-impl SpectralPowerDistribution for SDF {
+impl SpectralPowerDistributionFunction for SPD {
     fn evaluate_power(&self, lambda: f32) -> f32 {
         match (&self) {
-            SDF::Linear { signal, bounds } => {
+            SPD::Linear { signal, bounds } => {
                 assert!(
                     bounds.lower <= lambda && lambda < bounds.upper,
                     "lambda was {:?}, bounds were {:?}",
@@ -239,21 +204,32 @@ impl SpectralPowerDistribution for SDF {
                 let index = ((lambda - bounds.lower) / step_size) as usize;
                 signal[index]
             }
-            SDF::Exponential { signal } => {
+            SPD::Exponential { signal } => {
                 let mut val = 0.0f32;
                 for &(o, s, m) in signal {
                     val += w(lambda, m, o, s);
                 }
                 val
             }
-            SDF::InverseExponential { signal } => {
+            SPD::InverseExponential { signal } => {
                 let mut val = 1.0f32;
                 for &(o, s, m) in signal {
                     val -= w(lambda, m, o, s);
                 }
                 val.max(0.0)
             }
-            SDF::Blackbody { temperature, boost } => {
+            SPD::Machine { seed, list } => {
+                let mut val = *seed;
+                for (op, spd) in list {
+                    let eval = spd.evaluate_power(lambda);
+                    val = match (op) {
+                        Op::Add => val + eval,
+                        Op::Mul => val * eval,
+                    };
+                }
+                val.max(0.0)
+            }
+            SPD::Blackbody { temperature, boost } => {
                 if *boost == 0.0 {
                     blackbody(*temperature, lambda)
                 } else {
@@ -262,6 +238,9 @@ impl SpectralPowerDistribution for SDF {
                 }
             }
         }
+    }
+    fn evaluate(&self, lambda: f32) -> f32 {
+        self.evaluate_power(lambda).min(1.0)
     }
 }
 

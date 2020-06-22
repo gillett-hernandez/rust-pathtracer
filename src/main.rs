@@ -98,7 +98,7 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
     world
 }
 
-fn lambertian_under_lamp(color: SDF, world_strength: f32) -> World {
+fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
     //DiffuseLight::new(illuminants_and_colors::cie_e())
     //DiffuseLight::new(illuminants_and_colors::void())
     let lambertian = Box::new(Lambertian::new(color));
