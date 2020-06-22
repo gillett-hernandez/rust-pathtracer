@@ -24,32 +24,11 @@ pub use vec::{Axis, Vec3};
 use std::fmt::Debug;
 use std::ops::Mul;
 
-impl From<Point3> for Vec3 {
-    fn from(p: Point3) -> Self {
-        // Vec3::new(p.x, p.y, p.z)
-        Vec3::from_raw(p.0.replace(3, 0.0))
-    }
-}
-
-impl From<Vec3> for Point3 {
-    fn from(v: Vec3) -> Point3 {
-        // Point3::from_raw(v.0.replace(3, 1.0))
-        Point3::from_raw(v.0).normalize()
-    }
-}
-
-impl Mul<RGBColor> for Vec3 {
-    type Output = RGBColor;
-    fn mul(mut self, other: RGBColor) -> RGBColor {
-        // RGBColor::new(self.x() * other.r, self.y() * other.g, self.z() * other.b)
-        RGBColor::from_raw(self.0 * other.0)
-    }
-}
-
-impl From<RGBColor> for Vec3 {
-    fn from(c: RGBColor) -> Vec3 {
-        Vec3::from_raw(c.0)
-    }
+#[derive(Copy, Clone, PartialEq)]
+pub enum Sidedness {
+    Forward,
+    Reverse,
+    Dual,
 }
 
 #[derive(Copy, Clone, Debug)]

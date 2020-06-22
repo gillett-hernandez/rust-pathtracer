@@ -116,7 +116,7 @@ impl Integrator for PathTracingIntegrator {
                                         .to_local(&-direction);
                                     let sampled_light_emission =
                                         emission_material.emission(&light_hit, light_wi, None);
-                                    assert!(sampled_light_emission.0 > 0.0);
+                                    assert!(sampled_light_emission.0 >= 0.0);
                                     successful_light_samples += 1;
                                     light_contribution += reflectance
                                         * beta
@@ -125,7 +125,18 @@ impl Integrator for PathTracingIntegrator {
                                         * weight
                                         / light_pdf
                                         / pick_pdf;
-                                    assert!(!light_contribution.0.is_nan(), "{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", light_contribution, reflectance, beta, dropoff, sampled_light_emission, weight, pick_pdf, light_pdf);
+                                    assert!(
+                                        !light_contribution.0.is_nan(),
+                                        "{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+                                        light_contribution,
+                                        reflectance,
+                                        beta,
+                                        dropoff,
+                                        sampled_light_emission,
+                                        weight,
+                                        pick_pdf,
+                                        light_pdf
+                                    );
                                 }
                             }
                         } else {
@@ -135,7 +146,12 @@ impl Integrator for PathTracingIntegrator {
                     if self.light_samples > 0 {
                         // println!("light contribution: {:?}", light_contribution);
                         sum.energy += light_contribution / (self.light_samples as f32);
-                        assert!(!sum.energy.0.is_nan(), "{:?} {:?}", light_contribution, self.light_samples);
+                        assert!(
+                            !sum.energy.0.is_nan(),
+                            "{:?} {:?}",
+                            light_contribution,
+                            self.light_samples
+                        );
                     }
                     if self.only_direct {
                         break;
@@ -179,7 +195,7 @@ impl Integrator for PathTracingIntegrator {
                     let u = (PI + unit_direction.y().atan2(unit_direction.x())) / (2.0 * PI);
                     let v = unit_direction.z().acos() / PI;
                     let fake_hit_record: HitRecord =
-                    HitRecord::new(0.0, Point3::ZERO, (u, v), sum.lambda, Vec3::ZERO, None, 0);
+                        HitRecord::new(0.0, Point3::ZERO, (u, v), sum.lambda, Vec3::ZERO, None, 0);
                     let id = self.world.background;
                     let world_material: &Box<dyn Material> = &self.world.materials[id as usize];
                     let world_emission =
@@ -192,9 +208,17 @@ impl Integrator for PathTracingIntegrator {
             }
         }
         let xyz_from_sum = XYZColor::from(sum);
-        let rgb_from_xyz =RGBColor::from(xyz_from_sum);
+        let rgb_from_xyz = RGBColor::from(xyz_from_sum);
 
-        assert!(!sum.energy.0.is_nan() && xyz_from_sum.0.is_finite().all() && rgb_from_xyz.0.is_finite().all(), "{:?} {:?} {:?}", sum, xyz_from_sum, rgb_from_xyz);
+        assert!(
+            !sum.energy.0.is_nan()
+                && xyz_from_sum.0.is_finite().all()
+                && rgb_from_xyz.0.is_finite().all(),
+            "{:?} {:?} {:?}",
+            sum,
+            xyz_from_sum,
+            rgb_from_xyz
+        );
 
         sum.energy.0 * rgb_from_xyz
         // XYZColor::from(sum)

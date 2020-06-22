@@ -1,19 +1,20 @@
 use crate::hittable::HitRecord;
 use crate::material::{Material, BRDF, PDF};
 use crate::math::*;
+
 pub struct DiffuseLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
     pub color: SPD,
+    pub sidedness: Sidedness,
 }
 
 impl DiffuseLight {
-    pub fn new(color: SPD) -> DiffuseLight {
-        DiffuseLight { color }
+    pub fn new(color: SPD, sidedness: Sidedness) -> DiffuseLight {
+        DiffuseLight { color, sidedness }
     }
 }
 
 impl PDF for DiffuseLight {
-    // PDF has a different meaning for light sources.
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
         0.0
     }
@@ -27,7 +28,14 @@ impl BRDF for DiffuseLight {
         SingleEnergy::ZERO
     }
     fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
-        SingleEnergy::new(self.color.evaluate_power(hit.lambda))
+        if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
+            || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
+            || self.sidedness == Sidedness::Dual
+        {
+            SingleEnergy::new(self.color.evaluate_power(hit.lambda))
+        } else {
+            SingleEnergy::ZERO
+        }
     }
 }
 

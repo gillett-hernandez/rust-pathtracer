@@ -1,7 +1,7 @@
 // use packed_simd::{f32x4, f32x8};
+use crate::math::Point3;
 use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-
 #[derive(Copy, Clone, Debug)]
 pub enum Axis {
     X,
@@ -173,6 +173,13 @@ impl Vec3 {
 impl From<[f32; 3]> for Vec3 {
     fn from(other: [f32; 3]) -> Vec3 {
         Vec3::new(other[0], other[1], other[2])
+    }
+}
+
+impl From<Point3> for Vec3 {
+    fn from(p: Point3) -> Self {
+        // Vec3::new(p.x, p.y, p.z)
+        Vec3::from_raw(p.0.replace(3, 0.0))
     }
 }
 

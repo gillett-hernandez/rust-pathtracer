@@ -17,6 +17,7 @@ pub struct AARect {
     pub size: (f32, f32),
     half_size: (f32, f32),
     pub normal: Axis,
+    pub two_sided: bool,
     pub origin: Point3,
     pub material_id: Option<MaterialId>,
     pub instance_id: usize,
@@ -27,13 +28,15 @@ impl AARect {
         size: (f32, f32),
         origin: Point3,
         normal: Axis,
+        two_sided: bool,
         material_id: Option<MaterialId>,
         instance_id: usize,
     ) -> Self {
         AARect {
             size,
-            half_size:(size.0/2.0, size.1/2.0),
+            half_size: (size.0 / 2.0, size.1 / 2.0),
             origin,
+            two_sided,
             normal,
             material_id,
             instance_id,
@@ -46,6 +49,7 @@ impl AARect {
         y0: f32,
         x1: f32,
         y1: f32,
+        two_sided: bool,
         material_id: Option<MaterialId>,
         instance_id: usize,
     ) -> Self {
@@ -54,8 +58,9 @@ impl AARect {
         let offset = vec_shuffle(Vec3::new(midpoint.0, midpoint.1, 0.0), &normal);
         AARect {
             size,
-            half_size:(size.0/2.0, size.1/2.0),
+            half_size: (size.0 / 2.0, size.1 / 2.0),
             origin: origin + offset,
+            two_sided,
             normal,
             material_id,
             instance_id,
@@ -87,24 +92,29 @@ impl Hittable for AARect {
         }
         let xh = tmp_o.x() + t * tmp_d.x();
         let yh = tmp_o.y() + t * tmp_d.y();
-        if (xh < -self.half_size.0 || xh > self.half_size.0 || yh < -self.half_size.1 || yh > self.half_size.1) {
+        if (xh < -self.half_size.0
+            || xh > self.half_size.0
+            || yh < -self.half_size.1
+            || yh > self.half_size.1)
+        {
             return None;
         }
         let mut hit_normal = Vec3::from_axis(self.normal);
-        if r.direction * hit_normal > 0.0 {
+        if r.direction * hit_normal > 0.0 && self.two_sided {
             hit_normal = -hit_normal;
         }
-        Some(
-            HitRecord::new(
-                t,
-                r.point_at_parameter(t),
-                ((xh - self.half_size.0) / self.size.0, (yh - self.half_size.1) / self.size.1),
-                0.0,
-                hit_normal,
-                self.material_id,
-                self.instance_id
-            )
-        )
+        Some(HitRecord::new(
+            t,
+            r.point_at_parameter(t),
+            (
+                (xh - self.half_size.0) / self.size.0,
+                (yh - self.half_size.1) / self.size.1,
+            ),
+            0.0,
+            hit_normal,
+            self.material_id,
+            self.instance_id,
+        ))
     }
     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
         let Sample2D { x, y } = s.draw_2d();
@@ -123,7 +133,6 @@ impl Hittable for AARect {
         } else {
             (direction.normalized(), pdf)
         }
-
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
         let direction = (to - from);

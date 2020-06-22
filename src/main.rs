@@ -21,7 +21,7 @@ pub mod world;
 
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
-use geometry::{HittableList, Sphere, AARect};
+use geometry::{AARect, HittableList, Sphere};
 
 use integrator::{Integrator, PathTracingIntegrator};
 use material::{Material, BRDF, PDF};
@@ -94,7 +94,10 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
         lights: vec![],
         background: 0,
         materials: vec![
-            Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(1.0))),
+            Box::new(DiffuseLight::new(
+                illuminants_and_colors::cie_e(1.0),
+                Sidedness::Dual,
+            )),
             material,
         ],
     };
@@ -109,7 +112,7 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
     let green = illuminants_and_colors::green(1.0);
     let blue = illuminants_and_colors::blue(1.0);
     let white = illuminants_and_colors::cie_e(1.0);
-    let blackbody_2000_k_illuminant = illuminants_and_colors::blackbody(3500.0, 10.0);
+    let blackbody_2000_k_illuminant = illuminants_and_colors::blackbody(2500.0, 10.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
@@ -117,25 +120,76 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
     let lambertian_green = Box::new(Lambertian::new(green));
     let lambertian_blue = Box::new(Lambertian::new(blue));
 
-    let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant));
-    let diffuse_light_sphere = Box::new(DiffuseLight::new(blackbody_2000_k_illuminant));
-
+    let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
+    let diffuse_light_sphere = Box::new(DiffuseLight::new(
+        blackbody_2000_k_illuminant,
+        Sidedness::Reverse,
+    ));
 
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
-            Box::new(AARect::new((0.5, 0.5), Point3::new(0.0, 0.0, 0.9), Axis::Z, Some(2), 0)),
-            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, 0.0, 1.0), Axis::Z, Some(3), 1)),
+            Box::new(AARect::new(
+                (0.5, 0.5),
+                Point3::new(0.0, 0.0, 0.9),
+                Axis::Z,
+                false,
+                Some(2),
+                0,
+            )),
+            Box::new(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 0.0, 1.0),
+                Axis::Z,
+                true,
+                Some(3),
+                1,
+            )),
             Box::new(Sphere::new(0.3, Point3::new(0.0, 0.0, -0.3), Some(1), 1)), // ball at origin
-            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, 0.0, -1.0), Axis::Z, Some(3), 2)),
-            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, 1.0, 0.0), Axis::Y, Some(4), 3)),
-            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, -1.0, 0.0), Axis::Y, Some(5), 4)),
-            Box::new(AARect::new((2.0, 2.0), Point3::new(1.0, 0.0, 0.0), Axis::X, Some(3), 5)),
+            Box::new(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 0.0, -1.0),
+                Axis::Z,
+                true,
+                Some(3),
+                2,
+            )),
+            Box::new(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Axis::Y,
+                true,
+                Some(4),
+                3,
+            )),
+            Box::new(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, -1.0, 0.0),
+                Axis::Y,
+                true,
+                Some(5),
+                4,
+            )),
+            Box::new(AARect::new(
+                (2.0, 2.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Axis::X,
+                true,
+                Some(3),
+                5,
+            )),
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
         background: 0,
-        materials: vec![diffuse_light_world, lambertian, diffuse_light_sphere, lambertian_white, lambertian_blue, lambertian_red],
+        materials: vec![
+            diffuse_light_world,
+            lambertian,
+            diffuse_light_sphere,
+            lambertian_white,
+            lambertian_blue,
+            lambertian_red,
+        ],
     };
     world
 }
@@ -161,7 +215,7 @@ fn construct_scene() -> World {
     // world
     // let lambertian = Box::new(Lambertian::new(white));
     // white_furnace_test(lambertian)
-    lambertian_under_lamp(white, 0.0)
+    lambertian_under_lamp(white, 0.05)
 }
 
 fn render(
@@ -237,7 +291,7 @@ fn main() -> () {
         let now = Instant::now();
         // do stuff with film here
         let mut img: image::RgbImage =
-        image::ImageBuffer::new(film.width as u32, film.height as u32);
+            image::ImageBuffer::new(film.width as u32, film.height as u32);
 
         let mut max_luminance = 0.0;
         let mut total_luminance = 0.0;
@@ -248,7 +302,10 @@ fn main() -> () {
                 assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
                 total_luminance += lum;
                 if lum > max_luminance {
-                    println!("max lum so far was {} and occurred at ({}, {})", max_luminance, x, y);
+                    println!(
+                        "max lum so far was {} and occurred at ({}, {})",
+                        max_luminance, x, y
+                    );
                     max_luminance = lum;
                 }
             }

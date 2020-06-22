@@ -19,21 +19,20 @@ pub fn blackbody(temperature: f32, boost: f32) -> SPD {
 pub fn red(power: f32) -> SPD {
     SPD::Exponential {
         signal: vec![
-            (650.0, 500.0, 50.0 * 1.7 * power),
-            (590.0, 1000.0, 3.4 * power),
+            (650.0, 2400.0, 50.0 * 1.7 * power),
         ],
     }
 }
 
 pub fn green(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(540.0, 500.0, 50.0 * 1.7 * power)],
+        signal: vec![(540.0, 2400.0, 50.0 * 1.7 * power)],
     }
 }
 
 pub fn blue(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(430.0, 500.0, 50.0 * 1.7 * power)],
+        signal: vec![(400.0, 2400.0, 50.0 * 1.7 * power)],
     }
 }
 
