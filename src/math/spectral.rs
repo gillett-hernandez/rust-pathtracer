@@ -158,6 +158,7 @@ impl From<SingleWavelength> for XYZColor {
 pub enum SDF {
     Linear { signal: Vec<f32>, bounds: Bounds1D },
     Exponential { signal: Vec<(f32, f32, f32)> },
+    InverseExponential { signal: Vec<(f32, f32, f32)> },
     Blackbody { temperature: f32, boost: f32 },
 }
 
@@ -212,6 +213,13 @@ impl SpectralResponseFunction for SDF {
                     1.0
                 }
             }
+            SDF::InverseExponential { signal } => {
+                let mut val = 1.0f32;
+                for &(o, s, m) in signal {
+                    val -= w(lambda, m, o, s);
+                }
+                val.clamp(0.0, 1.0)
+            }
             _ => 0.0,
         }
     }
@@ -237,6 +245,13 @@ impl SpectralPowerDistribution for SDF {
                     val += w(lambda, m, o, s);
                 }
                 val
+            }
+            SDF::InverseExponential { signal } => {
+                let mut val = 1.0f32;
+                for &(o, s, m) in signal {
+                    val -= w(lambda, m, o, s);
+                }
+                val.max(0.0)
             }
             SDF::Blackbody { temperature, boost } => {
                 if *boost == 0.0 {
