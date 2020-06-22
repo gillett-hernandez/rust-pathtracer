@@ -106,7 +106,7 @@ fn lambertian_under_lamp(color: SDF, world_strength: f32) -> World {
         world_strength,
     )));
     let diffuse_light100 = Box::new(DiffuseLight::new(illuminants_and_colors::blackbody(
-        2000.0, 100.0,
+        2000.0, 10.0,
     )));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
@@ -236,7 +236,7 @@ fn main() -> () {
             "computed tonemapping: max luminance {}, avg luminance {}",
             max_luminance, avg_luminance
         );
-        let exposure = 100.0;
+        let exposure = 20.0;
         let gamma = 0.4;
 
         for (x, y, pixel) in img.enumerate_pixels_mut() {
@@ -246,7 +246,6 @@ fn main() -> () {
             let pixel_luminance = color.y();
             let target_luminance = exposure * pixel_luminance.powf(gamma);
             color.0 = color.0 * target_luminance / pixel_luminance;
-            // color.0 = color.0.replace(1, color.y() / max_luminance);
             let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);

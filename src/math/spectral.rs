@@ -238,7 +238,14 @@ impl SpectralPowerDistribution for SDF {
                 }
                 val
             }
-            SDF::Blackbody { temperature, boost } => *boost * blackbody(*temperature, lambda),
+            SDF::Blackbody { temperature, boost } => {
+                if *boost == 0.0 {
+                    blackbody(*temperature, lambda)
+                } else {
+                    boost * blackbody(*temperature, lambda)
+                        / blackbody(*temperature, max_blackbody_lambda(*temperature))
+                }
+            }
         }
     }
 }

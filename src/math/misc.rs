@@ -21,3 +21,7 @@ pub fn blackbody(temperature: f32, lambda: f32) -> f32 {
 
     lambda.powi(-5) * HCC2 / ((HKC / (lambda * temperature)).exp() - 1.0)
 }
+
+pub fn max_blackbody_lambda(temp: f32) -> f32 {
+    2.8977721e-3 / (temp * 1e-9)
+}
