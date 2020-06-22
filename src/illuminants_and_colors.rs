@@ -20,8 +20,20 @@ pub fn red(power: f32) -> SPD {
     SPD::Exponential {
         signal: vec![
             (650.0, 500.0, 50.0 * 1.7 * power),
-            (550.0, 1000.0, 3.4 * power),
+            (590.0, 1000.0, 3.4 * power),
         ],
+    }
+}
+
+pub fn green(power: f32) -> SPD {
+    SPD::Exponential {
+        signal: vec![(540.0, 500.0, 50.0 * 1.7 * power)],
+    }
+}
+
+pub fn blue(power: f32) -> SPD {
+    SPD::Exponential {
+        signal: vec![(430.0, 500.0, 50.0 * 1.7 * power)],
     }
 }
 

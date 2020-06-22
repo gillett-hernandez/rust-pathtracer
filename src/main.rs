@@ -14,6 +14,7 @@ pub mod material;
 pub mod materials;
 pub mod math;
 pub mod renderer;
+pub mod tonemap;
 pub mod world;
 
 use camera::{Camera, SimpleCamera};
@@ -99,15 +100,13 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
 }
 
 fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
-    //DiffuseLight::new(illuminants_and_colors::cie_e())
-    //DiffuseLight::new(illuminants_and_colors::void())
+    let cie_e_world_illuminant = illuminants_and_colors::cie_e(world_strength);
+    let cie_e_illuminant = illuminants_and_colors::cie_e(5.0);
+    let blackbody_2000_k_illuminant = illuminants_and_colors::blackbody(2000.0, 10.0);
+
     let lambertian = Box::new(Lambertian::new(color));
-    let diffuse_light_world = Box::new(DiffuseLight::new(illuminants_and_colors::cie_e(
-        world_strength,
-    )));
-    let diffuse_light100 = Box::new(DiffuseLight::new(illuminants_and_colors::blackbody(
-        2000.0, 10.0,
-    )));
+    let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant));
+    let diffuse_light_sphere = Box::new(DiffuseLight::new(cie_e_illuminant));
     let world = World {
         bvh: Box::new(HittableList::new(vec![
             Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
@@ -116,7 +115,7 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
         background: 0,
-        materials: vec![diffuse_light_world, lambertian, diffuse_light100],
+        materials: vec![diffuse_light_world, lambertian, diffuse_light_sphere],
     };
     world
 }
@@ -124,6 +123,8 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
 fn construct_scene() -> World {
     let white = illuminants_and_colors::cie_e(1.0);
     let red = illuminants_and_colors::red(1.0);
+    let green = illuminants_and_colors::green(1.0);
+    let blue = illuminants_and_colors::blue(1.0);
     // let lambertian = Box::new(Lambertian::new(white));
     // let diffuse_light = Box::new(DiffuseLight::new());
     // let world = World {
@@ -225,6 +226,7 @@ fn main() -> () {
             for x in 0..film.width {
                 let color = film.buffer[(y * film.width + x) as usize];
                 let lum = color.y();
+                assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
                 total_luminance += lum;
                 if lum > max_luminance {
                     max_luminance = lum;
@@ -236,7 +238,7 @@ fn main() -> () {
             "computed tonemapping: max luminance {}, avg luminance {}",
             max_luminance, avg_luminance
         );
-        let exposure = 20.0;
+        let exposure = 10.0;
         let gamma = 0.4;
 
         for (x, y, pixel) in img.enumerate_pixels_mut() {
