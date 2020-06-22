@@ -27,5 +27,5 @@ resolution.height = 1024
 min_samples = 200
 camera_id = 1
 russian_roulette = true
-only_direct = true
+only_direct = false
 light_samples = 4
