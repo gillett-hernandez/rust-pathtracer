@@ -19,7 +19,7 @@ pub use spectral::{SingleEnergy, SingleWavelength, SpectralPowerDistributionFunc
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 pub use tangent_frame::TangentFrame;
-pub use vec::Vec3;
+pub use vec::{Axis, Vec3};
 
 use std::fmt::Debug;
 use std::ops::Mul;

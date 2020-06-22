@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables, unused)]
 #![feature(clamp)]
 extern crate image;
+
+#[macro_use]
 extern crate packed_simd;
 
 pub mod aabb;
@@ -19,7 +21,7 @@ pub mod world;
 
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
-use geometry::{HittableList, Sphere};
+use geometry::{HittableList, Sphere, AARect};
 
 use integrator::{Integrator, PathTracingIntegrator};
 use material::{Material, BRDF, PDF};
@@ -101,21 +103,39 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
 
 fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
     let cie_e_world_illuminant = illuminants_and_colors::cie_e(world_strength);
-    let cie_e_illuminant = illuminants_and_colors::cie_e(5.0);
-    let blackbody_2000_k_illuminant = illuminants_and_colors::blackbody(2000.0, 10.0);
+    let cie_e_illuminant = illuminants_and_colors::cie_e(15.0);
+
+    let red = illuminants_and_colors::red(1.0);
+    let green = illuminants_and_colors::green(1.0);
+    let blue = illuminants_and_colors::blue(1.0);
+    let white = illuminants_and_colors::cie_e(1.0);
+    let blackbody_2000_k_illuminant = illuminants_and_colors::blackbody(3500.0, 10.0);
 
     let lambertian = Box::new(Lambertian::new(color));
+    let lambertian_white = Box::new(Lambertian::new(white));
+    let lambertian_red = Box::new(Lambertian::new(red));
+    let lambertian_green = Box::new(Lambertian::new(green));
+    let lambertian_blue = Box::new(Lambertian::new(blue));
+
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant));
-    let diffuse_light_sphere = Box::new(DiffuseLight::new(cie_e_illuminant));
+    let diffuse_light_sphere = Box::new(DiffuseLight::new(blackbody_2000_k_illuminant));
+
+
     let world = World {
         bvh: Box::new(HittableList::new(vec![
-            Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, -40.0), Some(2), 0)),
-            Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(1), 1)),
+            // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
+            Box::new(AARect::new((0.5, 0.5), Point3::new(0.0, 0.0, 0.9), Axis::Z, Some(2), 0)),
+            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, 0.0, 1.0), Axis::Z, Some(3), 1)),
+            Box::new(Sphere::new(0.3, Point3::new(0.0, 0.0, -0.3), Some(1), 1)), // ball at origin
+            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, 0.0, -1.0), Axis::Z, Some(3), 2)),
+            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, 1.0, 0.0), Axis::Y, Some(4), 3)),
+            Box::new(AARect::new((2.0, 2.0), Point3::new(0.0, -1.0, 0.0), Axis::Y, Some(5), 4)),
+            Box::new(AARect::new((2.0, 2.0), Point3::new(1.0, 0.0, 0.0), Axis::X, Some(3), 5)),
         ])),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
         background: 0,
-        materials: vec![diffuse_light_world, lambertian, diffuse_light_sphere],
+        materials: vec![diffuse_light_world, lambertian, diffuse_light_sphere, lambertian_white, lambertian_blue, lambertian_red],
     };
     world
 }
@@ -213,12 +233,11 @@ fn main() -> () {
                 .unwrap_or(render_settings.min_samples) as usize);
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
 
         let now = Instant::now();
         // do stuff with film here
         let mut img: image::RgbImage =
-            image::ImageBuffer::new(film.width as u32, film.height as u32);
+        image::ImageBuffer::new(film.width as u32, film.height as u32);
 
         let mut max_luminance = 0.0;
         let mut total_luminance = 0.0;
@@ -229,17 +248,24 @@ fn main() -> () {
                 assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
                 total_luminance += lum;
                 if lum > max_luminance {
+                    println!("max lum so far was {} and occurred at ({}, {})", max_luminance, x, y);
                     max_luminance = lum;
                 }
             }
         }
+        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
         let avg_luminance = total_luminance / total_pixels as f32;
+        // let exposure = 1.0f32;
+        // max_luminance = exposure^(-1/gamma)
+        // max_luminance = 1 / exposure^(1/gamma)
+        let gamma = 2.2f32.recip();
+        let exposure = 2.0 * avg_luminance.recip().powf(gamma);
+
+        // let upper = exposure.powf(-1.0/gamma);
         println!(
-            "computed tonemapping: max luminance {}, avg luminance {}",
-            max_luminance, avg_luminance
+            "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
+            max_luminance, avg_luminance, exposure
         );
-        let exposure = 10.0;
-        let gamma = 0.4;
 
         for (x, y, pixel) in img.enumerate_pixels_mut() {
             let mut color = film.buffer[(y * film.width as u32 + x) as usize];

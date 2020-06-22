@@ -30,6 +30,7 @@ impl Integrator for PathTracingIntegrator {
             // println!("whatever0");
             match (self.world.hit(ray, 0.0, INFINITY)) {
                 Some(mut hit) => {
+                    debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                     // println!("whatever1");
                     hit.lambda = sum.lambda;
                     let id = match (hit.material) {
@@ -56,7 +57,8 @@ impl Integrator for PathTracingIntegrator {
                     if emission.0 > 0.0 {
                         // check stuff here
                         if last_bsdf_pdf <= 0.0 || self.light_samples == 0 {
-                            sum.energy += beta * emission
+                            sum.energy += beta * emission;
+                            assert!(!sum.energy.0.is_nan());
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // // println!("{:?}", hit);
@@ -64,6 +66,7 @@ impl Integrator for PathTracingIntegrator {
                             let weight = power_heuristic(last_bsdf_pdf, pdf);
                             assert!(!pdf.is_nan() && !weight.is_nan(), "{}, {}", pdf, weight);
                             sum.energy += beta * emission * weight;
+                            assert!(!sum.energy.0.is_nan());
                         }
                     }
                     let mut light_contribution = SingleEnergy::ZERO;
@@ -75,6 +78,10 @@ impl Integrator for PathTracingIntegrator {
                             let pick_pdf = self.world.lights.len() as f32;
                             // sample the primitive from hit_point
                             let (direction, light_pdf) = light.sample(&mut sampler, hit.point);
+                            assert!(light_pdf.is_finite());
+                            if light_pdf == 0.0 {
+                                continue;
+                            }
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
                             let wo = frame.to_local(&direction);
@@ -87,7 +94,7 @@ impl Integrator for PathTracingIntegrator {
                             // note: time was changed to ray.time. change to hit.time?
                             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
                             let reflectance = material.f(&hit, wi, wo);
-                            // if reflectance.0.max_element() < 0.00000001 {
+                            // if reflectance.0 < 0.00001 {
                             //     // if reflectance is 0 for all components, skip this light sample
                             //     continue;
                             // }
@@ -118,6 +125,7 @@ impl Integrator for PathTracingIntegrator {
                                         * weight
                                         / light_pdf
                                         / pick_pdf;
+                                    assert!(!light_contribution.0.is_nan(), "{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", light_contribution, reflectance, beta, dropoff, sampled_light_emission, weight, pick_pdf, light_pdf);
                                 }
                             }
                         } else {
@@ -127,6 +135,7 @@ impl Integrator for PathTracingIntegrator {
                     if self.light_samples > 0 {
                         // println!("light contribution: {:?}", light_contribution);
                         sum.energy += light_contribution / (self.light_samples as f32);
+                        assert!(!sum.energy.0.is_nan(), "{:?} {:?}", light_contribution, self.light_samples);
                     }
                     if self.only_direct {
                         break;
@@ -165,23 +174,29 @@ impl Integrator for PathTracingIntegrator {
                     }
                 }
                 None => {
-                    /*vec3 unit_direction = unit_vector(r.direction());
+                    let unit_direction = ray.direction.normalized();
                     // get phi and theta values for that direction, then convert to UV values for an environment map.
-                    float u = (M_PI + atan2(unit_direction.y(), unit_direction.x())) / TAU;
-                    float v = acos(unit_direction.z()) / M_PI;*/
+                    let u = (PI + unit_direction.y().atan2(unit_direction.x())) / (2.0 * PI);
+                    let v = unit_direction.z().acos() / PI;
                     let fake_hit_record: HitRecord =
-                        HitRecord::new(0.0, Point3::ZERO, sum.lambda, Vec3::ZERO, None, 0);
+                    HitRecord::new(0.0, Point3::ZERO, (u, v), sum.lambda, Vec3::ZERO, None, 0);
                     let id = self.world.background;
                     let world_material: &Box<dyn Material> = &self.world.materials[id as usize];
                     let world_emission =
                         world_material.emission(&fake_hit_record, Vec3::ZERO, None);
                     // // println!("{:?}, {:?}", beta, world_emission);
                     sum.energy += beta * world_emission;
+                    assert!(!sum.energy.0.is_nan());
                     break;
                 }
             }
         }
-        sum.energy.0 * RGBColor::from(XYZColor::from(sum))
+        let xyz_from_sum = XYZColor::from(sum);
+        let rgb_from_xyz =RGBColor::from(xyz_from_sum);
+
+        assert!(!sum.energy.0.is_nan() && xyz_from_sum.0.is_finite().all() && rgb_from_xyz.0.is_finite().all(), "{:?} {:?} {:?}", sum, xyz_from_sum, rgb_from_xyz);
+
+        sum.energy.0 * rgb_from_xyz
         // XYZColor::from(sum)
     }
 }

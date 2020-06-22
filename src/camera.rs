@@ -47,7 +47,7 @@ impl SimpleCamera {
         let half_width = aspect_ratio * half_height;
         // aspect ratio = half_width / half_height
         let w = -direction;
-        let u = v_up.cross(w).normalized();
+        let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
 
         SimpleCamera {
@@ -69,30 +69,6 @@ impl SimpleCamera {
             t1,
         }
     }
-    // pub fn with_fov(&self, fov: FoV) -> Self {
-    //     let theta: f32;
-    //     let half_height:f32;
-    //     let half_width:f32;
-    //     match (fov) {
-    //         FoV::Vertical(fov_) => {
-    //             theta = fov_ * PI / 180.0;
-    //             half_height = (theta / 2.0).tan();
-    //             half_width = self.aspect_ratio * half_height;
-    //         }
-    //         FoV::Horizontal(fov_) => {
-    //             theta = fov_ * PI / 180.0;
-    //             half_width = (theta / 2.0).tan();
-    //             half_height = half_height / self.aspect_ratio;
-    //             vfov = fov_.tan();
-    //         }
-    //     }
-    //     SimpleCamera{
-    //         ..self,
-    //         lower_left_corner: self.origin - self.u * half_width * self.focal_distance - self.v * half_height * self.focal_distance - self.w * self.focal_distance,
-    //         horizontal: self.u * 2.0 * half_width * self.focal_distance,
-    //         vertical: self.v * 2.0 * half_height * self.focal_distance,
-    //     }
-    // }
 }
 
 unsafe impl Send for SimpleCamera {}

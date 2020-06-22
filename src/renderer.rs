@@ -71,8 +71,8 @@ impl Renderer for NaiveRenderer {
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
                 let mut temp_color = RGBColor::BLACK;
                 // let mut temp_color = XYZColor::BLACK;
-                // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
-                let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+                // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
                 for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
                     let r = camera.get_ray(
@@ -81,6 +81,7 @@ impl Renderer for NaiveRenderer {
                     );
                     temp_color += integrator.color(&mut sampler, r);
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
+                    assert!(temp_color.0.is_finite().all(), "{:?} resulted in {:?}", r, temp_color);
                 }
                 // unsafe {
                 *pixel_ref = XYZColor::from(temp_color / (settings.min_samples as f32));
