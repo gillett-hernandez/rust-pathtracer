@@ -162,8 +162,8 @@ impl Integrator for PathTracingIntegrator {
                     // println!("whatever!");
                     if let Some(wo) = maybe_wo {
                         let pdf = material.value(&hit, wi, wo);
-                        assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
-                        if pdf < 0.0000001 {
+                        debug_assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
+                        if pdf < 0.00000001 || pdf.is_nan() {
                             break;
                         }
                         if self.russian_roulette {
@@ -189,7 +189,7 @@ impl Integrator for PathTracingIntegrator {
                         // also convert wo back to world space when spawning the new ray
                         // println!("whatever!!");
                         ray = Ray::new(
-                            hit.point + hit.normal * 0.001,
+                            hit.point + hit.normal * 0.001 * if wo.z() > 0.0 { 1.0 } else { -1.0 },
                             frame.to_world(&wo).normalized(),
                         );
                     } else {

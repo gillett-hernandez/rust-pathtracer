@@ -166,7 +166,7 @@ fn sample_wh(alpha: f32, wi: Vec3, sampler: &mut Box<dyn Sampler>) -> Vec3 {
 
 #[derive(Debug)]
 pub struct GGX {
-    roughness: f32,
+    alpha: f32,
     eta: SPD,
     eta_o: f32, // replace with SPD
     kappa: SPD,
@@ -177,7 +177,7 @@ impl GGX {
     pub fn new(roughness: f32, eta: SPD, eta_o: f32, kappa: SPD, permeability: f32) -> Self {
         debug_assert!(roughness > 0.0);
         GGX {
-            roughness,
+            alpha: roughness,
             eta,
             eta_o,
             kappa,
@@ -244,27 +244,26 @@ impl GGX {
 
             ndotv = wi * wh;
             let refl = self.reflectance(eta_inner, kappa, ndotv);
-            glossy.0 =
-                refl * (0.25 / g) * ggx_d(self.roughness, wh) * ggx_g(self.roughness, wi, wo);
-            glossy_pdf = ggx_vnpdf(self.roughness, wi, wh) * 0.25 / ndotv.abs();
+            glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
+            glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
         } else {
             if self.permeability > 0.0 {
                 let eta_rel = self.eta_rel(eta_inner, wi);
 
-                let ggxg = ggx_g(self.roughness, wi, wo);
+                let ggxg = ggx_g(self.alpha, wi, wo);
                 let mut wh = (wi + eta_rel * wo).normalized();
                 // normal invert mark
                 if wh.z() < 0.0 {
                     wh = -wh;
                 }
 
-                let partial = ggx_vnpdf_no_d(self.roughness, wi, wh);
+                let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
                 ndotv = wi * wh;
                 let ndotl = wo * wh;
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
                 let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
-                let ggxd = ggx_d(self.roughness, wh);
+                let ggxd = ggx_d(self.alpha, wh);
                 let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
                 transmission_pdf = (ggxd * partial * dwh_dwo).abs();
 
@@ -322,7 +321,7 @@ impl PDF for GGX {
         } else {
             self.kappa.evaluate_power(hit.lambda)
         };
-        let wh = sample_wh(self.roughness, wi, &mut sampler).normalized();
+        let wh = sample_wh(self.alpha, wi, &mut sampler).normalized();
         let refl_prob = self.reflectance_probability(eta_inner, kappa, wi * wh);
         if refl_prob == 1.0 || sampler.draw_1d().x < refl_prob {
             // reflection

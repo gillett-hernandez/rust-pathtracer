@@ -16,9 +16,9 @@ pub type MaterialId = u8;
 // }
 pub type MaterialTable = Vec<Box<dyn Material>>;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+    // use super::*;
 
     // #[test]
     // fn test_lambertian() {
@@ -59,4 +59,4 @@ mod tests {
     //     println!("{:?}", pdf_sum / N as f32);
     //     assert!((pdf_sum / N as f32 - 1.0).abs() < 10000.0 / N as f32);
     // }
-}
+// }
