@@ -1,4 +1,4 @@
-use crate::math::{Sample2D, Sample3D, Vec3, PI};
+use crate::math::PI;
 
 pub fn power_heuristic(a: f32, b: f32) -> f32 {
     (a * a) / (a * a + b * b)

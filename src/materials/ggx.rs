@@ -4,10 +4,40 @@ use crate::math::*;
 
 pub fn reflect(wi: Vec3, normal: Vec3) -> Vec3 {
     let wi = -wi;
-    wi - 2.0 * (wi * normal) * normal
+    (wi - 2.0 * (wi * normal) * normal).normalized()
+}
+
+pub fn refract(wi: Vec3, normal: Vec3, eta: f32) -> Option<Vec3> {
+    let cos_i = wi * normal;
+    let sin_2_theta_i = (1.0 - cos_i * cos_i).max(0.0);
+    let sin_2_theta_t = eta * eta * sin_2_theta_i;
+    if sin_2_theta_t >= 1.0 {
+        return None;
+    }
+    let cos_t = (1.0 - sin_2_theta_t).sqrt();
+    Some((-wi * eta + normal * (eta * cos_i - cos_t)).normalized())
 }
 
 pub fn fresnel_dielectric(eta_i: f32, eta_t: f32, cos_i: f32) -> f32 {
+    // let swapped = if cos_i < 0 {
+    //     cos_i = -cos_i;
+    //     true
+    // } else {
+    //     false
+    // };
+    // let (eta_i, eta_t) = if swapped {
+    //     (eta_t, eta_i)
+    // } else {
+    //     (eta_i, eta_t)
+    // };
+    let cos_i = cos_i.clamp(-1.0, 1.0);
+
+    let (cos_i, eta_i, eta_t) = if cos_i < 0.0 {
+        (-cos_i, eta_t, eta_i)
+    } else {
+        (cos_i, eta_i, eta_t)
+    };
+
     let sin_t = eta_i / eta_t * (0.0f32).max(1.0 - cos_i * cos_i).sqrt();
     let cos_t = (0.0f32).max(1.0 - sin_t * sin_t).sqrt();
     let ei_ct = eta_i * cos_t;
@@ -19,27 +49,16 @@ pub fn fresnel_dielectric(eta_i: f32, eta_t: f32, cos_i: f32) -> f32 {
     (r_par * r_par + r_perp * r_perp) / 2.0
 }
 
-pub fn fresnel_conductor(
-    mut eta_i: f32,
-    mut eta_t: f32,
-    mut k_t: f32,
-    mut cos_theta_i: f32,
-) -> f32 {
-    cos_theta_i = cos_theta_i.clamp(-1.0, 1.0);
+pub fn fresnel_conductor(eta_i: f32, eta_t: f32, k_t: f32, cos_theta_i: f32) -> f32 {
+    let cos_theta_i = cos_theta_i.clamp(-1.0, 1.0);
 
     // handle dielectrics
-    let swapped = cos_theta_i < 0.0;
 
-    cos_theta_i = if swapped { -cos_theta_i } else { cos_theta_i };
-
-    let new_eta_i = if swapped { eta_t } else { eta_i };
-    let new_eta_t = if swapped { eta_i } else { eta_t };
-
-    // set k_t to zero when dielectric
-    // k_t = if swapped { 0.0 } else { k_t };
-
-    eta_i = new_eta_i;
-    eta_t = new_eta_t;
+    let (cos_theta_i, eta_i, eta_t) = if cos_theta_i < 0.0 {
+        (-cos_theta_i, eta_t, eta_i)
+    } else {
+        (cos_theta_i, eta_i, eta_t)
+    };
 
     // onto the full equations
 
@@ -64,34 +83,17 @@ pub fn fresnel_conductor(
     let t4 = t2 * sin_theta_i2;
     let rp = rs * (t3 - t4) / (t3 + t4);
 
-    (rs * rs + rp * rp) / 2.0
+    (rs + rp) / 2.0
 }
-
-pub fn refract(wi: Vec3, normal: Vec3, ior: f32) -> Option<Vec3> {
-    let mut cos_i = wi * normal;
-    let mut normal = normal;
-    let mut eta_i = 1.0;
-    let mut eta_t = ior;
-    if (cos_i < 0.0) {
-        cos_i = -cos_i;
-    } else {
-        normal = -normal;
-        let (eta_i, eta_t) = (eta_t, eta_i);
-    }
-    let eta = eta_i / eta_t;
-    let k = 1.0 - eta * eta * (1.0 - cos_i * cos_i);
-    if k < 0.0 {
-        None
-    } else {
-        Some(eta * wi + (eta * cos_i - k.sqrt()) * normal)
-    }
-}
-
 fn ggx_d(alpha: f32, wm: Vec3) -> f32 {
     let slope = (wm.x() / alpha, wm.y() / alpha);
     let slope2 = (slope.0 * slope.0, slope.1 * slope.1);
     let t = wm.z() * wm.z() + slope2.0 + slope2.1;
-    1.0 / (PI * alpha * alpha * t * t)
+    let a2 = alpha * alpha;
+    let t2 = t * t;
+    let aatt = a2 * t2;
+    debug_assert!(aatt > 0.0, "{} {} {:?}", alpha, t, wm);
+    1.0 / (PI * aatt)
 }
 
 fn ggx_lambda(alpha: f32, w: Vec3) -> f32 {
@@ -105,7 +107,9 @@ fn ggx_lambda(alpha: f32, w: Vec3) -> f32 {
 }
 
 fn ggx_g(alpha: f32, wi: Vec3, wo: Vec3) -> f32 {
-    1.0 / (1.0 + ggx_lambda(alpha, wi) + ggx_lambda(alpha, wo))
+    let bottom = 1.0 + ggx_lambda(alpha, wi) + ggx_lambda(alpha, wo);
+    debug_assert!(bottom != 0.0);
+    bottom.recip()
 }
 
 fn ggx_vnpdf(alpha: f32, wi: Vec3, wh: Vec3) -> f32 {
@@ -117,9 +121,9 @@ fn ggx_vnpdf_no_d(alpha: f32, wi: Vec3, wh: Vec3) -> f32 {
     ((wi * wh) / ((1.0 + ggx_lambda(alpha, wi)) * wi.z())).abs()
 }
 
-fn ggx_pdf(alpha: f32, wi: Vec3, wh: Vec3) -> f32 {
-    ggx_d(alpha, wh) * wh.z().abs()
-}
+// fn ggx_pdf(alpha: f32, _wi: Vec3, wh: Vec3) -> f32 {
+//     ggx_d(alpha, wh) * wh.z().abs()
+// }
 
 fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     let Sample2D { x, y } = sample;
@@ -144,11 +148,13 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     let p2 = r * sin_phi * if y < a { 1.0 } else { v.z() };
     let n = p1 * t1 + p2 * t2 + (1.0 - p1 * p1 - p2 * p2).sqrt() * v;
 
+    debug_assert!(n.0.is_finite().all(), "{:?}", n);
     Vec3::new(alpha * n.x(), alpha * n.y(), n.z().max(0.0)).normalized()
 }
 
 fn sample_wh(alpha: f32, wi: Vec3, sampler: &mut Box<dyn Sampler>) -> Vec3 {
     let sample = sampler.draw_2d();
+    // normal invert mark
     let flip = wi.z() < 0.0;
     let wh = sample_vndf(alpha, if flip { -wi } else { wi }, sample);
     if flip {
@@ -162,13 +168,14 @@ fn sample_wh(alpha: f32, wi: Vec3, sampler: &mut Box<dyn Sampler>) -> Vec3 {
 pub struct GGX {
     roughness: f32,
     eta: SPD,
-    eta_o: f32,
+    eta_o: f32, // replace with SPD
     kappa: SPD,
     permeability: f32,
 }
 
 impl GGX {
     pub fn new(roughness: f32, eta: SPD, eta_o: f32, kappa: SPD, permeability: f32) -> Self {
+        debug_assert!(roughness > 0.0);
         GGX {
             roughness,
             eta,
@@ -189,7 +196,6 @@ impl GGX {
     fn reflectance_probability(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
         if self.permeability > 0.0 {
             // fresnel_dielectric(self.eta_o, eta_i, wi.z())
-            // scale by self.permeability
             (self.permeability * self.reflectance(eta_inner, kappa, cos_theta_i) + 1.0
                 - self.permeability)
                 .clamp(0.0, 1.0)
@@ -197,70 +203,112 @@ impl GGX {
             1.0
         }
     }
+    fn eta_rel(&self, eta_inner: f32, wi: Vec3) -> f32 {
+        if wi.z() < 0.0 {
+            self.eta_o / eta_inner
+        } else {
+            eta_inner / self.eta_o
+        }
+    }
 }
 
-impl PDF for GGX {
-    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
-        let cos_i = wi.z();
-        let same_hemisphere = cos_i * wo.z() > 0.0;
-        let outside: bool = cos_i >= 0.0;
+impl GGX {
+    fn eval_pdf(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, f32) {
+        let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
 
+        if g == 0.0 {
+            return (SingleEnergy::ZERO, 0.0);
+        }
+
+        let cos_i = wi.z();
+
+        let mut glossy = SingleEnergy::ZERO;
+        let mut transmission = SingleEnergy::ZERO;
         let mut glossy_pdf = 0.0;
         let mut transmission_pdf = 0.0;
-        let eta_inner = self.eta.evaluate_power(hit.lambda);
+        let eta_inner = self.eta.evaluate_power(lambda);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
-            self.kappa.evaluate_power(hit.lambda)
+            self.kappa.evaluate_power(lambda)
         };
+        let mut ndotv = cos_i;
         if same_hemisphere {
-            let mut wh = (wo + wi);
+            let mut wh = (wo + wi).normalized();
+            // normal invert mark
             if wh.z() < 0.0 {
                 wh = -wh;
             }
-            let ndotv = wi * wh;
-            let refl = self.reflectance(eta_inner, kappa, cos_i);
+
+            ndotv = wi * wh;
+            let refl = self.reflectance(eta_inner, kappa, ndotv);
+            glossy.0 =
+                refl * (0.25 / g) * ggx_d(self.roughness, wh) * ggx_g(self.roughness, wi, wo);
             glossy_pdf = ggx_vnpdf(self.roughness, wi, wh) * 0.25 / ndotv.abs();
         } else {
             if self.permeability > 0.0 {
-                let mut eta_rel = self.eta_o / eta_inner;
-                if wi.z() < 0.0 {
-                    eta_rel = 1.0 / eta_rel;
-                }
+                let eta_rel = self.eta_rel(eta_inner, wi);
 
-                let mut wh = (wi + eta_rel * wo);
+                let ggxg = ggx_g(self.roughness, wi, wo);
+                let mut wh = (wi + eta_rel * wo).normalized();
+                // normal invert mark
                 if wh.z() < 0.0 {
                     wh = -wh;
                 }
 
-                let ggxg = ggx_g(self.roughness, wi, wo);
                 let partial = ggx_vnpdf_no_d(self.roughness, wi, wh);
-                let mut cos_theta_i = 0.0;
-                let ndotv = wi * wh;
+                ndotv = wi * wh;
                 let ndotl = wo * wh;
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
-                if sqrt_denom.abs() < 1e-6 {
-                    transmission_pdf = 0.0;
-                } else {
-                    let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
-                    let ggxd = ggx_d(self.roughness, wh);
-                    // let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
-                    // transmission.0 = weight;
-                    cos_theta_i = ndotv;
+                let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
+                let ggxd = ggx_d(self.roughness, wh);
+                let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
+                transmission_pdf = (ggxd * partial * dwh_dwo).abs();
 
-                    // let inv_reflectance = 1.0 - self.reflectance(eta_i, kappa, cos_theta_i);
-                    transmission_pdf =
-                        (ggxd * ggx_vnpdf_no_d(self.roughness, wi, wh) * dwh_dwo).abs();
-                }
+                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
+                transmission.0 = self.permeability * inv_reflectance * weight.abs();
+                debug_assert!(
+                    !transmission.is_nan(),
+                    "ir {} ggxd {} ggxg {} g {} nv {} dwh {}",
+                    inv_reflectance,
+                    ggxd,
+                    ggxg,
+                    g,
+                    ndotv,
+                    dwh_dwo
+                );
+                debug_assert!(
+                    !transmission_pdf.is_nan(),
+                    "{} {} {}",
+                    ggxd,
+                    partial,
+                    dwh_dwo
+                );
             }
         }
 
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, ndotv);
+        // let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);
 
-        refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf
+        let f = glossy + transmission;
+        let pdf = refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf;
+        debug_assert!(
+            !pdf.is_nan() && !f.is_nan(),
+            "{} {} {}",
+            refl_prob,
+            glossy_pdf,
+            transmission_pdf
+        );
+        (f, pdf)
+    }
+}
+
+impl PDF for GGX {
+    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
+        self.eval_pdf(hit.lambda, wi, wo).1
     }
     fn generate(
         &self,
@@ -274,23 +322,17 @@ impl PDF for GGX {
         } else {
             self.kappa.evaluate_power(hit.lambda)
         };
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
+        let wh = sample_wh(self.roughness, wi, &mut sampler).normalized();
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi * wh);
         if refl_prob == 1.0 || sampler.draw_1d().x < refl_prob {
             // reflection
-            let wh = sample_wh(self.roughness, wi, &mut sampler);
             let wo = reflect(wi, wh);
             return Some(wo);
         } else {
             // transmission
-            let mut wh = sample_wh(self.roughness, wi, &mut sampler);
-            let mut eta_rel = self.eta_o / eta_inner;
-            if wi.z() < 0.0 {
-                eta_rel = 1.0 / eta_rel;
-            }
 
-            if wh.z() < 0.0 {
-                wh = -wh;
-            }
+            let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
+
             let wo = refract(wi, wh, eta_rel);
             return wo;
         }
@@ -299,64 +341,47 @@ impl PDF for GGX {
 
 impl BRDF for GGX {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
-        let cos_i = wi.z();
-        let same_hemisphere = cos_i * wo.z() > 0.0;
-        let outside: bool = cos_i >= 0.0;
-
-        let g = (wi.z() * wo.z()).abs();
-
-        let mut glossy = SingleEnergy::ZERO;
-        let mut transmission = SingleEnergy::ZERO;
-        let eta_inner = self.eta.evaluate_power(hit.lambda);
-        let kappa = if self.permeability > 0.0 {
-            0.0
-        } else {
-            self.kappa.evaluate_power(hit.lambda)
-        };
-        if same_hemisphere {
-            let mut wh = (wo + wi);
-            if wh.z() < 0.0 {
-                wh = -wh;
-            }
-            let ndotv = wi * wh;
-            let refl = self.reflectance(eta_inner, kappa, cos_i);
-            glossy.0 =
-                refl * (0.25 / g) * ggx_d(self.roughness, wh) * ggx_g(self.roughness, wi, wo);
-        } else {
-            if self.permeability > 0.0 {
-                let mut eta_rel = self.eta_o / eta_inner;
-                if wi.z() < 0.0 {
-                    eta_rel = 1.0 / eta_rel;
-                }
-
-                let mut wh = (wi + eta_rel * wo);
-                if wh.z() < 0.0 {
-                    wh = -wh;
-                }
-
-                let ggxg = ggx_g(self.roughness, wi, wo);
-                let partial = ggx_vnpdf_no_d(self.roughness, wi, wh);
-                let mut cos_theta_i = 0.0;
-                let ndotv = wi * wh;
-                let ndotl = wo * wh;
-
-                let sqrt_denom = ndotv + eta_rel * ndotl;
-                let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
-                let ggxd = ggx_d(self.roughness, wh);
-                let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
-                // transmission.0 = weight;
-                cos_theta_i = ndotv;
-
-                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, cos_theta_i);
-                transmission.0 = self.permeability * inv_reflectance * weight.abs();
-            }
-        }
-
-        glossy + transmission
+        self.eval_pdf(hit.lambda, wi, wo).0
     }
-    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(&self, _hit: &HitRecord, _wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
         SingleEnergy::ZERO
     }
 }
 
 impl Material for GGX {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::curves;
+    #[test]
+    fn test_ggx_functions() {
+        let glass = curves::cauchy(1.5, 10000.0);
+        let flat_zero = curves::void();
+        let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+
+        let wi = Vec3::new(0.01, -0.01, -0.99).normalized();
+        let lambda = 500.0;
+
+        let ggx_glass = GGX::new(0.05, glass, 1.0, flat_zero, 1.0);
+        let fake_hit_record: HitRecord = HitRecord::new(
+            0.0,
+            Point3::ZERO,
+            (0.0f32, 0.0f32),
+            lambda,
+            Vec3::ZERO,
+            None,
+            0,
+        );
+        let maybe_wo = ggx_glass.generate(&fake_hit_record, &mut sampler, wi);
+        if let Some(wo) = maybe_wo {
+            println!("sampled wo is {:?}", wo);
+            let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
+            println!("sampled f is {:?}", sampled_f);
+            let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+            println!("sampled pdf is {:?}", sampled_pdf);
+        } else {
+            println!("failed to sample ggx");
+        }
+    }
+}

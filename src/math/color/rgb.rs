@@ -124,7 +124,7 @@ impl From<RGBColor> for f32x4 {
 
 impl Mul<RGBColor> for Vec3 {
     type Output = RGBColor;
-    fn mul(mut self, other: RGBColor) -> RGBColor {
+    fn mul(self, other: RGBColor) -> RGBColor {
         // RGBColor::new(self.x() * other.r, self.y() * other.g, self.z() * other.b)
         RGBColor::from_raw(self.0 * other.0)
     }

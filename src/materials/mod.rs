@@ -1,7 +1,3 @@
-// pub use crate::material::{BRDF, BTDF, BXDF, PDF};
-use crate::hittable::HitRecord;
-use crate::math::*;
-
 pub use crate::material::{Material, BRDF, PDF};
 
 mod diffuse_light;

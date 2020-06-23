@@ -38,11 +38,11 @@ pub fn blue(power: f32) -> SPD {
     }
 }
 
-pub fn add_pigment(mut spd: SPD, wavelength: f32, std_dev: f32, strength: f32) -> SPD {
+pub fn add_pigment(spd: SPD, wavelength: f32, std_dev: f32, strength: f32) -> SPD {
     let pigment = SPD::InverseExponential {
         signal: vec![(wavelength, std_dev, strength)],
     };
-    match (spd) {
+    match spd {
         SPD::Machine { seed, mut list } => {
             list.push((Op::Mul, pigment));
             SPD::Machine { seed, list }

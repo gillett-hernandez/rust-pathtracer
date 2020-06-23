@@ -1,7 +1,7 @@
 use crate::math::Vec3;
 // use packed_simd::{f32x4, f32x8};
 use packed_simd::f32x4;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Point3(pub f32x4);
@@ -48,11 +48,25 @@ impl Add<Vec3> for Point3 {
     }
 }
 
+impl AddAssign<Vec3> for Point3 {
+    fn add_assign(&mut self, other: Vec3) {
+        // Point3::new(self.x + other.x, self.y + other.y, self.z + other.z)
+        self.0 += other.0
+    }
+}
+
 impl Sub<Vec3> for Point3 {
     type Output = Point3;
     fn sub(self, other: Vec3) -> Point3 {
         // Point3::new(self.x - other.x, self.y - other.y, self.z - other.z)
         Point3::from_raw(self.0 - other.0)
+    }
+}
+
+impl SubAssign<Vec3> for Point3 {
+    fn sub_assign(&mut self, other: Vec3) {
+        // Point3::new(self.x + other.x, self.y + other.y, self.z + other.z)
+        self.0 -= other.0
     }
 }
 

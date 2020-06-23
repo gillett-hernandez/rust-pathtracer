@@ -14,6 +14,9 @@ impl SingleEnergy {
     }
     pub const ZERO: SingleEnergy = SingleEnergy { 0: 0.0 };
     pub const ONE: SingleEnergy = SingleEnergy { 0: 1.0 };
+    pub fn is_nan(&self) -> bool {
+        self.0.is_nan()
+    }
 }
 impl Add for SingleEnergy {
     type Output = SingleEnergy;
@@ -215,7 +218,7 @@ pub trait SpectralPowerDistributionFunction {
             ((integration_bounds.upper - integration_bounds.lower) / step_size) as usize;
         let mut sum: XYZColor = XYZColor::ZERO;
         for i in 0..iterations {
-            let lambda = (integration_bounds.lower + (i as f32) * step_size);
+            let lambda = integration_bounds.lower + (i as f32) * step_size;
             let angstroms = lambda * 10.0;
             let val = self.evaluate_power(lambda);
             sum.0 += f32x4::new(
@@ -232,7 +235,7 @@ pub trait SpectralPowerDistributionFunction {
 impl SpectralPowerDistributionFunction for SPD {
     fn evaluate_power(&self, lambda: f32) -> f32 {
         use ordered_float::OrderedFloat;
-        match (&self) {
+        match &self {
             SPD::Linear { signal, bounds } => {
                 assert!(
                     bounds.lower <= lambda && lambda < bounds.upper,
@@ -258,7 +261,7 @@ impl SpectralPowerDistributionFunction for SPD {
             SPD::Tabulated { signal, mode } => {
                 // let result = signal.binary_search_by_key(lambda, |&(a, b)| a);
                 let index = match signal
-                    .binary_search_by_key(&OrderedFloat::<f32>(lambda), |&(a, b)| {
+                    .binary_search_by_key(&OrderedFloat::<f32>(lambda), |&(a, _b)| {
                         OrderedFloat::<f32>(a)
                     }) {
                     Err(index) if index > 0 => index,
@@ -309,7 +312,7 @@ impl SpectralPowerDistributionFunction for SPD {
                 let mut val = *seed;
                 for (op, spd) in list {
                     let eval = spd.evaluate_power(lambda);
-                    val = match (op) {
+                    val = match op {
                         Op::Add => val + eval,
                         Op::Mul => val * eval,
                     };

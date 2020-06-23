@@ -1,3 +1,4 @@
+#![allow(unused, unused_imports)]
 use crate::config::RenderSettings;
 use crate::math::XYZColor;
 use crate::renderer::Film;

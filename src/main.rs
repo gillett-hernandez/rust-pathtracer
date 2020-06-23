@@ -1,4 +1,4 @@
-#![allow(unused_imports, unused_variables, unused)]
+// #![allow(unused_imports, unused_variables, unused)]
 #![feature(clamp)]
 extern crate image;
 
@@ -25,7 +25,7 @@ use config::{get_settings, RenderSettings, Settings};
 use geometry::{AARect, HittableList, Sphere};
 
 use integrator::{Integrator, PathTracingIntegrator};
-use material::{Material, BRDF, PDF};
+use material::Material;
 use materials::*;
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
@@ -36,8 +36,7 @@ use parsing::*;
 use std::sync::Arc;
 use std::time::Instant;
 
-use rand::prelude::*;
-use rayon::prelude::*;
+// use rayon::prelude::*;
 
 fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn Integrator> {
     let max_bounces = settings.max_bounces.unwrap_or(1);
@@ -81,11 +80,12 @@ fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
     cameras
 }
 
-fn construct_renderer(settings: &Settings) -> Box<dyn Renderer> {
+fn construct_renderer(_settings: &Settings) -> Box<dyn Renderer> {
     println!("constructing renderer");
     Box::new(NaiveRenderer::new())
 }
 
+#[allow(dead_code)]
 fn white_furnace_test(material: Box<dyn Material>) -> World {
     let world = World {
         bvh: Box::new(HittableList::new(vec![Box::new(Sphere::new(
@@ -104,6 +104,7 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
     world
 }
 
+#[allow(unused_variables)]
 fn cornell_box(color: SPD, world_strength: f32) -> World {
     let cie_e_world_illuminant = curves::cie_e(world_strength);
     let flat_zero = curves::void();
@@ -199,7 +200,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_glass,
+            ggx_gold_metal,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
@@ -209,12 +210,10 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     world
 }
 
+#[allow(unused_variables)]
 fn construct_scene() -> World {
     let white = curves::cie_e(1.0);
-    let red = curves::red(1.0);
-    let green = curves::green(1.0);
-    let blue = curves::blue(1.0);
-    cornell_box(white, 0.4)
+    cornell_box(white, 0.0)
 }
 
 fn render(
@@ -231,7 +230,7 @@ fn render(
     let world_ref: Arc<World> = Arc::clone(world);
     let integrator: Arc<Box<dyn Integrator>> =
         Arc::new(construct_integrator(render_settings, world_ref));
-    let camera_ref = camera.clone();
+    // let camera_ref = camera.clone();
     renderer.render(integrator.clone(), camera, render_settings, &mut film);
     film
 }
@@ -288,9 +287,6 @@ fn main() -> () {
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
         let now = Instant::now();
-        // Pixel data for a 256x256 floating point RGB image.
-        let pixel_data = vec![(0.82f32, 1.78f32, 0.21f32); 256 * 256];
-
         // do stuff with film here
         extern crate exr;
         use exr::prelude::rgba_image::*;

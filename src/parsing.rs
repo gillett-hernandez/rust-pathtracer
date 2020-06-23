@@ -1,19 +1,18 @@
-use crate::curves::VISIBLE_RANGE;
 use crate::math::*;
 pub use crate::spectral::InterpolationMode;
 
-use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
-use std::io::{self, BufWriter, Write};
+// use std::env;
+// use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
 pub fn parse_tabulated_curve_from_csv<F>(
     data: &str,
     column: usize,
     interpolation_mode: InterpolationMode,
-    mut func: F,
+    func: F,
 ) -> Result<SPD, Box<dyn Error>>
 where
     F: Fn(f32) -> f32,
@@ -46,14 +45,14 @@ where
     })
 }
 
-pub fn load_ior_and_kappa<F>(filename: &str, mut func: F) -> Result<(SPD, SPD), Box<dyn Error>>
+pub fn load_ior_and_kappa<F>(filename: &str, func: F) -> Result<(SPD, SPD), Box<dyn Error>>
 where
     F: Clone + Copy + Fn(f32) -> f32,
 {
     let path = Path::new(filename);
     let mut file = File::open(path)?;
     let mut buf = String::new();
-    file.read_to_string(&mut buf);
+    file.read_to_string(&mut buf)?;
     let ior = parse_tabulated_curve_from_csv(buf.as_ref(), 1, InterpolationMode::Cubic, func)?;
     let kappa = parse_tabulated_curve_from_csv(buf.as_ref(), 2, InterpolationMode::Cubic, func)?;
     Ok((ior, kappa))
@@ -65,9 +64,9 @@ mod tests {
     #[test]
     fn test_parse_tabulated_curve() {
         let (gold_ior, gold_kappa) =
-            load_ior_and_kappa("data/curves/gold.csv", |x: f32| x * 1000.0);
+            load_ior_and_kappa("data/curves/gold.csv", |x: f32| x * 1000.0).unwrap();
 
-        println!("{:?}", gold_ior_tabulation.evaluate_power(500.0));
-        println!("{:?}", gold_kappa_tabulation.evaluate_power(500.0));
+        println!("{:?}", gold_ior.evaluate_power(500.0));
+        println!("{:?}", gold_kappa.evaluate_power(500.0));
     }
 }

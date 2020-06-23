@@ -15,19 +15,19 @@ impl DiffuseLight {
 }
 
 impl PDF for DiffuseLight {
-    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
+    fn value(&self, _hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> f32 {
         0.0
     }
-    fn generate(&self, hit: &HitRecord, s: &mut Box<dyn Sampler>, wi: Vec3) -> Option<Vec3> {
+    fn generate(&self, _hit: &HitRecord, _s: &mut Box<dyn Sampler>, _wi: Vec3) -> Option<Vec3> {
         None
     }
 }
 
 impl BRDF for DiffuseLight {
-    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+    fn f(&self, _hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> SingleEnergy {
         SingleEnergy::ZERO
     }
-    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
         if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
             || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual

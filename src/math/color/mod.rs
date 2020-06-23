@@ -1,8 +1,4 @@
-use crate::math::misc::gaussian;
-use crate::math::*;
-
-use packed_simd::f32x4;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, SubAssign};
+// use packed_simd::f32x4;
 
 use nalgebra::{Matrix3, Vector3};
 

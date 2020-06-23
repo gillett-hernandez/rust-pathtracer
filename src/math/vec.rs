@@ -1,7 +1,7 @@
 // use packed_simd::{f32x4, f32x8};
 use crate::math::Point3;
 use packed_simd::f32x4;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, Div, Mul, MulAssign, Neg, Sub};
 #[derive(Copy, Clone, Debug)]
 pub enum Axis {
     X,
@@ -26,7 +26,7 @@ impl Vec3 {
     pub const Y: Vec3 = Vec3::new(0.0, 1.0, 0.0);
     pub const Z: Vec3 = Vec3::new(0.0, 0.0, 1.0);
     pub fn from_axis(axis: Axis) -> Vec3 {
-        match (axis) {
+        match axis {
             Axis::X => Vec3::X,
             Axis::Y => Vec3::Y,
             Axis::Z => Vec3::Z,

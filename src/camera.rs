@@ -40,7 +40,7 @@ impl SimpleCamera {
         t1: f32,
     ) -> Self {
         let direction = (look_at - look_from).normalized();
-        let lens_radius = aperture / 2.0;
+        let _lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
         let theta: f32 = vertical_fov * PI / 180.0;
         let half_height = (theta / 2.0).tan();

@@ -1,6 +1,6 @@
 use super::world::World;
-use crate::config::Settings;
-use crate::hittable::{HitRecord, Hittable};
+// use crate::config::Settings;
+use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
 use std::f32::INFINITY;
@@ -26,14 +26,14 @@ impl Integrator for PathTracingIntegrator {
         let mut beta: SingleEnergy = SingleEnergy::ONE;
         let mut last_bsdf_pdf = 0.0;
 
-        for current_bounce in 0..self.max_bounces {
+        for _ in 0..self.max_bounces {
             // println!("whatever0");
-            match (self.world.hit(ray, 0.0, INFINITY)) {
+            match self.world.hit(ray, 0.0, INFINITY) {
                 Some(mut hit) => {
                     debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                     // println!("whatever1");
                     hit.lambda = sum.lambda;
-                    let id = match (hit.material) {
+                    let id = match hit.material {
                         Some(id) => id as usize,
                         None => 0,
                     };
@@ -70,8 +70,8 @@ impl Integrator for PathTracingIntegrator {
                         }
                     }
                     let mut light_contribution = SingleEnergy::ZERO;
-                    let mut successful_light_samples = 0;
-                    for i in 0..self.light_samples {
+                    let mut _successful_light_samples = 0;
+                    for _i in 0..self.light_samples {
                         if let Some(light) = self.world.pick_random_light(&mut sampler) {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
@@ -120,7 +120,7 @@ impl Integrator for PathTracingIntegrator {
                                     let sampled_light_emission =
                                         emission_material.emission(&light_hit, light_wi, None);
                                     assert!(sampled_light_emission.0 >= 0.0);
-                                    successful_light_samples += 1;
+                                    // successful_light_samples += 1;
                                     light_contribution += reflectance
                                         * beta
                                         * dropoff
@@ -175,10 +175,14 @@ impl Integrator for PathTracingIntegrator {
                                 }
 
                                 beta = beta / attenuation;
+                                debug_assert!(!beta.0.is_nan(), "{}", attenuation);
                             }
                         }
                         let cos_i = wo.z();
-                        beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
+
+                        let f = material.f(&hit, wi, wo);
+                        beta *= f * cos_i.abs() / pdf;
+                        debug_assert!(!beta.0.is_nan(), "{:?} {} {}", f, cos_i, pdf);
                         last_bsdf_pdf = pdf;
                         // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection

@@ -22,7 +22,6 @@ pub use tangent_frame::TangentFrame;
 pub use vec::{Axis, Vec3};
 
 use std::fmt::Debug;
-use std::ops::Mul;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Sidedness {

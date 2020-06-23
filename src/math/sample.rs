@@ -1,6 +1,6 @@
 use crate::math::*;
 use rand::seq::SliceRandom;
-use rand::{thread_rng, Rng, RngCore};
+use rand::{thread_rng, RngCore};
 
 #[derive(Debug)]
 pub struct Sample1D {
@@ -100,7 +100,7 @@ impl Sampler for StratifiedSampler {
             // print!(".");
         }
         let idx = self.first[self.indices[0]];
-        let (width, depth, height) = (self.dims[0], self.dims[1], self.dims[2]);
+        let (width, _depth, _height) = (self.dims[0], self.dims[1], self.dims[2]);
         self.indices[0] += 1;
         if self.indices[0] >= width {
             self.indices[0] = 0;
@@ -119,9 +119,9 @@ impl Sampler for StratifiedSampler {
             // print!("*");
         }
         let idx = self.second[self.indices[1]];
-        let (width, depth, height) = (self.dims[0], self.dims[1], self.dims[2]);
+        let (width, depth, _height) = (self.dims[0], self.dims[1], self.dims[2]);
         self.indices[1] += 1;
-        if self.indices[1] >= width * height {
+        if self.indices[1] >= width * depth {
             self.indices[1] = 0;
         }
         // convert idx to the "pixel" based on dims
@@ -169,7 +169,7 @@ mod test {
     fn test_random_sampler_1d() {
         let mut sampler = Box::new(RandomSampler::new());
         let mut s = 0.0;
-        for i in 0..1000000 {
+        for _i in 0..1000000 {
             let sample = sampler.draw_1d();
             assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             s += function(sample.x);
@@ -180,7 +180,7 @@ mod test {
     fn test_stratified_sampler_1d() {
         let mut sampler = Box::new(StratifiedSampler::new(10, 10, 10));
         let mut s = 0.0;
-        for i in 0..1000000 {
+        for _i in 0..1000000 {
             let sample = sampler.draw_1d();
             assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             s += function(sample.x);
@@ -201,7 +201,7 @@ mod test {
     fn test_stratified_sampler_3d() {
         let mut sampler = Box::new(StratifiedSampler::new(10, 10, 10));
 
-        for i in 0..1000000 {
+        for _i in 0..1000000 {
             let sample = sampler.draw_3d();
             assert!(0.0 <= sample.x && sample.x <= 1.0, "{}", sample.x);
             assert!(0.0 <= sample.y && sample.y <= 1.0, "{}", sample.y);

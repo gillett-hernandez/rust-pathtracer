@@ -98,11 +98,19 @@ impl Hittable for Sphere {
         let normal = random_on_unit_sphere(s.draw_2d());
         let point_on_sphere = self.origin + self.radius * normal;
         let direction = point_on_sphere - from;
-        debug_assert!(direction.0.is_finite().all(), "{:?} {:?}", point_on_sphere, from);
+        debug_assert!(
+            direction.0.is_finite().all(),
+            "{:?} {:?}",
+            point_on_sphere,
+            from
+        );
         let pdf = direction.norm_squared()
             / ((normal * direction.normalized()).abs() * self.radius * self.radius * 4.0 * PI);
         if !pdf.is_finite() {
-            println!("pdf was {:?}, direction: {:?}, normal: {:?}", pdf, direction, normal);
+            println!(
+                "pdf was {:?}, direction: {:?}, normal: {:?}",
+                pdf, direction, normal
+            );
 
             (direction.normalized(), 0.0)
         } else {
@@ -110,7 +118,7 @@ impl Hittable for Sphere {
         }
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
-        let direction = (to - from);
+        let direction = to - from;
         let distance_squared = direction.norm_squared();
         let pdf = distance_squared
             / ((normal * direction.normalized()) * self.radius * self.radius * 4.0 * PI);

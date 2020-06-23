@@ -3,10 +3,8 @@ use crate::hittable::{HitRecord, Hittable};
 use crate::materials::MaterialId;
 use crate::math::*;
 
-use packed_simd::f32x4;
-
 fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
-    match (axis) {
+    match axis {
         Axis::X => Vec3::from_raw(shuffle!(vec.0, [2, 1, 0, 3])),
         Axis::Y => Vec3::from_raw(shuffle!(vec.0, [0, 2, 1, 3])),
         Axis::Z => vec,
@@ -87,15 +85,15 @@ impl Hittable for AARect {
         }
         let t = (-tmp_o.z()) / tmp_d.z();
         assert!(t.is_finite(), "{:?} {:?}", tmp_o, tmp_d);
-        if (t < t0 || t > t1) {
+        if t < t0 || t > t1 {
             return None;
         }
         let xh = tmp_o.x() + t * tmp_d.x();
         let yh = tmp_o.y() + t * tmp_d.y();
-        if (xh < -self.half_size.0
+        if xh < -self.half_size.0
             || xh > self.half_size.0
             || yh < -self.half_size.1
-            || yh > self.half_size.1)
+            || yh > self.half_size.1
         {
             return None;
         }
@@ -135,7 +133,7 @@ impl Hittable for AARect {
         }
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
-        let direction = (to - from);
+        let direction = to - from;
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
         distance_squared / ((normal * direction.normalized()).abs() * area)

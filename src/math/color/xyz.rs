@@ -1,5 +1,5 @@
 use packed_simd::f32x4;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul};
 #[derive(Copy, Clone, Debug)]
 pub struct XYZColor(pub f32x4);
 

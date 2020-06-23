@@ -59,7 +59,7 @@ impl HasBoundingBox for HittableList {
 
 impl Hittable for HittableList {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let mut hit_anything = false;
+        // let mut hit_anything = false;
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for hittable in &self.list {
@@ -68,7 +68,6 @@ impl Hittable for HittableList {
             // }
             let tmp_hit_record = hittable.hit(r, t0, closest_so_far);
             if let Some(hit) = &tmp_hit_record {
-                hit_anything = true;
                 closest_so_far = hit.time;
                 hit_record = tmp_hit_record;
             } else {
@@ -77,10 +76,10 @@ impl Hittable for HittableList {
         }
         hit_record
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, _s: &mut Box<dyn Sampler>, _from: Point3) -> (Vec3, f32) {
         unimplemented!()
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+    fn pdf(&self, _normal: Vec3, _from: Point3, _to: Point3) -> f32 {
         unimplemented!()
     }
     fn get_instance_id(&self) -> usize {

@@ -19,7 +19,7 @@ impl AABB {
     pub const fn new_raw(min: Point3, max: Point3) -> AABB {
         AABB { min, max }
     }
-    pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> bool {
+    pub fn hit(&self, r: Ray, _t0: f32, _t1: f32) -> bool {
         // let tmin: f32x4 = f32x4::splat(t0);
         // let tmax: f32x4 = f32x4::splat(t1);
         // assert that the absolute value of all the components of direction are greater than 0
