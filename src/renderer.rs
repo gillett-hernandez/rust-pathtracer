@@ -3,6 +3,7 @@ use crate::config::RenderSettings;
 use crate::integrator::Integrator;
 use crate::math::*;
 
+use std::io::Write;
 use std::sync::Arc;
 use std::vec::Vec;
 
@@ -59,6 +60,7 @@ impl Renderer for NaiveRenderer {
         //     for x in 0..film.width {
         let width = film.width;
         let height = film.height;
+        let output_divisor = film.width * film.height / 100;
         film.buffer
             .par_iter_mut()
             // .iter_mut()
@@ -68,17 +70,19 @@ impl Renderer for NaiveRenderer {
                 let x: usize = pixel_index - width * y;
                 // gen ray for pixel x, y
                 // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                let mut temp_color = RGBColor::BLACK;
-                // let mut temp_color = XYZColor::BLACK;
+                // let mut temp_color = RGBColor::BLACK;
+                let mut temp_color = XYZColor::BLACK;
                 let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                 // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+
                 for _s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
                     let r = camera.get_ray(
                         (x as f32 + sample.x) / (width as f32),
                         (y as f32 + sample.y) / (height as f32),
                     );
-                    temp_color += integrator.color(&mut sampler, r);
+                    temp_color += XYZColor::from(integrator.color(&mut sampler, r));
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
                     assert!(
                         temp_color.0.is_finite().all(),
@@ -87,8 +91,14 @@ impl Renderer for NaiveRenderer {
                         temp_color
                     );
                 }
+                if pixel_index % output_divisor == 0 {
+                    let stdout = std::io::stdout();
+                    let mut handle = stdout.lock();
+                    handle.write_all(b".").unwrap();
+                    std::io::stdout().flush().expect("some error message")
+                }
                 // unsafe {
-                *pixel_ref = XYZColor::from(temp_color / (settings.min_samples as f32));
+                *pixel_ref = temp_color / (settings.min_samples as f32);
                 // }
             });
     }

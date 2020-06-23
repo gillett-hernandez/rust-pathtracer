@@ -7,7 +7,7 @@ use std::f32::INFINITY;
 use std::sync::Arc;
 
 pub trait Integrator: Sync + Send {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor;
+    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength;
 }
 
 pub struct PathTracingIntegrator {
@@ -19,7 +19,7 @@ pub struct PathTracingIntegrator {
 }
 
 impl Integrator for PathTracingIntegrator {
-    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> RGBColor {
+    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         let mut ray = camera_ray;
         // println!("{:?}", ray);
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, 380.0, 780.0);
@@ -58,7 +58,7 @@ impl Integrator for PathTracingIntegrator {
                         // check stuff here
                         if last_bsdf_pdf <= 0.0 || self.light_samples == 0 {
                             sum.energy += beta * emission;
-                            assert!(!sum.energy.0.is_nan());
+                            assert!(!sum.energy.is_nan());
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // // println!("{:?}", hit);
@@ -66,7 +66,7 @@ impl Integrator for PathTracingIntegrator {
                             let weight = power_heuristic(last_bsdf_pdf, pdf);
                             assert!(!pdf.is_nan() && !weight.is_nan(), "{}, {}", pdf, weight);
                             sum.energy += beta * emission * weight;
-                            assert!(!sum.energy.0.is_nan());
+                            assert!(!sum.energy.is_nan());
                         }
                     }
                     let mut light_contribution = SingleEnergy::ZERO;
@@ -150,7 +150,7 @@ impl Integrator for PathTracingIntegrator {
                         // println!("light contribution: {:?}", light_contribution);
                         sum.energy += light_contribution / (self.light_samples as f32);
                         assert!(
-                            !sum.energy.0.is_nan(),
+                            !sum.energy.is_nan(),
                             "{:?} {:?}",
                             light_contribution,
                             self.light_samples
@@ -209,25 +209,15 @@ impl Integrator for PathTracingIntegrator {
                         world_material.emission(&fake_hit_record, Vec3::ZERO, None);
                     // // println!("{:?}, {:?}", beta, world_emission);
                     sum.energy += beta * world_emission;
-                    assert!(!sum.energy.0.is_nan());
+                    assert!(!sum.energy.is_nan());
                     break;
                 }
             }
         }
-        let xyz_from_sum = XYZColor::from(sum);
-        let rgb_from_xyz = RGBColor::from(xyz_from_sum);
+        // let xyz_from_sum = XYZColor::from(sum);
+        // let rgb_from_xyz = RGBColor::from(xyz_from_sum);
 
-        assert!(
-            !sum.energy.0.is_nan()
-                && xyz_from_sum.0.is_finite().all()
-                && rgb_from_xyz.0.is_finite().all(),
-            "{:?} {:?} {:?}",
-            sum,
-            xyz_from_sum,
-            rgb_from_xyz
-        );
-
-        sum.energy.0 * rgb_from_xyz
-        // XYZColor::from(sum)
+        assert!(!sum.energy.is_nan(), "{:?}", sum);
+        sum
     }
 }

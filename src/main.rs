@@ -124,19 +124,19 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 30000.0);
     let glass = curves::cauchy(1.5, 10000.0);
-    let blackbody_2000_k_illuminant = curves::blackbody(4500.0, 10.0);
+    let blackbody_2000_k_illuminant = curves::blackbody(4000.0, 5.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
     let lambertian_red = Box::new(Lambertian::new(red));
     let lambertian_green = Box::new(Lambertian::new(green));
     let lambertian_blue = Box::new(Lambertian::new(blue));
-    let ggx_glass = Box::new(GGX::new(0.02, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+    let ggx_glass = Box::new(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_rough_glass = Box::new(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let ggx_moissanite = Box::new(GGX::new(0.05, moissanite, 1.0, flat_zero.clone(), 1.0));
-    let ggx_silver_metal = Box::new(GGX::new(0.05, silver_ior, 1.0, silver_kappa, 0.0));
-    let ggx_gold_metal = Box::new(GGX::new(0.05, gold_ior, 1.0, gold_kappa, 0.0));
-    let ggx_bismuth_metal = Box::new(GGX::new(0.15, bismuth_ior, 1.0, bismuth_kappa, 0.0));
+    let ggx_moissanite = Box::new(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
+    let ggx_silver_metal = Box::new(GGX::new(0.03, silver_ior, 1.0, silver_kappa, 0.0));
+    let ggx_gold_metal = Box::new(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
+    let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
 
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
     let diffuse_light_sphere = Box::new(DiffuseLight::new(
@@ -148,7 +148,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         bvh: Box::new(HittableList::new(vec![
             // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
             Box::new(AARect::new(
-                (0.5, 0.5),
+                (0.7, 0.7),
                 Point3::new(0.0, 0.0, 0.9),
                 Axis::Z,
                 false,
@@ -163,7 +163,9 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                 Some(3),
                 1,
             )),
-            Box::new(Sphere::new(0.3, Point3::new(0.0, 0.0, -0.3), Some(1), 1)), // ball at origin
+            Box::new(Sphere::new(0.3, Point3::new(-0.5, 0.0, -0.7), Some(1), 1)), // ball at origin
+            Box::new(Sphere::new(0.3, Point3::new(0.1, -0.5, -0.7), Some(6), 1)), // ball at origin
+            Box::new(Sphere::new(0.3, Point3::new(0.1, 0.5, -0.7), Some(7), 1)),  // ball at origin
             Box::new(AARect::new(
                 (2.0, 2.0),
                 Point3::new(0.0, 0.0, -1.0),
@@ -202,11 +204,13 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_moissanite,
+            ggx_glass,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
+            ggx_gold_metal,
+            ggx_bismuth_metal,
         ],
     };
     world
@@ -272,6 +276,8 @@ fn main() -> () {
             render_settings.resolution.height,
         );
         println!("starting render with film resolution {}x{}", width, height);
+        let min_camera_rays = width * height * render_settings.min_samples as usize;
+        println!("minimum total samples: {}", min_camera_rays);
 
         let aspect_ratio = width as f32 / height as f32;
 
@@ -279,8 +285,8 @@ fn main() -> () {
 
         &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
         let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
-
         let total_pixels = film.width * film.height;
+
         let total_camera_rays = total_pixels
             * (render_settings
                 .max_samples
@@ -339,8 +345,8 @@ fn main() -> () {
         // max_luminance = exposure^(-1/gamma)
         // max_luminance = 1 / exposure^(1/gamma)
         let gamma = 2.2f32.recip();
-        // let exposure = 2.0 * avg_luminance.recip().powf(gamma);
-        let exposure = 12.0;
+        let exposure = 2.0 * avg_luminance.recip().powf(gamma);
+        // let exposure = 12.0;
 
         // let upper = exposure.powf(-1.0/gamma);
         println!(

@@ -135,6 +135,9 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
         Vec3::X
     };
     let t2 = t1.cross(v);
+    debug_assert!(v.0.is_finite().all(), "{:?}", v);
+    debug_assert!(t1.0.is_finite().all(), "{:?}", t1);
+    debug_assert!(t2.0.is_finite().all(), "{:?}", t2);
     let a = 1.0 / (1.0 + v.z());
     let r = x.sqrt();
     let phi = if y < a {
@@ -146,7 +149,8 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     let (sin_phi, cos_phi) = phi.sin_cos();
     let p1 = r * cos_phi;
     let p2 = r * sin_phi * if y < a { 1.0 } else { v.z() };
-    let n = p1 * t1 + p2 * t2 + (1.0 - p1 * p1 - p2 * p2).sqrt() * v;
+    let value = 1.0 - p1 * p1 - p2 * p2;
+    let n = p1 * t1 + p2 * t2 + value.max(0.0).sqrt() * v;
 
     debug_assert!(n.0.is_finite().all(), "{:?}", n);
     Vec3::new(alpha * n.x(), alpha * n.y(), n.z().max(0.0)).normalized()

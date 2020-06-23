@@ -154,7 +154,6 @@ impl From<SingleWavelength> for XYZColor {
         // convert to Angstroms. 10 Angstroms == 1nm
         let angstroms = swss.lambda * 10.0;
 
-        // i don't know how to take Energy into account for this
         XYZColor::new(
             swss.energy.0 * x_bar(angstroms),
             swss.energy.0 * y_bar(angstroms),
