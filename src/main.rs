@@ -31,8 +31,7 @@ use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
 
-use math::spectral::InterpolationMode;
-use parsing::parse_tabulated_curve_from_csv;
+use parsing::*;
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -105,46 +104,25 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
     world
 }
 
-fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
+fn cornell_box(color: SPD, world_strength: f32) -> World {
     let cie_e_world_illuminant = curves::cie_e(world_strength);
     let flat_zero = curves::void();
     let flat_one = curves::cie_e(1.0);
     let cie_e_illuminant = curves::cie_e(15.0);
-    let silver_ior_tabulation = parse_tabulated_curve_from_csv(
-        "data/curves/silver.csv",
-        1,
-        InterpolationMode::Cubic,
-        |x: f32| x * 1000.0,
-    )
-    .unwrap();
-    let silver_kappa_tabulation = parse_tabulated_curve_from_csv(
-        "data/curves/silver.csv",
-        2,
-        InterpolationMode::Cubic,
-        |x: f32| x * 1000.0,
-    )
-    .unwrap();
-    let gold_ior_tabulation = parse_tabulated_curve_from_csv(
-        "data/curves/gold.csv",
-        1,
-        InterpolationMode::Cubic,
-        |x: f32| x * 1000.0,
-    )
-    .unwrap();
-    let gold_kappa_tabulation = parse_tabulated_curve_from_csv(
-        "data/curves/gold.csv",
-        2,
-        InterpolationMode::Cubic,
-        |x: f32| x * 1000.0,
-    )
-    .unwrap();
+    let (silver_ior, silver_kappa) =
+        load_ior_and_kappa("data/curves/silver.csv", |x: f32| x * 1000.0).unwrap();
+    let (gold_ior, gold_kappa) =
+        load_ior_and_kappa("data/curves/gold.csv", |x: f32| x * 1000.0).unwrap();
+
+    let (bismuth_ior, bismuth_kappa) =
+        load_ior_and_kappa("data/curves/bismuth.csv", |x: f32| x * 1000.0).unwrap();
 
     let red = curves::red(1.0);
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 30000.0);
-    let glass = curves::cauchy(1.5, 30000.0);
+    let glass = curves::cauchy(1.5, 10000.0);
     let blackbody_2000_k_illuminant = curves::blackbody(4500.0, 10.0);
 
     let lambertian = Box::new(Lambertian::new(color));
@@ -153,20 +131,9 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
     let lambertian_green = Box::new(Lambertian::new(green));
     let lambertian_blue = Box::new(Lambertian::new(blue));
     let ggx_glass = Box::new(GGX::new(0.05, glass, 1.0, flat_zero, 1.0));
-    let ggx_silver_metal = Box::new(GGX::new(
-        0.05,
-        silver_ior_tabulation,
-        1.0,
-        silver_kappa_tabulation,
-        0.0,
-    ));
-    let ggx_gold_metal = Box::new(GGX::new(
-        0.05,
-        gold_ior_tabulation,
-        1.0,
-        gold_kappa_tabulation,
-        0.0,
-    ));
+    let ggx_silver_metal = Box::new(GGX::new(0.05, silver_ior, 1.0, silver_kappa, 0.0));
+    let ggx_gold_metal = Box::new(GGX::new(0.05, gold_ior, 1.0, gold_kappa, 0.0));
+    let ggx_bismuth_metal = Box::new(GGX::new(0.15, bismuth_ior, 1.0, bismuth_kappa, 0.0));
 
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
     let diffuse_light_sphere = Box::new(DiffuseLight::new(
@@ -232,7 +199,7 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_gold_metal,
+            ggx_bismuth_metal,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
@@ -247,23 +214,7 @@ fn construct_scene() -> World {
     let red = curves::red(1.0);
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
-    // let lambertian = Box::new(Lambertian::new(white));
-    // let diffuse_light = Box::new(DiffuseLight::new());
-    // let world = World {
-    //     bvh: Box::new(HittableList::new(vec![
-    //         Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, 40.0), Some(0))),
-    //         // Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(1))),
-    //         Box::new(Sphere::new(30.0, Point3::new(0.0, 0.0, -40.0), Some(0))),
-    //         Box::new(Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(0))),
-    //     ])),
-    //     // background: RGBColor::new(0.0, 0.0, 0.0),
-    //     background: white,
-    //     materials: vec![lambertian, diffuse_light],
-    // };
-    // world
-    // let lambertian = Box::new(Lambertian::new(white));
-    // white_furnace_test(lambertian)
-    lambertian_under_lamp(white, 0.4)
+    cornell_box(white, 0.4)
 }
 
 fn render(
