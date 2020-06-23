@@ -15,6 +15,7 @@ image = "0.23.4"
 packed_simd = "0.3.3"
 nalgebra = "0.21"
 ordered-float = "1.0.2"
+exr = "0.8.0"
 
 [build-dependencies]
 serde = { version = "1.0.110", features = ["derive"] }

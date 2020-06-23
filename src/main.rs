@@ -199,7 +199,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_bismuth_metal,
+            ggx_glass,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
@@ -288,7 +288,33 @@ fn main() -> () {
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
         let now = Instant::now();
+        // Pixel data for a 256x256 floating point RGB image.
+        let pixel_data = vec![(0.82f32, 1.78f32, 0.21f32); 256 * 256];
+
         // do stuff with film here
+        extern crate exr;
+        use exr::prelude::rgba_image::*;
+
+        // generate a color for each pixel position
+        let generate_pixels = |position: Vec2<usize>| {
+            let film_sample = film.buffer[position.y() * film.width + position.x()];
+            let [r, g, b, _]: [f32; 4] = RGBColor::from(film_sample).0.into();
+            Pixel::rgb(r, g, b)
+        };
+
+        let image_info = ImageInfo::rgb(
+            (film.width, film.height), // pixel resolution
+            SampleType::F16,           // convert the generated f32 values to f16 while writing
+        );
+
+        image_info
+            .write_pixels_to_file(
+                format!("output/test{}.exr", render_id),
+                write_options::high(), // higher speed, but higher memory usage
+                &generate_pixels,      // pass our pixel generator
+            )
+            .unwrap();
+
         let mut img: image::RgbImage =
             image::ImageBuffer::new(film.width as u32, film.height as u32);
 
@@ -339,7 +365,7 @@ fn main() -> () {
         img.save(format!(
             "{}/{}",
             directory.unwrap().clone(),
-            format!("test{}.png", render_id)
+            format!("output/test{}.png", render_id)
         ))
         .unwrap();
         println!("took {}s", (now.elapsed().as_millis() as f32) / 1000.0);
