@@ -5,9 +5,11 @@ use crate::math::*;
 pub use crate::material::{Material, BRDF, PDF};
 
 mod diffuse_light;
+mod ggx;
 mod lambertian;
 
 pub use diffuse_light::DiffuseLight;
+pub use ggx::GGX;
 pub use lambertian::Lambertian;
 
 // type required for an id into the Material Table

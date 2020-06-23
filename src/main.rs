@@ -8,9 +8,9 @@ extern crate packed_simd;
 pub mod aabb;
 pub mod camera;
 pub mod config;
+pub mod curves;
 pub mod geometry;
 pub mod hittable;
-pub mod illuminants_and_colors;
 pub mod integrator;
 pub mod material;
 pub mod materials;
@@ -25,7 +25,7 @@ use geometry::{AARect, HittableList, Sphere};
 
 use integrator::{Integrator, PathTracingIntegrator};
 use material::{Material, BRDF, PDF};
-use materials::{DiffuseLight, Lambertian};
+use materials::*;
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
@@ -94,10 +94,7 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
         lights: vec![],
         background: 0,
         materials: vec![
-            Box::new(DiffuseLight::new(
-                illuminants_and_colors::cie_e(1.0),
-                Sidedness::Dual,
-            )),
+            Box::new(DiffuseLight::new(curves::cie_e(1.0), Sidedness::Dual)),
             material,
         ],
     };
@@ -105,20 +102,31 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
 }
 
 fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
-    let cie_e_world_illuminant = illuminants_and_colors::cie_e(world_strength);
-    let cie_e_illuminant = illuminants_and_colors::cie_e(15.0);
+    let cie_e_world_illuminant = curves::cie_e(world_strength);
+    let flat_zero = curves::void();
+    let flat_one = curves::cie_e(1.0);
+    let cie_e_illuminant = curves::cie_e(15.0);
 
-    let red = illuminants_and_colors::red(1.0);
-    let green = illuminants_and_colors::green(1.0);
-    let blue = illuminants_and_colors::blue(1.0);
-    let white = illuminants_and_colors::cie_e(1.0);
-    let blackbody_2000_k_illuminant = illuminants_and_colors::blackbody(2500.0, 10.0);
+    let red = curves::red(1.0);
+    let green = curves::green(1.0);
+    let blue = curves::blue(1.0);
+    let white = curves::cie_e(1.0);
+    let moissanite = curves::cauchy(2.5, 30000.0);
+    let blackbody_2000_k_illuminant = curves::blackbody(2500.0, 10.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
     let lambertian_red = Box::new(Lambertian::new(red));
     let lambertian_green = Box::new(Lambertian::new(green));
     let lambertian_blue = Box::new(Lambertian::new(blue));
+    let ggx_glass = Box::new(GGX::new(0.4, moissanite, 1.0, flat_zero, 0.9));
+    let ggx_metal = Box::new(GGX::new(
+        0.1,
+        curves::cie_e(0.03),
+        1.0,
+        curves::cie_e(3.0),
+        0.0,
+    ));
 
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
     let diffuse_light_sphere = Box::new(DiffuseLight::new(
@@ -184,7 +192,7 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            lambertian,
+            ggx_metal,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
@@ -195,10 +203,10 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
 }
 
 fn construct_scene() -> World {
-    let white = illuminants_and_colors::cie_e(1.0);
-    let red = illuminants_and_colors::red(1.0);
-    let green = illuminants_and_colors::green(1.0);
-    let blue = illuminants_and_colors::blue(1.0);
+    let white = curves::cie_e(1.0);
+    let red = curves::red(1.0);
+    let green = curves::green(1.0);
+    let blue = curves::blue(1.0);
     // let lambertian = Box::new(Lambertian::new(white));
     // let diffuse_light = Box::new(DiffuseLight::new());
     // let world = World {
@@ -215,7 +223,7 @@ fn construct_scene() -> World {
     // world
     // let lambertian = Box::new(Lambertian::new(white));
     // white_furnace_test(lambertian)
-    lambertian_under_lamp(white, 0.05)
+    lambertian_under_lamp(white, 0.4)
 }
 
 fn render(
@@ -317,6 +325,7 @@ fn main() -> () {
         // max_luminance = 1 / exposure^(1/gamma)
         let gamma = 2.2f32.recip();
         let exposure = 2.0 * avg_luminance.recip().powf(gamma);
+        // let exposure = 2.0;
 
         // let upper = exposure.powf(-1.0/gamma);
         println!(

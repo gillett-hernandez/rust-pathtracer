@@ -99,6 +99,9 @@ impl Integrator for PathTracingIntegrator {
                             //     continue;
                             // }
                             let dropoff = wo.z().max(0.0);
+                            if dropoff == 0.0 {
+                                continue;
+                            }
                             // let dropoff = wo.z().abs();
                             if let Some(mut light_hit) = self.world.hit(light_ray, 0.0, INFINITY) {
                                 light_hit.lambda = sum.lambda;
@@ -127,7 +130,7 @@ impl Integrator for PathTracingIntegrator {
                                         / pick_pdf;
                                     assert!(
                                         !light_contribution.0.is_nan(),
-                                        "{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+                                        "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} lp {:?}",
                                         light_contribution,
                                         reflectance,
                                         beta,
@@ -177,7 +180,7 @@ impl Integrator for PathTracingIntegrator {
                         let cos_i = wo.z();
                         beta *= material.f(&hit, wi, wo) * cos_i.abs() / pdf;
                         last_bsdf_pdf = pdf;
-                        debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
+                        // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
                         // println!("whatever!!");

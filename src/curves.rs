@@ -16,11 +16,13 @@ pub fn blackbody(temperature: f32, boost: f32) -> SPD {
     SPD::Blackbody { temperature, boost }
 }
 
+pub fn cauchy(a: f32, b: f32) -> SPD {
+    SPD::Cauchy { a, b }
+}
+
 pub fn red(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![
-            (650.0, 2400.0, 50.0 * 1.7 * power),
-        ],
+        signal: vec![(650.0, 2400.0, 50.0 * 1.7 * power)],
     }
 }
 

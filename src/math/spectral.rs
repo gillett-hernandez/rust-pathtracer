@@ -15,7 +15,12 @@ impl SingleEnergy {
     pub const ZERO: SingleEnergy = SingleEnergy { 0: 0.0 };
     pub const ONE: SingleEnergy = SingleEnergy { 0: 1.0 };
 }
-
+impl Add for SingleEnergy {
+    type Output = SingleEnergy;
+    fn add(self, rhs: SingleEnergy) -> Self::Output {
+        SingleEnergy::new(self.0 + rhs.0)
+    }
+}
 impl AddAssign for SingleEnergy {
     fn add_assign(&mut self, rhs: SingleEnergy) {
         self.0 += rhs.0;
@@ -155,17 +160,40 @@ impl From<SingleWavelength> for XYZColor {
     }
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Op {
     Add,
     Mul,
 }
 
+#[derive(Debug, Clone)]
 pub enum SPD {
-    Linear { signal: Vec<f32>, bounds: Bounds1D },
-    Exponential { signal: Vec<(f32, f32, f32)> },
-    InverseExponential { signal: Vec<(f32, f32, f32)> },
-    Blackbody { temperature: f32, boost: f32 },
-    Machine { seed: f32, list: Vec<(Op, SPD)> },
+    Linear {
+        signal: Vec<f32>,
+        bounds: Bounds1D,
+    },
+    Polynomial {
+        xoffset: f32,
+        coefficients: [f32; 8],
+    },
+    Cauchy {
+        a: f32,
+        b: f32,
+    },
+    Exponential {
+        signal: Vec<(f32, f32, f32)>,
+    },
+    InverseExponential {
+        signal: Vec<(f32, f32, f32)>,
+    },
+    Blackbody {
+        temperature: f32,
+        boost: f32,
+    },
+    Machine {
+        seed: f32,
+        list: Vec<(Op, SPD)>,
+    },
 }
 
 pub trait SpectralPowerDistributionFunction {
@@ -204,6 +232,18 @@ impl SpectralPowerDistributionFunction for SPD {
                 let index = ((lambda - bounds.lower) / step_size) as usize;
                 signal[index]
             }
+            SPD::Polynomial {
+                xoffset,
+                coefficients,
+            } => {
+                let mut val = 0.0;
+                let tmp_lambda = lambda - xoffset;
+                for (i, &coef) in coefficients.iter().enumerate() {
+                    val += coef * tmp_lambda.powi(i as i32);
+                }
+                val
+            }
+            SPD::Cauchy { a, b } => *a + *b / (lambda * lambda),
             SPD::Exponential { signal } => {
                 let mut val = 0.0f32;
                 for &(o, s, m) in signal {
