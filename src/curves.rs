@@ -3,7 +3,7 @@
 use crate::math::spectral::Op;
 use crate::math::*;
 
-const VISIBLE_RANGE: Bounds1D = Bounds1D::new(370.0, 790.0);
+pub const VISIBLE_RANGE: Bounds1D = Bounds1D::new(370.0, 790.0);
 
 pub fn cie_e(power: f32) -> SPD {
     SPD::Linear {

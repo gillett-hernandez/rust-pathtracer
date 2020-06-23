@@ -166,11 +166,22 @@ pub enum Op {
     Mul,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum InterpolationMode {
+    Linear,
+    Nearest,
+    Cubic,
+}
+
 #[derive(Debug, Clone)]
 pub enum SPD {
     Linear {
         signal: Vec<f32>,
         bounds: Bounds1D,
+    },
+    Tabulated {
+        signal: Vec<(f32, f32)>,
+        mode: InterpolationMode,
     },
     Polynomial {
         xoffset: f32,
@@ -220,6 +231,7 @@ pub trait SpectralPowerDistributionFunction {
 
 impl SpectralPowerDistributionFunction for SPD {
     fn evaluate_power(&self, lambda: f32) -> f32 {
+        use ordered_float::OrderedFloat;
         match (&self) {
             SPD::Linear { signal, bounds } => {
                 assert!(
@@ -242,6 +254,41 @@ impl SpectralPowerDistributionFunction for SPD {
                     val += coef * tmp_lambda.powi(i as i32);
                 }
                 val
+            }
+            SPD::Tabulated { signal, mode } => {
+                // let result = signal.binary_search_by_key(lambda, |&(a, b)| a);
+                let index = match signal
+                    .binary_search_by_key(&OrderedFloat::<f32>(lambda), |&(a, b)| {
+                        OrderedFloat::<f32>(a)
+                    }) {
+                    Err(index) if index > 0 => index,
+                    Ok(index) | Err(index) => index,
+                };
+                let right = signal[index];
+                let t;
+                if index == 0 {
+                    return right.1;
+                }
+                let left = signal[index - 1];
+                t = (lambda - left.0) / (right.0 - left.0);
+
+                match mode {
+                    InterpolationMode::Linear => (1.0 - t) * left.1 + t * right.1,
+                    InterpolationMode::Nearest => {
+                        if t < 0.5 {
+                            left.1
+                        } else {
+                            right.1
+                        }
+                    }
+                    InterpolationMode::Cubic => {
+                        let t2 = 2.0 * t;
+                        let one_sub_t = 1.0 - t;
+                        let h00 = (1.0 + t2) * one_sub_t * one_sub_t;
+                        let h01 = t * t * (3.0 - t2);
+                        h00 * left.1 + h01 * right.1
+                    }
+                }
             }
             SPD::Cauchy { a, b } => *a + *b / (lambda * lambda),
             SPD::Exponential { signal } => {

@@ -178,19 +178,21 @@ impl GGX {
         }
     }
 
-    fn reflectance(&self, eta_i: f32, kappa: f32, cos_theta_i: f32) -> f32 {
+    fn reflectance(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
         if self.permeability > 0.0 {
-            fresnel_dielectric(self.eta_o, eta_i, cos_theta_i)
+            fresnel_dielectric(self.eta_o, eta_inner, cos_theta_i)
         } else {
-            fresnel_conductor(self.eta_o, eta_i, kappa, cos_theta_i)
+            fresnel_conductor(self.eta_o, eta_inner, kappa, cos_theta_i)
         }
     }
 
-    fn reflectance_probability(&self, eta_i: f32, kappa: f32, cos_theta_i: f32) -> f32 {
+    fn reflectance_probability(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
         if self.permeability > 0.0 {
             // fresnel_dielectric(self.eta_o, eta_i, wi.z())
             // scale by self.permeability
-            1.0 + self.permeability * (self.reflectance(eta_i, kappa, cos_theta_i) - 1.0)
+            (self.permeability * self.reflectance(eta_inner, kappa, cos_theta_i) + 1.0
+                - self.permeability)
+                .clamp(0.0, 1.0)
         } else {
             1.0
         }
@@ -207,7 +209,7 @@ impl PDF for GGX {
 
         let mut glossy_pdf = 0.0;
         let mut transmission_pdf = 0.0;
-        let eta_i = self.eta.evaluate_power(hit.lambda);
+        let eta_inner = self.eta.evaluate_power(hit.lambda);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
@@ -219,11 +221,11 @@ impl PDF for GGX {
                 wh = -wh;
             }
             let ndotv = wi * wh;
-            let refl = self.reflectance(hit.lambda, kappa, cos_i);
+            let refl = self.reflectance(eta_inner, kappa, cos_i);
             glossy_pdf = ggx_vnpdf(self.roughness, wi, wh) * 0.25 / ndotv.abs();
         } else {
             if self.permeability > 0.0 {
-                let mut eta_rel = eta_i / self.eta_o;
+                let mut eta_rel = self.eta_o / eta_inner;
                 if wi.z() < 0.0 {
                     eta_rel = 1.0 / eta_rel;
                 }
@@ -240,18 +242,23 @@ impl PDF for GGX {
                 let ndotl = wo * wh;
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
-                let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
-                let ggxd = ggx_d(self.roughness, wh);
-                let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
-                // transmission.0 = weight;
-                cos_theta_i = ndotv;
+                if sqrt_denom.abs() < 1e-6 {
+                    transmission_pdf = 0.0;
+                } else {
+                    let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
+                    let ggxd = ggx_d(self.roughness, wh);
+                    // let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
+                    // transmission.0 = weight;
+                    cos_theta_i = ndotv;
 
-                let inv_reflectance = 1.0 - self.reflectance(eta_i, kappa, cos_theta_i);
-                transmission_pdf = (ggxd * ggx_vnpdf_no_d(self.roughness, wi, wh) * dwh_dwo).abs();
+                    // let inv_reflectance = 1.0 - self.reflectance(eta_i, kappa, cos_theta_i);
+                    transmission_pdf =
+                        (ggxd * ggx_vnpdf_no_d(self.roughness, wi, wh) * dwh_dwo).abs();
+                }
             }
         }
 
-        let refl_prob = self.reflectance_probability(eta_i, kappa, cos_i);
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);
 
         refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf
     }
@@ -261,22 +268,22 @@ impl PDF for GGX {
         mut sampler: &mut Box<dyn Sampler>,
         wi: Vec3,
     ) -> Option<Vec3> {
-        let eta_i = self.eta.evaluate_power(hit.lambda);
+        let eta_inner = self.eta.evaluate_power(hit.lambda);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
             self.kappa.evaluate_power(hit.lambda)
         };
-        let refl_prob = self.reflectance_probability(eta_i, kappa, wi.z());
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
         if refl_prob == 1.0 || sampler.draw_1d().x < refl_prob {
             // reflection
-            let wh = sample_wh(self.roughness, wi, &mut sampler).normalized();
+            let wh = sample_wh(self.roughness, wi, &mut sampler);
             let wo = reflect(wi, wh);
             return Some(wo);
         } else {
             // transmission
-            let mut wh = sample_wh(self.roughness, wi, &mut sampler).normalized();
-            let mut eta_rel = eta_i / self.eta_o;
+            let mut wh = sample_wh(self.roughness, wi, &mut sampler);
+            let mut eta_rel = self.eta_o / eta_inner;
             if wi.z() < 0.0 {
                 eta_rel = 1.0 / eta_rel;
             }
@@ -300,7 +307,7 @@ impl BRDF for GGX {
 
         let mut glossy = SingleEnergy::ZERO;
         let mut transmission = SingleEnergy::ZERO;
-        let eta_i = self.eta.evaluate_power(hit.lambda);
+        let eta_inner = self.eta.evaluate_power(hit.lambda);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
@@ -312,12 +319,12 @@ impl BRDF for GGX {
                 wh = -wh;
             }
             let ndotv = wi * wh;
-            let refl = self.reflectance(eta_i, kappa, cos_i);
+            let refl = self.reflectance(eta_inner, kappa, cos_i);
             glossy.0 =
                 refl * (0.25 / g) * ggx_d(self.roughness, wh) * ggx_g(self.roughness, wi, wo);
         } else {
             if self.permeability > 0.0 {
-                let mut eta_rel = eta_i / self.eta_o;
+                let mut eta_rel = self.eta_o / eta_inner;
                 if wi.z() < 0.0 {
                     eta_rel = 1.0 / eta_rel;
                 }
@@ -340,7 +347,7 @@ impl BRDF for GGX {
                 // transmission.0 = weight;
                 cos_theta_i = ndotv;
 
-                let inv_reflectance = 1.0 - self.reflectance(eta_i, kappa, cos_theta_i);
+                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, cos_theta_i);
                 transmission.0 = self.permeability * inv_reflectance * weight.abs();
             }
         }

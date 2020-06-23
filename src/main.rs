@@ -15,6 +15,7 @@ pub mod integrator;
 pub mod material;
 pub mod materials;
 pub mod math;
+pub mod parsing;
 pub mod renderer;
 pub mod tonemap;
 pub mod world;
@@ -29,6 +30,9 @@ use materials::*;
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
+
+use math::spectral::InterpolationMode;
+use parsing::parse_tabulated_curve_from_csv;
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -106,25 +110,61 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
     let flat_zero = curves::void();
     let flat_one = curves::cie_e(1.0);
     let cie_e_illuminant = curves::cie_e(15.0);
+    let silver_ior_tabulation = parse_tabulated_curve_from_csv(
+        "data/curves/silver.csv",
+        1,
+        InterpolationMode::Cubic,
+        |x: f32| x * 1000.0,
+    )
+    .unwrap();
+    let silver_kappa_tabulation = parse_tabulated_curve_from_csv(
+        "data/curves/silver.csv",
+        2,
+        InterpolationMode::Cubic,
+        |x: f32| x * 1000.0,
+    )
+    .unwrap();
+    let gold_ior_tabulation = parse_tabulated_curve_from_csv(
+        "data/curves/gold.csv",
+        1,
+        InterpolationMode::Cubic,
+        |x: f32| x * 1000.0,
+    )
+    .unwrap();
+    let gold_kappa_tabulation = parse_tabulated_curve_from_csv(
+        "data/curves/gold.csv",
+        2,
+        InterpolationMode::Cubic,
+        |x: f32| x * 1000.0,
+    )
+    .unwrap();
 
     let red = curves::red(1.0);
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 30000.0);
-    let blackbody_2000_k_illuminant = curves::blackbody(2500.0, 10.0);
+    let glass = curves::cauchy(1.5, 30000.0);
+    let blackbody_2000_k_illuminant = curves::blackbody(4500.0, 10.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
     let lambertian_red = Box::new(Lambertian::new(red));
     let lambertian_green = Box::new(Lambertian::new(green));
     let lambertian_blue = Box::new(Lambertian::new(blue));
-    let ggx_glass = Box::new(GGX::new(0.4, moissanite, 1.0, flat_zero, 0.9));
-    let ggx_metal = Box::new(GGX::new(
-        0.1,
-        curves::cie_e(0.03),
+    let ggx_glass = Box::new(GGX::new(0.05, glass, 1.0, flat_zero, 1.0));
+    let ggx_silver_metal = Box::new(GGX::new(
+        0.05,
+        silver_ior_tabulation,
         1.0,
-        curves::cie_e(3.0),
+        silver_kappa_tabulation,
+        0.0,
+    ));
+    let ggx_gold_metal = Box::new(GGX::new(
+        0.05,
+        gold_ior_tabulation,
+        1.0,
+        gold_kappa_tabulation,
         0.0,
     ));
 
@@ -192,7 +232,7 @@ fn lambertian_under_lamp(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_metal,
+            ggx_gold_metal,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
@@ -324,8 +364,8 @@ fn main() -> () {
         // max_luminance = exposure^(-1/gamma)
         // max_luminance = 1 / exposure^(1/gamma)
         let gamma = 2.2f32.recip();
-        let exposure = 2.0 * avg_luminance.recip().powf(gamma);
-        // let exposure = 2.0;
+        // let exposure = 2.0 * avg_luminance.recip().powf(gamma);
+        let exposure = 12.0;
 
         // let upper = exposure.powf(-1.0/gamma);
         println!(
