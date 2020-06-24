@@ -120,13 +120,15 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let (bismuth_ior, bismuth_kappa) =
         load_ior_and_kappa("data/curves/bismuth.csv", |x: f32| x * 1000.0).unwrap();
     let (copper_ior, copper_kappa) =
-        load_ior_and_kappa("data/curves/copper.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/copper-mcpeak.csv", |x: f32| x * 1000.0).unwrap();
     let (lead_ior, lead_kappa) =
         load_ior_and_kappa("data/curves/lead.csv", |x: f32| x * 1000.0).unwrap();
     let (cold_lead_ior, cold_lead_kappa) =
         load_ior_and_kappa("data/curves/lead-140K.csv", |x: f32| x * 1000.0).unwrap();
     let (platinum_ior, platinum_kappa) =
         load_ior_and_kappa("data/curves/platinum.csv", |x: f32| x * 1000.0).unwrap();
+    let (iron_ior, iron_kappa) =
+        load_ior_and_kappa("data/curves/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
 
     let red = curves::red(1.0);
     let green = curves::green(1.0);
@@ -134,7 +136,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 30000.0);
     let glass = curves::cauchy(1.45, 10000.0);
-    let blackbody_2000_k_illuminant = curves::blackbody(4000.0, 5.0);
+    let blackbody_2000_k_illuminant = curves::blackbody(5500.0, 5.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
@@ -159,7 +161,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         0.0,
     ));
     let ggx_silver_metal_rough = Box::new(GGX::new(
-        0.3,
+        0.08,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
@@ -170,6 +172,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_cold_lead_metal = Box::new(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
     let ggx_platinum_metal = Box::new(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
+    let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
 
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
     let diffuse_light_sphere = Box::new(DiffuseLight::new(
@@ -251,8 +254,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_gold_metal,
-            ggx_copper_metal,
+            ggx_silver_metal_rough,
+            ggx_iron_metal,
         ],
     };
     world
@@ -334,7 +337,12 @@ fn main() -> () {
                 .unwrap_or(render_settings.min_samples) as usize);
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", film.total_pixels(), total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
+        println!(
+            "\ntook {}s at {} rays per second and {} rays per second per thread",
+            elapsed,
+            (total_camera_rays as f32) / elapsed,
+            (total_camera_rays as f32) / elapsed / (render_settings.threads.unwrap() as f32)
+        );
 
         let now = Instant::now();
         // do stuff with film here
