@@ -22,19 +22,19 @@ pub fn cauchy(a: f32, b: f32) -> SPD {
 
 pub fn red(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(650.0, 2400.0, 20.0 * 1.7 * power)],
+        signal: vec![(650.0, 2400.0, 10.0 * 1.7 * power)],
     }
 }
 
 pub fn green(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(540.0, 2400.0, 20.0 * 1.7 * power)],
+        signal: vec![(540.0, 2400.0, 10.0 * 1.7 * power)],
     }
 }
 
 pub fn blue(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(420.0, 2400.0, 20.0 * 1.7 * power)],
+        signal: vec![(420.0, 2400.0, 10.0 * 1.7 * power)],
     }
 }
 
