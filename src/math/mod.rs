@@ -8,6 +8,7 @@ mod sample;
 pub mod spectral;
 mod tangent_frame;
 mod vec;
+mod transform;
 
 pub use bounds::Bounds1D;
 pub use color::*;
@@ -20,6 +21,7 @@ pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 pub use tangent_frame::TangentFrame;
 pub use vec::{Axis, Vec3};
+pub use transform::Transform3;
 
 use std::fmt::Debug;
 

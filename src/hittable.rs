@@ -1,7 +1,8 @@
-use crate::aabb::HasBoundingBox; // AABB
 use crate::materials::MaterialId;
 use crate::math::*;
 use std::fmt::Debug;
+
+pub use crate::aabb::{HasBoundingBox, AABB};
 
 pub struct HitRecord {
     pub time: f32,

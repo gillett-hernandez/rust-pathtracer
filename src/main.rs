@@ -6,6 +6,7 @@ extern crate image;
 extern crate packed_simd;
 
 pub mod aabb;
+pub mod accelerator;
 pub mod camera;
 pub mod config;
 pub mod curves;
@@ -22,14 +23,14 @@ pub mod world;
 
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
-use geometry::{AARect, HittableList, Sphere};
+use geometry::{AARect, Sphere};
 
 use integrator::{Integrator, PathTracingIntegrator};
 use material::Material;
 use materials::*;
 use math::*;
 use renderer::{Film, NaiveRenderer, Renderer};
-use world::World;
+use world::*;
 
 use parsing::*;
 
@@ -88,12 +89,10 @@ fn construct_renderer(_settings: &Settings) -> Box<dyn Renderer> {
 #[allow(dead_code)]
 fn white_furnace_test(material: Box<dyn Material>) -> World {
     let world = World {
-        bvh: Box::new(HittableList::new(vec![Box::new(Sphere::new(
-            5.0,
-            Point3::new(0.0, 0.0, 0.0),
-            Some(1),
-            0,
-        ))])),
+        accelerator: Accelerator::new(
+            vec![Sphere::new(5.0, Point3::new(0.0, 0.0, 0.0), Some(1), 0).into()],
+            AcceleratorType::List,
+        ),
         lights: vec![],
         background: 0,
         materials: vec![
@@ -167,60 +166,69 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     ));
 
     let world = World {
-        bvh: Box::new(HittableList::new(vec![
-            // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
-            Box::new(AARect::new(
-                (0.7, 0.7),
-                Point3::new(0.0, 0.0, 0.9),
-                Axis::Z,
-                false,
-                Some(2),
-                0,
-            )),
-            Box::new(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, 0.0, 1.0),
-                Axis::Z,
-                true,
-                Some(3),
-                1,
-            )),
-            Box::new(Sphere::new(0.3, Point3::new(-0.5, 0.0, -0.7), Some(1), 1)), // ball at origin
-            Box::new(Sphere::new(0.3, Point3::new(0.1, -0.5, -0.7), Some(6), 1)), // ball at origin
-            Box::new(Sphere::new(0.3, Point3::new(0.1, 0.5, -0.7), Some(7), 1)),  // ball at origin
-            Box::new(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, 0.0, -1.0),
-                Axis::Z,
-                true,
-                Some(3),
-                2,
-            )),
-            Box::new(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, 1.0, 0.0),
-                Axis::Y,
-                true,
-                Some(4),
-                3,
-            )),
-            Box::new(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, -1.0, 0.0),
-                Axis::Y,
-                true,
-                Some(5),
-                4,
-            )),
-            Box::new(AARect::new(
-                (2.0, 2.0),
-                Point3::new(1.0, 0.0, 0.0),
-                Axis::X,
-                true,
-                Some(3),
-                5,
-            )),
-        ])),
+        accelerator: Accelerator::new(
+            vec![
+                // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
+                (AARect::new(
+                    (0.7, 0.7),
+                    Point3::new(0.0, 0.0, 0.9),
+                    Axis::Z,
+                    false,
+                    Some(2),
+                    0,
+                ))
+                .into(),
+                (AARect::new(
+                    (2.0, 2.0),
+                    Point3::new(0.0, 0.0, 1.0),
+                    Axis::Z,
+                    true,
+                    Some(3),
+                    1,
+                ))
+                .into(),
+                (Sphere::new(0.3, Point3::new(-0.5, 0.0, -0.7), Some(1), 1)).into(), // ball at origin
+                (Sphere::new(0.3, Point3::new(0.1, -0.5, -0.7), Some(6), 1)).into(), // ball at origin
+                (Sphere::new(0.3, Point3::new(0.1, 0.5, -0.7), Some(7), 1)).into(), // ball at origin
+                (AARect::new(
+                    (2.0, 2.0),
+                    Point3::new(0.0, 0.0, -1.0),
+                    Axis::Z,
+                    true,
+                    Some(3),
+                    2,
+                ))
+                .into(),
+                (AARect::new(
+                    (2.0, 2.0),
+                    Point3::new(0.0, 1.0, 0.0),
+                    Axis::Y,
+                    true,
+                    Some(4),
+                    3,
+                ))
+                .into(),
+                (AARect::new(
+                    (2.0, 2.0),
+                    Point3::new(0.0, -1.0, 0.0),
+                    Axis::Y,
+                    true,
+                    Some(5),
+                    4,
+                ))
+                .into(),
+                (AARect::new(
+                    (2.0, 2.0),
+                    Point3::new(1.0, 0.0, 0.0),
+                    Axis::X,
+                    true,
+                    Some(3),
+                    5,
+                ))
+                .into(),
+            ],
+            AcceleratorType::List,
+        ),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
         background: 0,
