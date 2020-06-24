@@ -32,7 +32,7 @@ use math::*;
 use world::World;
 
 use renderer::{Film, NaiveRenderer, Renderer};
-use tonemap::{sRGB, Tonemapper};
+use tonemap::Tonemapper;
 
 use parsing::*;
 
