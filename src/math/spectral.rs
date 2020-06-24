@@ -266,6 +266,10 @@ impl SpectralPowerDistributionFunction for SPD {
                     Err(index) if index > 0 => index,
                     Ok(index) | Err(index) => index,
                 };
+                if index == signal.len() {
+                    let left = signal[index - 1];
+                    return left.1;
+                }
                 let right = signal[index];
                 let t;
                 if index == 0 {

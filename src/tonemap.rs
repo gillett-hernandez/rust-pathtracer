@@ -2,18 +2,83 @@
 use crate::config::RenderSettings;
 use crate::math::XYZColor;
 use crate::renderer::Film;
+
+use nalgebra::{Matrix3, Vector3};
+use packed_simd::f32x4;
 pub trait Tonemapper {
-    fn map(film: &Film<XYZColor>, input: XYZColor) -> XYZColor;
+    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4;
 }
 
-pub struct GammaTonemapper {
-    pub exposure: f32,
-    pub gamma: f32,
+pub struct sRGB {
+    pub factor: f32,
+    pub exposure_adjustment: f32,
+    // pub gamma_adjustment: f32,
 }
 
-impl GammaTonemapper {
-    pub const fn new(exposure: f32, gamma: f32) -> Self {
-        GammaTonemapper { exposure, gamma }
+impl sRGB {
+    pub fn new(film: &Film<XYZColor>, exposure_adjustment: f32) -> Self {
+        let mut max_luminance = 0.0;
+        let mut total_luminance = 0.0;
+        for y in 0..film.height {
+            for x in 0..film.width {
+                let color = film.at(x, y);
+                let lum = color.y();
+                assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
+                total_luminance += lum;
+                if lum > max_luminance {
+                    println!(
+                        "max lum so far was {} and occurred at ({}, {})",
+                        max_luminance, x, y
+                    );
+                    max_luminance = lum;
+                }
+            }
+        }
+        let avg_luminance = total_luminance / film.total_pixels() as f32;
+        println!(
+            "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
+            max_luminance,
+            avg_luminance,
+            exposure_adjustment / max_luminance
+        );
+        sRGB {
+            factor: 1.0 / max_luminance,
+            exposure_adjustment,
+            // gamma_adjustment,
+        }
     }
-    // pub fn new_from_config(settings: &RenderSettings) -> Self {}
+}
+
+impl Tonemapper for sRGB {
+    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+        let cie_xyz_color = film.at(pixel.0, pixel.1);
+        let scaled_cie_xyz_color = cie_xyz_color * self.factor * self.exposure_adjustment;
+
+        let xyz_to_rgb: Matrix3<f32> = Matrix3::new(
+            3.24096994,
+            -1.53738318,
+            -0.49861076,
+            -0.96924364,
+            1.8759675,
+            0.04155506,
+            0.05563008,
+            -0.20397696,
+            1.05697151,
+        );
+        let [x, y, z, _]: [f32; 4] = scaled_cie_xyz_color.0.into();
+        let intermediate = xyz_to_rgb * Vector3::new(x, y, z);
+
+        let rgb_linear = f32x4::new(intermediate[0], intermediate[1], intermediate[2], 0.0);
+        const S313: f32x4 = f32x4::splat(0.0031308);
+        const S323_25: f32x4 = f32x4::splat(323.0 / 25.0);
+        const S5_12: f32x4 = f32x4::splat(5.0 / 12.0);
+        const S211: f32x4 = f32x4::splat(211.0);
+        const S11: f32x4 = f32x4::splat(11.0);
+        const S200: f32x4 = f32x4::splat(200.0);
+        let srgb = (rgb_linear.lt(S313)).select(
+            S323_25 * rgb_linear,
+            (S211 * rgb_linear.powf(S5_12) - S11) / S200,
+        );
+        srgb
+    }
 }

@@ -28,6 +28,13 @@ impl<T: Copy> Film<T> {
             height,
         }
     }
+    pub fn at(&self, x: usize, y: usize) -> T {
+        self.buffer[y * self.width + x]
+    }
+
+    pub fn total_pixels(&self) -> usize {
+        self.width * self.height
+    }
 }
 
 pub struct NaiveRenderer {}
