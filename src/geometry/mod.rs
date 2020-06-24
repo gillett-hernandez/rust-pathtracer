@@ -101,7 +101,7 @@ impl<'a> Hittable for Aggregate<'a> {
             Aggregate::AARect(rect) => rect.get_instance_id(),
             Aggregate::Instance {
                 aggregate,
-                transform,
+                transform: _,
             } => aggregate.get_instance_id(),
         }
     }

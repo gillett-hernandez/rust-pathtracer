@@ -1,4 +1,3 @@
-use crate::aabb::*;
 use crate::hittable::*;
 use crate::materials::{MaterialId, MaterialTable};
 use crate::math::*;

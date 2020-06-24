@@ -99,23 +99,6 @@ impl DivAssign<f32> for XYZColor {
 impl Add for XYZColor {
     type Output = XYZColor;
     fn add(self, other: XYZColor) -> XYZColor {
-        // unimplemented!();
-        // let [x1, y1, _z1, _]: [f32; 4] = self.0.into();
-        // let s1 = self.0.sum();
-        // let [x2, y2, _z2, _]: [f32; 4] = other.0.into();
-        // let s2 = other.0.sum();
-        // // let xyY1 = (x1 / s1, y1 / s1, y1);
-        // // let xyY2 = (x2 / s2, y2 / s2, y2);
-        // let sum = s1 + s2;
-        // // let xyY_mix = ((x1 + x2) / sum, (y1 + y2) / sum, sum);
-        // // let Yy = sum * sum / (y1 + y2);
-        // let x12 = x1 + x2;
-        // let y12 = y1 + y2;
-        // if y12 == 0.0 {
-        //     XYZColor::ZERO
-        // } else {
-        //     XYZColor::new(x12 / y12, 1.0, (sum - (x12) - (y12)) / y12) * sum
-        // }
         XYZColor::from_raw(self.0 + other.0)
     }
 }

@@ -43,7 +43,7 @@ impl HasBoundingBox for Accelerator {
                     }
                 }
                 bounding_box.unwrap()
-            } // _ => unimplemented!()
+            } // implement BVH
         }
     }
 }

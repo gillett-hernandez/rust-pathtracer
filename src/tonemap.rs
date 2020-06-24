@@ -14,6 +14,7 @@ pub trait Tonemapper {
     fn write_to_files(&self, film: &Film<XYZColor>, exr_filename: &str, png_filename: &str);
 }
 
+#[allow(non_camel_case_types)]
 pub struct sRGB {
     pub factor: f32,
     pub exposure_adjustment: f32,
@@ -109,8 +110,6 @@ impl Tonemapper for sRGB {
 
         let mut img: image::RgbImage =
             image::ImageBuffer::new(film.width as u32, film.height as u32);
-
-
 
         for (x, y, pixel) in img.enumerate_pixels_mut() {
             //apply tonemap here
