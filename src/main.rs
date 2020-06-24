@@ -179,6 +179,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         bvh: Box::new(HittableList::new(vec![
             // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
             Box::new(AARect::new(
+                // light
                 (0.7, 0.7),
                 Point3::new(0.0, 0.0, 0.9),
                 Axis::Z,
@@ -187,6 +188,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                 0,
             )),
             Box::new(AARect::new(
+                // top wall
                 (2.0, 2.0),
                 Point3::new(0.0, 0.0, 1.0),
                 Axis::Z,
@@ -194,10 +196,11 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                 Some(3),
                 1,
             )),
-            Box::new(Sphere::new(0.3, Point3::new(-0.5, 0.0, -0.7), Some(1), 1)), // ball at origin
-            Box::new(Sphere::new(0.3, Point3::new(0.1, -0.5, -0.7), Some(6), 1)), // ball at origin
-            Box::new(Sphere::new(0.3, Point3::new(0.1, 0.5, -0.7), Some(7), 1)),  // ball at origin
+            Box::new(Sphere::new(0.3, Point3::new(-0.5, 0.0, -0.7), Some(1), 1)), // ball in front
+            Box::new(Sphere::new(0.3, Point3::new(0.1, -0.5, -0.7), Some(6), 1)), // ball on left
+            Box::new(Sphere::new(0.3, Point3::new(0.1, 0.5, -0.7), Some(7), 1)),  // ball at right
             Box::new(AARect::new(
+                // wall on ground
                 (2.0, 2.0),
                 Point3::new(0.0, 0.0, -1.0),
                 Axis::Z,
@@ -206,22 +209,25 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                 2,
             )),
             Box::new(AARect::new(
+                // wall on left
                 (2.0, 2.0),
-                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, -1.0, 0.0),
                 Axis::Y,
                 true,
                 Some(4),
                 3,
             )),
             Box::new(AARect::new(
+                // wall on right
                 (2.0, 2.0),
-                Point3::new(0.0, -1.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
                 Axis::Y,
                 true,
                 Some(5),
                 4,
             )),
             Box::new(AARect::new(
+                // wall on back
                 (2.0, 2.0),
                 Point3::new(1.0, 0.0, 0.0),
                 Axis::X,
