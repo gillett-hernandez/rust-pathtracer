@@ -117,6 +117,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
 
     let (bismuth_ior, bismuth_kappa) =
         load_ior_and_kappa("data/curves/bismuth.csv", |x: f32| x * 1000.0).unwrap();
+    let (copper_ior, copper_kappa) =
+        load_ior_and_kappa("data/curves/copper.csv", |x: f32| x * 1000.0).unwrap();
 
     let red = curves::red(1.0);
     let green = curves::green(1.0);
@@ -134,9 +136,27 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_glass = Box::new(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_glass_rough = Box::new(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_moissanite = Box::new(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
-    let ggx_silver_metal = Box::new(GGX::new(0.03, silver_ior.clone(), 1.0, silver_kappa.clone(), 0.0));
-    let ggx_silver_metal_rough =
-        Box::new(GGX::new(0.3, silver_ior.clone(), 1.0, silver_kappa.clone(), 0.0));
+    let ggx_silver_metal = Box::new(GGX::new(
+        0.03,
+        silver_ior.clone(),
+        1.0,
+        silver_kappa.clone(),
+        0.0,
+    ));
+    let ggx_copper_metal = Box::new(GGX::new(
+        0.03,
+        copper_ior.clone(),
+        1.0,
+        copper_kappa.clone(),
+        0.0,
+    ));
+    let ggx_silver_metal_rough = Box::new(GGX::new(
+        0.3,
+        silver_ior.clone(),
+        1.0,
+        silver_kappa.clone(),
+        0.0,
+    ));
     let ggx_gold_metal = Box::new(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
 
@@ -206,12 +226,12 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_glass_rough,
+            ggx_glass,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_silver_metal_rough,
+            ggx_copper_metal,
             ggx_bismuth_metal,
         ],
     };
