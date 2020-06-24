@@ -132,9 +132,11 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let lambertian_green = Box::new(Lambertian::new(green));
     let lambertian_blue = Box::new(Lambertian::new(blue));
     let ggx_glass = Box::new(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let ggx_rough_glass = Box::new(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+    let ggx_glass_rough = Box::new(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_moissanite = Box::new(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
-    let ggx_silver_metal = Box::new(GGX::new(0.03, silver_ior, 1.0, silver_kappa, 0.0));
+    let ggx_silver_metal = Box::new(GGX::new(0.03, silver_ior.clone(), 1.0, silver_kappa.clone(), 0.0));
+    let ggx_silver_metal_rough =
+        Box::new(GGX::new(0.3, silver_ior.clone(), 1.0, silver_kappa.clone(), 0.0));
     let ggx_gold_metal = Box::new(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
 
@@ -204,12 +206,12 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_glass,
+            ggx_glass_rough,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_gold_metal,
+            ggx_silver_metal_rough,
             ggx_bismuth_metal,
         ],
     };

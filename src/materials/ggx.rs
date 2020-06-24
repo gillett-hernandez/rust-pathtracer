@@ -327,6 +327,7 @@ impl PDF for GGX {
         };
         let wh = sample_wh(self.alpha, wi, &mut sampler).normalized();
         let refl_prob = self.reflectance_probability(eta_inner, kappa, wi * wh);
+        // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
         if refl_prob == 1.0 || sampler.draw_1d().x < refl_prob {
             // reflection
             let wo = reflect(wi, wh);
