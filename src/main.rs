@@ -125,7 +125,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 30000.0);
-    let glass = curves::cauchy(1.5, 10000.0);
+    let glass = curves::cauchy(1.45, 10000.0);
     let blackbody_2000_k_illuminant = curves::blackbody(4000.0, 5.0);
 
     let lambertian = Box::new(Lambertian::new(color));
@@ -226,12 +226,12 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_glass,
+            ggx_glass_rough,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_copper_metal,
+            ggx_silver_metal_rough,
             ggx_bismuth_metal,
         ],
     };
