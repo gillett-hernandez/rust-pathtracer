@@ -119,6 +119,12 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         load_ior_and_kappa("data/curves/bismuth.csv", |x: f32| x * 1000.0).unwrap();
     let (copper_ior, copper_kappa) =
         load_ior_and_kappa("data/curves/copper.csv", |x: f32| x * 1000.0).unwrap();
+    let (lead_ior, lead_kappa) =
+        load_ior_and_kappa("data/curves/lead.csv", |x: f32| x * 1000.0).unwrap();
+    let (cold_lead_ior, cold_lead_kappa) =
+        load_ior_and_kappa("data/curves/lead-140K.csv", |x: f32| x * 1000.0).unwrap();
+    let (platinum_ior, platinum_kappa) =
+        load_ior_and_kappa("data/curves/platinum.csv", |x: f32| x * 1000.0).unwrap();
 
     let red = curves::red(1.0);
     let green = curves::green(1.0);
@@ -158,6 +164,9 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         0.0,
     ));
     let ggx_gold_metal = Box::new(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
+    let ggx_lead_metal = Box::new(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
+    let ggx_cold_lead_metal = Box::new(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
+    let ggx_platinum_metal = Box::new(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
 
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
@@ -226,13 +235,13 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_glass_rough,
+            ggx_platinum_metal,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_silver_metal_rough,
-            ggx_bismuth_metal,
+            ggx_lead_metal,
+            ggx_cold_lead_metal,
         ],
     };
     world
@@ -241,7 +250,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
 #[allow(unused_variables)]
 fn construct_scene() -> World {
     let white = curves::cie_e(1.0);
-    cornell_box(white, 0.0)
+    cornell_box(white, 0.2)
 }
 
 fn render(
