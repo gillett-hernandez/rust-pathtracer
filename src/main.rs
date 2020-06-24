@@ -246,13 +246,13 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         background: 0,
         materials: vec![
             diffuse_light_world,
-            ggx_platinum_metal,
+            ggx_moissanite,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_lead_metal,
-            ggx_cold_lead_metal,
+            ggx_gold_metal,
+            ggx_copper_metal,
         ],
     };
     world
@@ -327,62 +327,24 @@ fn main() -> () {
 
         &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
         let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
-        let total_pixels = film.total_pixels();
 
-        let total_camera_rays = total_pixels
+        let total_camera_rays = film.total_pixels()
             * (render_settings
                 .max_samples
                 .unwrap_or(render_settings.min_samples) as usize);
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", film.total_pixels(), total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
 
         let now = Instant::now();
         // do stuff with film here
-        extern crate exr;
-        use exr::prelude::rgba_image::*;
 
-        // generate a color for each pixel position
-        let generate_pixels = |position: Vec2<usize>| {
-            let film_sample = film.buffer[position.y() * film.width + position.x()];
-            let [r, g, b, _]: [f32; 4] = RGBColor::from(film_sample).0.into();
-            Pixel::rgb(r, g, b)
-        };
-
-        let image_info = ImageInfo::rgb(
-            (film.width, film.height), // pixel resolution
-            SampleType::F16,           // convert the generated f32 values to f16 while writing
-        );
-
-        image_info
-            .write_pixels_to_file(
-                format!("output/test{}.exr", render_id),
-                write_options::high(), // higher speed, but higher memory usage
-                &generate_pixels,      // pass our pixel generator
-            )
-            .unwrap();
-
-        let mut img: image::RgbImage =
-            image::ImageBuffer::new(film.width as u32, film.height as u32);
+        let directory_str = directory.cloned().unwrap_or(String::from("output"));
+        let exr_filename = format!("{}/test{}.exr", directory_str, render_id);
+        let png_filename = format!("{}/test{}.png", directory_str, render_id);
 
         let srgb_tonemapper = tonemap::sRGB::new(&film, 2.0);
-
-        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
-
-        for (x, y, pixel) in img.enumerate_pixels_mut() {
-            //apply tonemap here
-
-            let [r, g, b, _]: [f32; 4] =
-                srgb_tonemapper.map(&film, (x as usize, y as usize)).into();
-
-            *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
-        }
-        println!("saving image...");
-        img.save(format!(
-            "{}/{}",
-            directory.unwrap().clone(),
-            format!("output/test{}.png", render_id)
-        ))
-        .unwrap();
+        srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
         println!("took {}s", (now.elapsed().as_millis() as f32) / 1000.0);
     }
 }

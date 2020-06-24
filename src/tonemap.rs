@@ -5,8 +5,13 @@ use crate::renderer::Film;
 
 use nalgebra::{Matrix3, Vector3};
 use packed_simd::f32x4;
+
+extern crate exr;
+use exr::prelude::rgba_image::*;
+
 pub trait Tonemapper {
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4;
+    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> (f32x4, f32x4);
+    fn write_to_files(&self, film: &Film<XYZColor>, exr_filename: &str, png_filename: &str);
 }
 
 pub struct sRGB {
@@ -50,7 +55,7 @@ impl sRGB {
 }
 
 impl Tonemapper for sRGB {
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> (f32x4, f32x4) {
         let cie_xyz_color = film.at(pixel.0, pixel.1);
         let scaled_cie_xyz_color = cie_xyz_color * self.factor * self.exposure_adjustment;
 
@@ -79,6 +84,44 @@ impl Tonemapper for sRGB {
             S323_25 * rgb_linear,
             (S211 * rgb_linear.powf(S5_12) - S11) / S200,
         );
-        srgb
+        (srgb, rgb_linear)
+    }
+    fn write_to_files(&self, film: &Film<XYZColor>, exr_filename: &str, png_filename: &str) {
+        // generate a color for each pixel position
+        let generate_pixels = |position: Vec2<usize>| {
+            let (_mapped, linear) = self.map(&film, (position.x() as usize, position.y() as usize));
+            let [r, g, b, _]: [f32; 4] = linear.into();
+            Pixel::rgb(r, g, b)
+        };
+
+        let image_info = ImageInfo::rgb(
+            (film.width, film.height), // pixel resolution
+            SampleType::F16,           // convert the generated f32 values to f16 while writing
+        );
+
+        image_info
+            .write_pixels_to_file(
+                exr_filename,
+                write_options::high(), // higher speed, but higher memory usage
+                &generate_pixels,      // pass our pixel generator
+            )
+            .unwrap();
+
+        let mut img: image::RgbImage =
+            image::ImageBuffer::new(film.width as u32, film.height as u32);
+
+
+
+        for (x, y, pixel) in img.enumerate_pixels_mut() {
+            //apply tonemap here
+
+            let (mapped, _linear) = self.map(&film, (x as usize, y as usize));
+
+            let [r, g, b, _]: [f32; 4] = mapped.into();
+
+            *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
+        }
+        println!("saving image...");
+        img.save(png_filename).unwrap();
     }
 }

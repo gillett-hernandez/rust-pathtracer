@@ -19,7 +19,7 @@ vfov = 90
 
 [[render_settings]]
 threads=22
-output_directory = "."
+output_directory = "output"
 integrator="PT"
 max_bounces = 5
 resolution.width = 1080
