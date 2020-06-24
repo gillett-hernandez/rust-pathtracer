@@ -15,6 +15,7 @@ pub mod integrator;
 pub mod material;
 pub mod materials;
 pub mod math;
+
 pub mod parsing;
 pub mod renderer;
 pub mod tonemap;
@@ -28,8 +29,10 @@ use integrator::{Integrator, PathTracingIntegrator};
 use material::Material;
 use materials::*;
 use math::*;
-use renderer::{Film, NaiveRenderer, Renderer};
 use world::World;
+
+use renderer::{Film, NaiveRenderer, Renderer};
+use tonemap::{sRGB, Tonemapper};
 
 use parsing::*;
 
@@ -322,7 +325,7 @@ fn main() -> () {
 
         &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
         let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
-        let total_pixels = film.width * film.height;
+        let total_pixels = film.total_pixels();
 
         let total_camera_rays = total_pixels
             * (render_settings
@@ -359,46 +362,15 @@ fn main() -> () {
         let mut img: image::RgbImage =
             image::ImageBuffer::new(film.width as u32, film.height as u32);
 
-        let mut max_luminance = 0.0;
-        let mut total_luminance = 0.0;
-        for y in 0..film.height {
-            for x in 0..film.width {
-                let color = film.buffer[(y * film.width + x) as usize];
-                let lum = color.y();
-                assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
-                total_luminance += lum;
-                if lum > max_luminance {
-                    println!(
-                        "max lum so far was {} and occurred at ({}, {})",
-                        max_luminance, x, y
-                    );
-                    max_luminance = lum;
-                }
-            }
-        }
-        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
-        let avg_luminance = total_luminance / total_pixels as f32;
-        // let exposure = 1.0f32;
-        // max_luminance = exposure^(-1/gamma)
-        // max_luminance = 1 / exposure^(1/gamma)
-        let gamma = 2.2f32.recip();
-        let exposure = 2.0 * avg_luminance.recip().powf(gamma);
-        // let exposure = 12.0;
+        let srgb_tonemapper = tonemap::sRGB::new(&film, 2.0);
 
-        // let upper = exposure.powf(-1.0/gamma);
-        println!(
-            "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
-            max_luminance, avg_luminance, exposure
-        );
+        println!("{} pixels at {} camera rays computed in {}s at {} rays per second and {} rays per second per thread", total_pixels, total_camera_rays, elapsed, (total_camera_rays as f32)/elapsed, (total_camera_rays as f32)/elapsed/(render_settings.threads.unwrap() as f32));
 
         for (x, y, pixel) in img.enumerate_pixels_mut() {
-            let mut color = film.buffer[(y * film.width as u32 + x) as usize];
-
             //apply tonemap here
-            let pixel_luminance = color.y();
-            let target_luminance = exposure * pixel_luminance.powf(gamma);
-            color.0 = color.0 * target_luminance / pixel_luminance;
-            let [r, g, b, _]: [f32; 4] = RGBColor::from(color).0.into();
+
+            let [r, g, b, _]: [f32; 4] =
+                srgb_tonemapper.map(&film, (x as usize, y as usize)).into();
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
         }
