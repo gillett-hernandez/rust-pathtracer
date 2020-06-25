@@ -73,13 +73,17 @@ impl SingleWavelength {
         SingleWavelength { lambda, energy }
     }
 
-    pub fn new_from_range(x: f32, lower: f32, upper: f32) -> Self {
-        SingleWavelength::new(lower + x * (upper - lower), SingleEnergy::ZERO)
+    pub fn new_from_range(x: f32, bounds: Bounds1D) -> Self {
+        SingleWavelength::new(
+            bounds.lower + x * (bounds.upper - bounds.lower),
+            SingleEnergy::ZERO,
+        )
     }
 
     pub fn with_energy(&self, energy: SingleEnergy) -> Self {
         SingleWavelength::new(self.lambda, energy)
     }
+    pub const BLACK: SingleWavelength = SingleWavelength::new(0.0, SingleEnergy::ZERO);
 }
 
 impl Mul<f32> for SingleWavelength {
@@ -175,6 +179,8 @@ pub enum InterpolationMode {
     Cubic,
 }
 
+pub const EXTENDED_VISIBLE_RANGE: Bounds1D = Bounds1D::new(370.0, 790.0);
+pub const BOUNDED_VISIBLE_RANGE: Bounds1D = Bounds1D::new(380.0, 780.0);
 #[derive(Debug, Clone)]
 pub enum SPD {
     Linear {
@@ -212,6 +218,7 @@ pub enum SPD {
 pub trait SpectralPowerDistributionFunction {
     fn evaluate(&self, lambda: f32) -> f32;
     fn evaluate_power(&self, lambda: f32) -> f32;
+    fn sample_power(&self, wavelength_range: Bounds1D, sample: Sample1D) -> SingleWavelength;
     fn convert_to_xyz(&self, integration_bounds: Bounds1D, step_size: f32) -> XYZColor {
         let iterations =
             ((integration_bounds.upper - integration_bounds.lower) / step_size) as usize;
@@ -334,6 +341,11 @@ impl SpectralPowerDistributionFunction for SPD {
     }
     fn evaluate(&self, lambda: f32) -> f32 {
         self.evaluate_power(lambda).min(1.0)
+    }
+    fn sample_power(&self, wavelength_range: Bounds1D, sample: Sample1D) -> SingleWavelength {
+        match &self {
+            _ => SingleWavelength::new_from_range(sample.x, wavelength_range),
+        }
     }
 }
 

@@ -1,14 +1,14 @@
 // this module contains a series of SDFs
 
 use crate::math::spectral::Op;
+pub use crate::math::spectral::EXTENDED_VISIBLE_RANGE;
 use crate::math::*;
 
-pub const VISIBLE_RANGE: Bounds1D = Bounds1D::new(370.0, 790.0);
 
 pub fn cie_e(power: f32) -> SPD {
     SPD::Linear {
         signal: vec![power],
-        bounds: VISIBLE_RANGE,
+        bounds: EXTENDED_VISIBLE_RANGE,
     }
 }
 
@@ -57,6 +57,6 @@ pub fn add_pigment(spd: SPD, wavelength: f32, std_dev: f32, strength: f32) -> SP
 pub fn void() -> SPD {
     SPD::Linear {
         signal: vec![0.0],
-        bounds: VISIBLE_RANGE,
+        bounds: EXTENDED_VISIBLE_RANGE,
     }
 }

@@ -114,16 +114,20 @@ impl Hittable for AARect {
             self.instance_id,
         ))
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
-        let Sample2D { x, y } = s.draw_2d();
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+        let Sample2D { x, y } = s;
         let point = self.origin
             + vec_shuffle(
                 Vec3::new((x - 0.5) * self.size.0, (y - 0.5) * self.size.1, 0.0),
                 &self.normal,
             );
+        let normal = Vec3::from_axis(self.normal);
+        (point, normal)
+    }
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+        let (point, normal) = self.sample_surface(s.draw_2d());
         let direction = point - from;
         let area = self.size.0 * self.size.1;
-        let normal = Vec3::from_axis(self.normal);
         let pdf = direction.norm_squared() / ((normal * direction.normalized()).abs() * area);
         if !pdf.is_finite() {
             // println!("pdf was inf, {:?}", direction);
@@ -140,5 +144,8 @@ impl Hittable for AARect {
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id
+    }
+    fn get_material_id(&self) -> Option<MaterialId> {
+        self.material_id
     }
 }

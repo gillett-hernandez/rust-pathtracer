@@ -6,6 +6,7 @@ pub use rect::AARect;
 pub use sphere::Sphere;
 
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
+use crate::materials::MaterialId;
 use crate::math::*;
 
 pub enum Aggregate {
@@ -47,6 +48,12 @@ impl Hittable for Aggregate {
             Aggregate::AARect(rect) => rect.sample(s, from),
         }
     }
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+        match self {
+            Aggregate::Sphere(sphere) => sphere.sample_surface(s),
+            Aggregate::AARect(rect) => rect.sample_surface(s),
+        }
+    }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
         match self {
             Aggregate::Sphere(sphere) => sphere.pdf(normal, from, to),
@@ -57,6 +64,12 @@ impl Hittable for Aggregate {
         match self {
             Aggregate::Sphere(sphere) => sphere.get_instance_id(),
             Aggregate::AARect(rect) => rect.get_instance_id(),
+        }
+    }
+    fn get_material_id(&self) -> Option<MaterialId> {
+        match self {
+            Aggregate::Sphere(sphere) => sphere.get_material_id(),
+            Aggregate::AARect(rect) => rect.get_material_id(),
         }
     }
 }
@@ -109,6 +122,14 @@ impl Hittable for Instance {
             self.aggregate.sample(s, from)
         }
     }
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+        if let Some(transform) = self.transform {
+            let (point, normal) = self.aggregate.sample_surface(s);
+            (transform * point, transform * normal)
+        } else {
+            self.aggregate.sample_surface(s)
+        }
+    }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
         let (normal, from, to) = if let Some(transform) = self.transform {
             (
@@ -123,6 +144,9 @@ impl Hittable for Instance {
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id
+    }
+    fn get_material_id(&self) -> Option<MaterialId> {
+        self.aggregate.get_material_id()
     }
 }
 

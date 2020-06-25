@@ -96,17 +96,14 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
             vec![Instance::from(Aggregate::from(Sphere::new(
                 5.0,
                 Point3::new(0.0, 0.0, 0.0),
-                Some(1),
+                Some(0),
                 0,
             )))],
             AcceleratorType::List,
         ),
         lights: vec![],
-        background: 0,
-        materials: vec![
-            Box::new(DiffuseLight::new(curves::cie_e(1.0), Sidedness::Dual)),
-            material,
-        ],
+        environment: EnvironmentMap::new(curves::cie_e(1.0)),
+        materials: vec![material],
     };
     world
 }
@@ -179,7 +176,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
     let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
 
-    let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
+    let env_map = EnvironmentMap::new(cie_e_world_illuminant);
     let diffuse_light_sphere = Box::new(DiffuseLight::new(
         blackbody_2000_k_illuminant,
         Sidedness::Reverse,
@@ -194,7 +191,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 0.0, 0.9),
                     Axis::Z,
                     false,
-                    Some(2),
+                    Some(1),
                     0,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -202,25 +199,25 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 0.0, 1.0),
                     Axis::Z,
                     true,
-                    Some(3),
+                    Some(2),
                     1,
                 ))),
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(-0.5, 0.0, -0.7),
-                    Some(1),
+                    Some(0),
                     1,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(0.1, -0.5, -0.7),
-                    Some(6),
+                    Some(5),
                     1,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(0.1, 0.5, -0.7),
-                    Some(7),
+                    Some(6),
                     1,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(AARect::new(
@@ -228,7 +225,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 0.0, -1.0),
                     Axis::Z,
                     true,
-                    Some(3),
+                    Some(2),
                     2,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -236,7 +233,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 1.0, 0.0),
                     Axis::Y,
                     true,
-                    Some(4),
+                    Some(3),
                     3,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -244,7 +241,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, -1.0, 0.0),
                     Axis::Y,
                     true,
-                    Some(5),
+                    Some(4),
                     4,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -252,7 +249,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(1.0, 0.0, 0.0),
                     Axis::X,
                     true,
-                    Some(3),
+                    Some(2),
                     5,
                 ))),
             ],
@@ -260,9 +257,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         ),
         // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
         lights: vec![0],
-        background: 0,
+        environment: env_map,
         materials: vec![
-            diffuse_light_world,
             ggx_moissanite,
             diffuse_light_sphere,
             lambertian_white,

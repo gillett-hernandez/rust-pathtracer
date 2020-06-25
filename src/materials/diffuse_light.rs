@@ -1,5 +1,5 @@
 use crate::hittable::HitRecord;
-use crate::material::{Material, BRDF, PDF};
+use crate::material::Material;
 use crate::math::*;
 
 pub struct DiffuseLight {
@@ -14,19 +14,27 @@ impl DiffuseLight {
     }
 }
 
-impl PDF for DiffuseLight {
-    fn value(&self, _hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> f32 {
-        0.0
-    }
-    fn generate(&self, _hit: &HitRecord, _s: &mut Box<dyn Sampler>, _wi: Vec3) -> Option<Vec3> {
-        None
-    }
-}
+impl Material for DiffuseLight {
+    // don't implement the other functions, since the fallback default implementation does the exact same thing
 
-impl BRDF for DiffuseLight {
-    fn f(&self, _hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> SingleEnergy {
-        SingleEnergy::ZERO
+    fn sample_emission(
+        &self,
+        point: Point3,
+        normal: Vec3,
+        wavelength_range: Bounds1D,
+        scatter_sample: Sample2D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(Ray, SingleWavelength)> {
+        // wo localized to point and normal
+        let local_wo = random_cosine_direction(scatter_sample);
+
+        // needs to be converted to object space in a way that respects the surface normal
+        let frame = TangentFrame::from_normal(normal);
+        let object_wo = frame.to_world(&local_wo).normalized();
+        let sw = self.color.sample_power(wavelength_range, wavelength_sample);
+        Some((Ray::new(point, object_wo), sw))
     }
+
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
         if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
             || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
@@ -38,5 +46,3 @@ impl BRDF for DiffuseLight {
         }
     }
 }
-
-impl Material for DiffuseLight {}

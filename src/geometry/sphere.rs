@@ -94,9 +94,13 @@ impl Hittable for Sphere {
         }
         None
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
-        let normal = random_on_unit_sphere(s.draw_2d());
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+        let normal = random_on_unit_sphere(s);
         let point_on_sphere = self.origin + self.radius * normal;
+        (point_on_sphere, normal)
+    }
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+        let (point_on_sphere, normal) = self.sample_surface(s.draw_2d());
         let direction = point_on_sphere - from;
         debug_assert!(
             direction.0.is_finite().all(),
@@ -127,5 +131,8 @@ impl Hittable for Sphere {
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id
+    }
+    fn get_material_id(&self) -> Option<MaterialId> {
+        self.material_id
     }
 }

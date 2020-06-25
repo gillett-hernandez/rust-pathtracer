@@ -1,12 +1,13 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
+use crate::integrator::Integrator;
 use crate::material::Material;
 use crate::math::*;
+use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+
 use std::f32::INFINITY;
 use std::sync::Arc;
-
-use crate::integrator::Integrator;
 
 pub struct PathTracingIntegrator {
     pub max_bounces: u16,
@@ -20,7 +21,7 @@ impl Integrator for PathTracingIntegrator {
     fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         let mut ray = camera_ray;
         // println!("{:?}", ray);
-        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, 380.0, 780.0);
+        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, VISIBLE_RANGE);
         let mut beta: SingleEnergy = SingleEnergy::ONE;
         let mut last_bsdf_pdf = 0.0;
 
@@ -49,7 +50,7 @@ impl Integrator for PathTracingIntegrator {
                     let material: &Box<dyn Material> = &self.world.materials[id as usize];
 
                     // wo is generated in tangent space.
-                    let maybe_wo: Option<Vec3> = material.generate(&hit, &mut sampler, wi);
+                    let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
                     let emission = material.emission(&hit, wi, maybe_wo);
 
                     if emission.0 > 0.0 {
@@ -70,7 +71,7 @@ impl Integrator for PathTracingIntegrator {
                     let mut light_contribution = SingleEnergy::ZERO;
                     let mut _successful_light_samples = 0;
                     for _i in 0..self.light_samples {
-                        if let Some(light) = self.world.pick_random_light(&mut sampler) {
+                        if let Some(light) = self.world.pick_random_light(sampler.draw_1d()) {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             let pick_pdf = self.world.lights.len() as f32;
@@ -199,15 +200,10 @@ impl Integrator for PathTracingIntegrator {
                     // get phi and theta values for that direction, then convert to UV values for an environment map.
                     let u = (PI + unit_direction.y().atan2(unit_direction.x())) / (2.0 * PI);
                     let v = unit_direction.z().acos() / PI;
-                    let fake_hit_record: HitRecord =
-                        HitRecord::new(0.0, Point3::ZERO, (u, v), sum.lambda, Vec3::ZERO, None, 0);
-                    let id = self.world.background;
-                    let world_material: &Box<dyn Material> = &self.world.materials[id as usize];
-                    let world_emission =
-                        world_material.emission(&fake_hit_record, Vec3::ZERO, None);
-                    // // println!("{:?}, {:?}", beta, world_emission);
+
+                    let world_emission = self.world.environment.emission((u, v), sum.lambda);
                     sum.energy += beta * world_emission;
-                    assert!(!sum.energy.is_nan());
+                    assert!(!sum.energy.is_nan(), "{:?} {:?}", beta, world_emission);
                     break;
                 }
             }

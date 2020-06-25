@@ -1,5 +1,5 @@
 use crate::hittable::HitRecord;
-use crate::material::{Material, BRDF, PDF};
+use crate::material::Material;
 use crate::math::*;
 
 pub fn reflect(wi: Vec3, normal: Vec3) -> Vec3 {
@@ -156,8 +156,7 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     Vec3::new(alpha * n.x(), alpha * n.y(), n.z().max(0.0)).normalized()
 }
 
-fn sample_wh(alpha: f32, wi: Vec3, sampler: &mut Box<dyn Sampler>) -> Vec3 {
-    let sample = sampler.draw_2d();
+fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     // normal invert mark
     let flip = wi.z() < 0.0;
     let wh = sample_vndf(alpha, if flip { -wi } else { wi }, sample);
@@ -309,31 +308,31 @@ impl GGX {
     }
 }
 
-impl PDF for GGX {
+impl Material for GGX {
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
         self.eval_pdf(hit.lambda, wi, wo).1
     }
-    fn generate(
-        &self,
-        hit: &HitRecord,
-        mut sampler: &mut Box<dyn Sampler>,
-        wi: Vec3,
-    ) -> Option<Vec3> {
+    fn generate(&self, hit: &HitRecord, mut sample: Sample2D, wi: Vec3) -> Option<Vec3> {
         let eta_inner = self.eta.evaluate_power(hit.lambda);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
             self.kappa.evaluate_power(hit.lambda)
         };
-        let wh = sample_wh(self.alpha, wi, &mut sampler).normalized();
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi * wh);
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
         // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
-        if refl_prob == 1.0 || sampler.draw_1d().x < refl_prob {
+        if refl_prob == 1.0 || sample.x < refl_prob {
+            // rescale sample x value to 0 to 1 range
+            sample.x = sample.x / refl_prob;
             // reflection
+            let wh = sample_wh(self.alpha, wi, sample).normalized();
             let wo = reflect(wi, wh);
             return Some(wo);
         } else {
+            // rescale sample x value to 0 to 1 range
+            sample.x = sample.x / (1.0 - refl_prob);
             // transmission
+            let wh = sample_wh(self.alpha, wi, sample).normalized();
 
             let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
 
@@ -341,9 +340,6 @@ impl PDF for GGX {
             return wo;
         }
     }
-}
-
-impl BRDF for GGX {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
         self.eval_pdf(hit.lambda, wi, wo).0
     }
@@ -351,8 +347,6 @@ impl BRDF for GGX {
         SingleEnergy::ZERO
     }
 }
-
-impl Material for GGX {}
 
 #[cfg(test)]
 mod tests {
