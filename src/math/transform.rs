@@ -20,12 +20,16 @@ impl Mul<Vec3> for Matrix4x4 {
         // only apply scale and rotation
         let [v0, v1, v2, v3]: [f32; 4] = rhs.0.into();
 
-        let column0: f32x4 = shuffle!(self.0, [0, 4, 8, 12]);
-        let column1: f32x4 = shuffle!(self.0, [1, 5, 9, 13]);
-        let column2: f32x4 = shuffle!(self.0, [2, 6, 10, 14]);
-        let column3: f32x4 = shuffle!(self.0, [3, 7, 11, 15]);
+        // let column0: f32x4 = shuffle!(self.0, [0, 4, 8, 12]);
+        // let column1: f32x4 = shuffle!(self.0, [1, 5, 9, 13]);
+        // let column2: f32x4 = shuffle!(self.0, [2, 6, 10, 14]);
+        // let column3: f32x4 = shuffle!(self.0, [3, 7, 11, 15]);
+        let row1: f32x4 = shuffle!(self.0, [0, 1, 2, 3]);
+        let row2: f32x4 = shuffle!(self.0, [4, 5, 6, 7]);
+        let row3: f32x4 = shuffle!(self.0, [8, 9, 10, 11]);
+        let row4: f32x4 = shuffle!(self.0, [12, 13, 14, 15]);
 
-        let result = column0 * v0 + column1 * v1 + column2 * v2 + column3 * v3;
+        let result = row1 * v0 + row2 * v1 + row3 * v2 + row4 * v3;
 
         Vec3::from_raw(result)
     }
@@ -37,12 +41,16 @@ impl Mul<Point3> for Matrix4x4 {
         // only apply scale and rotation
         let [v0, v1, v2, v3]: [f32; 4] = rhs.0.into();
 
-        let column0: f32x4 = shuffle!(self.0, [0, 4, 8, 12]);
-        let column1: f32x4 = shuffle!(self.0, [1, 5, 9, 13]);
-        let column2: f32x4 = shuffle!(self.0, [2, 6, 10, 14]);
-        let column3: f32x4 = shuffle!(self.0, [3, 7, 11, 15]);
+        // let column1: f32x4 = shuffle!(self.0, [0, 4, 8, 12]);
+        // let column2: f32x4 = shuffle!(self.0, [1, 5, 9, 13]);
+        // let column3: f32x4 = shuffle!(self.0, [2, 6, 10, 14]);
+        // let column4: f32x4 = shuffle!(self.0, [3, 7, 11, 15]);
+        let row1: f32x4 = shuffle!(self.0, [0, 1, 2, 3]);
+        let row2: f32x4 = shuffle!(self.0, [4, 5, 6, 7]);
+        let row3: f32x4 = shuffle!(self.0, [8, 9, 10, 11]);
+        let row4: f32x4 = shuffle!(self.0, [12, 13, 14, 15]);
 
-        let result = column0 * v0 + column1 * v1 + column2 * v2 + column3 * v3;
+        let result = row1 * v0 + row2 * v1 + row3 * v2 + row4 * v3;
 
         Point3::from_raw(result)
     }
@@ -111,6 +119,12 @@ impl Transform3 {
             forward: Matrix4x4::from(forward),
             reverse: Matrix4x4::from(forward.try_inverse().expect("matrix inverse failed")),
         }
+    }
+
+    pub fn inverse(self) -> Transform3 {
+        // returns a transform3 that when multiplied with another Transform3, Vec3 or Point3,
+        // applies the reverse transform of self.enum
+        Transform3::new_from_raw(self.reverse, self.forward)
     }
 
     pub fn translation(shift: Vec3) -> Self {
@@ -211,7 +225,7 @@ impl Mul<AABB> for Transform3 {
 impl Mul<Transform3> for Transform3 {
     type Output = Transform3;
     fn mul(self, rhs: Transform3) -> Self::Output {
-        Transform3::new_from_raw(rhs.forward * self.forward, rhs.reverse * self.reverse)
+        Transform3::new_from_raw(self.forward * rhs.forward, rhs.reverse * self.reverse)
     }
 }
 
@@ -248,15 +262,122 @@ impl Div<AABB> for Transform3 {
     }
 }
 
-impl Div<Transform3> for Transform3 {
-    type Output = Transform3;
-    fn div(self, rhs: Transform3) -> Self::Output {
-        Transform3::new_from_raw(rhs.reverse * self.reverse, rhs.forward * self.forward)
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn test() {}
+    fn test_transform() {
+        let transform_translate = Transform3::translation(Vec3::new(1.0, 1.0, 1.0));
+        let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
+        let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+
+        let test_vec = Vec3::X;
+        println!("testing vec {:?}", test_vec);
+
+        println!("{:?}", transform_translate * test_vec);
+        println!("{:?}", transform_rotate * test_vec);
+        println!("{:?}", transform_scale * test_vec);
+
+        let test_point = Point3::ORIGIN + test_vec;
+        println!("testing point {:?}", test_point);
+
+        println!("{:?}", transform_translate * test_point);
+        println!("{:?}", transform_rotate * test_point);
+        println!("{:?}", transform_scale * test_point);
+    }
+
+    #[test]
+    fn test_reverse() {
+        let transform_translate = Transform3::translation(Vec3::new(1.0, 1.0, 1.0));
+        let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
+        let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+
+        let combination_trs = transform_translate * transform_rotate * transform_scale;
+        let combination_rs = transform_rotate * transform_scale;
+        let combination_tr = transform_translate * transform_rotate;
+        let combination_ts = transform_translate * transform_scale;
+
+        let test_vec = Vec3::X;
+        println!("testing vec {:?}", test_vec);
+
+        println!(
+            "vec trs, {:?}",
+            combination_trs.inverse() * (combination_trs * test_vec)
+        );
+        println!(
+            "vec  rs, {:?}",
+            combination_rs.inverse() * (combination_rs * test_vec)
+        );
+        println!(
+            "vec  tr, {:?}",
+            combination_tr.inverse() * (combination_tr * test_vec)
+        );
+        println!(
+            "vec  ts, {:?}",
+            combination_ts.inverse() * (combination_ts * test_vec)
+        );
+
+        let test_point = Point3::ORIGIN + test_vec;
+        println!("testing point {:?}", test_point);
+
+        println!(
+            "point trs, {:?}",
+            combination_trs.inverse() * (combination_trs * test_point)
+        );
+        println!(
+            "point  rs, {:?}",
+            combination_rs.inverse() * (combination_rs * test_point)
+        );
+        println!(
+            "point  tr, {:?}",
+            combination_tr.inverse() * (combination_tr * test_point)
+        );
+        println!(
+            "point  ts, {:?}",
+            combination_ts.inverse() * (combination_ts * test_point)
+        );
+    }
+
+    #[test]
+    fn test_transform_combination() {
+        let transform_translate = Transform3::translation(Vec3::new(1.0, 1.0, 1.0));
+        let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
+        let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+
+        let combination_trs = transform_translate * transform_rotate * transform_scale;
+        let combination_rs = transform_rotate * transform_scale;
+        let combination_tr = transform_translate * transform_rotate;
+        let combination_ts = transform_translate * transform_scale;
+
+        let test_vec = Vec3::X;
+        println!("testing vec {:?}", test_vec);
+
+        println!("vec trs, {:?}", combination_trs * test_vec);
+        println!("vec  rs, {:?}", combination_rs * test_vec);
+        println!("vec  tr, {:?}", combination_tr * test_vec);
+        println!("vec  ts, {:?}", combination_ts * test_vec);
+
+        let test_point = Point3::ORIGIN + test_vec;
+        println!("testing point {:?}", test_point);
+
+        println!("point trs, {:?}", combination_trs * test_point);
+        println!("point  rs, {:?}", combination_rs * test_point);
+        println!("point  tr, {:?}", combination_tr * test_point);
+        println!("point  ts, {:?}", combination_ts * test_point);
+    }
+
+    #[test]
+    fn test_translate() {
+        let n_translate =
+            nalgebra::Matrix4::new_translation(&nalgebra::Vector3::new(1.0, 1.0, 1.0));
+
+        let matrix = Matrix4x4::from(n_translate);
+        let vec = nalgebra::Vector4::new(1.0, 0.0, 0.0, 1.0);
+        let simd_vec = Vec3::from_raw(f32x4::new(1.0, 0.0, 0.0, 0.0));
+        let simd_point = Point3::from_raw(f32x4::new(1.0, 0.0, 0.0, 1.0));
+        let result1 = n_translate * vec;
+        let result2 = matrix * simd_vec;
+        let result3 = matrix * simd_point;
+        println!("{:?} {:?} {:?}", result1, result2, result3);
+    }
 }

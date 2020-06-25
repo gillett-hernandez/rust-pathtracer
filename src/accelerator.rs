@@ -1,6 +1,6 @@
 use crate::aabb::*;
 use crate::geometry::Aggregate;
-use crate::hittable::{HitRecord, Hittable, Indexable};
+use crate::hittable::{HitRecord, Hittable};
 use crate::math::*;
 
 pub enum AcceleratorType {

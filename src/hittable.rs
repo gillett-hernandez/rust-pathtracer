@@ -57,6 +57,6 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
 }
 
 // a supertrait of Hittable that allows indexing into it
-pub trait Indexable: Hittable {
-    fn get_primitive(&self, index: usize) -> &Box<dyn Hittable>;
-}
+// pub trait Indexable: Hittable {
+//     fn get_primitive(&self, index: usize) -> &Box<dyn Hittable>;
+// }

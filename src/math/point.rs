@@ -13,7 +13,8 @@ impl Point3 {
     pub const fn from_raw(v: f32x4) -> Point3 {
         Point3(v)
     }
-    pub const ZERO: Point3 = Point3::from_raw(f32x4::splat(0.0));
+    pub const ZERO: Point3 = Point3::from_raw(f32x4::new(0.0, 0.0, 0.0, 1.0));
+    pub const ORIGIN: Point3 = Point3::from_raw(f32x4::new(0.0, 0.0, 0.0, 1.0));
     pub fn is_normal(&self) -> bool {
         !(self.0.is_nan().any() || self.0.is_infinite().any())
     }
