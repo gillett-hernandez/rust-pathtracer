@@ -1,6 +1,6 @@
 use crate::world::World;
 // use crate::config::Settings;
-use crate::hittable::{HitRecord, Hittable};
+use crate::hittable::Hittable;
 use crate::integrator::Integrator;
 use crate::material::Material;
 use crate::math::*;

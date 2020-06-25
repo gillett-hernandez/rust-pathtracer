@@ -26,7 +26,7 @@ use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::{AARect, Aggregate, Instance, Sphere};
 
-use integrator::{Integrator, PathTracingIntegrator};
+use integrator::{Integrator, LightTracingIntegrator, PathTracingIntegrator};
 use material::Material;
 use materials::*;
 use math::*;
@@ -47,17 +47,42 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
     let russian_roulette = settings.russian_roulette.unwrap_or(true);
     let light_samples = settings.light_samples.unwrap_or(4);
     let only_direct = settings.only_direct.unwrap_or(false);
-    println!(
-        "constructing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
-        max_bounces, russian_roulette, light_samples
-    );
-    Box::new(PathTracingIntegrator {
-        max_bounces,
-        world,
-        russian_roulette,
-        light_samples,
-        only_direct,
-    })
+
+    match settings
+        .integrator
+        .as_ref()
+        .unwrap_or(&"PT".to_string())
+        .as_ref()
+    {
+        "PT" => {
+            println!(
+                "constructing path tracing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
+                max_bounces, russian_roulette, light_samples
+            );
+            Box::new(PathTracingIntegrator {
+                max_bounces,
+                world,
+                russian_roulette,
+                light_samples,
+                only_direct,
+            })
+        }
+        "LT" => {
+            println!("constructing light tracing integrator");
+            Box::new(LightTracingIntegrator {
+                max_bounces,
+                world,
+                russian_roulette,
+            })
+        }
+        _ => Box::new(PathTracingIntegrator {
+            max_bounces,
+            world,
+            russian_roulette,
+            light_samples,
+            only_direct,
+        }),
+    }
 }
 
 fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
@@ -138,7 +163,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 30000.0);
     let glass = curves::cauchy(1.45, 10000.0);
-    let blackbody_2000_k_illuminant = curves::blackbody(5500.0, 5.0);
+    let blackbody_2000_k_illuminant = curves::blackbody(4000.0, 5.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
@@ -163,7 +188,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         0.0,
     ));
     let ggx_silver_metal_rough = Box::new(GGX::new(
-        0.08,
+        0.18,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
@@ -174,7 +199,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_cold_lead_metal = Box::new(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
     let ggx_platinum_metal = Box::new(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-    let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
+    let ggx_iron_metal = Box::new(GGX::new(0.18, iron_ior, 1.0, iron_kappa, 0.0));
 
     let env_map = EnvironmentMap::new(cie_e_world_illuminant);
     let diffuse_light_sphere = Box::new(DiffuseLight::new(
@@ -259,7 +284,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         lights: vec![0],
         environment: env_map,
         materials: vec![
-            ggx_moissanite,
+            ggx_glass_rough,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,

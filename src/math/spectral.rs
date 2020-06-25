@@ -83,6 +83,11 @@ impl SingleWavelength {
     pub fn with_energy(&self, energy: SingleEnergy) -> Self {
         SingleWavelength::new(self.lambda, energy)
     }
+
+    pub fn replace_energy(&self, energy: f32) -> Self {
+        self.with_energy(SingleEnergy::new(energy))
+    }
+
     pub const BLACK: SingleWavelength = SingleWavelength::new(0.0, SingleEnergy::ZERO);
 }
 
@@ -344,7 +349,10 @@ impl SpectralPowerDistributionFunction for SPD {
     }
     fn sample_power(&self, wavelength_range: Bounds1D, sample: Sample1D) -> SingleWavelength {
         match &self {
-            _ => SingleWavelength::new_from_range(sample.x, wavelength_range),
+            _ => {
+                let ws = SingleWavelength::new_from_range(sample.x, wavelength_range);
+                ws.replace_energy(self.evaluate_power(ws.lambda))
+            }
         }
     }
 }

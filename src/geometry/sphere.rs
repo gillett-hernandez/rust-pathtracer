@@ -55,7 +55,7 @@ impl Hittable for Sphere {
             let normal: Vec3;
             // time = r.time + (-b - discriminant_sqrt) / a;
             time = (-b - discriminant_sqrt) / a;
-            if time < t1 && time > t0 {
+            if time < t1 && time > t0 && time < r.tmax {
                 point = r.point_at_parameter(time);
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
@@ -74,7 +74,7 @@ impl Hittable for Sphere {
             }
             // time = r.time + (-b + discriminant_sqrt) / a;
             time = (-b + discriminant_sqrt) / a;
-            if time < t1 && time > t0 {
+            if time < t1 && time > t0 && time < r.tmax {
                 point = r.point_at_parameter(time);
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);

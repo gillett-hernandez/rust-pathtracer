@@ -48,7 +48,7 @@ impl sRGB {
             exposure_adjustment / max_luminance
         );
         sRGB {
-            factor: 1.0 / max_luminance,
+            factor: (1.0 / max_luminance).min(1000000.0),
             exposure_adjustment,
             // gamma_adjustment,
         }

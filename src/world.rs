@@ -1,7 +1,7 @@
 use packed_simd::f32x4;
 
 use crate::hittable::*;
-use crate::materials::{MaterialId, MaterialTable};
+use crate::materials::MaterialTable;
 use crate::math::*;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
@@ -17,14 +17,16 @@ impl EnvironmentMap {
     }
     pub fn sample_spd(
         &self,
-        uv: (f32, f32),
+        _uv: (f32, f32),
         wavelength_range: Bounds1D,
         sample: Sample1D,
     ) -> Option<SingleWavelength> {
+        // later use uv for texture accessing
         Some(self.color.sample_power(wavelength_range, sample))
     }
 
     pub fn emission(&self, _uv: (f32, f32), lambda: f32) -> SingleEnergy {
+        assert!(lambda > 0.0);
         SingleEnergy::new(self.color.evaluate_power(lambda))
     }
 
@@ -38,12 +40,12 @@ impl EnvironmentMap {
         let phi = PI * (2.0 * uv.0 - 1.0);
         let (y, x) = phi.sin_cos();
         let z = (PI * uv.1).cos();
-        let point = Point3::from_raw((f32x4::new(x, y, z, 0.0) * world_radius).replace(3, 1.0));
-        let direction = Vec3::new(-x, -y, -z);
+        let _point = Point3::from_raw((f32x4::new(x, y, z, 0.0) * world_radius).replace(3, 1.0));
+        let _direction = Vec3::new(-x, -y, -z);
         let sw = self.color.sample_power(wavelength_range, wavelength_sample);
 
         // force overwrite point and direction for testing purposes
-        let point = Point3::new(0.0, 0.0, world_radius);
+        let point = Point3::new(0.0, 0.0, 10.0 * world_radius);
         let direction = -Vec3::Z;
         (Ray::new(point, direction), sw)
     }
@@ -74,6 +76,10 @@ impl World {
             );
             Some(self.accelerator.get_primitive(self.lights[idx]))
         }
+    }
+
+    pub fn instance_is_light(&self, instance_id: usize) -> bool {
+        self.lights.contains(&instance_id)
     }
 
     pub fn get_primitive(&self, index: usize) -> &Instance {
