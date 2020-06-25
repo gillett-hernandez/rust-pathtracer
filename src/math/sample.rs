@@ -14,6 +14,16 @@ impl Sample1D {
     pub fn new_random_sample() -> Self {
         Sample1D { x: random() }
     }
+    pub fn choose<T>(mut self, split: f32, a: T, b: T) -> (Self, T) {
+        assert!(0.0 <= split && split < 1.0);
+        if self.x < split {
+            self.x /= split;
+            (self, a)
+        } else {
+            self.x = (1.0 - self.x) / (split - self.x);
+            (self, b)
+        }
+    }
 }
 
 #[derive(Debug)]

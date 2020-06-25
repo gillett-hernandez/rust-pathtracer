@@ -96,6 +96,10 @@ impl World {
     pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         self.accelerator.hit(r, t0, t1)
     }
+
+    pub fn get_env_sampling_probability(&self) -> f32 {
+        0.8
+    }
 }
 
 impl HasBoundingBox for World {

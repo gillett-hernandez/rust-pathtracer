@@ -26,7 +26,7 @@ use camera::{Camera, SimpleCamera};
 use config::{get_settings, RenderSettings, Settings};
 use geometry::{AARect, Aggregate, Instance, Sphere};
 
-use integrator::{Integrator, LightTracingIntegrator, PathTracingIntegrator};
+use integrator::*;
 use material::Material;
 use materials::*;
 use math::*;
@@ -74,6 +74,10 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
                 world,
                 russian_roulette,
             })
+        }
+        "BDPT" => {
+            println!("constructing light tracing integrator");
+            Box::new(BDPTIntegrator { max_bounces, world })
         }
         _ => Box::new(PathTracingIntegrator {
             max_bounces,

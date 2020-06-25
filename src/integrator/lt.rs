@@ -17,9 +17,6 @@ pub struct LightTracingIntegrator {
     // pub only_direct: bool,
 }
 
-// pub fn g(camera_point: Point3, cos_i: f32, light_point: Point3, cos_o: f32) -> f32 {
-//     ((camera_point - light_point).norm_squared() * cos_i * cos_o).abs()
-// }
 
 impl Integrator for LightTracingIntegrator {
     fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
@@ -68,7 +65,7 @@ impl Integrator for LightTracingIntegrator {
         let camera_hit_frame = TangentFrame::from_normal(camera_vertex.normal);
         let camera_vertex_material: &Box<dyn Material> =
             &self.world.materials[camera_vertex.material.unwrap_or(0) as usize];
-            
+
         let scene_light_sampling_probability = 0.8;
 
         let sampled;
