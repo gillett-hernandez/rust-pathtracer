@@ -1,5 +1,5 @@
 use crate::hittable::HitRecord;
-use crate::material::{Material, BRDF, PDF};
+use crate::material::Material;
 use crate::math::*;
 
 pub struct ParallelLight {
@@ -14,33 +14,75 @@ impl ParallelLight {
     }
 }
 
-impl PDF for ParallelLight {
-    fn value(&self, _hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> f32 {
-        0.0
-    }
-    fn generate(&self, _hit: &HitRecord, _s: &mut Box<dyn Sampler>, _wi: Vec3) -> Option<Vec3> {
-        None
-    }
-}
+impl Material for ParallelLight {
+    // don't implement the other functions, since the fallback default implementation does the exact same thing
 
-impl BRDF for ParallelLight {
-    fn f(&self, _hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> SingleEnergy {
-        SingleEnergy::ZERO
+    fn sample_emission(
+        &self,
+        point: Point3,
+        normal: Vec3,
+        wavelength_range: Bounds1D,
+        mut scatter_sample: Sample2D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(Ray, SingleWavelength, PDF)> {
+        // wo localized to point and normal
+        let mut swap = false;
+        if self.sidedness == Sidedness::Reverse {
+            swap = true;
+        }
+
+        if self.sidedness == Sidedness::Dual {
+            if scatter_sample.x < 0.5 {
+                swap = true;
+                scatter_sample.x *= 2.0;
+            } else {
+                scatter_sample.x = (1.0 - scatter_sample.x) * 2.0;
+            }
+        }
+        let mut local_wo = (random_cosine_direction(scatter_sample) + 10.0 * Vec3::Z).normalized();
+
+        if swap {
+            local_wo = -local_wo;
+        }
+        // needs to be converted to object space in a way that respects the surface normal
+        let frame = TangentFrame::from_normal(normal);
+        let object_wo = frame.to_world(&local_wo).normalized();
+        let (sw, _pdf) = self
+            .color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        Some((
+            Ray::new(point + object_wo * 0.01, object_wo),
+            // sw.with_energy(sw.energy / PI),
+            sw,
+            // PDF::from(local_wo.z().abs() / PI),
+            PDF::from(1.0),
+            // PDF::from(local_wo.z().abs() * pdf.0 / PI),
+        ))
     }
+
+    fn sample_emission_spectra(
+        &self,
+        wavelength_range: Bounds1D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(f32, PDF)> {
+        let (sw, pdf) = self
+            .color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        Some((sw.lambda, pdf))
+    }
+
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
         if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
             || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            if wi.z().abs() < 0.9 {
-                SingleEnergy::ZERO
+            if wi.z().abs() > 0.9 {
+                SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
             } else {
-                SingleEnergy::new(self.color.evaluate_power(hit.lambda))
+                SingleEnergy::ZERO
             }
         } else {
             SingleEnergy::ZERO
         }
     }
 }
-
-impl Material for ParallelLight {}

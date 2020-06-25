@@ -104,7 +104,7 @@ impl Mul<SingleWavelength> for f32 {
 
 impl Mul<XYZColor> for SingleWavelength {
     type Output = SingleWavelength;
-    fn mul(self, xyz: XYZColor) -> SingleWavelength {
+    fn mul(self, _xyz: XYZColor) -> SingleWavelength {
         // let lambda = other.wavelength;
         // let other_as_color: XYZColor = other.into();
         // other_as_color gives us the x y and z values for other

@@ -184,7 +184,7 @@ impl Integrator for PathTracingIntegrator {
                         beta *= f * cos_i.abs() / pdf.into();
                         debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
                         last_bsdf_pdf = pdf.into();
-                        // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
+                        
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
                         // println!("whatever!!");

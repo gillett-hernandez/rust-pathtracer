@@ -3,6 +3,7 @@ use crate::math::*;
 
 use std::marker::{Send, Sync};
 
+#[allow(unused_variables)]
 pub trait Material: Send + Sync {
     // provide default implementations
     // methods for sampling the bsdf

@@ -68,6 +68,7 @@ impl Integrator for LightTracingIntegrator {
         let camera_hit_frame = TangentFrame::from_normal(camera_vertex.normal);
         let camera_vertex_material: &Box<dyn Material> =
             &self.world.materials[camera_vertex.material.unwrap_or(0) as usize];
+            
         let scene_light_sampling_probability = 0.8;
 
         let sampled;
@@ -81,6 +82,7 @@ impl Integrator for LightTracingIntegrator {
             // if we picked a light
             let (light_surface_point, light_surface_normal) =
                 light.sample_surface(sampler.draw_2d());
+
             let mat_id = match light.get_material_id() {
                 Some(id) => id as usize,
                 None => 0,
@@ -102,13 +104,12 @@ impl Integrator for LightTracingIntegrator {
                 / (1.0 - scene_light_sampling_probability))
                 .clamp(0.0, 1.0);
             // sample world env
-            let Sample2D { x: u, y: v } = sampler.draw_2d();
             let world_aabb = self.world.accelerator.bounding_box();
             let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
             // println!("sampled light emission in world light branch");
             sampled = self.world.environment.sample_emission(
                 world_radius,
-                Sample2D::new(0.0, 0.0),
+                sampler.draw_2d(),
                 VISIBLE_RANGE,
                 wavelength_sample,
             );
@@ -127,7 +128,7 @@ impl Integrator for LightTracingIntegrator {
         };
         assert!(radiance.0 > 0.0, "radiance was 0, {}", lambda);
 
-        let mut last_bsdf_pdf = PDF::from(0.0);
+        // let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
         for bounce_count in 0..self.max_bounces {
             if let Some(mut hit) = self.world.hit(ray, 0.0, INFINITY) {
@@ -244,8 +245,8 @@ impl Integrator for LightTracingIntegrator {
                     // beta *= f / pdf;
                     beta_pdf = PDF::from(beta_pdf.0 * pdf.0 * wi.z() * cos_i.abs());
                     debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
-                    last_bsdf_pdf = pdf;
-                    // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
+                    // last_bsdf_pdf = pdf;
+
                     // add normal to avoid self intersection
                     // also convert wo back to world space when spawning the new ray
                     // println!("whatever!!");

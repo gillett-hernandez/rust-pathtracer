@@ -47,7 +47,7 @@ impl Material for DiffuseLight {
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
         let object_wo = frame.to_world(&local_wo).normalized();
-        let (sw, pdf) = self
+        let (sw, _pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((

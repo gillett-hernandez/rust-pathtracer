@@ -24,7 +24,6 @@ pub use transform::Transform3;
 pub use vec::{Axis, Vec3};
 
 use std::fmt::Debug;
-use std::ops::{Div, Mul};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Sidedness {

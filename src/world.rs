@@ -1,5 +1,3 @@
-use packed_simd::f32x4;
-
 use crate::hittable::*;
 use crate::materials::MaterialTable;
 use crate::math::*;

@@ -201,6 +201,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
     let ggx_iron_metal = Box::new(GGX::new(0.18, iron_ior, 1.0, iron_kappa, 0.0));
 
+    let env_map = EnvironmentMap::new(cie_e_world_illuminant);
     let diffuse_light_sphere =
         Box::new(DiffuseLight::new(blackbody_illuminant, Sidedness::Reverse));
 
