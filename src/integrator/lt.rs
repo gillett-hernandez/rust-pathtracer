@@ -69,7 +69,7 @@ impl Integrator for LightTracingIntegrator {
         if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
             light_pick_sample.x =
                 (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
-            let light = self.world.pick_random_light(light_pick_sample).unwrap();
+            let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
             let (light_surface_point, light_surface_normal) =

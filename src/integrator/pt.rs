@@ -67,10 +67,11 @@ impl Integrator for PathTracingIntegrator {
                     let mut light_contribution = SingleEnergy::ZERO;
                     let mut _successful_light_samples = 0;
                     for _i in 0..self.light_samples {
-                        if let Some(light) = self.world.pick_random_light(sampler.draw_1d()) {
+                        if let Some((light, pdf)) = self.world.pick_random_light(sampler.draw_1d())
+                        {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
-                            let pick_pdf = PDF::from(1.0 / (self.world.lights.len() as f32));
+                            let pick_pdf = pdf;
                             // sample the primitive from hit_point
                             let (direction, light_pdf) = light.sample(&mut sampler, hit.point);
                             assert!(light_pdf.0.is_finite());

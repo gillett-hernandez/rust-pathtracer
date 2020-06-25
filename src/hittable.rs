@@ -55,6 +55,7 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3);
     // method that should implement evaluating the pdf value of that sample having occurred, assuming random hemisphere sampling.
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF;
+    fn surface_area(&self, transform: &Transform3) -> f32;
     fn get_instance_id(&self) -> usize;
     fn get_material_id(&self) -> MaterialId;
 }

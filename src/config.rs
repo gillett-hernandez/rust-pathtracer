@@ -36,7 +36,7 @@ pub enum CameraSettings {
 }
 #[derive(Deserialize, Clone)]
 pub struct RenderSettings {
-    pub output_directory: Option<String>,
+    pub filename: Option<String>,
     pub resolution: Resolution,
     pub integrator: Option<String>,
     pub selected_pair: Option<(usize, usize)>,
@@ -91,7 +91,7 @@ mod tests {
             }
         };
         for config in &settings.render_settings {
-            assert!(config.output_directory != None);
+            assert!(config.filename != None);
             assert!(config.threads.unwrap() > 0)
         }
     }

@@ -142,6 +142,15 @@ impl Hittable for AARect {
         let distance_squared = direction.norm_squared();
         PDF::from(distance_squared / ((normal * direction.normalized()).abs() * area))
     }
+
+    fn surface_area(&self, transform: &Transform3) -> f32 {
+        let transform_multiplier = match self.normal {
+            Axis::X => (*transform * Vec3::Y).norm() * (*transform * Vec3::Z).norm(),
+            Axis::Y => (*transform * Vec3::X).norm() * (*transform * Vec3::Z).norm(),
+            Axis::Z => (*transform * Vec3::X).norm() * (*transform * Vec3::Y).norm(),
+        };
+        transform_multiplier * self.size.0 * self.size.1
+    }
     fn get_instance_id(&self) -> usize {
         self.instance_id
     }

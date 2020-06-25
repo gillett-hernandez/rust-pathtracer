@@ -60,6 +60,12 @@ impl Hittable for Aggregate {
             Aggregate::AARect(rect) => rect.pdf(normal, from, to),
         }
     }
+    fn surface_area(&self, transform: &Transform3) -> f32 {
+        match self {
+            Aggregate::Sphere(sphere) => sphere.surface_area(transform),
+            Aggregate::AARect(rect) => rect.surface_area(transform),
+        }
+    }
     fn get_instance_id(&self) -> usize {
         match self {
             Aggregate::Sphere(sphere) => sphere.get_instance_id(),
@@ -149,6 +155,15 @@ impl Hittable for Instance {
             (normal, from, to)
         };
         self.aggregate.pdf(normal, from, to)
+    }
+
+    fn surface_area(&self, transform: &Transform3) -> f32 {
+        if let Some(more_transform) = self.transform {
+            self.aggregate
+                .surface_area(&(more_transform * (*transform)))
+        } else {
+            self.aggregate.surface_area(transform)
+        }
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id

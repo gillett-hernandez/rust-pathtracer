@@ -34,6 +34,9 @@ pub struct Vertex {
     pub material_id: MaterialId,
     pub instance_id: usize,
     pub throughput: SingleEnergy,
+    pub pdf_forward: f32,
+    pub pdf_backward: f32,
+    pub veach_g: f32,
 }
 
 impl Vertex {
@@ -46,6 +49,9 @@ impl Vertex {
         material_id: MaterialId,
         instance_id: usize,
         throughput: SingleEnergy,
+        pdf_forward: f32,
+        pdf_backward: f32,
+        veach_g: f32,
     ) -> Self {
         Vertex {
             kind,
@@ -56,6 +62,9 @@ impl Vertex {
             material_id,
             instance_id,
             throughput,
+            pdf_forward,
+            pdf_backward,
+            veach_g,
         }
     }
 }
@@ -80,23 +89,30 @@ pub struct BDPTIntegrator {
     pub specific_pair: Option<(usize, usize)>,
 }
 
+pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
+    (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
+}
+
+pub fn veach_v(world: &Arc<World>, eye_point: Point3, light_point: Point3) -> bool {
+    let diff = light_point - eye_point;
+    let norm = diff.norm();
+    let cam_to_light = Ray::new(eye_point, diff / norm);
+
+    let tmax = norm * 0.99;
+    world.hit(cam_to_light, 0.0, tmax).is_none()
+}
+
 pub fn random_walk(
     mut ray: Ray,
     lambda: f32,
     bounce_limit: u16,
+    start_throughput: SingleEnergy,
     trace_type: Type,
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
 ) {
-    // match trace_type {
-    //     Kind::Light => {
-
-    //         }
-    //     }
-    //     Kind::Eye => {}
-    // }
-    let mut beta = SingleEnergy::ONE;
+    let mut beta = start_throughput;
     for _ in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, INFINITY) {
             hit.lambda = lambda;
@@ -110,9 +126,7 @@ pub fn random_walk(
 
             // }
             // wo is generated in tangent space.
-            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
-
-            vertices.push(Vertex::new(
+            let mut vertex = Vertex::new(
                 trace_type,
                 hit.time,
                 hit.lambda,
@@ -121,15 +135,31 @@ pub fn random_walk(
                 id as MaterialId,
                 hit.instance_id,
                 beta,
-            ));
+                0.0,
+                0.0,
+                1.0,
+            );
+            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
+
             if let Some(wo) = maybe_wo {
-                let cos_i = wo.z();
-                // let cos_o = wo.z();
+                let cos_i = wo.z().abs();
+                let cos_o = wi.z().abs();
                 let pdf = material.value(&hit, wi, wo);
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.0 < 0.00000001 || pdf.is_nan() {
                     break;
                 }
+
+                vertex.pdf_forward = pdf.0 / cos_i;
+                if cos_o < 0.00001 {
+                    // considered specular
+                    vertex.pdf_backward = vertex.pdf_forward;
+                } else {
+                    vertex.pdf_backward = vertex.pdf_forward / cos_o;
+                }
+
+                vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
+                vertices.push(vertex);
 
                 let f = material.f(&hit, wi, wo);
 
@@ -143,23 +173,14 @@ pub fn random_walk(
                     frame.to_world(&wo).normalized(),
                 );
             } else {
+                vertex.pdf_forward = 0.0;
+                vertex.pdf_backward = 1.0;
+                vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
+                vertices.push(vertex);
                 break;
             }
         }
     }
-}
-
-pub fn veach_g(eye_point: Point3, cos_i: f32, light_point: Point3, cos_o: f32) -> f32 {
-    (cos_i * cos_o).abs() / (eye_point - light_point).norm_squared()
-}
-
-pub fn veach_v(world: &Arc<World>, eye_point: Point3, light_point: Point3) -> bool {
-    let diff = light_point - eye_point;
-    let norm = diff.norm();
-    let cam_to_light = Ray::new(eye_point, diff / norm);
-
-    let tmax = norm * 0.99;
-    world.hit(cam_to_light, 0.0, tmax).is_none()
 }
 
 pub fn eval_unweighted_contribution(
@@ -168,7 +189,7 @@ pub fn eval_unweighted_contribution(
     s_light_idx: usize,
     eye_path: &Vec<Vertex>,
     t_eye_idx: usize,
-) -> SingleEnergy {
+) -> (SingleEnergy, f32) {
     let last_light_vertex_throughput = if s_light_idx == 0 {
         SingleEnergy::ONE
     } else {
@@ -182,6 +203,7 @@ pub fn eval_unweighted_contribution(
     };
 
     let cst: SingleEnergy;
+    let g;
     if s_light_idx == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
         let second_to_last_eye_vertex = eye_path[t_eye_idx - 2];
@@ -192,11 +214,22 @@ pub fn eval_unweighted_contribution(
         let frame = TangentFrame::from_normal(normal);
         let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
 
-        cst = hit_light_material.emission(&last_eye_vertex.into(), frame.to_local(&wi), None);
+        cst = hit_light_material.emission(
+            &last_eye_vertex.into(),
+            frame.to_local(&wi).normalized(),
+            None,
+        );
+        // if cst.0 > 0.0 {
+        //     println!(
+        //         "{:?}, {:?}, {:?}",
+        //         cst, last_eye_vertex.material_id, last_eye_vertex.instance_id
+        //     );
+        // }
+        g = 1.0;
     } else if t_eye_idx == 0 {
         // since the light path actually directly hit the camera, ignore it for now. maybe add it to a splatting queue once a more sophisticated renderer is implemented
         // but the current renderer can't handle contributions that aren't restricted to the current pixel
-        return SingleEnergy::ZERO;
+        return (SingleEnergy::ZERO, 0.0);
     } else {
         // assume light_path[0] and light_path[1] have had their reflectances fixed to be the light radiance values, as that's what the BDPT algorithm seems to expect.
         // also assume that camera_path[0] throughput is set to the so called We value, which is a measure of the importance of the given camera ray and wavelength sample
@@ -208,75 +241,87 @@ pub fn eval_unweighted_contribution(
         let light_to_eye_vec = last_eye_vertex.point - last_light_vertex.point;
         let light_to_eye_direction = light_to_eye_vec.normalized();
 
+        let llv_normal = last_light_vertex.normal;
+        let llv_frame = TangentFrame::from_normal(llv_normal);
+        let llv_world_light_to_eye = light_to_eye_direction;
+        let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
         let fsl = if s_light_idx == 1 {
             // connected to surface of light
             let hit_light_material = world.get_material(last_light_vertex.material_id);
 
-            let normal = last_light_vertex.normal;
-            let frame = TangentFrame::from_normal(normal);
-            let wi = light_to_eye_direction;
-
-            hit_light_material.emission(&last_light_vertex.into(), frame.to_local(&wi), None)
+            hit_light_material.emission(&last_light_vertex.into(), llv_local_light_to_eye, None)
         } else {
             let second_to_last_light_vertex = light_path[s_light_idx - 2];
             let normal = last_light_vertex.normal;
             let frame = TangentFrame::from_normal(normal);
             let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
-            let wo = light_to_eye_direction;
             let hit_material = world.get_material(last_light_vertex.material_id);
             hit_material.f(
                 &last_light_vertex.into(),
-                frame.to_local(&wi),
-                frame.to_local(&wo),
+                llv_frame.to_local(&wi).normalized(),
+                llv_local_light_to_eye,
             )
         };
 
         if fsl == SingleEnergy::ZERO {
-            return SingleEnergy::ZERO;
+            return (SingleEnergy::ZERO, 0.0);
         }
 
+        let lev_normal = last_eye_vertex.normal;
+        let lev_frame = TangentFrame::from_normal(lev_normal);
+        let lev_world_eye_to_light = -light_to_eye_direction;
+        let lev_local_eye_to_light = lev_frame.to_local(&lev_world_eye_to_light).normalized();
         let fse = if t_eye_idx == 1 {
             // another unsupported situation. see the above note about the current renderer
             // camera.eval_we(last_eye_vertex.point, last_light_vertex.point)
-            return SingleEnergy::ZERO;
+            return (SingleEnergy::ZERO, 0.0);
         } else {
             let second_to_last_eye_vertex = eye_path[t_eye_idx - 2];
-            let normal = last_eye_vertex.normal;
-            let frame = TangentFrame::from_normal(normal);
             let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
-            let wo = -light_to_eye_direction;
+
             let hit_material = world.get_material(last_eye_vertex.material_id);
             hit_material.f(
                 &last_eye_vertex.into(),
-                frame.to_local(&wi),
-                frame.to_local(&wo),
+                lev_frame.to_local(&wi).normalized(),
+                lev_local_eye_to_light,
             )
         };
 
         if fse == SingleEnergy::ZERO {
-            return SingleEnergy::ZERO;
+            return (SingleEnergy::ZERO, 0.0);
         }
 
         let (cos_i, cos_o) = (
-            (light_to_eye_direction * last_eye_vertex.normal).abs(),
-            (light_to_eye_direction * last_light_vertex.normal).abs(),
+            lev_local_eye_to_light.z().abs(),
+            llv_local_light_to_eye.z().abs(),
         );
-        let g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
+        g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
         if g == 0.0 {
-            return SingleEnergy::ZERO;
+            return (SingleEnergy::ZERO, 0.0);
         }
 
         if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
             // not visible
-            return SingleEnergy::ZERO;
+            return (SingleEnergy::ZERO, 0.0);
         }
         cst = fsl * g * fse;
     }
-    last_light_vertex_throughput * cst * last_eye_vertex_throughput
+    (
+        last_light_vertex_throughput * cst * last_eye_vertex_throughput,
+        g,
+    )
 }
 
-pub fn eval_mis(world: &Arc<World>, light_path: &Vec<Vertex>, eye_path: &Vec<Vertex>) -> Vec<f32> {
-    Vec::new()
+pub fn eval_mis(
+    world: &Arc<World>,
+    light_path: &Vec<Vertex>,
+    s: usize,
+    eye_path: &Vec<Vertex>,
+    t: usize,
+    veach_g: f32,
+    mis_nodes: &Vec<(f32, f32, bool)>,
+) -> f32 {
+    1.0
 }
 
 impl Integrator for BDPTIntegrator {
@@ -295,7 +340,7 @@ impl Integrator for BDPTIntegrator {
         if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
             light_pick_sample.x =
                 (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
-            let light = self.world.pick_random_light(light_pick_sample).unwrap();
+            let (light, light_pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
             let (light_surface_point, light_surface_normal) =
@@ -314,6 +359,12 @@ impl Integrator for BDPTIntegrator {
                 )
                 .unwrap();
             light_g_term = (light_surface_normal * (&sampled.0).direction).abs();
+
+            let directional_pdf = sampled.2;
+            // if delta light, the pdf_forward is only directional_pdf
+            let pdf_forward: PDF = directional_pdf / light_g_term;
+            let pdf_backward: PDF = light_pick_pdf / light.surface_area(&Transform3::new());
+
             start_light_vertex = Vertex::new(
                 Type::LightSource(Source::Instance),
                 0.0,
@@ -323,6 +374,9 @@ impl Integrator for BDPTIntegrator {
                 mat_id,
                 light.get_instance_id(),
                 sampled.1.energy,
+                pdf_forward.into(),
+                pdf_backward.into(),
+                1.0,
             );
         } else {
             light_pick_sample.x = ((light_pick_sample.x - scene_light_sampling_probability)
@@ -347,6 +401,9 @@ impl Integrator for BDPTIntegrator {
                 0,
                 0,
                 sampled.1.energy,
+                1.0,
+                1.0,
+                1.0,
             );
         };
 
@@ -367,6 +424,9 @@ impl Integrator for BDPTIntegrator {
             0,
             0,
             SingleEnergy::ONE,
+            1.0,
+            0.0,
+            1.0,
         ));
         light_path.push(start_light_vertex);
 
@@ -374,6 +434,7 @@ impl Integrator for BDPTIntegrator {
             camera_ray,
             lambda,
             self.max_bounces,
+            SingleEnergy::ONE,
             Type::Eye,
             sampler,
             &self.world,
@@ -383,21 +444,25 @@ impl Integrator for BDPTIntegrator {
             light_ray,
             lambda,
             self.max_bounces,
+            radiance,
             Type::Light,
             sampler,
             &self.world,
             &mut light_path,
         );
 
-        // assert!(
-        //     light_path.len() > 1,
-        //     "{:?}, {:?}",
-        //     eye_path.len(),
-        //     light_path.len()
-        // );
-        // light_path[1].throughput = radiance;
-
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
+
+        if let Some((s, t)) = self.specific_pair {
+            if s <= light_vertex_count && t <= eye_vertex_count {
+                let (factor, g) =
+                    eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
+                return SingleWavelength::new(lambda, factor);
+            }
+        }
+
+        let mis_enabled = false;
+        let mut mis_nodes: Vec<(f32, f32, bool)> = Vec::new();
         let mut sum = SingleEnergy::ZERO;
         for path_length in 1..(1 + self.max_bounces as usize) {
             let path_vertex_count = path_length + 1;
@@ -410,25 +475,22 @@ impl Integrator for BDPTIntegrator {
                     continue;
                 }
 
-                if let Some(pair) = self.specific_pair {
-                    if s == pair.0 && t == pair.1 {
-                        let factor =
-                            eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
-                        return SingleWavelength::new(lambda, factor);
-                    } else {
-                        continue;
-                    }
-                }
-
                 if t < 2 {
                     continue;
                 }
-                let factor =
+                let mut g = 1.0;
+                let (factor, new_g) =
                     eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
-                if factor == SingleEnergy::ZERO {
+                g = new_g;
+                let weight = if mis_enabled {
+                    eval_mis(&self.world, &light_path, s, &eye_path, t, g, &mis_nodes)
+                } else {
+                    1.0
+                };
+                if factor == SingleEnergy::ZERO || weight == 0.0 {
                     continue;
                 }
-                sum += factor;
+                sum += weight * factor;
             }
         }
         SingleWavelength::new(lambda, sum)

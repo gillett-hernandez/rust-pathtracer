@@ -120,6 +120,9 @@ impl Hittable for Sphere {
         debug_assert!(pdf.is_finite());
         pdf.into()
     }
+    fn surface_area(&self, transform: &Transform3) -> f32 {
+        self.radius * self.radius * 4.0 * PI
+    }
     fn get_instance_id(&self) -> usize {
         self.instance_id
     }

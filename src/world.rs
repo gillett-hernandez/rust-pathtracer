@@ -75,7 +75,7 @@ pub struct World {
 }
 
 impl World {
-    pub fn pick_random_light(&self, s: Sample1D) -> Option<&Instance> {
+    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
         let length = self.lights.len();
         if length == 0 {
             None
@@ -90,7 +90,10 @@ impl World {
                 idx,
                 length as usize
             );
-            Some(self.accelerator.get_primitive(self.lights[idx]))
+            Some((
+                self.accelerator.get_primitive(self.lights[idx]),
+                PDF::from(1.0 / length as f32),
+            ))
         }
     }
 

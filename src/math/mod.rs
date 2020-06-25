@@ -24,6 +24,7 @@ pub use transform::Transform3;
 pub use vec::{Axis, Vec3};
 
 use std::fmt::Debug;
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Sidedness {
@@ -48,6 +49,50 @@ impl From<f32> for PDF {
 impl From<PDF> for f32 {
     fn from(val: PDF) -> Self {
         val.0
+    }
+}
+
+impl Add for PDF {
+    type Output = PDF;
+    fn add(self, rhs: PDF) -> Self::Output {
+        PDF::from(self.0 + rhs.0)
+    }
+}
+impl AddAssign for PDF {
+    fn add_assign(&mut self, rhs: PDF) {
+        self.0 += rhs.0;
+    }
+}
+
+impl Mul<f32> for PDF {
+    type Output = PDF;
+    fn mul(self, rhs: f32) -> Self::Output {
+        PDF::from(self.0 * rhs)
+    }
+}
+impl Mul<PDF> for f32 {
+    type Output = PDF;
+    fn mul(self, rhs: PDF) -> Self::Output {
+        PDF::from(self * rhs.0)
+    }
+}
+
+impl Mul for PDF {
+    type Output = PDF;
+    fn mul(self, rhs: PDF) -> Self::Output {
+        PDF::from(self.0 * rhs.0)
+    }
+}
+
+impl MulAssign for PDF {
+    fn mul_assign(&mut self, other: PDF) {
+        self.0 = self.0 * other.0
+    }
+}
+impl Div<f32> for PDF {
+    type Output = PDF;
+    fn div(self, rhs: f32) -> Self::Output {
+        PDF::from(self.0 / rhs)
     }
 }
 

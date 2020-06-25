@@ -199,7 +199,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         0.0,
     ));
     let ggx_silver_metal_rough = Box::new(GGX::new(
-        0.18,
+        0.08,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
@@ -210,7 +210,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_cold_lead_metal = Box::new(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
     let ggx_platinum_metal = Box::new(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
     let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-    let ggx_iron_metal = Box::new(GGX::new(0.18, iron_ior, 1.0, iron_kappa, 0.0));
+    let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
 
     let env_map = EnvironmentMap::new(cie_e_world_illuminant);
     let diffuse_light_sphere =
@@ -240,19 +240,19 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     0.3,
                     Point3::new(-0.5, 0.0, -0.7),
                     0,
-                    1,
+                    2,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(0.1, -0.5, -0.7),
                     5,
-                    1,
+                    3,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(0.1, 0.5, -0.7),
                     6,
-                    1,
+                    4,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(AARect::new(
                     (2.0, 2.0),
@@ -260,7 +260,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Axis::Z,
                     true,
                     2,
-                    2,
+                    5,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
                     (2.0, 2.0),
@@ -268,7 +268,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Axis::Y,
                     true,
                     3,
-                    3,
+                    6,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
                     (2.0, 2.0),
@@ -276,7 +276,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Axis::Y,
                     true,
                     4,
-                    4,
+                    7,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
                     (2.0, 2.0),
@@ -284,7 +284,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Axis::X,
                     true,
                     2,
-                    5,
+                    8,
                 ))),
             ],
             AcceleratorType::List,
@@ -293,13 +293,13 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         lights: vec![0],
         environment: env_map,
         materials: vec![
-            ggx_glass_rough,
+            ggx_glass,
             diffuse_light_sphere,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
-            ggx_silver_metal_rough,
-            ggx_iron_metal,
+            ggx_gold_metal,
+            ggx_copper_metal,
         ],
     };
     world
@@ -357,7 +357,6 @@ fn main() -> () {
     let renderer = construct_renderer(&config);
     // get settings for each film
     for (render_id, render_settings) in config.render_settings.iter().enumerate() {
-        let directory = render_settings.output_directory.as_ref();
         let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
 
         let (width, height) = (
@@ -392,9 +391,10 @@ fn main() -> () {
         let now = Instant::now();
         // do stuff with film here
 
-        let directory_str = directory.cloned().unwrap_or(String::from("output"));
-        let exr_filename = format!("{}/test{}.exr", directory_str, render_id);
-        let png_filename = format!("{}/test{}.png", directory_str, render_id);
+        let filename = render_settings.filename.as_ref();
+        let filename_str = filename.cloned().unwrap_or(String::from("output"));
+        let exr_filename = format!("output/{}.exr", filename_str);
+        let png_filename = format!("output/{}.png", filename_str);
 
         let srgb_tonemapper = tonemap::sRGB::new(&film, 2.0);
         srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
