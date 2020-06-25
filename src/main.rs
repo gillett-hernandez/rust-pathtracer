@@ -139,9 +139,9 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
-    let moissanite = curves::cauchy(2.5, 30000.0);
+    let moissanite = curves::cauchy(2.5, 40000.0);
     let glass = curves::cauchy(1.45, 10000.0);
-    let blackbody_2000_k_illuminant = curves::blackbody(5500.0, 5.0);
+    let blackbody_illuminant = curves::blackbody(5500.0, 5.0);
 
     let lambertian = Box::new(Lambertian::new(color));
     let lambertian_white = Box::new(Lambertian::new(white));
@@ -180,10 +180,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
 
     let diffuse_light_world = Box::new(DiffuseLight::new(cie_e_world_illuminant, Sidedness::Dual));
-    let diffuse_light_sphere = Box::new(DiffuseLight::new(
-        blackbody_2000_k_illuminant,
-        Sidedness::Reverse,
-    ));
+    let diffuse_light_sphere =
+        Box::new(ParallelLight::new(blackbody_illuminant, Sidedness::Reverse));
 
     let world = World {
         accelerator: Accelerator::new(

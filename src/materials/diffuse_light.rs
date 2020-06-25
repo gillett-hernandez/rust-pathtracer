@@ -32,7 +32,7 @@ impl BRDF for DiffuseLight {
             || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            SingleEnergy::new(self.color.evaluate_power(hit.lambda))
+            SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
         } else {
             SingleEnergy::ZERO
         }
