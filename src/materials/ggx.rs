@@ -216,13 +216,13 @@ impl GGX {
 }
 
 impl GGX {
-    fn eval_pdf(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, f32) {
+    fn eval_pdf(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, PDF) {
         let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
 
         if g == 0.0 {
-            return (SingleEnergy::ZERO, 0.0);
+            return (SingleEnergy::ZERO, 0.0.into());
         }
 
         let cos_i = wi.z();
@@ -304,12 +304,12 @@ impl GGX {
             glossy_pdf,
             transmission_pdf
         );
-        (f, pdf)
+        (f, pdf.into())
     }
 }
 
 impl Material for GGX {
-    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
+    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         self.eval_pdf(hit.lambda, wi, wo).1
     }
     fn generate(&self, hit: &HitRecord, mut sample: Sample2D, wi: Vec3) -> Option<Vec3> {

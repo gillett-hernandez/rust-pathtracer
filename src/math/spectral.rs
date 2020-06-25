@@ -74,10 +74,7 @@ impl SingleWavelength {
     }
 
     pub fn new_from_range(x: f32, bounds: Bounds1D) -> Self {
-        SingleWavelength::new(
-            bounds.lower + x * (bounds.upper - bounds.lower),
-            SingleEnergy::ZERO,
-        )
+        SingleWavelength::new(bounds.lower + x * bounds.span(), SingleEnergy::ZERO)
     }
 
     pub fn with_energy(&self, energy: SingleEnergy) -> Self {
@@ -111,7 +108,8 @@ impl Mul<XYZColor> for SingleWavelength {
         // let lambda = other.wavelength;
         // let other_as_color: XYZColor = other.into();
         // other_as_color gives us the x y and z values for other
-        self.with_energy(self.energy * xyz.y())
+        // self.with_energy(self.energy * xyz.y())
+        unimplemented!()
     }
 }
 
@@ -223,10 +221,14 @@ pub enum SPD {
 pub trait SpectralPowerDistributionFunction {
     fn evaluate(&self, lambda: f32) -> f32;
     fn evaluate_power(&self, lambda: f32) -> f32;
-    fn sample_power(&self, wavelength_range: Bounds1D, sample: Sample1D) -> SingleWavelength;
+    // note: sample power
+    fn sample_power_and_pdf(
+        &self,
+        wavelength_range: Bounds1D,
+        sample: Sample1D,
+    ) -> (SingleWavelength, PDF);
     fn convert_to_xyz(&self, integration_bounds: Bounds1D, step_size: f32) -> XYZColor {
-        let iterations =
-            ((integration_bounds.upper - integration_bounds.lower) / step_size) as usize;
+        let iterations = (integration_bounds.span() / step_size) as usize;
         let mut sum: XYZColor = XYZColor::ZERO;
         for i in 0..iterations {
             let lambda = integration_bounds.lower + (i as f32) * step_size;
@@ -249,12 +251,12 @@ impl SpectralPowerDistributionFunction for SPD {
         match &self {
             SPD::Linear { signal, bounds } => {
                 assert!(
-                    bounds.lower <= lambda && lambda < bounds.upper,
+                    bounds.contains(&lambda),
                     "lambda was {:?}, bounds were {:?}",
                     lambda,
                     bounds
                 );
-                let step_size = (bounds.upper - bounds.lower) / (signal.len() as f32);
+                let step_size = bounds.span() / (signal.len() as f32);
                 let index = ((lambda - bounds.lower) / step_size) as usize;
                 signal[index]
             }
@@ -347,11 +349,18 @@ impl SpectralPowerDistributionFunction for SPD {
     fn evaluate(&self, lambda: f32) -> f32 {
         self.evaluate_power(lambda).min(1.0)
     }
-    fn sample_power(&self, wavelength_range: Bounds1D, sample: Sample1D) -> SingleWavelength {
+    fn sample_power_and_pdf(
+        &self,
+        wavelength_range: Bounds1D,
+        sample: Sample1D,
+    ) -> (SingleWavelength, PDF) {
         match &self {
             _ => {
                 let ws = SingleWavelength::new_from_range(sample.x, wavelength_range);
-                ws.replace_energy(self.evaluate_power(ws.lambda))
+                (
+                    ws.replace_energy(self.evaluate_power(ws.lambda)),
+                    PDF::from(1.0 / wavelength_range.span()), // uniform distribution
+                )
             }
         }
     }

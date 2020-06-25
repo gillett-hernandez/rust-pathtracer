@@ -36,7 +36,7 @@ impl Integrator for LightTracingIntegrator {
                     None => 0,
                 };
                 let material: &Box<dyn Material> = &self.world.materials[mat_id as usize];
-                let lambda = material
+                let (lambda, lambda_pdf) = material
                     .sample_emission_spectra(VISIBLE_RANGE, wavelength_sample)
                     .expect("instance marked as light did not have any emission spectra");
                 hit.lambda = lambda;
@@ -44,7 +44,7 @@ impl Integrator for LightTracingIntegrator {
                 let wi = frame.to_local(&-camera_ray.direction).normalized();
                 let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
 
-                let mut energy = material.emission(&hit, wi, maybe_wo);
+                let energy = material.emission(&hit, wi, maybe_wo);
                 // energy.0 = 0.0;
                 return SingleWavelength { lambda, energy };
             }
@@ -60,7 +60,9 @@ impl Integrator for LightTracingIntegrator {
                     .environment
                     .sample_spd((u, v), VISIBLE_RANGE, wavelength_sample);
 
-            return world_emission.unwrap_or(SingleWavelength::BLACK);
+            let (world_emission, pdf) = world_emission.expect("world env could not be sampled");
+            return world_emission;
+            // return world_emission.with_energy(world_emission.energy / pdf.0);
         };
 
         let camera_hit_frame = TangentFrame::from_normal(camera_vertex.normal);
@@ -69,6 +71,7 @@ impl Integrator for LightTracingIntegrator {
         let scene_light_sampling_probability = 0.8;
 
         let sampled;
+        let mut light_g_term: f32 = 1.0;
 
         if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
             light_pick_sample.x =
@@ -93,6 +96,7 @@ impl Integrator for LightTracingIntegrator {
                     wavelength_sample,
                 )
                 .unwrap();
+            light_g_term = (light_surface_normal * (&sampled.0).direction).abs();
         } else {
             light_pick_sample.x = ((light_pick_sample.x - scene_light_sampling_probability)
                 / (1.0 - scene_light_sampling_probability))
@@ -104,7 +108,7 @@ impl Integrator for LightTracingIntegrator {
             // println!("sampled light emission in world light branch");
             sampled = self.world.environment.sample_emission(
                 world_radius,
-                (u, v),
+                Sample2D::new(0.0, 0.0),
                 VISIBLE_RANGE,
                 wavelength_sample,
             );
@@ -113,7 +117,9 @@ impl Integrator for LightTracingIntegrator {
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
         let mut beta = SingleEnergy::ONE;
+        // let mut beta = radiance / (sampled.2).0;
         // let mut beta = radiance;
+        let mut beta_pdf = PDF::from(1.0);
         camera_vertex.lambda = lambda;
         let mut sum = SingleWavelength {
             lambda,
@@ -121,14 +127,15 @@ impl Integrator for LightTracingIntegrator {
         };
         assert!(radiance.0 > 0.0, "radiance was 0, {}", lambda);
 
-        let mut last_bsdf_pdf = 0.0;
+        let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
-        for _ in 0..self.max_bounces {
+        for bounce_count in 0..self.max_bounces {
             if let Some(mut hit) = self.world.hit(ray, 0.0, INFINITY) {
                 // hit some bsdf surface
                 // debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                 // println!("whatever1");
                 hit.lambda = lambda;
+
                 assert!(lambda > 0.0);
                 let id = match hit.material {
                     Some(id) => id as usize,
@@ -138,6 +145,10 @@ impl Integrator for LightTracingIntegrator {
                 let wi = frame.to_local(&-ray.direction).normalized();
                 // println!("{:?}. wi {:?} ", hit, wi);
 
+                if bounce_count == 0 {
+                    // include first P_A term correctly
+                    beta.0 *= light_g_term * wi.z() / (hit.point - ray.origin).norm_squared();
+                }
                 // assert!(
                 //     wi.z() > 0.0,
                 //     "point: {:?}, normal {:?}, incoming: {:?}, in local space: {:?}",
@@ -158,22 +169,25 @@ impl Integrator for LightTracingIntegrator {
 
                 let lp_to_cv = Ray::new(hit.point, (camera_vertex.point - hit.point).normalized());
 
-                let tmax = (camera_vertex.point - hit.point).norm() * 0.9;
+                let tmax = (camera_vertex.point - hit.point).norm() * 0.99;
+                // this conditional serves as the V term, checking if the camera vertex and light vertex can see each other
                 if self.world.hit(lp_to_cv, 0.0, tmax).is_none() {
                     let lp_wi = wi;
                     let lp_wo = frame.to_local(&lp_to_cv.direction);
                     let lp_reflectance = material.f(&hit, lp_wi, lp_wo);
                     let lp_bsdf_pdf = material.value(&hit, lp_wi, lp_wo);
-                    let lp_cos_i = lp_wo.z().abs();
+                    let lp_cos_i = lp_wo.z();
 
                     let cv_wi = camera_hit_frame.to_local(&-camera_ray.direction);
                     let cv_wo = camera_hit_frame.to_local(&-lp_to_cv.direction);
                     let cv_reflectance = camera_vertex_material.f(&camera_vertex, cv_wi, cv_wo);
                     let cv_bsdf_pdf = camera_vertex_material.value(&camera_vertex, cv_wi, cv_wo);
-                    let cv_cos_i = cv_wo.z().abs();
+                    let cv_cos_i = cv_wo.z();
 
+                    // G term in veaches paper, except with the V term factored out.
                     let g =
-                        ((camera_vertex.point - hit.point).norm_squared() * cv_cos_i * lp_cos_i)
+                        // ((camera_vertex.point - hit.point).norm_squared() * cv_cos_i * lp_cos_i)
+                        (cv_cos_i * lp_cos_i / (camera_vertex.point - hit.point).norm_squared())
                             .abs();
 
                     let cst = lp_reflectance * g * cv_reflectance;
@@ -190,8 +204,8 @@ impl Integrator for LightTracingIntegrator {
                     //     g,
                     //     beta
                     // );
-                    if cv_bsdf_pdf * lp_bsdf_pdf > 0.0 {
-                        sum.energy += radiance * beta * cst / cv_bsdf_pdf / lp_bsdf_pdf;
+                    if cv_bsdf_pdf.0 * lp_bsdf_pdf.0 > 0.0 {
+                        sum.energy += radiance * beta * cst;
                     }
                 }
                 // }
@@ -218,8 +232,8 @@ impl Integrator for LightTracingIntegrator {
 
                 if let Some(wo) = maybe_wo {
                     let pdf = material.value(&hit, wi, wo);
-                    debug_assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
-                    if pdf < 0.00000001 || pdf.is_nan() {
+                    debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
+                    if pdf.0 < 0.00000001 || pdf.is_nan() {
                         break;
                     }
                     if self.russian_roulette {
@@ -237,8 +251,11 @@ impl Integrator for LightTracingIntegrator {
                     let cos_i = wo.z();
 
                     let f = material.f(&hit, wi, wo);
-                    beta *= f * cos_i.abs() / pdf;
-                    debug_assert!(!beta.0.is_nan(), "{:?} {} {}", f, cos_i, pdf);
+                    beta *= f * cos_i.abs() / pdf.0;
+                    // beta *= f * wi.z() * cos_i.abs() / pdf;
+                    // beta *= f / pdf;
+                    beta_pdf = PDF::from(beta_pdf.0 * pdf.0 * wi.z() * cos_i.abs());
+                    debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
                     last_bsdf_pdf = pdf;
                     // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                     // add normal to avoid self intersection

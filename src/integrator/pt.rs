@@ -23,7 +23,7 @@ impl Integrator for PathTracingIntegrator {
         // println!("{:?}", ray);
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, VISIBLE_RANGE);
         let mut beta: SingleEnergy = SingleEnergy::ONE;
-        let mut last_bsdf_pdf = 0.0;
+        let mut last_bsdf_pdf = PDF::from(0.0);
 
         for _ in 0..self.max_bounces {
             // println!("whatever0");
@@ -55,15 +55,15 @@ impl Integrator for PathTracingIntegrator {
 
                     if emission.0 > 0.0 {
                         // check stuff here
-                        if last_bsdf_pdf <= 0.0 || self.light_samples == 0 {
+                        if last_bsdf_pdf.0 <= 0.0 || self.light_samples == 0 {
                             sum.energy += beta * emission;
                             assert!(!sum.energy.is_nan());
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // // println!("{:?}", hit);
                             let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
-                            let weight = power_heuristic(last_bsdf_pdf, pdf);
-                            assert!(!pdf.is_nan() && !weight.is_nan(), "{}, {}", pdf, weight);
+                            let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
+                            assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
                             sum.energy += beta * emission * weight;
                             assert!(!sum.energy.is_nan());
                         }
@@ -74,11 +74,11 @@ impl Integrator for PathTracingIntegrator {
                         if let Some(light) = self.world.pick_random_light(sampler.draw_1d()) {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
-                            let pick_pdf = self.world.lights.len() as f32;
+                            let pick_pdf = PDF::from(1.0 / (self.world.lights.len() as f32));
                             // sample the primitive from hit_point
                             let (direction, light_pdf) = light.sample(&mut sampler, hit.point);
-                            assert!(light_pdf.is_finite());
-                            if light_pdf == 0.0 {
+                            assert!(light_pdf.0.is_finite());
+                            if light_pdf.0 == 0.0 {
                                 continue;
                             }
                             // direction is already in world space.
@@ -110,7 +110,8 @@ impl Integrator for PathTracingIntegrator {
                                 // let light_pdf =
                                 //     light.pdf(light_hit.normal, hit.point, light_hit.point);
                                 let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
-                                let weight = power_heuristic(light_pdf, scatter_pdf_for_light_ray);
+                                let weight =
+                                    power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
                                 if light_hit.instance_id == light.get_instance_id() {
                                     let emission_material =
                                         &self.world.materials[light_hit.material.unwrap() as usize];
@@ -125,8 +126,8 @@ impl Integrator for PathTracingIntegrator {
                                         * dropoff
                                         * sampled_light_emission
                                         * weight
-                                        / light_pdf
-                                        / pick_pdf;
+                                        / light_pdf.0
+                                        / pick_pdf.0;
                                     assert!(
                                         !light_contribution.0.is_nan(),
                                         "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} lp {:?}",
@@ -161,8 +162,8 @@ impl Integrator for PathTracingIntegrator {
                     // println!("whatever!");
                     if let Some(wo) = maybe_wo {
                         let pdf = material.value(&hit, wi, wo);
-                        debug_assert!(pdf >= 0.0, "pdf was less than 0 {}", pdf);
-                        if pdf < 0.00000001 || pdf.is_nan() {
+                        debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
+                        if pdf.0 < 0.00000001 || pdf.is_nan() {
                             break;
                         }
                         if self.russian_roulette {
@@ -180,9 +181,9 @@ impl Integrator for PathTracingIntegrator {
                         let cos_i = wo.z();
 
                         let f = material.f(&hit, wi, wo);
-                        beta *= f * cos_i.abs() / pdf;
-                        debug_assert!(!beta.0.is_nan(), "{:?} {} {}", f, cos_i, pdf);
-                        last_bsdf_pdf = pdf;
+                        beta *= f * cos_i.abs() / pdf.into();
+                        debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
+                        last_bsdf_pdf = pdf.into();
                         // debug_assert!(wi.z() * wo.z() > 0.0, "{:?} {:?}", wi, wo);
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray

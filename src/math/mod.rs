@@ -7,8 +7,8 @@ mod random;
 mod sample;
 pub mod spectral;
 mod tangent_frame;
-mod vec;
 mod transform;
+mod vec;
 
 pub use bounds::Bounds1D;
 pub use color::*;
@@ -20,16 +20,36 @@ pub use spectral::{SingleEnergy, SingleWavelength, SpectralPowerDistributionFunc
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 pub use tangent_frame::TangentFrame;
-pub use vec::{Axis, Vec3};
 pub use transform::Transform3;
+pub use vec::{Axis, Vec3};
 
 use std::fmt::Debug;
+use std::ops::{Div, Mul};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Sidedness {
     Forward,
     Reverse,
     Dual,
+}
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
+pub struct PDF(pub f32);
+impl PDF {
+    pub fn is_nan(&self) -> bool {
+        self.0.is_nan()
+    }
+}
+
+impl From<f32> for PDF {
+    fn from(val: f32) -> Self {
+        PDF(val)
+    }
+}
+
+impl From<PDF> for f32 {
+    fn from(val: PDF) -> Self {
+        val.0
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

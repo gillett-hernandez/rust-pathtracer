@@ -124,23 +124,23 @@ impl Hittable for AARect {
         let normal = Vec3::from_axis(self.normal);
         (point, normal)
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
         let (point, normal) = self.sample_surface(s.draw_2d());
         let direction = point - from;
         let area = self.size.0 * self.size.1;
         let pdf = direction.norm_squared() / ((normal * direction.normalized()).abs() * area);
         if !pdf.is_finite() {
             // println!("pdf was inf, {:?}", direction);
-            (direction.normalized(), 0.0)
+            (direction.normalized(), 0.0.into())
         } else {
-            (direction.normalized(), pdf)
+            (direction.normalized(), pdf.into())
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
-        distance_squared / ((normal * direction.normalized()).abs() * area)
+        PDF::from(distance_squared / ((normal * direction.normalized()).abs() * area))
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id

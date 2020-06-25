@@ -20,12 +20,21 @@ impl EnvironmentMap {
         _uv: (f32, f32),
         wavelength_range: Bounds1D,
         sample: Sample1D,
-    ) -> Option<SingleWavelength> {
+    ) -> Option<(SingleWavelength, PDF)> {
+        // sample emission at a given uv when wavelength is yet to be determined.
+        // used when a camera ray hits an environment map without ever having been assigned a wavelength.
+
         // later use uv for texture accessing
-        Some(self.color.sample_power(wavelength_range, sample))
+
+        Some(self.color.sample_power_and_pdf(wavelength_range, sample))
     }
 
     pub fn emission(&self, _uv: (f32, f32), lambda: f32) -> SingleEnergy {
+        // evaluate emission at uv coordinate and wavelength
+
+        // let phi = PI * (2.0 * uv.0 - 1.0);
+        // let (y, x) = phi.sin_cos();
+        // let z = (PI * uv.1).cos();
         assert!(lambda > 0.0);
         SingleEnergy::new(self.color.evaluate_power(lambda))
     }
@@ -33,21 +42,21 @@ impl EnvironmentMap {
     pub fn sample_emission(
         &self,
         world_radius: f32,
-        uv: (f32, f32),
+        _sample: Sample2D,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> (Ray, SingleWavelength) {
-        let phi = PI * (2.0 * uv.0 - 1.0);
-        let (y, x) = phi.sin_cos();
-        let z = (PI * uv.1).cos();
-        let _point = Point3::from_raw((f32x4::new(x, y, z, 0.0) * world_radius).replace(3, 1.0));
-        let _direction = Vec3::new(-x, -y, -z);
-        let sw = self.color.sample_power(wavelength_range, wavelength_sample);
+    ) -> (Ray, SingleWavelength, PDF) {
+        // sample env map cdf to get light ray, based on env map strength
+        // let _point = Point3::from_raw((f32x4::new(x, y, z, 0.0) * world_radius).replace(3, 1.0));
+        // let _direction = Vec3::new(-x, -y, -z);
+        let (sw, pdf) = self
+            .color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
 
         // force overwrite point and direction for testing purposes
         let point = Point3::new(0.0, 0.0, 10.0 * world_radius);
         let direction = -Vec3::Z;
-        (Ray::new(point, direction), sw)
+        (Ray::new(point, direction), sw, pdf)
     }
 }
 

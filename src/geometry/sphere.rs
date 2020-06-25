@@ -60,8 +60,6 @@ impl Hittable for Sphere {
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
                 normal = (point - self.origin) / self.radius;
-                //         rec.mat_ptr = mat_ptr;
-                //         rec.primitive = (hittable *)this;
                 return Some(HitRecord::new(
                     time,
                     point,
@@ -79,8 +77,6 @@ impl Hittable for Sphere {
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
                 normal = (point - self.origin) / self.radius;
-                //         rec.mat_ptr = mat_ptr;
-                //         rec.primitive = (hittable *)this;
                 return Some(HitRecord::new(
                     time,
                     point,
@@ -99,7 +95,7 @@ impl Hittable for Sphere {
         let point_on_sphere = self.origin + self.radius * normal;
         (point_on_sphere, normal)
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
         let (point_on_sphere, normal) = self.sample_surface(s.draw_2d());
         let direction = point_on_sphere - from;
         debug_assert!(
@@ -116,18 +112,18 @@ impl Hittable for Sphere {
                 pdf, direction, normal
             );
 
-            (direction.normalized(), 0.0)
+            (direction.normalized(), 0.0.into())
         } else {
-            (direction.normalized(), pdf)
+            (direction.normalized(), pdf.into())
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
         let pdf = distance_squared
             / ((normal * direction.normalized()) * self.radius * self.radius * 4.0 * PI);
         debug_assert!(pdf.is_finite());
-        pdf
+        pdf.into()
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id

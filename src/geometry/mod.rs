@@ -42,7 +42,7 @@ impl Hittable for Aggregate {
             Aggregate::AARect(rect) => rect.hit(r, t0, t1),
         }
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
         match self {
             Aggregate::Sphere(sphere) => sphere.sample(s, from),
             Aggregate::AARect(rect) => rect.sample(s, from),
@@ -54,7 +54,7 @@ impl Hittable for Aggregate {
             Aggregate::AARect(rect) => rect.sample_surface(s),
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         match self {
             Aggregate::Sphere(sphere) => sphere.pdf(normal, from, to),
             Aggregate::AARect(rect) => rect.pdf(normal, from, to),
@@ -114,7 +114,7 @@ impl Hittable for Instance {
             self.aggregate.hit(r, t0, t1)
         }
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, f32) {
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
         if let Some(transform) = self.transform {
             let (vec, pdf) = self.aggregate.sample(s, transform.reverse * from);
             (transform * vec, pdf)
@@ -130,7 +130,7 @@ impl Hittable for Instance {
             self.aggregate.sample_surface(s)
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> f32 {
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let (normal, from, to) = if let Some(transform) = self.transform {
             (
                 transform.reverse * normal,

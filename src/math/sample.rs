@@ -8,6 +8,9 @@ pub struct Sample1D {
 }
 
 impl Sample1D {
+    pub const fn new(x: f32) -> Self {
+        Sample1D { x }
+    }
     pub fn new_random_sample() -> Self {
         Sample1D { x: random() }
     }
@@ -20,6 +23,9 @@ pub struct Sample2D {
 }
 
 impl Sample2D {
+    pub const fn new(x: f32, y: f32) -> Self {
+        Sample2D { x, y }
+    }
     pub fn new_random_sample() -> Self {
         Sample2D {
             x: random(),
@@ -35,6 +41,9 @@ pub struct Sample3D {
 }
 
 impl Sample3D {
+    pub const fn new(x: f32, y: f32, z: f32) -> Self {
+        Sample3D { x, y, z }
+    }
     pub fn new_random_sample() -> Self {
         Sample3D {
             x: random(),

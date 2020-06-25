@@ -12,12 +12,12 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn value(&self, _hit: &HitRecord, wi: Vec3, wo: Vec3) -> f32 {
+    fn value(&self, _hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         let cosine = wo.z();
         if cosine * wi.z() > 0.0 {
-            cosine / PI
+            (cosine / PI).into()
         } else {
-            0.0
+            0.0.into()
         }
     }
     fn generate(&self, _hit: &HitRecord, s: Sample2D, _wi: Vec3) -> Option<Vec3> {

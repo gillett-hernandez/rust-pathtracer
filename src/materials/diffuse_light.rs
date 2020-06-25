@@ -24,7 +24,7 @@ impl Material for DiffuseLight {
         wavelength_range: Bounds1D,
         mut scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength)> {
+    ) -> Option<(Ray, SingleWavelength, PDF)> {
         // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
@@ -47,20 +47,25 @@ impl Material for DiffuseLight {
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
         let object_wo = frame.to_world(&local_wo).normalized();
-        let sw = self.color.sample_power(wavelength_range, wavelength_sample);
-        Some((Ray::new(point + object_wo * 0.01, object_wo), sw))
+        let (sw, pdf) = self
+            .color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        Some((
+            Ray::new(point + object_wo * 0.01, object_wo),
+            sw,
+            PDF::from(pdf.0 / PI),
+        ))
     }
 
     fn sample_emission_spectra(
         &self,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> Option<f32> {
-        Some(
-            self.color
-                .sample_power(wavelength_range, wavelength_sample)
-                .lambda,
-        )
+    ) -> Option<(f32, PDF)> {
+        let (sw, pdf) = self
+            .color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        Some((sw.lambda, pdf))
     }
 
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
