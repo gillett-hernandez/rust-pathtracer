@@ -1,10 +1,6 @@
 use crate::math::*;
 use std::marker::{Send, Sync};
 
-pub enum FoV {
-    Horizontal(f32),
-    Vertical(f32),
-}
 pub trait Camera: Send + Sync {
     fn get_ray(&self, s: f32, t: f32) -> Ray;
     fn modify_aspect_ratio(&mut self, aspect_ratio: f32);
@@ -102,6 +98,10 @@ impl Camera for SimpleCamera {
         self.vertical = self.v * 2.0 * half_height * self.focal_distance;
     }
 }
+
+// pub enum BundledCamera {
+//     SimpleCamera(SimpleCamera),
+// }
 
 #[cfg(test)]
 mod tests {

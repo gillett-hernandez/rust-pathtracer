@@ -32,7 +32,6 @@ impl Integrator for PathTracingIntegrator {
                     debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                     // println!("whatever1");
                     hit.lambda = sum.lambda;
-                    let id = hit.material as usize;
                     let frame = TangentFrame::from_normal(hit.normal);
                     let wi = frame.to_local(&-ray.direction).normalized();
                     // assert!(
@@ -44,7 +43,7 @@ impl Integrator for PathTracingIntegrator {
                     //     wi
                     // );
 
-                    let material: &Box<dyn Material> = &self.world.materials[id as usize];
+                    let material: &Box<dyn Material> = &self.world.get_material(hit.material);
 
                     // wo is generated in tangent space.
                     let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
@@ -111,7 +110,7 @@ impl Integrator for PathTracingIntegrator {
                                     power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
                                 if light_hit.instance_id == light.get_instance_id() {
                                     let emission_material =
-                                        &self.world.materials[light_hit.material as usize];
+                                        self.world.get_material(light_hit.material);
                                     let light_wi = TangentFrame::from_normal(light_hit.normal)
                                         .to_local(&-direction);
                                     let sampled_light_emission =

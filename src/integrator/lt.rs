@@ -27,8 +27,7 @@ impl Integrator for LightTracingIntegrator {
         let mut light_pick_sample = sampler.draw_1d();
         let mut camera_vertex = if let Some(mut hit) = self.world.hit(camera_ray, 0.0, INFINITY) {
             if self.world.instance_is_light(hit.instance_id) {
-                let mat_id = hit.material as usize;
-                let material: &Box<dyn Material> = &self.world.materials[mat_id as usize];
+                let material: &Box<dyn Material> = &self.world.get_material(hit.material);
                 let (lambda, lambda_pdf) = material
                     .sample_emission_spectra(VISIBLE_RANGE, wavelength_sample)
                     .expect("instance marked as light did not have any emission spectra");
@@ -60,7 +59,7 @@ impl Integrator for LightTracingIntegrator {
 
         let camera_hit_frame = TangentFrame::from_normal(camera_vertex.normal);
         let camera_vertex_material: &Box<dyn Material> =
-            &self.world.materials[camera_vertex.material as usize];
+            self.world.get_material(camera_vertex.material);
 
         let scene_light_sampling_probability = 0.8;
 
@@ -77,7 +76,7 @@ impl Integrator for LightTracingIntegrator {
                 light.sample_surface(sampler.draw_2d());
 
             let mat_id = light.get_material_id();
-            let material: &Box<dyn Material> = &self.world.materials[mat_id as usize];
+            let material: &Box<dyn Material> = &self.world.get_material(mat_id);
             // println!("sampled light emission in instance light branch");
             sampled = material
                 .sample_emission(
@@ -128,7 +127,6 @@ impl Integrator for LightTracingIntegrator {
                 hit.lambda = lambda;
 
                 assert!(lambda > 0.0);
-                let id = hit.material as usize;
                 let frame = TangentFrame::from_normal(hit.normal);
                 let wi = frame.to_local(&-ray.direction).normalized();
                 // println!("{:?}. wi {:?} ", hit, wi);
@@ -146,7 +144,7 @@ impl Integrator for LightTracingIntegrator {
                 //     wi
                 // );
 
-                let material: &Box<dyn Material> = &self.world.materials[id as usize];
+                let material: &Box<dyn Material> = &self.world.get_material(hit.material);
 
                 // attempt to connect to camera vertex.
 

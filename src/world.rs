@@ -1,9 +1,11 @@
+// use crate::camera::BundledCamera;
 use crate::hittable::*;
 use crate::materials::MaterialTable;
 use crate::math::*;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::Instance;
+pub use crate::materials::{Material, MaterialId};
 
 pub struct EnvironmentMap {
     pub color: SPD,
@@ -61,6 +63,7 @@ impl EnvironmentMap {
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
+    // pub cameras: Vec<BundledCamera>,
     pub materials: MaterialTable,
     pub environment: EnvironmentMap,
 }
@@ -87,6 +90,10 @@ impl World {
 
     pub fn instance_is_light(&self, instance_id: usize) -> bool {
         self.lights.contains(&instance_id)
+    }
+
+    pub fn get_material(&self, mat_id: MaterialId) -> &Box<dyn Material> {
+        &self.materials[mat_id as usize]
     }
 
     pub fn get_primitive(&self, index: usize) -> &Instance {
