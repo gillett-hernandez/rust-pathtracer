@@ -8,11 +8,11 @@ use std::ops::{Div, Mul};
 #[derive(Debug, Copy, Clone)]
 pub struct Matrix4x4(f32x16);
 
-// impl Matrix4x4 {
-//     const I: Matrix4x4 = Matrix4x4(f32x16::new(
-//         1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-//     ));
-// }
+impl Matrix4x4 {
+    const I: Matrix4x4 = Matrix4x4(f32x16::new(
+        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ));
+}
 
 impl Mul<Vec3> for Matrix4x4 {
     type Output = Vec3;
@@ -114,6 +114,12 @@ pub struct Transform3 {
 }
 
 impl Transform3 {
+    pub fn new() -> Self {
+        Transform3 {
+            forward: Matrix4x4::I,
+            reverse: Matrix4x4::I,
+        }
+    }
     pub fn new_from_matrix(forward: nalgebra::Matrix4<f32>) -> Self {
         Transform3 {
             forward: Matrix4x4::from(forward),
@@ -166,8 +172,29 @@ impl Transform3 {
     //     Transform3::new_from_matrix(affine)
     // }
 
+    pub fn stack(
+        translate: Option<Transform3>,
+        rotate: Option<Transform3>,
+        scale: Option<Transform3>,
+    ) -> Transform3 {
+        let mut stack = Transform3::new();
+        if let Some(scale) = scale {
+            stack = scale * stack;
+        }
+        if let Some(rotate) = rotate {
+            stack = rotate * stack;
+        }
+        if let Some(translate) = translate {
+            stack = translate * stack;
+        }
+        stack
+    }
+
     pub fn new_from_raw(forward: Matrix4x4, reverse: Matrix4x4) -> Self {
-        Transform3 { forward, reverse }
+        Transform3 {
+            forward,
+            reverse: reverse,
+        }
     }
 }
 

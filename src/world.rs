@@ -3,7 +3,7 @@ use crate::materials::{MaterialId, MaterialTable};
 use crate::math::*;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
-pub use crate::geometry::Aggregate;
+pub use crate::geometry::Instance;
 
 pub struct World {
     pub accelerator: Accelerator,
@@ -13,7 +13,7 @@ pub struct World {
 }
 
 impl World {
-    pub fn pick_random_light(&self, s: &mut Box<dyn Sampler>) -> Option<&Aggregate> {
+    pub fn pick_random_light(&self, s: &mut Box<dyn Sampler>) -> Option<&Instance> {
         let length = self.lights.len();
         if length == 0 {
             None
@@ -32,7 +32,7 @@ impl World {
         }
     }
 
-    pub fn get_primitive(&self, index: usize) -> &Aggregate {
+    pub fn get_primitive(&self, index: usize) -> &Instance {
         self.accelerator.get_primitive(index)
     }
 
