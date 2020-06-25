@@ -154,7 +154,11 @@ impl Hittable for Instance {
         self.instance_id
     }
     fn get_material_id(&self) -> MaterialId {
-        self.aggregate.get_material_id()
+        if let Some(material_id) = self.material_id {
+            material_id
+        } else {
+            self.aggregate.get_material_id()
+        }
     }
 }
 

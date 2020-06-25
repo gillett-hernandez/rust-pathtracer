@@ -20,11 +20,11 @@ vfov = 90
 [[render_settings]]
 threads=22
 output_directory = "output"
-integrator="LT"
-max_bounces = 10
-resolution.width = 1080
-resolution.height = 1080
-min_samples = 100
+integrator="BDPT"
+max_bounces = 8
+resolution.width = 1024
+resolution.height = 1024
+min_samples = 30
 camera_id = 1
 russian_roulette = true
 only_direct = false

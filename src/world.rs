@@ -5,7 +5,7 @@ use crate::math::*;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::Instance;
-pub use crate::materials::{Material, MaterialId};
+pub use crate::materials::{DiffuseLight, Material, MaterialId};
 
 pub struct EnvironmentMap {
     pub color: SPD,
@@ -60,6 +60,12 @@ impl EnvironmentMap {
     }
 }
 
+impl From<EnvironmentMap> for DiffuseLight {
+    fn from(map: EnvironmentMap) -> Self {
+        DiffuseLight::new(map.color, Sidedness::Dual)
+    }
+}
+
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
@@ -105,7 +111,7 @@ impl World {
     }
 
     pub fn get_env_sampling_probability(&self) -> f32 {
-        0.8
+        1.0
     }
 }
 

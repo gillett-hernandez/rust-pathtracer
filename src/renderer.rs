@@ -67,6 +67,11 @@ impl Renderer for NaiveRenderer {
         //     for x in 0..film.width {
         let width = film.width;
         let height = film.height;
+
+        for _ in 0..100 {
+            print!("-");
+        }
+        println!("");
         let output_divisor = (film.width * film.height / 100).max(1);
         film.buffer
             .par_iter_mut()

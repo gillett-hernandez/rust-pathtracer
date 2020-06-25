@@ -76,11 +76,14 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
             })
         }
         "BDPT" => {
-            println!("constructing light tracing integrator");
+            println!(
+                "constructing BDPT integrator with selected pair {:?}",
+                settings.selected_pair
+            );
             Box::new(BDPTIntegrator {
                 max_bounces,
                 world,
-                specific_pair: None,
+                specific_pair: settings.selected_pair,
             })
         }
         _ => Box::new(PathTracingIntegrator {
@@ -370,6 +373,7 @@ fn main() -> () {
         let now = Instant::now();
 
         &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
+
         let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
 
         let total_camera_rays = film.total_pixels()
