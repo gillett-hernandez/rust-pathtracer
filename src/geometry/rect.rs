@@ -17,7 +17,7 @@ pub struct AARect {
     pub normal: Axis,
     pub two_sided: bool,
     pub origin: Point3,
-    pub material_id: Option<MaterialId>,
+    pub material_id: MaterialId,
     pub instance_id: usize,
 }
 
@@ -27,7 +27,7 @@ impl AARect {
         origin: Point3,
         normal: Axis,
         two_sided: bool,
-        material_id: Option<MaterialId>,
+        material_id: MaterialId,
         instance_id: usize,
     ) -> Self {
         AARect {
@@ -48,7 +48,7 @@ impl AARect {
         x1: f32,
         y1: f32,
         two_sided: bool,
-        material_id: Option<MaterialId>,
+        material_id: MaterialId,
         instance_id: usize,
     ) -> Self {
         let size = (x1 - x0, y1 - y0);
@@ -145,7 +145,7 @@ impl Hittable for AARect {
     fn get_instance_id(&self) -> usize {
         self.instance_id
     }
-    fn get_material_id(&self) -> Option<MaterialId> {
+    fn get_material_id(&self) -> MaterialId {
         self.material_id
     }
 }

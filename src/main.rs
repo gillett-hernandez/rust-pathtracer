@@ -77,7 +77,11 @@ fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn
         }
         "BDPT" => {
             println!("constructing light tracing integrator");
-            Box::new(BDPTIntegrator { max_bounces, world })
+            Box::new(BDPTIntegrator {
+                max_bounces,
+                world,
+                specific_pair: None,
+            })
         }
         _ => Box::new(PathTracingIntegrator {
             max_bounces,
@@ -125,7 +129,7 @@ fn white_furnace_test(material: Box<dyn Material>) -> World {
             vec![Instance::from(Aggregate::from(Sphere::new(
                 5.0,
                 Point3::new(0.0, 0.0, 0.0),
-                Some(0),
+                0,
                 0,
             )))],
             AcceleratorType::List,
@@ -218,7 +222,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 0.0, 0.9),
                     Axis::Z,
                     false,
-                    Some(1),
+                    1,
                     0,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -226,25 +230,25 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 0.0, 1.0),
                     Axis::Z,
                     true,
-                    Some(2),
+                    2,
                     1,
                 ))),
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(-0.5, 0.0, -0.7),
-                    Some(0),
+                    0,
                     1,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(0.1, -0.5, -0.7),
-                    Some(5),
+                    5,
                     1,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(Sphere::new(
                     0.3,
                     Point3::new(0.1, 0.5, -0.7),
-                    Some(6),
+                    6,
                     1,
                 ))), // ball at origin
                 Instance::from(Aggregate::from(AARect::new(
@@ -252,7 +256,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 0.0, -1.0),
                     Axis::Z,
                     true,
-                    Some(2),
+                    2,
                     2,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -260,7 +264,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, 1.0, 0.0),
                     Axis::Y,
                     true,
-                    Some(3),
+                    3,
                     3,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -268,7 +272,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(0.0, -1.0, 0.0),
                     Axis::Y,
                     true,
-                    Some(4),
+                    4,
                     4,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
@@ -276,7 +280,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     Point3::new(1.0, 0.0, 0.0),
                     Axis::X,
                     true,
-                    Some(2),
+                    2,
                     5,
                 ))),
             ],

@@ -10,7 +10,7 @@ pub struct HitRecord {
     pub uv: (f32, f32),
     pub lambda: f32,
     pub normal: Vec3,
-    pub material: Option<MaterialId>,
+    pub material: MaterialId,
     pub instance_id: usize,
 }
 
@@ -21,7 +21,7 @@ impl HitRecord {
         uv: (f32, f32),
         lambda: f32,
         normal: Vec3,
-        material: Option<MaterialId>,
+        material: MaterialId,
         instance_id: usize,
     ) -> Self {
         HitRecord {
@@ -56,7 +56,7 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
     // method that should implement evaluating the pdf value of that sample having occurred, assuming random hemisphere sampling.
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF;
     fn get_instance_id(&self) -> usize;
-    fn get_material_id(&self) -> Option<MaterialId>;
+    fn get_material_id(&self) -> MaterialId;
 }
 
 // a supertrait of Hittable that allows indexing into it

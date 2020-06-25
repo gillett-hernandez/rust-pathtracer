@@ -32,10 +32,7 @@ impl Integrator for PathTracingIntegrator {
                     debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                     // println!("whatever1");
                     hit.lambda = sum.lambda;
-                    let id = match hit.material {
-                        Some(id) => id as usize,
-                        None => 0,
-                    };
+                    let id = hit.material as usize;
                     let frame = TangentFrame::from_normal(hit.normal);
                     let wi = frame.to_local(&-ray.direction).normalized();
                     // assert!(
@@ -114,7 +111,7 @@ impl Integrator for PathTracingIntegrator {
                                     power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
                                 if light_hit.instance_id == light.get_instance_id() {
                                     let emission_material =
-                                        &self.world.materials[light_hit.material.unwrap() as usize];
+                                        &self.world.materials[light_hit.material as usize];
                                     let light_wi = TangentFrame::from_normal(light_hit.normal)
                                         .to_local(&-direction);
                                     let sampled_light_emission =
@@ -184,7 +181,7 @@ impl Integrator for PathTracingIntegrator {
                         beta *= f * cos_i.abs() / pdf.into();
                         debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
                         last_bsdf_pdf = pdf.into();
-                        
+
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
                         // println!("whatever!!");

@@ -23,17 +23,32 @@ pub struct Vertex {
     pub point: Point3,
     pub normal: Vec3,
     pub material_id: MaterialId,
+    pub instance_id: usize,
     pub pdf: PDF,
+    pub reflectance: f32,
+    pub beta: SingleEnergy,
 }
 
 impl Vertex {
-    pub fn new(kind: Type, point: Point3, normal: Vec3, material_id: MaterialId, pdf: PDF) -> Self {
+    pub fn new(
+        kind: Type,
+        point: Point3,
+        normal: Vec3,
+        material_id: MaterialId,
+        instance_id: usize,
+        pdf: PDF,
+        reflectance: f32,
+        beta: SingleEnergy,
+    ) -> Self {
         Vertex {
             kind,
             point,
             normal,
             material_id,
+            instance_id,
             pdf,
+            reflectance,
+            beta,
         }
     }
 }
@@ -41,6 +56,7 @@ impl Vertex {
 pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
+    pub specific_pair: Option<(usize, usize)>,
 }
 
 pub fn random_walk(
@@ -63,10 +79,7 @@ pub fn random_walk(
     for i in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, INFINITY) {
             hit.lambda = lambda;
-            let id = match hit.material {
-                Some(id) => id as usize,
-                None => 0,
-            };
+            let id = hit.material as usize;
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
             let material: &Box<dyn Material> = &world.materials[id as usize];
@@ -86,12 +99,19 @@ pub fn random_walk(
                 beta *= f * cos_i.abs() / pdf.0;
                 debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
 
-                vertices[i as usize] =
-                    Vertex::new(trace_type, hit.point, hit.normal, id as MaterialId, pdf);
+                vertices[i as usize] = Vertex::new(
+                    trace_type,
+                    hit.point,
+                    hit.normal,
+                    id as MaterialId,
+                    hit.instance_id,
+                    pdf,
+                    f.0,
+                    beta,
+                );
 
                 // add normal to avoid self intersection
                 // also convert wo back to world space when spawning the new ray
-
                 ray = Ray::new(
                     hit.point + hit.normal * 0.001 * if wo.z() > 0.0 { 1.0 } else { -1.0 },
                     frame.to_world(&wo).normalized(),
@@ -116,6 +136,38 @@ pub fn veach_v(world: &Arc<World>, camera_point: Point3, light_point: Point3) ->
     world.hit(cam_to_light, 0.0, tmax).is_none()
 }
 
+pub fn eval_unweighted_contribution(
+    world: &Arc<World>,
+    light_path: &Vec<Vertex>,
+    light_idx_s: usize,
+    eye_path: &Vec<Vertex>,
+    eye_idx_t: usize,
+) -> f32 {
+    let light_vertex = light_path[light_idx_s];
+    let eye_vertex = eye_path[eye_idx_t];
+
+    let light_vertex_throughput = if light_idx_s == 0 {
+        SingleEnergy::ONE
+    } else {
+        light_path[light_idx_s - 1].beta
+    };
+
+    let eye_vertex_throughput = if eye_idx_t == 0 {
+        SingleEnergy::ONE
+    } else {
+        eye_path[eye_idx_t - 1].beta
+    };
+
+    let cst: SingleEnergy;
+
+    if light_idx_s == 0 {
+        let light_primitive = world.get_primitive(light_path[0].instance_id);
+        cst = SingleEnergy::ZERO;
+    }
+
+    0.0
+}
+
 impl Integrator for BDPTIntegrator {
     fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         // setup: decide light, emit ray from light, emit ray from camera, connect light path vertices to camera path vertices.
@@ -137,10 +189,8 @@ impl Integrator for BDPTIntegrator {
             let (light_surface_point, light_surface_normal) =
                 light.sample_surface(sampler.draw_2d());
 
-            let mat_id = match light.get_material_id() {
-                Some(id) => id as usize,
-                None => 0,
-            };
+
+                let mat_id = light.get_material_id();
             let material: &Box<dyn Material> = &self.world.materials[mat_id as usize];
             // println!("sampled light emission in instance light branch");
             sampled = material
@@ -173,8 +223,9 @@ impl Integrator for BDPTIntegrator {
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
 
-        let mut light_vertices: Vec<Vertex> = Vec::with_capacity(self.max_bounces as usize - 1);
-        let mut eye_vertices: Vec<Vertex> = Vec::with_capacity(self.max_bounces as usize - 1);
+        // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
+        let mut light_path: Vec<Vertex> = Vec::with_capacity(self.max_bounces as usize - 1);
+        let mut eye_path: Vec<Vertex> = Vec::with_capacity(self.max_bounces as usize - 1);
 
         random_walk(
             camera_ray,
@@ -183,7 +234,7 @@ impl Integrator for BDPTIntegrator {
             Type::Eye,
             sampler,
             &self.world,
-            &mut eye_vertices,
+            &mut eye_path,
         );
         random_walk(
             light_ray,
@@ -192,7 +243,7 @@ impl Integrator for BDPTIntegrator {
             Type::Light,
             sampler,
             &self.world,
-            &mut light_vertices,
+            &mut light_path,
         );
 
         SingleWavelength::BLACK

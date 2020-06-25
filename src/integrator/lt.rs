@@ -17,7 +17,6 @@ pub struct LightTracingIntegrator {
     // pub only_direct: bool,
 }
 
-
 impl Integrator for LightTracingIntegrator {
     fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera or to camera ray hit point.
@@ -28,10 +27,7 @@ impl Integrator for LightTracingIntegrator {
         let mut light_pick_sample = sampler.draw_1d();
         let mut camera_vertex = if let Some(mut hit) = self.world.hit(camera_ray, 0.0, INFINITY) {
             if self.world.instance_is_light(hit.instance_id) {
-                let mat_id = match hit.material {
-                    Some(id) => id as usize,
-                    None => 0,
-                };
+                let mat_id = hit.material as usize;
                 let material: &Box<dyn Material> = &self.world.materials[mat_id as usize];
                 let (lambda, lambda_pdf) = material
                     .sample_emission_spectra(VISIBLE_RANGE, wavelength_sample)
@@ -64,7 +60,7 @@ impl Integrator for LightTracingIntegrator {
 
         let camera_hit_frame = TangentFrame::from_normal(camera_vertex.normal);
         let camera_vertex_material: &Box<dyn Material> =
-            &self.world.materials[camera_vertex.material.unwrap_or(0) as usize];
+            &self.world.materials[camera_vertex.material as usize];
 
         let scene_light_sampling_probability = 0.8;
 
@@ -80,10 +76,7 @@ impl Integrator for LightTracingIntegrator {
             let (light_surface_point, light_surface_normal) =
                 light.sample_surface(sampler.draw_2d());
 
-            let mat_id = match light.get_material_id() {
-                Some(id) => id as usize,
-                None => 0,
-            };
+            let mat_id = light.get_material_id();
             let material: &Box<dyn Material> = &self.world.materials[mat_id as usize];
             // println!("sampled light emission in instance light branch");
             sampled = material
@@ -135,10 +128,7 @@ impl Integrator for LightTracingIntegrator {
                 hit.lambda = lambda;
 
                 assert!(lambda > 0.0);
-                let id = match hit.material {
-                    Some(id) => id as usize,
-                    None => 0,
-                };
+                let id = hit.material as usize;
                 let frame = TangentFrame::from_normal(hit.normal);
                 let wi = frame.to_local(&-ray.direction).normalized();
                 // println!("{:?}. wi {:?} ", hit, wi);

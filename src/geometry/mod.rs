@@ -66,7 +66,7 @@ impl Hittable for Aggregate {
             Aggregate::AARect(rect) => rect.get_instance_id(),
         }
     }
-    fn get_material_id(&self) -> Option<MaterialId> {
+    fn get_material_id(&self) -> MaterialId {
         match self {
             Aggregate::Sphere(sphere) => sphere.get_material_id(),
             Aggregate::AARect(rect) => rect.get_material_id(),
@@ -77,13 +77,20 @@ impl Hittable for Aggregate {
 pub struct Instance {
     aggregate: Aggregate,
     transform: Option<Transform3>,
+    material_id: Option<MaterialId>,
     instance_id: usize,
 }
 impl Instance {
-    fn new(aggregate: Aggregate, transform: Option<Transform3>, instance_id: usize) -> Self {
+    fn new(
+        aggregate: Aggregate,
+        transform: Option<Transform3>,
+        material_id: Option<MaterialId>,
+        instance_id: usize,
+    ) -> Self {
         Instance {
             aggregate,
             transform,
+            material_id,
             instance_id,
         }
     }
@@ -105,6 +112,7 @@ impl Hittable for Instance {
                 Some(HitRecord {
                     normal: transform * hit.normal,
                     point: transform * hit.point,
+                    instance_id: self.instance_id,
                     ..hit
                 })
             } else {
@@ -145,7 +153,7 @@ impl Hittable for Instance {
     fn get_instance_id(&self) -> usize {
         self.instance_id
     }
-    fn get_material_id(&self) -> Option<MaterialId> {
+    fn get_material_id(&self) -> MaterialId {
         self.aggregate.get_material_id()
     }
 }
@@ -154,7 +162,8 @@ impl From<Aggregate> for Instance {
     fn from(data: Aggregate) -> Self {
         // a direct conversion directly copies the instance id. take care when duplicating instances that are referred to by lights.
         let instance_id = (&data).get_instance_id();
-        Instance::new(data, None, instance_id)
+        let material_id = (&data).get_material_id();
+        Instance::new(data, None, Some(material_id), instance_id)
     }
 }
 

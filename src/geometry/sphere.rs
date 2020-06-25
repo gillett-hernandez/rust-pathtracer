@@ -6,17 +6,12 @@ use crate::math::*;
 pub struct Sphere {
     pub radius: f32,
     pub origin: Point3,
-    pub material_id: Option<MaterialId>,
+    pub material_id: MaterialId,
     pub instance_id: usize,
 }
 
 impl Sphere {
-    pub fn new(
-        radius: f32,
-        origin: Point3,
-        material_id: Option<MaterialId>,
-        instance_id: usize,
-    ) -> Sphere {
+    pub fn new(radius: f32, origin: Point3, material_id: MaterialId, instance_id: usize) -> Sphere {
         Sphere {
             radius,
             origin,
@@ -128,7 +123,7 @@ impl Hittable for Sphere {
     fn get_instance_id(&self) -> usize {
         self.instance_id
     }
-    fn get_material_id(&self) -> Option<MaterialId> {
+    fn get_material_id(&self) -> MaterialId {
         self.material_id
     }
 }
