@@ -116,9 +116,9 @@ impl Integrator for LightTracingIntegrator {
         let mut ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
-        let mut beta = SingleEnergy::ONE;
+        // let mut beta = SingleEnergy::ONE;
         // let mut beta = radiance / (sampled.2).0;
-        // let mut beta = radiance;
+        let mut beta = radiance;
         let mut beta_pdf = PDF::from(1.0);
         camera_vertex.lambda = lambda;
         let mut sum = SingleWavelength {
@@ -191,19 +191,7 @@ impl Integrator for LightTracingIntegrator {
                             .abs();
 
                     let cst = lp_reflectance * g * cv_reflectance;
-                    // energy += cam_path_throughput * cst * light_path_throughput
-                    // println!(
-                    //     "{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                    //     lp_to_cv,
-                    //     lp_reflectance,
-                    //     lp_cos_i,
-                    //     lp_bsdf_pdf,
-                    //     cv_reflectance,
-                    //     cv_cos_i,
-                    //     cv_bsdf_pdf,
-                    //     g,
-                    //     beta
-                    // );
+
                     if cv_bsdf_pdf.0 * lp_bsdf_pdf.0 > 0.0 {
                         sum.energy += radiance * beta * cst;
                     }
