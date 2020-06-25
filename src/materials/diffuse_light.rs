@@ -53,7 +53,8 @@ impl Material for DiffuseLight {
         Some((
             Ray::new(point + object_wo * 0.01, object_wo),
             sw.with_energy(sw.energy / PI),
-            PDF::from(local_wo.z().abs() * pdf.0 / PI),
+            PDF::from(local_wo.z().abs() / PI),
+            // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
     }
 
@@ -73,8 +74,7 @@ impl Material for DiffuseLight {
             || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            assert!(hit.lambda > 0.0);
-            SingleEnergy::new(self.color.evaluate_power(hit.lambda))
+            SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
         } else {
             SingleEnergy::ZERO
         }
