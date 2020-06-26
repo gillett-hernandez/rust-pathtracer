@@ -69,16 +69,16 @@ impl Integrator for LightTracingIntegrator {
         if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
             light_pick_sample.x =
                 (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
-            let (light, _pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
+            let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
-            let (light_surface_point, light_surface_normal, _area_pdf) =
+            let (light_surface_point, light_surface_normal, area_pdf) =
                 light.sample_surface(sampler.draw_2d());
 
             let mat_id = light.get_material_id();
             let material: &Box<dyn Material> = &self.world.get_material(mat_id);
             // println!("sampled light emission in instance light branch");
-            sampled = material
+            let tmp_sampled = material
                 .sample_emission(
                     light_surface_point,
                     light_surface_normal,
@@ -87,7 +87,12 @@ impl Integrator for LightTracingIntegrator {
                     wavelength_sample,
                 )
                 .unwrap();
-            light_g_term = (light_surface_normal * (&sampled.0).direction).abs();
+            light_g_term = (light_surface_normal * (&tmp_sampled.0).direction).abs();
+            sampled = (
+                tmp_sampled.0,
+                tmp_sampled.1,
+                tmp_sampled.2 * pick_pdf * area_pdf,
+            );
         } else {
             light_pick_sample.x = ((light_pick_sample.x - scene_light_sampling_probability)
                 / (1.0 - scene_light_sampling_probability))
@@ -106,6 +111,7 @@ impl Integrator for LightTracingIntegrator {
         let mut ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
+        let light_pdf = sampled.2;
         // let mut beta = SingleEnergy::ONE;
         // let mut beta = radiance / (sampled.2).0;
         let mut beta = radiance;
@@ -133,7 +139,8 @@ impl Integrator for LightTracingIntegrator {
 
                 if bounce_count == 0 {
                     // include first P_A term correctly
-                    beta.0 *= light_g_term * wi.z() / (hit.point - ray.origin).norm_squared();
+                    beta.0 *= light_pdf.0 * light_g_term * wi.z()
+                        / (hit.point - ray.origin).norm_squared();
                 }
                 // assert!(
                 //     wi.z() > 0.0,

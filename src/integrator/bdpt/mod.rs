@@ -139,7 +139,7 @@ impl Integrator for BDPTIntegrator {
         ));
         light_path.push(start_light_vertex);
 
-        random_walk(
+        let additional_contribution = random_walk(
             camera_ray,
             lambda,
             self.max_bounces,
@@ -170,7 +170,7 @@ impl Integrator for BDPTIntegrator {
             }
         }
 
-        let mis_enabled = true;
+        let mis_enabled = false;
         let mut mis_nodes: Vec<MISNode> = Vec::new();
         if mis_enabled {
             for _ in 0..(self.max_bounces + 1) {
@@ -178,6 +178,7 @@ impl Integrator for BDPTIntegrator {
             }
         }
         let mut sum = SingleEnergy::ZERO;
+        // sum += additional_contribution.unwrap_or(SingleEnergy::ZERO);
         for path_length in 1..(1 + self.max_bounces as usize) {
             let path_vertex_count = path_length + 1;
             for s in 0..(path_vertex_count as usize) {

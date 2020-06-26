@@ -111,8 +111,10 @@ pub fn random_walk(
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
-) {
+) -> Option<SingleEnergy> {
     let mut beta = start_throughput;
+    let mut last_bsdf_pdf = PDF::from(0.0);
+    let mut additional_contribution = SingleEnergy::ZERO; // additional contributions from emission from hit objects that support bsdf sampling
     for _ in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, INFINITY) {
             hit.lambda = lambda;
@@ -120,10 +122,23 @@ pub fn random_walk(
             let wi = frame.to_local(&-ray.direction).normalized();
             let material: &Box<dyn Material> = &world.materials[hit.material as usize];
 
-            // let emission = material.emission(&hit, wi, None);
-            // if emission.0 > 0.0 && trace_type == Type::Eye {
-
-            // }
+            // consider accumulating emission in some other form for trace_type == Type::Eye situations, as mentioned in veach.
+            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
+            let emission = material.emission(&hit, wi, maybe_wo);
+            if emission.0 > 0.0 && trace_type == Type::Eye {
+                if last_bsdf_pdf.0 <= 0.0 {
+                    additional_contribution += beta * emission;
+                    assert!(!additional_contribution.is_nan());
+                } else {
+                    let hit_primitive = world.get_primitive(hit.instance_id);
+                    // // println!("{:?}", hit);
+                    let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
+                    let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
+                    assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                    additional_contribution += beta * emission * weight;
+                    assert!(!additional_contribution.is_nan());
+                }
+            }
             // wo is generated in tangent space.
             let mut vertex = Vertex::new(
                 trace_type,
@@ -138,7 +153,6 @@ pub fn random_walk(
                 0.0,
                 1.0,
             );
-            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
 
             if let Some(wo) = maybe_wo {
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
@@ -168,6 +182,7 @@ pub fn random_walk(
 
                 // let beta_before_hit = beta;
                 beta *= f * cos_i.abs() / pdf.0;
+                last_bsdf_pdf = pdf;
 
                 debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
 
@@ -185,6 +200,11 @@ pub fn random_walk(
                 break;
             }
         }
+    }
+    if additional_contribution.0 > 0.0 {
+        Some(additional_contribution)
+    } else {
+        None
     }
 }
 

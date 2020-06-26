@@ -39,7 +39,8 @@ impl Material for ParallelLight {
                 scatter_sample.x = (1.0 - scatter_sample.x) * 2.0;
             }
         }
-        let mut local_wo = (random_cosine_direction(scatter_sample) + 10.0 * Vec3::Z).normalized();
+        // let mut local_wo = (random_cosine_direction(scatter_sample) + 10.0 * Vec3::Z).normalized();
+        let mut local_wo = Vec3::Z;
 
         if swap {
             local_wo = -local_wo;
@@ -55,7 +56,7 @@ impl Material for ParallelLight {
             // sw.with_energy(sw.energy / PI),
             sw,
             // PDF::from(local_wo.z().abs() / PI),
-            PDF::from(1.0),
+            PDF::from(0.0),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
     }
