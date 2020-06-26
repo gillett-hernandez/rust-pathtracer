@@ -200,6 +200,9 @@ pub fn random_walk(
                 vertices.push(vertex);
                 break;
             }
+        } else {
+            // add a vertex when a camera ray hits the environment
+            break;
         }
     }
     if additional_contribution.0 > 0.0 {
@@ -626,18 +629,25 @@ where
 
     assert!(combined_path[0] == light_path[0]);
     assert!(combined_path[k] == eye_path[0]);
+    assert!(combined_path[s] == light_path[s]);
+    assert!(combined_path[s + 1] == light_path[k1 - s]);
 
-    let mut weights: Vec<f32> = Vec::with_capacity(k1);
-    weights.fill(0.0);
-    weights[s] = 1.0;
+    let mut path_ps: Vec<f32> = Vec::with_capacity(k1);
+    path_ps.fill(0.0);
+    path_ps[s] = 1.0;
+    // notes about special cases:
+    // for the eye subpath, vertex0.pdf_forward is 1.0 and vertex0.pdf_backward is 0.0 (cannot sample camera for now)
+    // for the eye subpath, vertex1.pdf_forward is P_A, which technically is the directional pdf times the geometry term for the camera.
+    // and pdf_backward is
+    // for the light subpath, vertex0.pdf_forward
     // first build up from index = s to index = k
     for i in s..k1 {
         let i1 = i + 1;
-        // if i == 0 {
-        //     // top case of equation 10.9
-        //     weights[1] = weights[0] * combined_path[0].pdf_forward / combined_path[0].pdf_backward;
-        // }
+        if i == 0 {
+            // top case of equation 10.9
+            path_ps[1] = path_ps[0] * combined_path[0].pdf_forward / combined_path[0].pdf_backward;
+        }
     }
 
-    mis_function(&weights)
+    mis_function(&path_ps)
 }

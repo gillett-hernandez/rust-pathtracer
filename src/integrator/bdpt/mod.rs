@@ -134,7 +134,7 @@ impl Integrator for BDPTIntegrator {
             0,
             SingleEnergy::ONE,
             1.0,
-            0.0,
+            1.0,
             1.0,
         ));
         light_path.push(start_light_vertex);
