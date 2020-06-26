@@ -20,17 +20,20 @@ pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
     pub specific_pair: Option<(usize, usize)>,
-    pub cameras: Vec<Box<dyn Camera>>,
-    pub camera_id: CameraId,
+    pub cameras: Vec<Camera>,
 }
 
 impl GenericIntegrator for BDPTIntegrator {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, samples: &mut Vec<(Sample, CameraId)>) {
+    fn color(
+        &self,
+        sampler: &mut Box<dyn Sampler>,
+        camera_ray: Ray,
+        samples: &mut Vec<(Sample, CameraId)>,
+    ) -> SingleWavelength {
         // setup: decide light, emit ray from light, emit ray from camera, connect light path vertices to camera path vertices.
 
         let wavelength_sample = sampler.draw_1d();
         let mut light_pick_sample = sampler.draw_1d();
-        let camera = self.cameras[self.camera_id];
 
         let scene_light_sampling_probability = self.world.get_env_sampling_probability();
 

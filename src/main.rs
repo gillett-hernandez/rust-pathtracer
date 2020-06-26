@@ -43,13 +43,13 @@ use std::time::Instant;
 
 // use rayon::prelude::*;
 
-fn parse_cameras_from(settings: &Config) -> Vec<Box<dyn Camera>> {
-    let mut cameras = Vec::<Box<dyn Camera>>::new();
+fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
+    let mut cameras = Vec::<Camera>::new();
     for camera_config in &settings.cameras {
-        let camera: Box<dyn Camera> = match camera_config {
+        let camera: Camera = match camera_config {
             config::CameraSettings::SimpleCamera(cam) => {
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
-                Box::new(SimpleCamera::new(
+                Camera::SimpleCamera(SimpleCamera::new(
                     Point3::from(cam.look_from),
                     Point3::from(cam.look_at),
                     Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
@@ -285,12 +285,12 @@ fn main() -> () {
 
     let world = construct_scene();
 
-    let mut cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
+    let cameras: Vec<Camera> = parse_cameras_from(&config);
     // some integrators only work with certain renderers.
     // collect the render settings bundles that apply to certain integrators, and correlate them with their corresponding renderers.
     // use multiple renderers if necessary
 
     // let renderer = construct_renderer(&config);
-    let renderer = NaiveRenderer::new(world);
-    renderer.render(&cameras, config);
+    let renderer = NaiveRenderer::new();
+    renderer.render(world, cameras, &config);
 }

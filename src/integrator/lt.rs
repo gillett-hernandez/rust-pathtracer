@@ -15,7 +15,7 @@ pub struct LightTracingIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
     pub russian_roulette: bool,
-    pub cameras: Vec<Box<dyn Camera>>,
+    pub cameras: Vec<Camera>,
     // pub only_direct: bool,
 }
 /*

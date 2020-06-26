@@ -1,13 +1,29 @@
 use crate::math::*;
 use std::marker::{Send, Sync};
 
-pub struct CameraId(usize);
-pub trait Camera: Send + Sync + Copy + Clone + Sized {
-    fn get_ray(&self, s: f32, t: f32) -> Ray;
-    fn modify_aspect_ratio(&mut self, aspect_ratio: f32);
+pub struct CameraId(pub usize);
+
+#[derive(Debug, Copy, Clone)]
+pub enum Camera {
+    SimpleCamera(SimpleCamera),
 }
 
-#[derive(Copy, Clone, Debug)]
+impl Camera {
+    pub fn get_ray(&self, s: f32, t: f32) -> Ray {
+        match self {
+            Camera::SimpleCamera(simple_camera) => simple_camera.get_ray(s, t),
+        }
+    }
+    pub fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
+        match self {
+            Camera::SimpleCamera(simple_camera) => {
+                Camera::SimpleCamera(simple_camera.with_aspect_ratio(aspect_ratio))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 pub struct SimpleCamera {
     pub origin: Point3,
     pub direction: Vec3,
@@ -35,7 +51,7 @@ impl SimpleCamera {
         aperture: f32,
         t0: f32,
         t1: f32,
-    ) -> Self {
+    ) -> SimpleCamera {
         let direction = (look_at - look_from).normalized();
         let _lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
@@ -68,11 +84,8 @@ impl SimpleCamera {
     }
 }
 
-unsafe impl Send for SimpleCamera {}
-unsafe impl Sync for SimpleCamera {}
-
-impl Camera for SimpleCamera {
-    fn get_ray(&self, s: f32, t: f32) -> Ray {
+impl SimpleCamera {
+    pub fn get_ray(&self, s: f32, t: f32) -> Ray {
         // circular aperture/lens
         let rd: Vec3 = self.lens_radius * random_in_unit_disk(Sample2D::new_random_sample());
         let offset = self.u * rd.x() + self.v * rd.y();
@@ -86,7 +99,7 @@ impl Camera for SimpleCamera {
         assert!(ray_direction.is_normal());
         Ray::new_with_time(ray_origin, ray_direction, time)
     }
-    fn modify_aspect_ratio(&mut self, aspect_ratio: f32) {
+    pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
         assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
         let theta: f32 = self.vfov * PI / 180.0;
         let half_height = (theta / 2.0).tan();
@@ -97,12 +110,14 @@ impl Camera for SimpleCamera {
             - self.w * self.focal_distance;
         self.horizontal = self.u * 2.0 * half_width * self.focal_distance;
         self.vertical = self.v * 2.0 * half_height * self.focal_distance;
+        self
     }
 }
 
-// pub enum BundledCamera {
-//     SimpleCamera(SimpleCamera),
-// }
+unsafe impl Send for Camera {}
+unsafe impl Send for SimpleCamera {}
+unsafe impl Sync for Camera {}
+unsafe impl Sync for SimpleCamera {}
 
 #[cfg(test)]
 mod tests {
