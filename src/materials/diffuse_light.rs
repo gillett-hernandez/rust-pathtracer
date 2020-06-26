@@ -60,6 +60,7 @@ impl Material for DiffuseLight {
 
     fn sample_emission_spectra(
         &self,
+        _uv: (f32, f32),
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> Option<(f32, PDF)> {

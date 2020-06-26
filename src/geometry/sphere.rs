@@ -85,13 +85,14 @@ impl Hittable for Sphere {
         }
         None
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         let normal = random_on_unit_sphere(s);
         let point_on_sphere = self.origin + self.radius * normal;
-        (point_on_sphere, normal)
+        let surface_area = self.radius * self.radius * 4.0 * PI;
+        (point_on_sphere, normal, PDF::from(1.0 / surface_area))
     }
     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
-        let (point_on_sphere, normal) = self.sample_surface(s.draw_2d());
+        let (point_on_sphere, normal, area_pdf) = self.sample_surface(s.draw_2d());
         let direction = point_on_sphere - from;
         debug_assert!(
             direction.0.is_finite().all(),
@@ -99,9 +100,8 @@ impl Hittable for Sphere {
             point_on_sphere,
             from
         );
-        let pdf = direction.norm_squared()
-            / ((normal * direction.normalized()).abs() * self.radius * self.radius * 4.0 * PI);
-        if !pdf.is_finite() {
+        let pdf = area_pdf * direction.norm_squared() / (normal * direction.normalized()).abs();
+        if !pdf.0.is_finite() {
             println!(
                 "pdf was {:?}, direction: {:?}, normal: {:?}",
                 pdf, direction, normal
@@ -109,19 +109,26 @@ impl Hittable for Sphere {
 
             (direction.normalized(), 0.0.into())
         } else {
-            (direction.normalized(), pdf.into())
+            (direction.normalized(), pdf)
         }
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
         let pdf = distance_squared
-            / ((normal * direction.normalized()) * self.radius * self.radius * 4.0 * PI);
-        debug_assert!(pdf.is_finite());
+            / ((normal * direction.normalized()).abs() * self.radius * self.radius * 4.0 * PI);
+        debug_assert!(pdf.is_finite() && pdf >= 0.0);
         pdf.into()
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
-        self.radius * self.radius * 4.0 * PI
+        let transformed_axes = transform.axis_transform();
+        self.radius
+            * self.radius
+            * 4.0
+            * PI
+            * transformed_axes.0.norm()
+            * transformed_axes.1.norm()
+            * transformed_axes.2.norm()
     }
     fn get_instance_id(&self) -> usize {
         self.instance_id

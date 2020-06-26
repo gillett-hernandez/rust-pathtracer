@@ -114,26 +114,26 @@ impl Hittable for AARect {
             self.instance_id,
         ))
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         let Sample2D { x, y } = s;
         let point = self.origin
             + vec_shuffle(
                 Vec3::new((x - 0.5) * self.size.0, (y - 0.5) * self.size.1, 0.0),
                 &self.normal,
             );
+        let area = self.size.0 * self.size.1;
         let normal = Vec3::from_axis(self.normal);
-        (point, normal)
+        (point, normal, (1.0 / area).into())
     }
     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
-        let (point, normal) = self.sample_surface(s.draw_2d());
+        let (point, normal, area_pdf) = self.sample_surface(s.draw_2d());
         let direction = point - from;
-        let area = self.size.0 * self.size.1;
-        let pdf = direction.norm_squared() / ((normal * direction.normalized()).abs() * area);
-        if !pdf.is_finite() {
+        let pdf = area_pdf * direction.norm_squared() / ((normal * direction.normalized()).abs());
+        if !pdf.0.is_finite() {
             // println!("pdf was inf, {:?}", direction);
             (direction.normalized(), 0.0.into())
         } else {
-            (direction.normalized(), pdf.into())
+            (direction.normalized(), pdf)
         }
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
@@ -144,10 +144,11 @@ impl Hittable for AARect {
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {
+        let transformed_axes = transform.axis_transform();
         let transform_multiplier = match self.normal {
-            Axis::X => (*transform * Vec3::Y).norm() * (*transform * Vec3::Z).norm(),
-            Axis::Y => (*transform * Vec3::X).norm() * (*transform * Vec3::Z).norm(),
-            Axis::Z => (*transform * Vec3::X).norm() * (*transform * Vec3::Y).norm(),
+            Axis::X => transformed_axes.1.norm() * transformed_axes.2.norm(),
+            Axis::Y => transformed_axes.0.norm() * transformed_axes.2.norm(),
+            Axis::Z => transformed_axes.0.norm() * transformed_axes.1.norm(),
         };
         transform_multiplier * self.size.0 * self.size.1
     }

@@ -6,13 +6,15 @@ use std::marker::{Send, Sync};
 #[allow(unused_variables)]
 pub trait Material: Send + Sync {
     // provide default implementations
-    // methods for sampling the bsdf
+
+    // methods for sampling the bsdf, not related to the light itself
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         0.0.into()
     }
     fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Option<Vec3> {
         None
     }
+
     // method to sample an emitted light ray with a wavelength and energy
     // can fail when the material is not emissive
     fn sample_emission(
@@ -25,8 +27,10 @@ pub trait Material: Send + Sync {
     ) -> Option<(Ray, SingleWavelength, PDF)> {
         None
     }
+
     fn sample_emission_spectra(
         &self,
+        uv: (f32, f32),
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> Option<(f32, PDF)> {

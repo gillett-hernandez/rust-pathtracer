@@ -48,7 +48,7 @@ impl Hittable for Aggregate {
             Aggregate::AARect(rect) => rect.sample(s, from),
         }
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         match self {
             Aggregate::Sphere(sphere) => sphere.sample_surface(s),
             Aggregate::AARect(rect) => rect.sample_surface(s),
@@ -136,10 +136,10 @@ impl Hittable for Instance {
             self.aggregate.sample(s, from)
         }
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         if let Some(transform) = self.transform {
-            let (point, normal) = self.aggregate.sample_surface(s);
-            (transform * point, transform * normal)
+            let (point, normal, pdf) = self.aggregate.sample_surface(s);
+            (transform * point, transform * normal, pdf)
         } else {
             self.aggregate.sample_surface(s)
         }

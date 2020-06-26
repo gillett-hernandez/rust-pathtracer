@@ -17,13 +17,13 @@ look_at = [0, 0, 0]
 vfov = 90
 
 [[render_settings]]
-threads=22
-filename = "light_tracing"
-integrator="LT"
-max_bounces = 8
-resolution.width = 1024
-resolution.height = 1024
-min_samples = 30
+threads=1
+filename = "bdpt"
+integrator="BDPT"
+max_bounces = 4
+resolution.width = 512
+resolution.height = 512
+min_samples = 1
 camera_id = 1
 russian_roulette = true
 only_direct = false

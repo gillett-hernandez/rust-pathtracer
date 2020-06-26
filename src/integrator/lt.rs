@@ -28,8 +28,8 @@ impl Integrator for LightTracingIntegrator {
         let mut camera_vertex = if let Some(mut hit) = self.world.hit(camera_ray, 0.0, INFINITY) {
             if self.world.instance_is_light(hit.instance_id) {
                 let material: &Box<dyn Material> = &self.world.get_material(hit.material);
-                let (lambda, lambda_pdf) = material
-                    .sample_emission_spectra(VISIBLE_RANGE, wavelength_sample)
+                let (lambda, _lambda_pdf) = material
+                    .sample_emission_spectra(hit.uv, VISIBLE_RANGE, wavelength_sample)
                     .expect("instance marked as light did not have any emission spectra");
                 hit.lambda = lambda;
                 let frame = TangentFrame::from_normal(hit.normal);
@@ -52,7 +52,7 @@ impl Integrator for LightTracingIntegrator {
                     .environment
                     .sample_spd((u, v), VISIBLE_RANGE, wavelength_sample);
 
-            let (world_emission, pdf) = world_emission.expect("world env could not be sampled");
+            let (world_emission, _pdf) = world_emission.expect("world env could not be sampled");
             return world_emission;
             // return world_emission.with_energy(world_emission.energy / pdf.0);
         };
@@ -69,10 +69,10 @@ impl Integrator for LightTracingIntegrator {
         if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
             light_pick_sample.x =
                 (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
-            let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
+            let (light, _pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
-            let (light_surface_point, light_surface_normal) =
+            let (light_surface_point, light_surface_normal, _area_pdf) =
                 light.sample_surface(sampler.draw_2d());
 
             let mat_id = light.get_material_id();

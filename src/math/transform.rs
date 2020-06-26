@@ -196,6 +196,10 @@ impl Transform3 {
             reverse: reverse,
         }
     }
+
+    pub fn axis_transform(&self) -> (Vec3, Vec3, Vec3) {
+        (*self * Vec3::X, *self * Vec3::Y, *self * Vec3::Z)
+    }
 }
 
 impl From<nalgebra::Matrix4<f32>> for Matrix4x4 {

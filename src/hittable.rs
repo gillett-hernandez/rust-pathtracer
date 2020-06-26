@@ -48,16 +48,23 @@ impl Debug for HitRecord {
 use std::marker::{Send, Sync};
 
 pub trait Hittable: Send + Sync + HasBoundingBox {
+    // unrelated to light sampling
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord>;
-    // method that should implement sampling a direction subtended by the solid angle of Self from point P
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF);
-    // method that should implement randomly sampling a point and normal on the surface of the object in object space
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3);
-    // method that should implement evaluating the pdf value of that sample having occurred, assuming random hemisphere sampling.
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF;
-    fn surface_area(&self, transform: &Transform3) -> f32;
     fn get_instance_id(&self) -> usize;
     fn get_material_id(&self) -> MaterialId;
+
+    // methods related to when the Hittable is an Emissive
+    // method that should implement sampling a direction subtended by the solid angle of Self from point P
+    // returns the solid angle PDF.
+    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF);
+    // method that should implement randomly sampling a point and normal on the surface of the object in object space
+    // returns a point on the surface, the normal at that point, and the probability of that Point being chosen
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF);
+
+    // method that should implement the solid angle pdf of sampling this hittable from Vertex {from, normal}
+    // to is on the surface of the hittable/light
+    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF;
+    fn surface_area(&self, transform: &Transform3) -> f32;
 }
 
 // a supertrait of Hittable that allows indexing into it

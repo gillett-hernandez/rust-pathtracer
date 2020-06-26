@@ -356,7 +356,7 @@ fn main() -> () {
     let mut cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
     let renderer = construct_renderer(&config);
     // get settings for each film
-    for (render_id, render_settings) in config.render_settings.iter().enumerate() {
+    for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
         let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
 
         let (width, height) = (
