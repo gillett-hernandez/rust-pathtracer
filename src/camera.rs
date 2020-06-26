@@ -2,7 +2,7 @@ use crate::math::*;
 use std::marker::{Send, Sync};
 
 pub struct CameraId(usize);
-pub trait Camera: Send + Sync {
+pub trait Camera: Send + Sync + Copy + Clone + Sized {
     fn get_ray(&self, s: f32, t: f32) -> Ray;
     fn modify_aspect_ratio(&mut self, aspect_ratio: f32);
 }

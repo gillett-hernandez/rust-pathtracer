@@ -7,15 +7,14 @@ use crate::config::Config;
 use crate::config::RenderSettings;
 use crate::integrator::*;
 use crate::math::*;
-use crate::world::World;
 use crate::tonemap::sRGB;
+use crate::world::World;
 
 use std::io::Write;
 // use std::sync::Arc;
 use std::time::Instant;
 
 use rayon::prelude::*;
-
 
 // fn construct_integrator(
 //     settings: &RenderSettings,
@@ -33,55 +32,16 @@ pub struct NaiveRenderer {
 
 impl NaiveRenderer {
     pub fn new(world: World) -> NaiveRenderer {
-        NaiveRenderer {world}
+        NaiveRenderer { world }
     }
-}
 
-pub trait Renderer {
-    fn render(&self, cameras: Vec<Box<dyn Camera>>, config: &Config) -> Vec<Film<XYZColor>>;
-}
-
-impl Renderer for NaiveRenderer {
-    fn render(&self, mut cameras: Vec<Box<dyn Camera>>, config: &Config) -> Vec<Film<XYZColor>> {
-        // bin the render settings into bins corresponding to what integrator they need.
-
-        let mut bundled_cameras: Vec<Box<dyn Camera>> = Vec::new();
-        let mut splatted_renders = Vec<&RenderSettings> = Vec::new();
-        let mut films: Vec<Film<XYZColor>> = Vec::new();
-        let mut sampled_renders: Vec<&RenderSettings> = Vec::new();
-
-
-        // phase 1, gather and sort what renders need to be done
-        for (_render_id, mut render_settings) in config.render_settings.iter().enumerate() {
-            let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
-
-            let (width, height) = (
-                render_settings.resolution.width,
-                render_settings.resolution.height,
-            );
-            let aspect_ratio = width as f32 / height as f32;
-
-            // copy camera and modify its aspect ratio (so that uv splatting works correctly)
-            let mut copied_camera = cameras[camera_id].copy();
-            copied_camera.modify_aspect_ratio(aspect_ratio);
-
-            match IntegratorType::from(render_settings.integrator.unwrap_or("PT")) {
-                    IntegratorType::PathTracing => {
-                        sampled_renders.push(render_settings.clone())
-                    }
-                _ => {// then determine new camera id
-                    render_settings.camera_id = bundled_cameras.len();
-
-                    // and push to cameras to be used for splatting
-                    bundled_cameras.push(copied_camera);
-                    splatted_renders.push(render_settings.clone());}
-            }
-
-        }
-            // phase 2, for renders that don't require a splatted render, do them first
-        let width = film.width;
-        let height = film.height;
-
+    pub fn render_sampled(
+        integrator: Integrator,
+        settings: &RenderSettings,
+        camera: &Box<dyn Camera>,
+    ) -> Film<XYZColor> {
+        let (width, height) = (settings.resolution.width, settings.resolution.height);
+        let film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
         for _ in 0..100 {
             print!("-");
         }
@@ -128,5 +88,71 @@ impl Renderer for NaiveRenderer {
                 // }
             });
         println!("");
+    }
+    pub fn render_splatted(
+        integrator: Integrator,
+        renders: Vec<RenderSettings>,
+    ) -> Vec<Film<XYZColor>> {
+        Vec::new()
+    }
+}
+
+pub trait Renderer {
+    fn render(&self, cameras: Vec<Box<dyn Camera>>, config: &Config);
+}
+
+impl Renderer for NaiveRenderer {
+    fn render(&self, mut cameras: Vec<Box<dyn Camera>>, config: &Config) {
+        // bin the render settings into bins corresponding to what integrator they need.
+
+        let mut bundled_cameras: Vec<Box<dyn Camera>> = Vec::new();
+        let mut splatted_renders: Vec<RenderSettings> = Vec::new();
+        let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
+        let mut sampled_renders: Vec<RenderSettings> = Vec::new();
+
+        // phase 1, gather and sort what renders need to be done
+        for (_render_id, mut render_settings) in config.render_settings.iter().enumerate() {
+            let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
+
+            let (width, height) = (
+                render_settings.resolution.width,
+                render_settings.resolution.height,
+            );
+            let aspect_ratio = width as f32 / height as f32;
+
+            // copy camera and modify its aspect ratio (so that uv splatting works correctly)
+            let mut copied_camera = cameras[camera_id].copy();
+            copied_camera.modify_aspect_ratio(aspect_ratio);
+
+            match IntegratorType::from(render_settings.integrator.unwrap_or("PT".into()).into()) {
+                IntegratorType::PathTracing => sampled_renders.push(render_settings.clone()),
+                _ => {
+                    // then determine new camera id
+                    render_settings.camera_id = Some(bundled_cameras.len() as u16);
+
+                    // and push to cameras to be used for splatting
+                    bundled_cameras.push(copied_camera);
+                    splatted_renders.push(render_settings.clone());
+                }
+            }
+        }
+        // phase 2, for renders that don't require a splatted render, do them first
+        for render in sampled_renders.iter() {
+            films.push((render, self.render_sampled(render)));
+        }
+
+        // phase 3, do renders where cameras can be combined
+
+        // phase 4: tonemap and output all films
+
+        for (render_settings, film) in films.iter() {
+            let filename = render_settings.filename.as_ref();
+            let filename_str = filename.cloned().unwrap_or(String::from("output"));
+            let exr_filename = format!("output/{}.exr", filename_str);
+            let png_filename = format!("output/{}.png", filename_str);
+
+            let srgb_tonemapper = sRGB::new(&film, 1.0);
+            srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
+        }
     }
 }

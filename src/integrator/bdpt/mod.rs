@@ -21,6 +21,7 @@ pub struct BDPTIntegrator {
     pub world: Arc<World>,
     pub specific_pair: Option<(usize, usize)>,
     pub cameras: Vec<Box<dyn Camera>>,
+    pub camera_id: CameraId,
 }
 
 impl GenericIntegrator for BDPTIntegrator {
@@ -29,6 +30,7 @@ impl GenericIntegrator for BDPTIntegrator {
 
         let wavelength_sample = sampler.draw_1d();
         let mut light_pick_sample = sampler.draw_1d();
+        let camera = self.cameras[self.camera_id];
 
         let scene_light_sampling_probability = self.world.get_env_sampling_probability();
 

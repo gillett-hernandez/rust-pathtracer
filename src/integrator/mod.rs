@@ -45,6 +45,7 @@ impl Integrator {
                 world,
                 specific_pair: None,
                 cameras,
+                camera_id: settings.camera_id.unwrap() as usize,
             }),
             IntegratorType::LightTracing => Integrator::LightTracing(LightTracingIntegrator {
                 max_bounces: 10,
