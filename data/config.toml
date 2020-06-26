@@ -17,13 +17,13 @@ look_at = [0, 0, 0]
 vfov = 90
 
 [[render_settings]]
-threads=1
+threads=22
 filename = "bdpt"
 integrator="BDPT"
-max_bounces = 8
-resolution.width = 512
-resolution.height = 512
-min_samples = 1
+max_bounces = 16
+resolution.width = 1024
+resolution.height = 1024
+min_samples = 100
 camera_id = 1
 russian_roulette = true
 only_direct = false

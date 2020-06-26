@@ -368,10 +368,10 @@ mod tests {
             (0.0f32, 0.0f32),
             lambda,
             Vec3::ZERO,
-            None,
+            0,
             0,
         );
-        let maybe_wo = ggx_glass.generate(&fake_hit_record, &mut sampler, wi);
+        let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), wi);
         if let Some(wo) = maybe_wo {
             println!("sampled wo is {:?}", wo);
             let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);

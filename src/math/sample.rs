@@ -210,7 +210,7 @@ mod test {
     fn test_stratified_sampler_2d() {
         let mut sampler = Box::new(StratifiedSampler::new(10, 10, 10));
 
-        for i in 0..1000000 {
+        for _i in 0..1000000 {
             let sample = sampler.draw_2d();
             assert!(0.0 <= sample.x && sample.x <= 1.0, "{}", sample.x);
             assert!(0.0 <= sample.y && sample.y <= 1.0, "{}", sample.y);

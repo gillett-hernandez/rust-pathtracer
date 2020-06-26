@@ -1,5 +1,6 @@
 // #![allow(unused_imports, unused_variables, unused)]
-#![feature(clamp)]
+#![feature(clamp, slice_fill)]
+
 extern crate image;
 
 #[macro_use]
@@ -23,7 +24,7 @@ pub mod tonemap;
 pub mod world;
 
 use camera::{Camera, SimpleCamera};
-use config::{get_settings, RenderSettings, Settings};
+use config::{get_settings, RenderSettings, Config};
 use geometry::{AARect, Aggregate, Instance, Sphere};
 
 use integrator::*;
@@ -42,61 +43,7 @@ use std::time::Instant;
 
 // use rayon::prelude::*;
 
-fn construct_integrator(settings: &RenderSettings, world: Arc<World>) -> Box<dyn Integrator> {
-    let max_bounces = settings.max_bounces.unwrap_or(1);
-    let russian_roulette = settings.russian_roulette.unwrap_or(true);
-    let light_samples = settings.light_samples.unwrap_or(4);
-    let only_direct = settings.only_direct.unwrap_or(false);
-
-    match settings
-        .integrator
-        .as_ref()
-        .unwrap_or(&"PT".to_string())
-        .as_ref()
-    {
-        "PT" => {
-            println!(
-                "constructing path tracing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
-                max_bounces, russian_roulette, light_samples
-            );
-            Box::new(PathTracingIntegrator {
-                max_bounces,
-                world,
-                russian_roulette,
-                light_samples,
-                only_direct,
-            })
-        }
-        "LT" => {
-            println!("constructing light tracing integrator");
-            Box::new(LightTracingIntegrator {
-                max_bounces,
-                world,
-                russian_roulette,
-            })
-        }
-        "BDPT" => {
-            println!(
-                "constructing BDPT integrator with selected pair {:?}",
-                settings.selected_pair
-            );
-            Box::new(BDPTIntegrator {
-                max_bounces,
-                world,
-                specific_pair: settings.selected_pair,
-            })
-        }
-        _ => Box::new(PathTracingIntegrator {
-            max_bounces,
-            world,
-            russian_roulette,
-            light_samples,
-            only_direct,
-        }),
-    }
-}
-
-fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
+fn parse_cameras_from(settings: &Config) -> Vec<Box<dyn Camera>> {
     let mut cameras = Vec::<Box<dyn Camera>>::new();
     for camera_config in &settings.cameras {
         let camera: Box<dyn Camera> = match camera_config {
@@ -120,7 +67,7 @@ fn parse_cameras_from(settings: &Settings) -> Vec<Box<dyn Camera>> {
     cameras
 }
 
-fn construct_renderer(_settings: &Settings) -> Box<dyn Renderer> {
+fn construct_renderer(_settings: &Config) -> Box<dyn Renderer> {
     println!("constructing renderer");
     Box::new(NaiveRenderer::new())
 }
@@ -311,27 +258,17 @@ fn construct_scene() -> World {
     cornell_box(white, 0.2)
 }
 
-fn render(
-    renderer: &Box<dyn Renderer>,
-    camera: &Box<dyn Camera>,
-    render_settings: &RenderSettings,
-    world: &Arc<World>,
-) -> Film<XYZColor> {
-    let mut film: Film<XYZColor> = Film::new(
-        render_settings.resolution.width,
-        render_settings.resolution.height,
-        XYZColor::BLACK,
-    );
-    let world_ref: Arc<World> = Arc::clone(world);
-    let integrator: Arc<Box<dyn Integrator>> =
-        Arc::new(construct_integrator(render_settings, world_ref));
-    // let camera_ref = camera.clone();
-    renderer.render(integrator.clone(), camera, render_settings, &mut film);
-    film
-}
+// fn render(
+//     renderer: &Box<dyn Renderer>,
+//     camera: &Box<dyn Camera>,
+//     render_settings: &RenderSettings,
+//     world: &Arc<World>,
+// ) -> Film<XYZColor> {
+
+// }
 
 fn main() -> () {
-    let config: Settings = match get_settings("data/config.toml".to_string()) {
+    let config: Config = match get_settings("data/config.toml".to_string()) {
         Ok(expr) => expr,
         Err(v) => {
             println!("{:?}", "couldn't read config.toml");
@@ -354,48 +291,10 @@ fn main() -> () {
     let world = Arc::new(construct_scene());
 
     let mut cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
+    // some integrators only work with certain renderers.
+    // collect the render settings bundles that apply to certain integrators, and correlate them with their corresponding renderers.
+    // use multiple renderers if necessary
+    
     let renderer = construct_renderer(&config);
-    // get settings for each film
-    for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
-        let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
-
-        let (width, height) = (
-            render_settings.resolution.width,
-            render_settings.resolution.height,
-        );
-        println!("starting render with film resolution {}x{}", width, height);
-        let min_camera_rays = width * height * render_settings.min_samples as usize;
-        println!("minimum total samples: {}", min_camera_rays);
-
-        let aspect_ratio = width as f32 / height as f32;
-
-        let now = Instant::now();
-
-        &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
-
-        let film = render(&renderer, &cameras[camera_id], &render_settings, &world);
-
-        let total_camera_rays = film.total_pixels()
-            * (render_settings
-                .max_samples
-                .unwrap_or(render_settings.min_samples) as usize);
-
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-
-        // do stuff with film here
-
-        let filename = render_settings.filename.as_ref();
-        let filename_str = filename.cloned().unwrap_or(String::from("output"));
-        let exr_filename = format!("output/{}.exr", filename_str);
-        let png_filename = format!("output/{}.png", filename_str);
-
-        let srgb_tonemapper = tonemap::sRGB::new(&film, 10.0);
-        srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
-        println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread",
-            elapsed,
-            (total_camera_rays as f32) / elapsed,
-            (total_camera_rays as f32) / elapsed / (render_settings.threads.unwrap() as f32)
-        );
-    }
+    renderer.render(&cameras, config);
 }
