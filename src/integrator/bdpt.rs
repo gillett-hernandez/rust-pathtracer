@@ -231,12 +231,6 @@ pub fn eval_unweighted_contribution(
             frame.to_local(&wi).normalized(),
             None,
         );
-        // if cst.0 > 0.0 {
-        //     println!(
-        //         "{:?}, {:?}, {:?}",
-        //         cst, last_eye_vertex.material_id, last_eye_vertex.instance_id
-        //     );
-        // }
         g = 1.0;
     } else if t_eye_idx == 0 {
         // since the light path actually directly hit the camera, ignore it for now. maybe add it to a splatting queue once a more sophisticated renderer is implemented
@@ -259,7 +253,6 @@ pub fn eval_unweighted_contribution(
         let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
         let fsl = if s_light_idx == 1 {
             // connected to surface of light
-            // issue here. debug.
 
             let hit_light_material = world.get_material(last_light_vertex.material_id);
             let emission = hit_light_material.emission(
@@ -267,13 +260,6 @@ pub fn eval_unweighted_contribution(
                 llv_local_light_to_eye,
                 None,
             );
-            // if last_eye_vertex.instance_id == 8 && emission.0 < 0.1 {
-            //     println!(
-            //         "{:?} connecting to point {:?} (with wi of {:?})resulted in emission of {}",
-            //         last_light_vertex, last_eye_vertex.point, llv_local_light_to_eye, emission.0
-            //     );
-            // }
-            // assert!(emission.0 > 0.0);
             emission
         } else {
             let second_to_last_light_vertex = light_path[s_light_idx - 2];
@@ -287,9 +273,6 @@ pub fn eval_unweighted_contribution(
         };
 
         if fsl == SingleEnergy::ZERO {
-            // if last_eye_vertex.instance_id == 8 {
-            //     println!("returning 0 at line 281");
-            // }
             return (SingleEnergy::ZERO, 0.0);
         }
 
@@ -311,19 +294,10 @@ pub fn eval_unweighted_contribution(
                 lev_frame.to_local(&wi).normalized(),
                 lev_local_eye_to_light,
             );
-            // if last_eye_vertex.instance_id == 8 && reflectance.0 < 0.2 {
-            //     println!(
-            //         "{:?} connecting to point {:?} (with wi of {:?})resulted in reflectance of {}",
-            //         last_light_vertex, last_eye_vertex.point, lev_local_eye_to_light, reflectance.0
-            //     );
-            // }
             reflectance
         };
 
         if fse == SingleEnergy::ZERO {
-            // if last_eye_vertex.instance_id == 8 {
-            //     println!("returning 0 at line 315");
-            // }
             return (SingleEnergy::ZERO, 0.0);
         }
 
@@ -333,17 +307,11 @@ pub fn eval_unweighted_contribution(
         );
         g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
         if g == 0.0 {
-            // if last_eye_vertex.instance_id == 8 {
-            //     println!("returning 0 at line 327");
-            // }
             return (SingleEnergy::ZERO, 0.0);
         }
 
         if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
             // not visible
-            // if last_eye_vertex.instance_id == 8 {
-            //     println!("returning 0 at line 336");
-            // }
             return (SingleEnergy::ZERO, 0.0);
         }
         cst = fsl * g * fse;
@@ -364,7 +332,6 @@ pub fn eval_mis(
     veach_g: f32,
     mis_nodes: &Vec<(f32, f32, bool)>,
 ) -> f32 {
-    
     1.0
 }
 

@@ -153,11 +153,16 @@ impl Integrator for LightTracingIntegrator {
                 // connection succeeded?
                 // this emulates g function
 
-                let lp_to_cv = Ray::new(hit.point, (camera_vertex.point - hit.point).normalized());
+                let tmax = (camera_vertex.point - hit.point).norm() * 0.98;
+                let lp_to_cv = Ray::new_with_time_and_tmax(
+                    hit.point,
+                    (camera_vertex.point - hit.point).normalized(),
+                    0.0,
+                    tmax,
+                );
 
-                let tmax = (camera_vertex.point - hit.point).norm() * 0.99;
                 // this conditional serves as the V term, checking if the camera vertex and light vertex can see each other
-                if self.world.hit(lp_to_cv, 0.0, tmax).is_none() {
+                if self.world.hit(lp_to_cv, 0.01, tmax).is_none() {
                     let lp_wi = wi;
                     let lp_wo = frame.to_local(&lp_to_cv.direction);
                     let lp_reflectance = material.f(&hit, lp_wi, lp_wo);
