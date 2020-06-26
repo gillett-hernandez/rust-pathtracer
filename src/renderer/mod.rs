@@ -8,127 +8,77 @@ use crate::config::RenderSettings;
 use crate::integrator::*;
 use crate::math::*;
 use crate::world::World;
+use crate::tonemap::sRGB;
 
 use std::io::Write;
-use std::sync::Arc;
+// use std::sync::Arc;
+use std::time::Instant;
 
 use rayon::prelude::*;
 
-fn construct_integrator(
-    settings: &RenderSettings,
-    world: Arc<World>,
-) -> Box<dyn SamplerIntegrator> {
-    let max_bounces = settings.max_bounces.unwrap_or(1);
-    let russian_roulette = settings.russian_roulette.unwrap_or(true);
-    let light_samples = settings.light_samples.unwrap_or(4);
-    let only_direct = settings.only_direct.unwrap_or(false);
 
-    match settings
-        .integrator
-        .as_ref()
-        .unwrap_or(&"PT".to_string())
-        .as_ref()
-    {
-        "PT" => {
-            println!(
-                "constructing path tracing integrator, max bounces: {},\nrussian_roulette: {}, light_samples: {}",
-                max_bounces, russian_roulette, light_samples
-            );
-            Box::new(PathTracingIntegrator {
-                max_bounces,
-                world,
-                russian_roulette,
-                light_samples,
-                only_direct,
-            })
-        }
-        "LT" => {
-            println!("constructing light tracing integrator");
-            Box::new(LightTracingIntegrator {
-                max_bounces,
-                world,
-                russian_roulette,
-            })
-        }
-        "BDPT" => {
-            println!(
-                "constructing BDPT integrator with selected pair {:?}",
-                settings.selected_pair
-            );
-            Box::new(BDPTIntegrator {
-                max_bounces,
-                world,
-                specific_pair: settings.selected_pair,
-            })
-        }
-        _ => Box::new(PathTracingIntegrator {
-            max_bounces,
-            world,
-            russian_roulette,
-            light_samples,
-            only_direct,
-        }),
-    }
+// fn construct_integrator(
+//     settings: &RenderSettings,
+//     world: Arc<World>,
+// ) -> Box<dyn SamplerIntegrator> {
+//     let max_bounces = settings.max_bounces.unwrap_or(1);
+//     let russian_roulette = settings.russian_roulette.unwrap_or(true);
+//     let light_samples = settings.light_samples.unwrap_or(4);
+//     let only_direct = settings.only_direct.unwrap_or(false);
+// }
+
+pub struct NaiveRenderer {
+    world: World,
 }
-pub struct NaiveRenderer {}
 
 impl NaiveRenderer {
-    pub fn new() -> NaiveRenderer {
-        NaiveRenderer {}
+    pub fn new(world: World) -> NaiveRenderer {
+        NaiveRenderer {world}
     }
 }
 
 pub trait Renderer {
-    fn render(&self, cameras: &Vec<Box<dyn Camera>>, settings: &Config, film: &mut Film<XYZColor>);
+    fn render(&self, cameras: Vec<Box<dyn Camera>>, config: &Config) -> Vec<Film<XYZColor>>;
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, camera: &Vec<Box<dyn Camera>>, config: &Config) -> Vec<Film<XYZColor>> {
-        // get settings for each film
-        for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
+    fn render(&self, mut cameras: Vec<Box<dyn Camera>>, config: &Config) -> Vec<Film<XYZColor>> {
+        // bin the render settings into bins corresponding to what integrator they need.
+
+        let mut bundled_cameras: Vec<Box<dyn Camera>> = Vec::new();
+        let mut splatted_renders = Vec<&RenderSettings> = Vec::new();
+        let mut films: Vec<Film<XYZColor>> = Vec::new();
+        let mut sampled_renders: Vec<&RenderSettings> = Vec::new();
+
+
+        // phase 1, gather and sort what renders need to be done
+        for (_render_id, mut render_settings) in config.render_settings.iter().enumerate() {
             let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
 
             let (width, height) = (
                 render_settings.resolution.width,
                 render_settings.resolution.height,
             );
-            println!("starting render with film resolution {}x{}", width, height);
-            let min_camera_rays = width * height * render_settings.min_samples as usize;
-            println!("minimum total samples: {}", min_camera_rays);
-
             let aspect_ratio = width as f32 / height as f32;
 
-            let now = Instant::now();
+            // copy camera and modify its aspect ratio (so that uv splatting works correctly)
+            let mut copied_camera = cameras[camera_id].copy();
+            copied_camera.modify_aspect_ratio(aspect_ratio);
 
-            &cameras[camera_id].modify_aspect_ratio(aspect_ratio);
+            match IntegratorType::from(render_settings.integrator.unwrap_or("PT")) {
+                    IntegratorType::PathTracing => {
+                        sampled_renders.push(render_settings.clone())
+                    }
+                _ => {// then determine new camera id
+                    render_settings.camera_id = bundled_cameras.len();
 
-            let film = renderer.render(&cameras[camera_id], &render_settings, &world);
+                    // and push to cameras to be used for splatting
+                    bundled_cameras.push(copied_camera);
+                    splatted_renders.push(render_settings.clone());}
+            }
 
-            let total_camera_rays = film.total_pixels()
-                * (render_settings
-                    .max_samples
-                    .unwrap_or(render_settings.min_samples) as usize);
-
-            let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-
-            // do stuff with film here
-
-            let filename = render_settings.filename.as_ref();
-            let filename_str = filename.cloned().unwrap_or(String::from("output"));
-            let exr_filename = format!("output/{}.exr", filename_str);
-            let png_filename = format!("output/{}.png", filename_str);
-
-            let srgb_tonemapper = tonemap::sRGB::new(&film, 10.0);
-            srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
-            println!(
-                "\ntook {}s at {} rays per second and {} rays per second per thread",
-                elapsed,
-                (total_camera_rays as f32) / elapsed,
-                (total_camera_rays as f32) / elapsed / (render_settings.threads.unwrap() as f32)
-            );
         }
-        // for y in 0..film.height {
-        //     for x in 0..film.width {
+            // phase 2, for renders that don't require a splatted render, do them first
         let width = film.width;
         let height = film.height;
 

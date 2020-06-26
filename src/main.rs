@@ -24,7 +24,7 @@ pub mod tonemap;
 pub mod world;
 
 use camera::{Camera, SimpleCamera};
-use config::{get_settings, RenderSettings, Config};
+use config::{get_settings, Config, RenderSettings};
 use geometry::{AARect, Aggregate, Instance, Sphere};
 
 use integrator::*;
@@ -65,11 +65,6 @@ fn parse_cameras_from(settings: &Config) -> Vec<Box<dyn Camera>> {
         cameras.push(camera);
     }
     cameras
-}
-
-fn construct_renderer(_settings: &Config) -> Box<dyn Renderer> {
-    println!("constructing renderer");
-    Box::new(NaiveRenderer::new())
 }
 
 #[allow(dead_code)]
@@ -288,13 +283,14 @@ fn main() -> () {
 
     // do_prerender_steps(config);
 
-    let world = Arc::new(construct_scene());
+    let world = construct_scene();
 
     let mut cameras: Vec<Box<dyn Camera>> = parse_cameras_from(&config);
     // some integrators only work with certain renderers.
     // collect the render settings bundles that apply to certain integrators, and correlate them with their corresponding renderers.
     // use multiple renderers if necessary
-    
-    let renderer = construct_renderer(&config);
+
+    // let renderer = construct_renderer(&config);
+    let renderer = NaiveRenderer::new(world);
     renderer.render(&cameras, config);
 }
