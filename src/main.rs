@@ -213,8 +213,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
 
     let env_map = EnvironmentMap::new(cie_e_world_illuminant);
-    let diffuse_light_sphere =
-        Box::new(DiffuseLight::new(blackbody_illuminant, Sidedness::Reverse));
+    let diffuse_light = Box::new(DiffuseLight::new(blackbody_illuminant, Sidedness::Dual));
 
     let world = World {
         accelerator: Accelerator::new(
@@ -279,6 +278,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
                     7,
                 ))),
                 Instance::from(Aggregate::from(AARect::new(
+                    // back wall
                     (2.0, 2.0),
                     Point3::new(1.0, 0.0, 0.0),
                     Axis::X,
@@ -294,7 +294,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         environment: env_map,
         materials: vec![
             ggx_glass,
-            diffuse_light_sphere,
+            diffuse_light,
             lambertian_white,
             lambertian_blue,
             lambertian_red,
@@ -381,14 +381,7 @@ fn main() -> () {
                 .unwrap_or(render_settings.min_samples) as usize);
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread",
-            elapsed,
-            (total_camera_rays as f32) / elapsed,
-            (total_camera_rays as f32) / elapsed / (render_settings.threads.unwrap() as f32)
-        );
 
-        let now = Instant::now();
         // do stuff with film here
 
         let filename = render_settings.filename.as_ref();
@@ -396,8 +389,13 @@ fn main() -> () {
         let exr_filename = format!("output/{}.exr", filename_str);
         let png_filename = format!("output/{}.png", filename_str);
 
-        let srgb_tonemapper = tonemap::sRGB::new(&film, 2.0);
+        let srgb_tonemapper = tonemap::sRGB::new(&film, 10.0);
         srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
-        println!("took {}s", (now.elapsed().as_millis() as f32) / 1000.0);
+        println!(
+            "\ntook {}s at {} rays per second and {} rays per second per thread",
+            elapsed,
+            (total_camera_rays as f32) / elapsed,
+            (total_camera_rays as f32) / elapsed / (render_settings.threads.unwrap() as f32)
+        );
     }
 }

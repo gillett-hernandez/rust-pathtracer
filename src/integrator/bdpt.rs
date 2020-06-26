@@ -93,13 +93,23 @@ pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
 }
 
-pub fn veach_v(world: &Arc<World>, eye_point: Point3, light_point: Point3) -> bool {
-    let diff = light_point - eye_point;
+pub fn veach_v(world: &Arc<World>, point0: Point3, point1: Point3) -> bool {
+    // returns if the points are visible
+    let diff = point1 - point0;
     let norm = diff.norm();
-    let cam_to_light = Ray::new(eye_point, diff / norm);
-
-    let tmax = norm * 0.99;
-    world.hit(cam_to_light, 0.0, tmax).is_none()
+    let tmax = norm * 0.95;
+    let point0_to_point1 = Ray::new_with_time_and_tmax(point0, diff / norm, 0.0, tmax);
+    let hit = world.hit(point0_to_point1, 0.01, tmax);
+    // if (point0.x() == 1.0 || point1.x() == 1.0) && !hit.as_ref().is_none() {
+    //     // from back wall to something
+    //     println!(
+    //         "{:?} {:?}, hit was {:?}",
+    //         point0,
+    //         point1,
+    //         hit.as_ref().unwrap()
+    //     );
+    // }
+    hit.is_none()
 }
 
 pub fn random_walk(
@@ -113,13 +123,12 @@ pub fn random_walk(
     vertices: &mut Vec<Vertex>,
 ) {
     let mut beta = start_throughput;
-    for _ in 0..bounce_limit {
+    for vert_idx in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, INFINITY) {
             hit.lambda = lambda;
-            let id = hit.material as usize;
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
-            let material: &Box<dyn Material> = &world.materials[id as usize];
+            let material: &Box<dyn Material> = &world.materials[hit.material as usize];
 
             // let emission = material.emission(&hit, wi, None);
             // if emission.0 > 0.0 && trace_type == Type::Eye {
@@ -132,7 +141,7 @@ pub fn random_walk(
                 hit.lambda,
                 hit.point,
                 hit.normal,
-                id as MaterialId,
+                hit.material,
                 hit.instance_id,
                 beta,
                 0.0,
@@ -159,11 +168,14 @@ pub fn random_walk(
                 }
 
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
+
                 vertices.push(vertex);
 
                 let f = material.f(&hit, wi, wo);
 
+                let beta_before_hit = beta;
                 beta *= f * cos_i.abs() / pdf.0;
+
                 debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
 
                 // add normal to avoid self intersection
@@ -247,13 +259,24 @@ pub fn eval_unweighted_contribution(
         let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
         let fsl = if s_light_idx == 1 {
             // connected to surface of light
-            let hit_light_material = world.get_material(last_light_vertex.material_id);
+            // issue here. debug.
 
-            hit_light_material.emission(&last_light_vertex.into(), llv_local_light_to_eye, None)
+            let hit_light_material = world.get_material(last_light_vertex.material_id);
+            let emission = hit_light_material.emission(
+                &last_light_vertex.into(),
+                llv_local_light_to_eye,
+                None,
+            );
+            // if last_eye_vertex.instance_id == 8 && emission.0 < 0.1 {
+            //     println!(
+            //         "{:?} connecting to point {:?} (with wi of {:?})resulted in emission of {}",
+            //         last_light_vertex, last_eye_vertex.point, llv_local_light_to_eye, emission.0
+            //     );
+            // }
+            // assert!(emission.0 > 0.0);
+            emission
         } else {
             let second_to_last_light_vertex = light_path[s_light_idx - 2];
-            let normal = last_light_vertex.normal;
-            let frame = TangentFrame::from_normal(normal);
             let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
             let hit_material = world.get_material(last_light_vertex.material_id);
             hit_material.f(
@@ -264,6 +287,9 @@ pub fn eval_unweighted_contribution(
         };
 
         if fsl == SingleEnergy::ZERO {
+            // if last_eye_vertex.instance_id == 8 {
+            //     println!("returning 0 at line 281");
+            // }
             return (SingleEnergy::ZERO, 0.0);
         }
 
@@ -278,16 +304,26 @@ pub fn eval_unweighted_contribution(
         } else {
             let second_to_last_eye_vertex = eye_path[t_eye_idx - 2];
             let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
-
+            // let wo = -light_to_eye;
             let hit_material = world.get_material(last_eye_vertex.material_id);
-            hit_material.f(
+            let reflectance = hit_material.f(
                 &last_eye_vertex.into(),
                 lev_frame.to_local(&wi).normalized(),
                 lev_local_eye_to_light,
-            )
+            );
+            // if last_eye_vertex.instance_id == 8 && reflectance.0 < 0.2 {
+            //     println!(
+            //         "{:?} connecting to point {:?} (with wi of {:?})resulted in reflectance of {}",
+            //         last_light_vertex, last_eye_vertex.point, lev_local_eye_to_light, reflectance.0
+            //     );
+            // }
+            reflectance
         };
 
         if fse == SingleEnergy::ZERO {
+            // if last_eye_vertex.instance_id == 8 {
+            //     println!("returning 0 at line 315");
+            // }
             return (SingleEnergy::ZERO, 0.0);
         }
 
@@ -297,15 +333,22 @@ pub fn eval_unweighted_contribution(
         );
         g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
         if g == 0.0 {
+            // if last_eye_vertex.instance_id == 8 {
+            //     println!("returning 0 at line 327");
+            // }
             return (SingleEnergy::ZERO, 0.0);
         }
 
         if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
             // not visible
+            // if last_eye_vertex.instance_id == 8 {
+            //     println!("returning 0 at line 336");
+            // }
             return (SingleEnergy::ZERO, 0.0);
         }
         cst = fsl * g * fse;
     }
+
     (
         last_light_vertex_throughput * cst * last_eye_vertex_throughput,
         g,
@@ -321,6 +364,7 @@ pub fn eval_mis(
     veach_g: f32,
     mis_nodes: &Vec<(f32, f32, bool)>,
 ) -> f32 {
+    
     1.0
 }
 

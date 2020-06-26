@@ -62,6 +62,12 @@ impl Div<f32> for SingleEnergy {
     }
 }
 
+impl From<f32> for SingleEnergy {
+    fn from(value: f32) -> Self {
+        SingleEnergy::new(value)
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct SingleWavelength {
     pub lambda: f32,

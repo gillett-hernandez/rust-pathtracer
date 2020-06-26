@@ -14,6 +14,7 @@ pub trait Material: Send + Sync {
         None
     }
     // method to sample an emitted light ray with a wavelength and energy
+    // can fail when the material is not emissive
     fn sample_emission(
         &self,
         point: Point3,

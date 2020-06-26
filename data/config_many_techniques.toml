@@ -1,0 +1,134 @@
+[[cameras]]
+type="SimpleCamera"
+look_from = [-100, 0, 0]
+look_at = [0, 0, 0]
+vfov = 6
+
+[[cameras]]
+type="SimpleCamera"
+look_from = [-5, 0, 0]
+look_at = [0, 0, 0]
+vfov = 28
+
+[[cameras]]
+type="SimpleCamera"
+look_from = [-1, 0, 0]
+look_at = [0, 0, 0]
+vfov = 90
+
+[[render_settings]]
+threads=22
+filename = "bdpt_no_mis"
+integrator="BDPT"
+max_bounces = 8
+resolution.width = 1024
+resolution.height = 1024
+min_samples = 30
+camera_id = 1
+russian_roulette = true
+only_direct = false
+
+
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l0_e2"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [0, 2]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l4_e4"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [4, 4]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l1_e2"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [1, 2]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l2_e2"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [2, 2]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l3_e2"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [3, 2]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l4_e2"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [4, 2]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l3_e3"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [3, 3]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#
+#[[render_settings]]
+#threads=22
+#filename = "bdpt_l3_e4"
+#integrator="BDPT"
+#max_bounces = 8
+#selected_pair = [3, 4]
+#resolution.width = 1024
+#resolution.height = 1024
+#min_samples = 30
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false

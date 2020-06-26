@@ -113,5 +113,6 @@ impl Renderer for NaiveRenderer {
                 *pixel_ref = temp_color / (settings.min_samples as f32);
                 // }
             });
+        println!("");
     }
 }

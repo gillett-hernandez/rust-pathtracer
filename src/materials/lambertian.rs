@@ -28,8 +28,13 @@ impl Material for Lambertian {
 
     // implement f
 
-    fn f(&self, hit: &HitRecord, _wi: Vec3, _wo: Vec3) -> SingleEnergy {
-        SingleEnergy::new(self.color.evaluate(hit.lambda) / PI)
+    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+        let cosine = wo.z();
+        if cosine * wi.z() > 0.0 {
+            SingleEnergy::new(self.color.evaluate(hit.lambda) / PI)
+        } else {
+            0.0.into()
+        }
     }
     // fn emission(&self, _hit: &HitRecord, _wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
     //     SingleEnergy::ZERO
