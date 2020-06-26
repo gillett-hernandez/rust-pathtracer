@@ -83,7 +83,7 @@ impl Hittable for Aggregate {
 pub struct Instance {
     aggregate: Aggregate,
     transform: Option<Transform3>,
-    material_id: Option<MaterialId>,
+    material_id: MaterialId,
     instance_id: usize,
 }
 impl Instance {
@@ -91,8 +91,19 @@ impl Instance {
         aggregate: Aggregate,
         transform: Option<Transform3>,
         material_id: Option<MaterialId>,
-        instance_id: usize,
+        instance_id: Option<usize>,
     ) -> Self {
+        // steal instance id from Aggregate if not provided.
+        let instance_id = if let Some(id) = instance_id {
+            id
+        } else {
+            aggregate.get_instance_id()
+        };
+        let material_id = if let Some(id) = material_id {
+            id
+        } else {
+            aggregate.get_material_id()
+        };
         Instance {
             aggregate,
             transform,
@@ -100,6 +111,11 @@ impl Instance {
             instance_id,
         }
     }
+
+    // fn with_transform(&mut self, transform: Transform3) {
+    //     // replaces this instance's transform with a new one
+    //     self.transform = Some(transform);
+    // }
 }
 impl HasBoundingBox for Instance {
     fn bounding_box(&self) -> AABB {
@@ -169,20 +185,17 @@ impl Hittable for Instance {
         self.instance_id
     }
     fn get_material_id(&self) -> MaterialId {
-        if let Some(material_id) = self.material_id {
-            material_id
-        } else {
-            self.aggregate.get_material_id()
-        }
+        self.material_id
     }
 }
 
 impl From<Aggregate> for Instance {
     fn from(data: Aggregate) -> Self {
-        // a direct conversion directly copies the instance id. take care when duplicating instances that are referred to by lights.
+        // a direct conversion directly copies the instance id and material id.
+        // take care when duplicating instances that are referred to by lights.
         let instance_id = (&data).get_instance_id();
         let material_id = (&data).get_material_id();
-        Instance::new(data, None, Some(material_id), instance_id)
+        Instance::new(data, None, Some(material_id), Some(instance_id))
     }
 }
 
@@ -191,8 +204,8 @@ mod tests {
     use super::*;
     #[test]
     fn test_aggregate() {
-        let sphere = Sphere::new(1.0, Point3::ORIGIN, None, 0);
-        let aarect = AARect::new((1.0, 1.0), Point3::ORIGIN, Axis::X, true, None, 0);
+        let sphere = Sphere::new(1.0, Point3::ORIGIN, 0, 0);
+        let aarect = AARect::new((1.0, 1.0), Point3::ORIGIN, Axis::X, true, 0, 0);
 
         let transform = Transform3::stack(
             Some(Transform3::translation(Vec3::new(1.0, 1.0, 1.0))),
@@ -203,13 +216,13 @@ mod tests {
         let aggregate1 = Aggregate::from(sphere);
         let aggregate2 = Aggregate::from(aarect);
 
-        let aggregate1 = aggregate1.with_transform(transform);
-        let aggregate2 = aggregate2.with_transform(transform);
+        let instance1 = Instance::new(aggregate1, Some(transform), None, None);
+        let instance2 = Instance::new(aggregate2, Some(transform), None, None);
 
         let test_ray = Ray::new(Point3::ORIGIN + 10.0 * Vec3::Z, -Vec3::Z);
 
-        let isect1 = aggregate1.hit(test_ray, 0.0, 1.0);
-        let isect2 = aggregate2.hit(test_ray, 0.0, 1.0);
+        let isect1 = instance1.hit(test_ray, 0.0, 1.0);
+        let isect2 = instance2.hit(test_ray, 0.0, 1.0);
 
         if let Some(hit) = isect1 {
             println!("{:?}", hit);

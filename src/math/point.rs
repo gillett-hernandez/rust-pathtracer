@@ -3,7 +3,7 @@ use crate::math::Vec3;
 use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point3(pub f32x4);
 
 impl Point3 {
