@@ -389,7 +389,7 @@ fn main() -> () {
         let exr_filename = format!("output/{}.exr", filename_str);
         let png_filename = format!("output/{}.png", filename_str);
 
-        let srgb_tonemapper = tonemap::sRGB::new(&film, 10.0);
+        let srgb_tonemapper = tonemap::sRGB::new(&film, 1.0);
         srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
         println!(
             "\ntook {}s at {} rays per second and {} rays per second per thread",
