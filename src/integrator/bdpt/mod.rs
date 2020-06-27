@@ -131,19 +131,6 @@ impl GenericIntegrator for BDPTIntegrator {
             0.0,
             1.0,
         ));
-        eye_path.push(Vertex::new(
-            Type::Camera,
-            camera_ray.time,
-            lambda,
-            camera_ray.origin + 0.05 * camera_ray.direction,
-            camera_ray.direction,
-            0,
-            0,
-            SingleEnergy::ONE,
-            1.0,
-            1.0,
-            1.0,
-        ));
         light_path.push(start_light_vertex);
 
         let _additional_contribution = random_walk(
