@@ -3,7 +3,9 @@
 ![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/pt.png?raw=true)
 
 The above image was rendered at 1024 spp, with a disk light at 5500K and a env color emitting light at 2700K.
-The colors of the left and right walls are set to have relatively narrow peaks at 420nm(blue) and 640nm(red) respectively. the curves used are at [curves.rs](src/curves.rs)
+
+The colors of the left and right walls are set to have relatively narrow peaks at 420nm(blue) and 640nm(red) respectively. the curves used are at [curves.rs](src/curves.rs). The left sphere is Gold, and the right sphere is Iron. refractive indices and data obtained from https://refractiveindex.info/
+
 
 This is a wavelength aware physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
 
