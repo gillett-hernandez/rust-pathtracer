@@ -8,8 +8,9 @@ vfov = 6
 type="SimpleCamera"
 look_from = [-5, 0, 0]
 look_at = [0, 0, 0]
-aperture_size = 1.4
-vfov = 28
+aperture_size = 0
+focal_distance = 5.0
+vfov = 27.2
 
 [[cameras]]
 type="SimpleCamera"
@@ -19,13 +20,14 @@ vfov = 90
 
 
 [[render_settings]]
-threads = 1
-filename = "LT"
-integrator = "LT"
-max_bounces = 10
-resolution.width = 10
-resolution.height = 10
-min_samples = 1
+threads = 23
+filename = "PT"
+integrator = "PT"
+max_bounces = 12
+resolution.width = 1024
+resolution.height = 1024
+exposure = 2.0
+min_samples = 512
 camera_id = 1
 russian_roulette = true
 only_direct = false

@@ -17,7 +17,6 @@ pub mod integrator;
 pub mod material;
 pub mod materials;
 pub mod math;
-
 pub mod parsing;
 pub mod renderer;
 pub mod tonemap;
@@ -26,13 +25,10 @@ pub mod world;
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, Config};
 use geometry::*;
-
 use math::*;
-use world::*;
-
-use renderer::{NaiveRenderer, Renderer};
-
 use parsing::*;
+use renderer::{NaiveRenderer, Renderer};
+use world::*;
 
 fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
     let mut cameras = Vec::<Camera>::new();
@@ -103,7 +99,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 34000.0);
     let glass = curves::cauchy(1.45, 3540.0);
-    let blackbody_illuminant = curves::blackbody(5500.0, 5.0);
+    let blackbody_illuminant = curves::blackbody(5500.0, 10.0);
 
     let lambertian = MaterialEnum::from(Lambertian::new(color));
     let lambertian_white = MaterialEnum::from(Lambertian::new(white));
@@ -241,17 +237,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
 #[allow(unused_variables)]
 fn construct_scene() -> World {
     let white = curves::cie_e(1.0);
-    cornell_box(white, 0.2)
+    cornell_box(white, 0.0)
 }
-
-// fn render(
-//     renderer: &Box<dyn Renderer>,
-//     camera: &Box<dyn Camera>,
-//     render_settings: &RenderSettings,
-//     world: &Arc<World>,
-// ) -> Film<XYZColor> {
-
-// }
 
 fn main() -> () {
     let config: Config = match get_settings("data/config.toml".to_string()) {
@@ -271,8 +258,6 @@ fn main() -> () {
         .num_threads(threads as usize)
         .build_global()
         .unwrap();
-
-    // do_prerender_steps(config);
 
     let world = construct_scene();
 

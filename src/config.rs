@@ -43,6 +43,7 @@ pub struct RenderSettings {
     pub max_bounces: Option<u16>,
     pub threads: Option<u16>,
     pub min_samples: u16,
+    pub exposure: Option<f32>,
     pub max_samples: Option<u16>,
     pub camera_id: Option<u16>,
     pub russian_roulette: Option<bool>,

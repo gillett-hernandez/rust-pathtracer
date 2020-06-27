@@ -69,7 +69,7 @@ impl SimpleCamera {
         t1: f32,
     ) -> SimpleCamera {
         let direction = (look_at - look_from).normalized();
-        let _lens_radius = aperture / 2.0;
+        let lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
         let theta: f32 = vertical_fov * PI / 180.0;
         let half_height = (theta / 2.0).tan();
@@ -86,6 +86,10 @@ impl SimpleCamera {
             None,
         );
 
+        if lens_radius == 0.0 {
+            println!("Warn: lens radius is 0");
+        }
+
         SimpleCamera {
             origin: look_from,
             direction,
@@ -99,7 +103,7 @@ impl SimpleCamera {
             vfov: vertical_fov,
             surface: Instance::new(
                 Aggregate::from(Disk::new(
-                    aperture / 2.0,
+                    lens_radius,
                     look_from,
                     true,
                     MaterialId::Camera(0),

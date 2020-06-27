@@ -1,5 +1,6 @@
 # Rust Pathtracer
 
+
 This is a wavelength aware physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
@@ -19,7 +20,7 @@ In addition, much of the code emphasizes matching reality as closely as possible
     * custom exposure values for the sRGB tonemapper are supported, however they are not part of the config file as of yet. the default behavior is to set the brightest pixel on the screen to white.
 * Colors and Lights:
   * Colors on the film are represented in [CIE XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space) color space. this is then color mapped to linear RGB space and sRGB space according to the [wikipedia article](https://en.wikipedia.org/wiki/SRGB)
-  * Lights can have physically correct spectral power distribution functions, including blackbody distributions and distributions with peaks at certain frequencies 
+  * Lights can have physically correct spectral power distribution functions, including blackbody distributions and distributions with peaks at certain frequencies
   * Colors are implemented as Spectral Response Functions, under the hood they are bounded spectral power distributions
   * in general, for lights and for colors, those spectral response functions are implemented as curves, and multiple curve types are supported. see [curves.rs](src/curves.rs) and [math/spectral.rs](src/math/spectral.rs) for more information
 * Metals and Dielectrics are wavelength-dependent:
