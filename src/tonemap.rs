@@ -33,7 +33,7 @@ impl sRGB {
                 assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
                 total_luminance += lum;
                 if lum > max_luminance {
-                    println!("max lum {} at ({}, {})", max_luminance, x, y);
+                    // println!("max lum {} at ({}, {})", max_luminance, x, y);
                     max_luminance = lum;
                 }
             }
@@ -123,7 +123,7 @@ impl Tonemapper for sRGB {
         img.save(png_filename).unwrap();
 
         println!(
-            "took {}s to tonemap and output",
+            "took {}s to tonemap and output\n",
             (now.elapsed().as_millis() as f32) / 1000.0
         );
     }
