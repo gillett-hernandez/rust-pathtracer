@@ -42,7 +42,7 @@ it comes preloaded with many options and most are commented out.
 
 ## Experimental implementations:
 
-The Light Tracing Integrator and the Bidirectional Path tracing integrator can represent the camera's lens in the scene, and allow for light to intersect the camera lens. While typically this is done with one camera at a time, I've taken the liberty of trying to implement it so that multiple cameras can be in the scene at once, and if light happens to intersect *any* camera, some contribution will be recorded. This is divided so that all the films that use the Light Tracing integrator will all have their cameras in the scene at once, and the same for Bidirectional Path Tracing.
+The Light Tracing Integrator and the Bidirectional Path tracing integrator can represent the camera's lens in the scene, and allow for light to intersect the camera lens. While typically this is done with one camera at a time, I've taken the liberty of trying to implement it so that multiple cameras can be in the scene at once, and if light happens to intersect *any* camera, the contribution will be recorded to that film. This is batched so that all the films that use the Light Tracing integrator will all have their cameras in the scene at once, and the same for Bidirectional Path Tracing.
 
 That should theoretically cause images to converge faster, though the feature is still a WIP and may be changed in the future. Renders using the Path tracing integrator will be unaffected, and their cameras will not physically exist in the World.
 
