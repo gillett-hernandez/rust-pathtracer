@@ -152,6 +152,7 @@ impl GenericIntegrator for LightTracingIntegrator {
 
                 if let MaterialId::Camera(camera_id) = hit.material {
                     // check stuff here
+                    println!("checking camera id {}", camera_id);
                     let camera = self.world.get_camera(camera_id);
                     // if we hit it, then it has to have a surface
                     let hit_primitive = camera.get_surface().unwrap();

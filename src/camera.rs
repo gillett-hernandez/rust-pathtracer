@@ -151,6 +151,7 @@ impl SimpleCamera {
         if rdx * rdx + rdy * rdy > self.lens_radius * self.lens_radius {
             None
         } else {
+            print!("+");
             // intersect "ray" with image plane
             let local_wi: Vec3 = transform / ray.direction;
             let local_ray_z = local_wi.z();
