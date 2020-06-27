@@ -2,7 +2,7 @@
 use crate::math::Point3;
 use packed_simd::f32x4;
 use std::ops::{Add, Div, Mul, MulAssign, Neg, Sub};
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Axis {
     X,
     Y,

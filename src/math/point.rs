@@ -90,6 +90,7 @@ impl From<[f32; 3]> for Point3 {
 impl From<Vec3> for Point3 {
     fn from(v: Vec3) -> Point3 {
         // Point3::from_raw(v.0.replace(3, 1.0))
-        Point3::from_raw(v.0).normalize()
+        Point3::ORIGIN + v
+        // Point3::from_raw(v.0)
     }
 }

@@ -11,7 +11,7 @@ fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AARect {
     pub size: (f32, f32),
     half_size: (f32, f32),

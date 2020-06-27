@@ -3,7 +3,7 @@ use crate::hittable::{HitRecord, Hittable};
 use crate::materials::MaterialId;
 use crate::math::*;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Disk {
     pub radius: f32,
     pub two_sided: bool,

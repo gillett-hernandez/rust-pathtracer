@@ -89,6 +89,7 @@ fn ggx_d(alpha: f32, wm: Vec3) -> f32 {
     let slope = (wm.x() / alpha, wm.y() / alpha);
     let slope2 = (slope.0 * slope.0, slope.1 * slope.1);
     let t = wm.z() * wm.z() + slope2.0 + slope2.1;
+    debug_assert!(t > 0.0, "{:?} {:?}", wm, slope2);
     let a2 = alpha * alpha;
     let t2 = t * t;
     let aatt = a2 * t2;
@@ -114,6 +115,7 @@ fn ggx_g(alpha: f32, wi: Vec3, wo: Vec3) -> f32 {
 
 fn ggx_vnpdf(alpha: f32, wi: Vec3, wh: Vec3) -> f32 {
     let inv_gl = 1.0 + ggx_lambda(alpha, wi);
+    assert!(wh.0.is_finite().all());
     (ggx_d(alpha, wh) * (wi * wh).abs()) / (inv_gl * wi.z().abs())
 }
 
@@ -247,6 +249,7 @@ impl GGX {
 
             ndotv = wi * wh;
             let refl = self.reflectance(eta_inner, kappa, ndotv);
+            assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
             glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
         } else {
@@ -254,6 +257,14 @@ impl GGX {
                 let eta_rel = self.eta_rel(eta_inner, wi);
 
                 let ggxg = ggx_g(self.alpha, wi, wo);
+                assert!(
+                    wi.0.is_finite().all() && wo.0.is_finite().all(),
+                    "{:?} {:?} {:?} {:?}",
+                    wi,
+                    wo,
+                    ggxg,
+                    cos_i
+                );
                 let mut wh = (wi + eta_rel * wo).normalized();
                 // normal invert mark
                 if wh.z() < 0.0 {
@@ -266,6 +277,14 @@ impl GGX {
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
                 let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
+                assert!(
+                    wh.0.is_finite().all(),
+                    "{:?} {:?} {:?} {:?}",
+                    eta_rel,
+                    ndotv,
+                    ndotl,
+                    sqrt_denom
+                );
                 let ggxd = ggx_d(self.alpha, wh);
                 let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
                 transmission_pdf = (ggxd * partial * dwh_dwo).abs();

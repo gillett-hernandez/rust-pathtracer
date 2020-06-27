@@ -86,7 +86,10 @@ impl World {
         let mut lights = Vec::new();
         for instance in instances.iter() {
             if let MaterialId::Light(id) = instance.get_material_id() {
-                println!("adding light {:?} to lights list", id);
+                println!(
+                    "adding light with mat id {:?} and instance id {:?} to lights list",
+                    id, instance.instance_id
+                );
                 lights.push(instance.instance_id as usize);
             }
         }
@@ -150,10 +153,19 @@ impl World {
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
         // assigns cameras to the internal list and rebuilds the scene accelerator if specified
         // this should only ever be called when self.cameras is empty and the scene accelerator does not have any camera geometry in it
-        assert!(
-            self.cameras.len() == 0,
-            "assign cameras should only be called on a fresh world"
-        );
+        // assert!(
+        //     self.cameras.len() == 0,
+        //     "assign cameras should only be called on a fresh world"
+        // );
+        if add_and_rebuild_scene {
+            for camera in self.cameras.iter() {
+                let instances = &mut self.accelerator.instances;
+                if let Some(camera_surface) = camera.get_surface() {
+                    instances.remove_item(&camera_surface);
+                }
+            }
+        }
+
         self.cameras = cameras;
 
         if add_and_rebuild_scene {

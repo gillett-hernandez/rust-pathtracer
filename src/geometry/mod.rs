@@ -11,7 +11,7 @@ use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
 use crate::materials::MaterialId;
 use crate::math::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Aggregate {
     AARect(AARect),
     Sphere(Sphere),
@@ -98,7 +98,7 @@ impl Hittable for Aggregate {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instance {
     pub aggregate: Aggregate,
     pub transform: Option<Transform3>,

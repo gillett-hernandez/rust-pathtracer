@@ -72,6 +72,8 @@ impl From<GGX> for MaterialEnum {
 
 impl Material for MaterialEnum {
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+        assert!(wi.0.is_finite().all());
+        assert!(wo.0.is_finite().all());
         match self {
             MaterialEnum::GGX(inner) => inner.value(hit, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.value(hit, wi, wo),
@@ -127,6 +129,8 @@ impl Material for MaterialEnum {
         }
     }
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+        assert!(wi.0.is_finite().all());
+        assert!(wo.0.is_finite().all());
         match self {
             MaterialEnum::GGX(inner) => inner.f(hit, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.f(hit, wi, wo),

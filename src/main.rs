@@ -1,5 +1,6 @@
 // #![allow(unused_imports, unused_variables, unused)]
-#![feature(clamp, slice_fill)]
+#![feature(clamp, slice_fill, vec_remove_item)]
+
 extern crate image;
 
 #[macro_use]

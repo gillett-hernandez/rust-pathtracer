@@ -119,7 +119,7 @@ pub fn random_walk(
     let mut additional_contribution = SingleEnergy::ZERO;
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
     for _ in 0..bounce_limit {
-        if let Some(mut hit) = world.hit(ray, 0.0, INFINITY) {
+        if let Some(mut hit) = world.hit(ray, 0.01, ray.tmax) {
             hit.lambda = lambda;
             let mut vertex = Vertex::new(
                 trace_type,
@@ -212,19 +212,25 @@ pub fn random_walk(
             if trace_type == Type::Eye {
                 let max_world_radius =
                     (world.bounding_box().max - world.bounding_box().min).norm() / 2.0;
+                let max_world_radius_2 = max_world_radius * max_world_radius;
+                assert!(max_world_radius.is_finite());
+                let at_env = max_world_radius * ray.direction;
+                assert!(at_env.0.is_finite().all());
+                assert!(Point3::from(at_env).0.is_finite().all());
                 let vertex = Vertex::new(
                     Type::LightSource(Source::Environment),
-                    INFINITY,
+                    1.0 * max_world_radius,
                     lambda,
-                    Point3::from(max_world_radius * ray.direction),
+                    Point3::from(at_env),
                     -ray.direction,
                     MaterialId::Light(0),
                     0,
                     beta,
-                    1.0 / (max_world_radius * max_world_radius * 4.0 * PI),
                     0.0,
-                    1.0,
+                    1.0 / (max_world_radius_2 * 4.0 * PI),
+                    1.0 / (max_world_radius_2),
                 );
+                assert!(vertex.point.0.is_finite().all());
                 vertices.push(vertex);
             }
             break;
@@ -267,6 +273,7 @@ pub fn eval_unweighted_contribution(
         let normal = last_eye_vertex.normal;
         let frame = TangentFrame::from_normal(normal);
         let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
+        assert!(wi.0.is_finite().all(), "{:?}", eye_path);
 
         cst = hit_light_material.emission(
             &last_eye_vertex.into(),

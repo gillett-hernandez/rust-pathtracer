@@ -5,7 +5,7 @@ use nalgebra;
 use packed_simd::{f32x16, f32x4};
 use std::ops::{Div, Mul};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Matrix4x4(f32x16);
 
 impl Matrix4x4 {
@@ -114,7 +114,7 @@ impl Mul for Matrix4x4 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Transform3 {
     pub forward: Matrix4x4,
     pub reverse: Matrix4x4,
