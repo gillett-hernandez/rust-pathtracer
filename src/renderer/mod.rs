@@ -17,15 +17,15 @@ use std::time::Instant;
 
 use rayon::prelude::*;
 
-// fn construct_integrator(
-//     settings: &RenderSettings,
-//     world: Arc<World>,
-// ) -> Box<dyn SamplerIntegrator> {
-//     let max_bounces = settings.max_bounces.unwrap_or(1);
-//     let russian_roulette = settings.russian_roulette.unwrap_or(true);
-//     let light_samples = settings.light_samples.unwrap_or(4);
-//     let only_direct = settings.only_direct.unwrap_or(false);
-// }
+pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
+    let filename = render_settings.filename.as_ref();
+    let filename_str = filename.cloned().unwrap_or(String::from("output"));
+    let exr_filename = format!("output/{}.exr", filename_str);
+    let png_filename = format!("output/{}.png", filename_str);
+
+    let srgb_tonemapper = sRGB::new(film, 1.0);
+    srgb_tonemapper.write_to_files(film, &exr_filename, &png_filename);
+}
 
 pub struct NaiveRenderer {}
 
@@ -48,8 +48,6 @@ impl NaiveRenderer {
 
         let total_camera_rays =
             width * height * (settings.max_samples.unwrap_or(settings.min_samples) as usize);
-
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
         // do stuff with film here
 
@@ -100,8 +98,10 @@ impl NaiveRenderer {
                 // }
             });
         println!("");
+        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+
         println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread",
+            "\ntook {}s at {} rays per second and {} rays per second per thread\n",
             elapsed,
             (total_camera_rays as f32) / elapsed,
             (total_camera_rays as f32) / elapsed / (settings.threads.unwrap() as f32)
@@ -237,7 +237,7 @@ impl NaiveRenderer {
             .threads
             .unwrap();
         println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread",
+            "\ntook {}s at {} rays per second and {} rays per second per thread\n",
             elapsed,
             (total_camera_samples as f32) / elapsed,
             (total_camera_samples as f32) / elapsed / (maximum_threads as f32)
@@ -376,12 +376,12 @@ impl Renderer for NaiveRenderer {
                         cameras: bundled_cameras.clone(),
                     };
 
+                    println!("rendering with bidirectional path tracing integrator");
                     let render_splatted_result = NaiveRenderer::render_splatted(
                         integrator,
                         bundled_settings.clone(),
                         bundled_cameras,
                     );
-                    println!("rendering with bidirectional path tracing integrator");
                     assert!(render_splatted_result.len() > 0);
                     films.extend(
                         (&bundled_settings)
@@ -403,13 +403,7 @@ impl Renderer for NaiveRenderer {
         );
 
         for (render_settings, film) in films.iter() {
-            let filename = render_settings.filename.as_ref();
-            let filename_str = filename.cloned().unwrap_or(String::from("output"));
-            let exr_filename = format!("output/{}.exr", filename_str);
-            let png_filename = format!("output/{}.png", filename_str);
-
-            let srgb_tonemapper = sRGB::new(&film, 1.0);
-            srgb_tonemapper.write_to_files(&film, &exr_filename, &png_filename);
+            output_film(render_settings, film);
         }
     }
 }
