@@ -595,7 +595,7 @@ impl<'a> Index<usize> for CombinedPath<'a> {
 }
 
 pub fn eval_mis<F>(
-    world: &Arc<World>,
+    _world: &Arc<World>,
     light_path: &Vec<Vertex>,
     s: usize,
     eye_path: &Vec<Vertex>,

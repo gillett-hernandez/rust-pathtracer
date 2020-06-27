@@ -43,18 +43,17 @@ impl Integrator {
     pub fn from_settings_and_world(
         world: Arc<World>,
         integrator_type: IntegratorType,
-        cameras: &Vec<Camera>,
+        _cameras: &Vec<Camera>,
         settings: &RenderSettings,
     ) -> Option<Self> {
         match integrator_type {
             _ => Some(Integrator::PathTracing(PathTracingIntegrator {
-                max_bounces: 10,
+                max_bounces: settings.max_bounces.unwrap(),
                 world,
-                russian_roulette: true,
-                light_samples: 4,
-                only_direct: false,
+                russian_roulette: settings.russian_roulette.unwrap_or(true),
+                light_samples: settings.light_samples.unwrap_or(4),
+                only_direct: settings.only_direct.unwrap_or(false),
             })),
-            _ => None,
         }
     }
 }

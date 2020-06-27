@@ -148,12 +148,12 @@ impl NaiveRenderer {
         }
 
         println!("");
-        let mut additional_splats: Vec<(Sample, CameraId)> = Vec::new();
-        let result: Vec<(Sample, CameraId)> = films
+        // let : Vec<(Sample, CameraId)> = Vec::new();
+        let mut additional_splats: Vec<(Sample, CameraId)> = films
             .par_iter_mut()
             .enumerate()
             .flat_map(
-                |(film_number, (settings, film)): (
+                |(_film_number, (settings, film)): (
                     usize,
                     &mut (RenderSettings, Film<XYZColor>),
                 )|
@@ -212,11 +212,27 @@ impl NaiveRenderer {
                 },
             )
             .collect();
-        use std::cmp::Ordering;
+
         // additional_splats.;
-        additional_splats.par_sort_unstable_by(|(sample1, camera_id1), (sample2, camera_id2)| {
+        additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
             camera_id1.0.cmp(&camera_id2.0)
         });
+        for (sample, camera_id) in additional_splats {
+            match sample {
+                Sample::LightSample(radiance, (x, y)) => {
+                    let light_film = &mut light_films[camera_id.0];
+                    // unsafe {
+                    light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
+                    // }
+                }
+                Sample::ImageSample(radiance, (x, y)) => {
+                    let image_film = &mut films[camera_id.0].1;
+                    // unsafe {
+                    image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
+                    // }
+                }
+            }
+        }
 
         println!("");
         let maximum_threads = renders

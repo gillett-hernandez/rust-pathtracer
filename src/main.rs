@@ -24,22 +24,21 @@ pub mod tonemap;
 pub mod world;
 
 use camera::{Camera, SimpleCamera};
-use config::{get_settings, Config, RenderSettings};
+use config::{get_settings, Config};
 use geometry::{AARect, Aggregate, Instance, Sphere};
 
-use integrator::*;
 use material::Material;
 use materials::*;
 use math::*;
 use world::*;
 
-use renderer::{Film, NaiveRenderer, Renderer};
-use tonemap::Tonemapper;
+use renderer::{NaiveRenderer, Renderer};
 
 use parsing::*;
 
-use std::sync::Arc;
-use std::time::Instant;
+// use integrator::*;
+// use std::sync::Arc;
+// use std::time::Instant;
 
 // use rayon::prelude::*;
 
