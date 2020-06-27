@@ -121,8 +121,6 @@ impl NaiveRenderer {
         // let total_camera_rays =
         //     width * height * (settings.max_samples.unwrap_or(settings.min_samples) as usize);
 
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-
         // do stuff with film here
 
         let mut total_camera_samples = 0;
@@ -221,19 +219,16 @@ impl NaiveRenderer {
             match sample {
                 Sample::LightSample(radiance, (x, y)) => {
                     let light_film = &mut light_films[camera_id.0];
-                    // unsafe {
                     light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
-                    // }
                 }
                 Sample::ImageSample(radiance, (x, y)) => {
                     let image_film = &mut films[camera_id.0].1;
-                    // unsafe {
                     image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
-                    // }
                 }
             }
         }
 
+        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!("");
         let maximum_threads = renders
             .iter()
@@ -248,6 +243,17 @@ impl NaiveRenderer {
             (total_camera_samples as f32) / elapsed / (maximum_threads as f32)
         );
 
+        for i in 0..films.len() {
+            let image_film = &mut films[i].1;
+            let light_film = &light_films[i];
+            for (image_pixel, light_pixel) in
+                image_film.buffer.iter_mut().zip(light_film.buffer.iter())
+            {
+                // use veach section 10.3.4.3 here
+                *image_pixel += *light_pixel;
+            }
+        }
+
         Vec::new()
     }
 }
@@ -260,15 +266,15 @@ impl Renderer for NaiveRenderer {
     fn render(&self, world: World, cameras: Vec<Camera>, config: &Config) {
         // bin the render settings into bins corresponding to what integrator they need.
 
-        let bundled_cameras: Vec<Camera> = Vec::new();
+        let mut bundled_cameras: Vec<Camera> = Vec::new();
         let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
         let mut sampled_renders: Vec<(IntegratorType, RenderSettings)> = Vec::new();
-        let mut batched_renders_and_cameras: HashMap<
+        let mut splatting_renders_and_cameras: HashMap<
             IntegratorType,
             Vec<(RenderSettings, Camera)>,
         > = HashMap::new();
-        batched_renders_and_cameras.insert(IntegratorType::PathTracing, Vec::new());
-        batched_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
+        // splatting_renders_and_cameras.insert(IntegratorType::PathTracing, Vec::new());
+        splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
         for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
@@ -292,12 +298,16 @@ impl Renderer for NaiveRenderer {
 
             match integrator_type {
                 IntegratorType::PathTracing => {
-                    sampled_renders.push((IntegratorType::PathTracing, render_settings.clone()))
-                }
-                t if batched_renders_and_cameras.contains_key(&t) => {
-                    // then determine new camera id
                     let mut updated_render_settings = render_settings.clone();
                     updated_render_settings.camera_id = Some(bundled_cameras.len() as u16);
+                    bundled_cameras.push(copied_camera);
+                    sampled_renders.push((IntegratorType::PathTracing, updated_render_settings));
+                }
+                t if splatting_renders_and_cameras.contains_key(&t) => {
+                    // then determine new camera id
+                    let list = splatting_renders_and_cameras.get_mut(&t).unwrap();
+                    let mut updated_render_settings = render_settings.clone();
+                    updated_render_settings.camera_id = Some(list.len() as u16);
                     // let mut updated_render_settings = RenderSettings {
                     //     camera_id: Some(bundled_cameras.len() as u16),
                     //     ..*render_settings
@@ -306,10 +316,8 @@ impl Renderer for NaiveRenderer {
                     // and push to cameras to be used for splatting
                     // bundled_cameras.push(copied_camera);
                     // splatted_renders.push((t, updated_render_settings));
-                    batched_renders_and_cameras
-                        .get_mut(&t)
-                        .unwrap()
-                        .push((updated_render_settings, copied_camera))
+
+                    list.push((updated_render_settings, copied_camera))
                 }
                 _ => {}
             }
@@ -344,11 +352,16 @@ impl Renderer for NaiveRenderer {
 
         // phase 3, do renders where cameras can be combined
 
-        for integrator_type in batched_renders_and_cameras.keys() {
+        for integrator_type in splatting_renders_and_cameras.keys() {
+            if let Some(l) = splatting_renders_and_cameras.get(integrator_type) {
+                if l.len() == 0 {
+                    continue;
+                }
+            }
             match integrator_type {
                 IntegratorType::BDPT => {
                     let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
-                        batched_renders_and_cameras
+                        splatting_renders_and_cameras
                             .get(integrator_type)
                             .unwrap()
                             .iter()
