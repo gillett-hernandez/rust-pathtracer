@@ -4,12 +4,14 @@ This is a Single Wavelength Physically based 3D rendering engine written in Rust
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
 
+Most, if not all of the integrators use importance sampling and MIS.
+
 It supports the following integrators:
-* [Path Tracing](src/integrator/pt.rs)
+* [Path Tracing](src/integrator/pt.rs), described on wikipedia [here](https://en.wikipedia.org/wiki/Path_tracing)
 
 Work is in progress on other branches for the following integrators:
-* [Light tracing](src/integrator/lt.rs)
-* [Bidirectional Path Tracing](src/integrator/bdpt/mod.rs)
+* [Light tracing](src/integrator/lt.rs), also known as particle tracing, where light is emitted from light sources in the scene and traced until it hits the camera
+* [Bidirectional Path Tracing](src/integrator/bdpt/mod.rs), described in PBRT [here](http://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing.html)
 
 In addition, much of the code emphasizes matching reality as closely as possible, including the following:
 * Output format:
@@ -44,4 +46,25 @@ The Light Tracing Integrator and the Bidirectional Path tracing integrator can r
 
 That should theoretically cause images to converge faster, though the feature is still a WIP and may be changed in the future. Renders using the Path tracing integrator will be unaffected, and their cameras will not physically exist in the World.
 
-Please view this as a hobby or reference implementation, and if you find any issues, please feel free to submit a pull request to fix them, or log them on GitHub's issue tracker :)
+
+## To Do: an incomplete list
+- [x] implement basic config file to reduce unnecessary recompilations. Done, at [config.rs](src/config.rs), data files at [data/config.toml](data/config.toml)
+- [x] add simple random walk abstraction. Done, at [integrator/bdpt/helpers.rs](src/integrator/bdpt/helpers.rs)
+- [x] implement glossy and transmissive bsdfs. Done, implemented GGX, at [materials/ggx.rs](src/materials/ggx.rs)
+- [x] add common color spectral reflectance functions. Done, implemented at [curves.rs](src/curves.rs)
+- [x] implement correct XYZ to sRGB tonemapping. Done, at [tonemap.rs](src/tonemap.rs)
+- [x] implement parsing CSV files as curves and using them as ior and kappa values. Done, at [parsing.rs](src/parsing.rs)
+- [x] implement instances. Somewhat done, still more to do. at [geometry/mod.rs] and [math/transform.rs](src/math/transform.rs)
+- [x] implement basic accelerator. Done, at [accelerator.rs](src/accelerator.rs)
+- [x] implement environment sampling. Somewhat done, still more to do. at [world.rs](src/world.rs)
+- [x] implement light emission sampling to generate rays from lights. Done, part of the material trait at [material.rs](src/material.rs)
+- [ ] implement BVH
+- [ ] implement spectral power distribution importance sampling. requires computing the CDF of curves.
+- [ ] implement scene parser to reduce compilations even more
+- [ ] implement light tracing
+- [ ] implement BDPT
+- [ ] refactor bsdf trait methods
+
+## Contribution
+
+Please view this as a hobby or reference implementation. If you find any issues, please feel free to log them on GitHub's issue tracker, or submit a pull request to fix them :)
