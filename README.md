@@ -1,10 +1,10 @@
 # Rust Pathtracer
 
-This is a Single Wavelength Physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
+This is a wavelength aware physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
 
-Most, if not all of the integrators use importance sampling and MIS.
+Most, if not all of the integrators use importance sampling and MIS, and they trace using single wavelength sampling
 
 It supports the following integrators:
 * [Path Tracing](src/integrator/pt.rs), described on wikipedia [here](https://en.wikipedia.org/wiki/Path_tracing)
