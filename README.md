@@ -13,7 +13,7 @@ Work is in progress on other branches for the following integrators:
 * [Light tracing](src/integrator/lt.rs), also known as particle tracing, where light is emitted from light sources in the scene and traced until it hits the camera
 * [Bidirectional Path Tracing](src/integrator/bdpt/mod.rs), described in PBRT [here](http://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing.html)
 
-In addition, much of the code emphasizes matching reality as closely as possible, including the following:
+In addition, much of the code emphasizes matching reality as closely as possible, including the following features:
 * Output format:
   * The renderer outputs an .exr file in Linear RGB space, and a .png file in sRGB space.
     * custom exposure values for the sRGB tonemapper are supported, however they are not part of the config file as of yet. the default behavior is to set the brightest pixel on the screen to white.
