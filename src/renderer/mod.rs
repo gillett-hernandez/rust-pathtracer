@@ -395,7 +395,6 @@ impl Renderer for NaiveRenderer {
         }
 
         // phase 4: tonemap and output all films
-        // println!("films {}", films.len());
         assert!(
             films.len() == config.render_settings.len(),
             "{}",

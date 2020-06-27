@@ -1,7 +1,9 @@
 mod cube;
+mod disk;
 mod rect;
 mod sphere;
 
+pub use disk::Disk;
 pub use rect::AARect;
 pub use sphere::Sphere;
 
@@ -12,11 +14,18 @@ use crate::math::*;
 pub enum Aggregate {
     AARect(AARect),
     Sphere(Sphere),
+    Disk(Disk),
 }
 
 impl From<Sphere> for Aggregate {
     fn from(data: Sphere) -> Self {
         Aggregate::Sphere(data)
+    }
+}
+
+impl From<Disk> for Aggregate {
+    fn from(data: Disk) -> Self {
+        Aggregate::Disk(data)
     }
 }
 
@@ -31,6 +40,7 @@ impl HasBoundingBox for Aggregate {
         match self {
             Aggregate::Sphere(sphere) => sphere.bounding_box(),
             Aggregate::AARect(rect) => rect.bounding_box(),
+            Aggregate::Disk(disk) => disk.bounding_box(),
         }
     }
 }
@@ -39,23 +49,27 @@ impl Hittable for Aggregate {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         match self {
             Aggregate::Sphere(sphere) => sphere.hit(r, t0, t1),
+            Aggregate::Disk(disk) => disk.hit(r, t0, t1),
             Aggregate::AARect(rect) => rect.hit(r, t0, t1),
         }
     }
     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
         match self {
             Aggregate::Sphere(sphere) => sphere.sample(s, from),
+            Aggregate::Disk(disk) => disk.sample(s, from),
             Aggregate::AARect(rect) => rect.sample(s, from),
         }
     }
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         match self {
             Aggregate::Sphere(sphere) => sphere.sample_surface(s),
+            Aggregate::Disk(disk) => disk.sample_surface(s),
             Aggregate::AARect(rect) => rect.sample_surface(s),
         }
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         match self {
+            Aggregate::Disk(disk) => disk.pdf(normal, from, to),
             Aggregate::Sphere(sphere) => sphere.pdf(normal, from, to),
             Aggregate::AARect(rect) => rect.pdf(normal, from, to),
         }
@@ -63,17 +77,20 @@ impl Hittable for Aggregate {
     fn surface_area(&self, transform: &Transform3) -> f32 {
         match self {
             Aggregate::Sphere(sphere) => sphere.surface_area(transform),
+            Aggregate::Disk(disk) => disk.surface_area(transform),
             Aggregate::AARect(rect) => rect.surface_area(transform),
         }
     }
     fn get_instance_id(&self) -> usize {
         match self {
             Aggregate::Sphere(sphere) => sphere.get_instance_id(),
+            Aggregate::Disk(disk) => disk.get_instance_id(),
             Aggregate::AARect(rect) => rect.get_instance_id(),
         }
     }
     fn get_material_id(&self) -> MaterialId {
         match self {
+            Aggregate::Disk(disk) => disk.get_material_id(),
             Aggregate::Sphere(sphere) => sphere.get_material_id(),
             Aggregate::AARect(rect) => rect.get_material_id(),
         }

@@ -119,7 +119,7 @@ unsafe impl Send for SimpleCamera {}
 unsafe impl Sync for Camera {}
 unsafe impl Sync for SimpleCamera {}
 
-use crate::hittable::{HasBoundingBox, Hittable, AABB};
+use crate::hittable::*;
 
 impl HasBoundingBox for SimpleCamera {
     fn bounding_box(&self) -> AABB {
@@ -131,7 +131,9 @@ impl HasBoundingBox for SimpleCamera {
 }
 
 impl Hittable for SimpleCamera {
-    fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {}
+    fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
+        
+    }
 }
 
 // impl HasBoundingBox for Camera {
