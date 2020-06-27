@@ -66,6 +66,14 @@ That should theoretically cause images to converge faster, though the feature is
 - [ ] implement BDPT
 - [ ] refactor bsdf trait methods
 
+## Credits:
+
+Thanks to Nova, for helping me figure out implementation details and generally helping me learn rust.
+
+I am referencing [this](https://rendering-memo.blogspot.com/2016/03/bidirectional-path-tracing-8-combine.html) blog post and code while working on the BDPT integrator, so thanks to the author.
+
+Thanks to members of the Rendering & Lighting (offline) discord server for pointing me in the right direction in fixing some color output issues.
+
 ## Contribution
 
 Please view this as a hobby or reference implementation. If you find any issues, please feel free to log them on GitHub's issue tracker, or submit a pull request to fix them :)

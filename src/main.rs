@@ -70,11 +70,108 @@ fn white_furnace_test(material: MaterialEnum) -> World {
 }
 
 #[allow(unused_variables)]
-fn cornell_box(color: SPD, world_strength: f32) -> World {
-    let cie_e_world_illuminant = curves::cie_e(world_strength);
-    let flat_zero = curves::void();
-    let flat_one = curves::cie_e(1.0);
-    let cie_e_illuminant = curves::cie_e(15.0);
+fn cornell_box(
+    additional_instances: Vec<Instance>,
+    additional_materials: Vec<MaterialEnum>,
+    light_material: MaterialEnum,
+    world_illuminant: SPD,
+) -> World {
+    let env_map = EnvironmentMap::new(world_illuminant);
+    let red = curves::red(1.0);
+    let green = curves::green(1.0);
+    let blue = curves::blue(1.0);
+    let white = curves::cie_e(1.0);
+    let lambertian_white = MaterialEnum::from(Lambertian::new(white));
+    let lambertian_red = MaterialEnum::from(Lambertian::new(red));
+    let lambertian_green = MaterialEnum::from(Lambertian::new(green));
+    let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
+
+    let mut world_materials = vec![
+        light_material,
+        lambertian_white,
+        lambertian_blue,
+        lambertian_red,
+    ];
+
+    let mut world_instances = vec![
+        Instance::new(
+            Aggregate::from(Disk::new(
+                0.4,
+                Point3::new(0.0, 0.0, 0.9),
+                false,
+                MaterialId::Light(0),
+                0,
+            )),
+            None,
+            None,
+            None,
+        ),
+        Instance::from(Aggregate::from(AARect::new(
+            // ceiling
+            (2.0, 2.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Axis::Z,
+            true,
+            1.into(),
+            1,
+        ))),
+        Instance::from(Aggregate::from(AARect::new(
+            // floor
+            (2.0, 2.0),
+            Point3::new(0.0, 0.0, -1.0),
+            Axis::Z,
+            true,
+            1.into(),
+            2,
+        ))),
+        Instance::from(Aggregate::from(AARect::new(
+            // left wall
+            (2.0, 2.0),
+            Point3::new(0.0, 1.0, 0.0),
+            Axis::Y,
+            true,
+            3.into(),
+            3,
+        ))),
+        Instance::from(Aggregate::from(AARect::new(
+            // right wall
+            (2.0, 2.0),
+            Point3::new(0.0, -1.0, 0.0),
+            Axis::Y,
+            true,
+            2.into(),
+            4,
+        ))),
+        Instance::from(Aggregate::from(AARect::new(
+            // back wall
+            (2.0, 2.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Axis::X,
+            true,
+            1.into(),
+            5,
+        ))),
+    ];
+
+    let base_length = world_materials.len();
+    world_materials.extend_from_slice(additional_materials.as_slice());
+    for mut instance in additional_instances {
+        instance.material_id = match instance.material_id {
+            MaterialId::Material(old) => MaterialId::Material((base_length + old as usize) as u16),
+            MaterialId::Light(old) => MaterialId::Light((base_length + old as usize) as u16),
+            MaterialId::Camera(old) => {
+                continue;
+            }
+        };
+        world_instances.push(instance);
+    }
+
+    let world = World::new(world_instances, world_materials, env_map);
+    world
+}
+
+fn construct_scene() -> World {
+    // load some curves
     let (silver_ior, silver_kappa) =
         load_ior_and_kappa("data/curves/silver.csv", |x: f32| x * 1000.0).unwrap();
     let (gold_ior, gold_kappa) =
@@ -93,39 +190,44 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let (iron_ior, iron_kappa) =
         load_ior_and_kappa("data/curves/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
 
+    // create some curves
+    let _white = curves::cie_e(1.0);
+    let flat_zero = curves::void();
+    let _flat_one = curves::cie_e(1.0);
+    let _cie_e_illuminant = curves::cie_e(15.0);
     let red = curves::red(1.0);
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
     let moissanite = curves::cauchy(2.5, 34000.0);
     let glass = curves::cauchy(1.45, 3540.0);
-    let blackbody_illuminant = curves::blackbody(5500.0, 10.0);
 
-    let lambertian = MaterialEnum::from(Lambertian::new(color));
-    let lambertian_white = MaterialEnum::from(Lambertian::new(white));
-    let lambertian_red = MaterialEnum::from(Lambertian::new(red));
-    let lambertian_green = MaterialEnum::from(Lambertian::new(green));
-    let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
+    // create materials
+    let _lambertian_white = MaterialEnum::from(Lambertian::new(white));
+    let _lambertian_red = MaterialEnum::from(Lambertian::new(red));
+    let _lambertian_green = MaterialEnum::from(Lambertian::new(green));
+    let _lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
+
     let ggx_glass = MaterialEnum::from(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let ggx_glass_rough =
+    let _ggx_glass_rough =
         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let ggx_moissanite =
+    let _ggx_moissanite =
         MaterialEnum::from(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
-    let ggx_silver_metal = MaterialEnum::from(GGX::new(
+    let _ggx_silver_metal = MaterialEnum::from(GGX::new(
         0.03,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
         0.0,
     ));
-    let ggx_copper_metal = MaterialEnum::from(GGX::new(
+    let _ggx_copper_metal = MaterialEnum::from(GGX::new(
         0.03,
         copper_ior.clone(),
         1.0,
         copper_kappa.clone(),
         0.0,
     ));
-    let ggx_silver_metal_rough = MaterialEnum::from(GGX::new(
+    let _ggx_silver_metal_rough = MaterialEnum::from(GGX::new(
         0.08,
         silver_ior.clone(),
         1.0,
@@ -133,111 +235,51 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
         0.0,
     ));
     let ggx_gold_metal = MaterialEnum::from(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
-    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
-    let ggx_cold_lead_metal =
+    let _ggx_lead_metal = MaterialEnum::from(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
+    let _ggx_cold_lead_metal =
         MaterialEnum::from(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
-    let ggx_platinum_metal =
+    let _ggx_platinum_metal =
         MaterialEnum::from(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
-    let ggx_bismuth_metal =
+    let _ggx_bismuth_metal =
         MaterialEnum::from(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
+    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.03, iron_ior, 1.0, iron_kappa, 0.0));
 
-    let env_map = EnvironmentMap::new(cie_e_world_illuminant);
-    let diffuse_light =
-        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant, Sidedness::Dual));
+    // create some illuminants and lights
+    let blackbody_illuminant1 = curves::blackbody(2700.0, 1.0);
+    let blackbody_illuminant2 = curves::blackbody(5500.0, 10.0);
+    let _cie_e_illuminant_low_power = curves::cie_e(0.25);
 
-    let world = World::new(
-        vec![
-            Instance::new(
-                Aggregate::from(Disk::new(
-                    0.4,
-                    Point3::new(0.0, 0.0, 0.9),
-                    false,
-                    MaterialId::Light(1),
-                    0,
-                )),
-                None,
-                None,
-                None,
-            ),
-            Instance::from(Aggregate::from(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, 0.0, 1.0),
-                Axis::Z,
-                true,
-                2.into(),
-                1,
-            ))),
-            Instance::from(Aggregate::from(Sphere::new(
-                0.3,
-                Point3::new(-0.5, 0.0, -0.7),
-                0.into(),
-                2,
-            ))), // ball at origin
-            Instance::from(Aggregate::from(Sphere::new(
-                0.3,
-                Point3::new(0.1, -0.5, -0.7),
-                5.into(),
-                3,
-            ))), // ball at origin
-            Instance::from(Aggregate::from(Sphere::new(
-                0.3,
-                Point3::new(0.1, 0.5, -0.7),
-                6.into(),
-                4,
-            ))), // ball at origin
-            Instance::from(Aggregate::from(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, 0.0, -1.0),
-                Axis::Z,
-                true,
-                2.into(),
-                5,
-            ))),
-            Instance::from(Aggregate::from(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, 1.0, 0.0),
-                Axis::Y,
-                true,
-                3.into(),
-                6,
-            ))),
-            Instance::from(Aggregate::from(AARect::new(
-                (2.0, 2.0),
-                Point3::new(0.0, -1.0, 0.0),
-                Axis::Y,
-                true,
-                4.into(),
-                7,
-            ))),
-            Instance::from(Aggregate::from(AARect::new(
-                // back wall
-                (2.0, 2.0),
-                Point3::new(1.0, 0.0, 0.0),
-                Axis::X,
-                true,
-                2.into(),
-                8,
-            ))),
-        ],
-        vec![
-            ggx_glass,
-            diffuse_light,
-            lambertian_white,
-            lambertian_blue,
-            lambertian_red,
-            ggx_gold_metal,
-            ggx_copper_metal,
-        ],
-        env_map,
-    );
-    world
-}
+    let light_material =
+        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Dual));
 
-#[allow(unused_variables)]
-fn construct_scene() -> World {
-    let white = curves::cie_e(1.0);
-    cornell_box(white, 0.0)
+    let world_illuminant = blackbody_illuminant1;
+    let additional_instances = vec![
+        Instance::from(Aggregate::from(Sphere::new(
+            0.3,
+            Point3::new(-0.5, 0.0, -0.7),
+            0.into(),
+            0,
+        ))), // ball at origin
+        Instance::from(Aggregate::from(Sphere::new(
+            0.3,
+            Point3::new(0.1, -0.5, -0.7),
+            1.into(),
+            1,
+        ))), // ball at origin
+        Instance::from(Aggregate::from(Sphere::new(
+            0.3,
+            Point3::new(0.1, 0.5, -0.7),
+            2.into(),
+            2,
+        ))),
+    ]; // ball at origin
+    let additional_materials = vec![ggx_glass, ggx_gold_metal, ggx_iron_metal];
+    cornell_box(
+        additional_instances,
+        additional_materials,
+        light_material,
+        world_illuminant,
+    )
 }
 
 fn main() -> () {

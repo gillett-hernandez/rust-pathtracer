@@ -17,13 +17,13 @@ pub use parallel_light::ParallelLight;
 // pub type MaterialId = u8;
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum MaterialId {
-    Material(u8),
+    Material(u16),
     Light(u16),
     Camera(u8),
 }
 
-impl From<u8> for MaterialId {
-    fn from(value: u8) -> Self {
+impl From<u16> for MaterialId {
+    fn from(value: u16) -> Self {
         MaterialId::Material(value)
     }
 }
