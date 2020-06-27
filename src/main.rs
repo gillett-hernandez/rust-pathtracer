@@ -25,21 +25,14 @@ pub mod world;
 
 use camera::{Camera, SimpleCamera};
 use config::{get_settings, Config};
-use geometry::{AARect, Aggregate, Instance, Sphere};
+use geometry::*;
 
-// use materials::*;
 use math::*;
 use world::*;
 
 use renderer::{NaiveRenderer, Renderer};
 
 use parsing::*;
-
-// use integrator::*;
-// use std::sync::Arc;
-// use std::time::Instant;
-
-// use rayon::prelude::*;
 
 fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
     let mut cameras = Vec::<Camera>::new();
@@ -159,14 +152,18 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
 
     let world = World::new(
         vec![
-            Instance::from(Aggregate::from(AARect::new(
-                (0.7, 0.7),
-                Point3::new(0.0, 0.0, 0.9),
-                Axis::Z,
-                false,
-                MaterialId::Light(1),
-                0,
-            ))),
+            Instance::new(
+                Aggregate::from(Disk::new(
+                    0.4,
+                    Point3::new(0.0, 0.0, 0.9),
+                    false,
+                    MaterialId::Light(1),
+                    0,
+                )),
+                None,
+                None,
+                None,
+            ),
             Instance::from(Aggregate::from(AARect::new(
                 (2.0, 2.0),
                 Point3::new(0.0, 0.0, 1.0),

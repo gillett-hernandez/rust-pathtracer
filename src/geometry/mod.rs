@@ -154,13 +154,22 @@ impl Hittable for Instance {
                     normal: transform * hit.normal,
                     point: transform * hit.point,
                     instance_id: self.instance_id,
+                    material: self.material_id,
                     ..hit
                 })
             } else {
                 None
             }
         } else {
-            self.aggregate.hit(r, t0, t1)
+            if let Some(hit) = self.aggregate.hit(r, t0, t1) {
+                Some(HitRecord {
+                    instance_id: self.instance_id,
+                    material: self.material_id,
+                    ..hit
+                })
+            } else {
+                None
+            }
         }
     }
     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {

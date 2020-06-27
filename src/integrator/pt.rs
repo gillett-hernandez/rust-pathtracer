@@ -67,17 +67,18 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let mut light_contribution = SingleEnergy::ZERO;
                     let mut _successful_light_samples = 0;
                     for _i in 0..self.light_samples {
-                        if let Some((light, pdf)) = self.world.pick_random_light(sampler.draw_1d())
+                        if let Some((light, pick_pdf)) =
+                            self.world.pick_random_light(sampler.draw_1d())
                         {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
-                            let pick_pdf = pdf;
                             // sample the primitive from hit_point
                             let (direction, light_pdf) = light.sample(&mut sampler, hit.point);
                             assert!(light_pdf.0.is_finite());
                             if light_pdf.0 == 0.0 {
                                 continue;
                             }
+                            let direction = direction.normalized();
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
                             let wo = frame.to_local(&direction);
@@ -99,7 +100,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                                 continue;
                             }
                             // let dropoff = wo.z().abs();
-                            if let Some(mut light_hit) = self.world.hit(light_ray, 0.0, INFINITY) {
+                            if let Some(mut light_hit) = self.world.hit(light_ray, 0.01, INFINITY) {
                                 light_hit.lambda = sum.lambda;
                                 // note: changed t0 to 0.0. change back to hit.time maybe?
                                 //

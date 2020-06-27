@@ -31,40 +31,6 @@ impl GenericIntegrator for LightTracingIntegrator {
         // in this integrator, it's the latter
         let wavelength_sample = sampler.draw_1d();
         let mut light_pick_sample = sampler.draw_1d();
-        // let mut camera_vertex = if let Some(mut hit) = self.world.hit(camera_ray, 0.0, INFINITY) {
-        //     if self.world.instance_is_light(hit.instance_id) {
-        //         let material = self.world.get_material(hit.material);
-        //         let (lambda, _lambda_pdf) = material
-        //             .sample_emission_spectra(hit.uv, VISIBLE_RANGE, wavelength_sample)
-        //             .expect("instance marked as light did not have any emission spectra");
-        //         hit.lambda = lambda;
-        //         let frame = TangentFrame::from_normal(hit.normal);
-        //         let wi = frame.to_local(&-camera_ray.direction).normalized();
-        //         let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
-
-        //         let energy = material.emission(&hit, wi, maybe_wo);
-        //         // energy.0 = 0.0;
-        //         return SingleWavelength { lambda, energy };
-        //     }
-        //     hit
-        // } else {
-        //     let unit_direction = camera_ray.direction.normalized();
-        //     // get phi and theta values for that direction, then convert to UV values for an environment map.
-        //     let u = (PI + unit_direction.y().atan2(unit_direction.x())) / (2.0 * PI);
-        //     let v = unit_direction.z().acos() / PI;
-
-        //     let world_emission =
-        //         self.world
-        //             .environment
-        //             .sample_spd((u, v), VISIBLE_RANGE, wavelength_sample);
-
-        //     let (world_emission, _pdf) = world_emission.expect("world env could not be sampled");
-        //     return world_emission;
-        //     // return world_emission.with_energy(world_emission.energy / pdf.0);
-        // };
-
-        // let camera_hit_frame = TangentFrame::from_normal(camera_vertex.normal);
-        // let camera_vertex_material = self.world.get_material(camera_vertex.material);
 
         let scene_light_sampling_probability = 0.8;
 
@@ -131,7 +97,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
         for bounce_count in 0..self.max_bounces {
-            if let Some(mut hit) = self.world.hit(ray, 0.0, INFINITY) {
+            if let Some(mut hit) = self.world.hit(ray, 0.01, INFINITY) {
                 // hit some bsdf surface
                 // debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                 // println!("whatever1");
@@ -150,17 +116,23 @@ impl GenericIntegrator for LightTracingIntegrator {
 
                 let material = self.world.get_material(hit.material);
 
+                if hit.instance_id == 9 {
+                    println!(
+                        "should have checked camera, but material was {:?}",
+                        hit.material
+                    );
+                }
                 if let MaterialId::Camera(camera_id) = hit.material {
-                    // check stuff here
+                    // consider the case when the camera is hit directly
                     println!("checking camera id {}", camera_id);
-                    let camera = self.world.get_camera(camera_id);
+                    let camera = self.world.get_camera(camera_id as usize);
                     // if we hit it, then it has to have a surface
                     let hit_primitive = camera.get_surface().unwrap();
                     // somehow calculate pixel coordinate
                     let pixel_uv = camera.get_pixel_for_ray(Ray::new(hit.point, -ray.direction));
                     if let Some(uv) = pixel_uv {
                         if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
-                            let energy = beta * radiance;
+                            let energy = beta;
                             let sw = SingleWavelength::new(lambda, energy);
                             let ret = (Sample::LightSample(sw, uv), camera_id);
                             samples.push(ret);
@@ -170,7 +142,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                             let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
                             assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                            let energy = beta * radiance * weight;
+                            let energy = beta * weight;
                             let sw = SingleWavelength::new(lambda, energy);
                             let ret = (Sample::LightSample(sw, uv), camera_id);
                             samples.push(ret);
@@ -182,7 +154,63 @@ impl GenericIntegrator for LightTracingIntegrator {
                 let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
 
                 // attempt to connect to camera
-                for _ in 0..self.camera_samples {}
+                for _ in 0..self.camera_samples {
+                    let camera_pick = sampler.draw_1d();
+                    let (camera, camera_pick_pdf) = self
+                        .world
+                        .pick_random_camera(camera_pick)
+                        .expect("camera pick failed");
+                    if let Some(camera_surface) = camera.get_surface() {
+                        let (direction, pdf) = camera_surface.sample(sampler, hit.point);
+                        let direction = direction.normalized();
+                        if pdf.0 == 0.0 {
+                            // go to next pick
+                            continue;
+                        }
+                        let camera_wo = frame.to_local(&direction);
+                        let camera_connect_ray =
+                            Ray::new_with_time(hit.point + hit.normal, direction, ray.time + 0.01);
+                        let reflectance = material.f(&hit, wi, camera_wo);
+                        let dropoff = camera_wo.z().max(0.0);
+                        if dropoff == 0.0 {
+                            continue;
+                        }
+                        if let Some(mut camera_hit) =
+                            self.world.hit(camera_connect_ray, 0.01, INFINITY)
+                        {
+                            camera_hit.lambda = lambda;
+                            let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
+                            let weight = power_heuristic(pdf.0, scatter_pdf_into_camera.0);
+                            // let camera_wi = (camera_surface
+                            //     .transform
+                            //     .expect("camera did not have transform")
+                            //     / (-direction))
+                            //     .normalized();
+                            if camera_hit.instance_id == camera_surface.instance_id {
+                                if let MaterialId::Camera(camera_id) = camera_hit.material {
+                                    // correctly connected.
+                                    let pixel_uv =
+                                        camera.get_pixel_for_ray(Ray::new(hit.point, -direction));
+                                    if let Some(uv) = pixel_uv {
+                                        assert!(
+                                            !pdf.is_nan() && !weight.is_nan(),
+                                            "{:?}, {}",
+                                            pdf,
+                                            weight
+                                        );
+                                        let energy = reflectance * beta * dropoff * weight
+                                            / camera_pick_pdf.0
+                                            / pdf.0;
+                                        let sw = SingleWavelength::new(lambda, energy);
+                                        let ret = (Sample::LightSample(sw, uv), camera_id);
+                                        println!("adding camera sample to platting list");
+                                        samples.push(ret);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if let Some(wo) = maybe_wo {
                     let pdf = material.value(&hit, wi, wo);

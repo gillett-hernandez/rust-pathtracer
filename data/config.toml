@@ -16,31 +16,6 @@ look_from = [-1, 0, 0]
 look_at = [0, 0, 0]
 vfov = 90
 
-[[render_settings]]
-threads = 22
-filename = "BDPT"
-integrator = "BDPT"
-max_bounces = 10
-resolution.width = 1024
-resolution.height = 1024
-min_samples = 10
-camera_id = 1
-russian_roulette = true
-only_direct = false
-
-
-[[render_settings]]
-threads = 22
-filename = "LT"
-integrator = "LT"
-max_bounces = 10
-resolution.width = 1024
-resolution.height = 1024
-min_samples = 10
-camera_id = 1
-russian_roulette = true
-only_direct = false
-
 
 [[render_settings]]
 threads = 22

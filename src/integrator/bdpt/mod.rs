@@ -208,7 +208,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
                     )
                 } else {
-                    1.0
+                    1.0 / ((s + t) as f32)
                 };
                 if weight == 0.0 {
                     continue;

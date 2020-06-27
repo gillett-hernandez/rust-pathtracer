@@ -103,6 +103,7 @@ impl World {
         }
     }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
+        // currently just uniform sampling
         let length = self.lights.len();
         if length == 0 {
             None
@@ -124,6 +125,26 @@ impl World {
         }
     }
 
+    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&Camera, PDF)> {
+        // currently just uniform sampling
+        let length = self.cameras.len();
+        if length == 0 {
+            None
+        } else {
+            let x = s.x;
+            let idx = (length as f32 * x).clamp(0.0, length as f32 - 1.0) as usize;
+            assert!(
+                idx < self.lights.len(),
+                "{}, {}, {}, {}",
+                x,
+                length as f32 * x,
+                idx,
+                length as usize
+            );
+            Some((self.get_camera(idx), PDF::from(1.0 / length as f32)))
+        }
+    }
+
     pub fn instance_is_light(&self, instance_id: usize) -> bool {
         self.lights.contains(&instance_id)
     }
@@ -137,9 +158,8 @@ impl World {
         self.accelerator.get_primitive(index)
     }
 
-    pub fn get_camera(&self, index: u8) -> &Camera {
-        &self.cameras[index as usize]
-        // self.cameras.get_unchecked(index as usize)
+    pub fn get_camera(&self, index: usize) -> &Camera {
+        &self.cameras[index]
     }
 
     pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
@@ -170,10 +190,15 @@ impl World {
 
         if add_and_rebuild_scene {
             let instances = &mut self.accelerator.instances;
-            for cam in self.cameras.iter() {
+            for (cam_id, cam) in self.cameras.iter().enumerate() {
                 if let Some(mut surface) = cam.get_surface() {
                     let id = instances.len();
                     surface.instance_id = id;
+                    surface.material_id = MaterialId::Camera(cam_id as u8);
+                    println!(
+                        "adding camera to world with instance id {}, material id {:?}, and transform {:?}",
+                        id, surface.material_id, surface.transform
+                    );
                     instances.push(surface);
                 }
             }
