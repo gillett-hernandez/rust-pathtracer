@@ -15,8 +15,8 @@ Work is in progress on other branches for the following integrators:
 
 In addition, much of the code emphasizes matching reality as closely as possible, including the following:
 * Output format:
-  * The renderer outputs in come in a .exr file in Linear RGB space, and a .png file in sRGB space.
-    * custom exposure values are supported, however they are not part of the config file as of yet. the default behavior is to set the brightest pixel on the screen to white.
+  * The renderer outputs an .exr file in Linear RGB space, and a .png file in sRGB space.
+    * custom exposure values for the sRGB tonemapper are supported, however they are not part of the config file as of yet. the default behavior is to set the brightest pixel on the screen to white.
 * Colors and Lights:
   * Colors on the film are represented in [CIE XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space) color space. this is then color mapped to linear RGB space and sRGB space according to the [wikipedia article](https://en.wikipedia.org/wiki/SRGB)
   * Lights can have physically correct spectral power distribution functions.
