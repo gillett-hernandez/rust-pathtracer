@@ -1,5 +1,6 @@
 # Rust Pathtracer
 
+![512 spp](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/pt.png?raw=true)
 
 This is a wavelength aware physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
 
@@ -17,7 +18,7 @@ Work is in progress on other branches for the following integrators:
 In addition, much of the code emphasizes matching reality as closely as possible, including the following features:
 * Output format:
   * The renderer outputs an .exr file in Linear RGB space, and a .png file in sRGB space.
-    * custom exposure values for the sRGB tonemapper are supported, however they are not part of the config file as of yet. the default behavior is to set the brightest pixel on the screen to white.
+    * custom exposure values for the sRGB tonemapper are supported. the default behavior is to set the brightest pixel on the screen to white.
 * Colors and Lights:
   * Colors on the film are represented in [CIE XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space) color space. this is then color mapped to linear RGB space and sRGB space according to the [wikipedia article](https://en.wikipedia.org/wiki/SRGB)
   * Lights can have physically correct spectral power distribution functions, including blackbody distributions and distributions with peaks at certain frequencies
@@ -64,7 +65,7 @@ That should theoretically cause images to converge faster, though the feature is
 - [ ] implement scene parser to reduce compilations even more
 - [ ] implement light tracing
 - [ ] implement BDPT
-- [ ] refactor bsdf trait methods
+- [ ] refactor bsdf trait methods to reduce duplication
 
 ## Contribution
 
