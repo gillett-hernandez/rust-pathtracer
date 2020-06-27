@@ -175,6 +175,7 @@ impl NaiveRenderer {
                             // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
                             // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
                             let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
+                            // use with capacity to preallocate
                             for _s in 0..settings.min_samples {
                                 let sample = sampler.draw_2d();
                                 let r = camera.get_ray(
@@ -213,16 +214,24 @@ impl NaiveRenderer {
 
         // additional_splats.;
         additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
-            camera_id1.0.cmp(&camera_id2.0)
+            camera_id1.cmp(&camera_id2)
         });
         for (sample, camera_id) in additional_splats {
             match sample {
                 Sample::LightSample(radiance, (x, y)) => {
-                    let light_film = &mut light_films[camera_id.0];
+                    let light_film = &mut light_films[camera_id as usize];
+                    let (x, y) = (
+                        (x * light_film.width as f32) as usize,
+                        (y * light_film.height as f32) as usize,
+                    );
                     light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
                 }
                 Sample::ImageSample(radiance, (x, y)) => {
-                    let image_film = &mut films[camera_id.0].1;
+                    let image_film = &mut films[camera_id as usize].1;
+                    let (x, y) = (
+                        (x * image_film.width as f32) as usize,
+                        (y * image_film.height as f32) as usize,
+                    );
                     image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
                 }
             }
@@ -277,6 +286,7 @@ impl Renderer for NaiveRenderer {
         > = HashMap::new();
         // splatting_renders_and_cameras.insert(IntegratorType::PathTracing, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
+        splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
         for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
@@ -379,6 +389,37 @@ impl Renderer for NaiveRenderer {
                     };
 
                     println!("rendering with bidirectional path tracing integrator");
+                    let render_splatted_result = NaiveRenderer::render_splatted(
+                        integrator,
+                        bundled_settings.clone(),
+                        bundled_cameras.clone(),
+                    );
+                    assert!(render_splatted_result.len() > 0);
+                    films.extend(
+                        (&bundled_settings)
+                            .iter()
+                            .cloned()
+                            .zip(render_splatted_result),
+                    );
+                }
+                IntegratorType::LightTracing => {
+                    let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
+                        splatting_renders_and_cameras
+                            .get(integrator_type)
+                            .unwrap()
+                            .iter()
+                            .cloned()
+                            .unzip();
+                    world.assign_cameras(bundled_cameras.clone(), true);
+                    let arc_world = Arc::new(world.clone());
+                    let integrator = LightTracingIntegrator {
+                        max_bounces: 10,
+                        world: arc_world.clone(),
+                        russian_roulette: true,
+                        camera_samples: 4,
+                    };
+
+                    println!("rendering with light tracing integrator");
                     let render_splatted_result = NaiveRenderer::render_splatted(
                         integrator,
                         bundled_settings.clone(),

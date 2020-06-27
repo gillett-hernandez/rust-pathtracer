@@ -63,8 +63,8 @@ pub trait SamplerIntegrator: Sync + Send {
 }
 
 pub enum Sample {
-    ImageSample(SingleWavelength, (usize, usize)),
-    LightSample(SingleWavelength, (usize, usize)),
+    ImageSample(SingleWavelength, (f32, f32)),
+    LightSample(SingleWavelength, (f32, f32)),
 }
 
 pub trait GenericIntegrator: Send + Sync {

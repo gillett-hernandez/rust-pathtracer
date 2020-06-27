@@ -100,10 +100,10 @@ impl Hittable for Aggregate {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Instance {
-    aggregate: Aggregate,
-    transform: Option<Transform3>,
-    material_id: MaterialId,
-    instance_id: usize,
+    pub aggregate: Aggregate,
+    pub transform: Option<Transform3>,
+    pub material_id: MaterialId,
+    pub instance_id: usize,
 }
 impl Instance {
     pub fn new(

@@ -3,7 +3,7 @@ use crate::world::World;
 use crate::aabb::HasBoundingBox;
 use crate::hittable::Hittable;
 use crate::material::Material;
-use crate::materials::{MaterialEnum, MaterialId};
+use crate::materials::MaterialId;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use std::f32::INFINITY;
@@ -91,7 +91,10 @@ impl GenericIntegrator for LightTracingIntegrator {
                     sampler.draw_2d(),
                     wavelength_sample,
                 )
-                .unwrap();
+                .expect(&format!(
+                    "emission sample failed, light is {:?} material is {:?}",
+                    light, mat_id
+                ));
             light_g_term = (light_surface_normal * (&tmp_sampled.0).direction).abs();
             sampled = (
                 tmp_sampled.0,
@@ -149,17 +152,28 @@ impl GenericIntegrator for LightTracingIntegrator {
 
                 if let MaterialId::Camera(camera_id) = hit.material {
                     // check stuff here
+                    let camera = self.world.get_camera(camera_id);
+                    // if we hit it, then it has to have a surface
+                    let hit_primitive = camera.get_surface().unwrap();
                     // somehow calculate pixel coordinate
-                    if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
-                        let energy = beta * radiance;
-                    // samples.push();
-                    } else {
-                        let hit_primitive = self.world.get_primitive(hit.instance_id);
-                        // // println!("{:?}", hit);
-                        let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
-                        let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
-                        assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                        let energy = beta * radiance * weight;
+                    let pixel_uv = camera.get_pixel_for_ray(Ray::new(hit.point, -ray.direction));
+                    if let Some(uv) = pixel_uv {
+                        if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
+                            let energy = beta * radiance;
+                            let sw = SingleWavelength::new(lambda, energy);
+                            let ret = (Sample::LightSample(sw, uv), camera_id);
+                            samples.push(ret);
+                        } else {
+                            // let hit_primitive = self.world.get_primitive(hit.instance_id);
+                            // // println!("{:?}", hit);
+                            let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
+                            let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
+                            assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                            let energy = beta * radiance * weight;
+                            let sw = SingleWavelength::new(lambda, energy);
+                            let ret = (Sample::LightSample(sw, uv), camera_id);
+                            samples.push(ret);
+                        }
                     }
                 }
 
@@ -167,7 +181,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
 
                 // attempt to connect to camera
-                for _ in 0..4 {}
+                for _ in 0..self.camera_samples {}
 
                 if let Some(wo) = maybe_wo {
                     let pdf = material.value(&hit, wi, wo);

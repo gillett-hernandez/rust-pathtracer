@@ -86,7 +86,8 @@ impl World {
         let mut lights = Vec::new();
         for instance in instances.iter() {
             if let MaterialId::Light(id) = instance.get_material_id() {
-                lights.push(id as usize);
+                println!("adding light {:?} to lights list", id);
+                lights.push(instance.instance_id as usize);
             }
         }
         let accelerator = Accelerator::new(instances, AcceleratorType::List);
@@ -133,6 +134,11 @@ impl World {
         self.accelerator.get_primitive(index)
     }
 
+    pub fn get_camera(&self, index: u8) -> &Camera {
+        &self.cameras[index as usize]
+        // self.cameras.get_unchecked(index as usize)
+    }
+
     pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         self.accelerator.hit(r, t0, t1)
     }
@@ -153,7 +159,9 @@ impl World {
         if add_and_rebuild_scene {
             let instances = &mut self.accelerator.instances;
             for cam in self.cameras.iter() {
-                if let Some(surface) = cam.get_surface() {
+                if let Some(mut surface) = cam.get_surface() {
+                    let id = instances.len();
+                    surface.instance_id = id;
                     instances.push(surface);
                 }
             }

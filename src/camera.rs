@@ -4,7 +4,7 @@ use crate::math::*;
 
 use std::marker::{Send, Sync};
 
-pub struct CameraId(pub usize);
+pub type CameraId = u8;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Camera {
@@ -29,12 +29,19 @@ impl Camera {
             Camera::SimpleCamera(inner) => inner.get_surface(),
         }
     }
+    pub fn get_pixel_for_ray(&self, ray: Ray) -> Option<(f32, f32)> {
+        match self {
+            Camera::SimpleCamera(inner) => inner.get_pixel_for_ray(ray),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct SimpleCamera {
     pub origin: Point3,
     pub direction: Vec3,
+    half_height: f32,
+    half_width: f32,
     focal_distance: f32,
     lower_left_corner: Point3,
     vfov: f32,
@@ -81,6 +88,8 @@ impl SimpleCamera {
         SimpleCamera {
             origin: look_from,
             direction,
+            half_height,
+            half_width,
             focal_distance: focus_dist,
             lower_left_corner: look_from
                 - u * half_width * focus_dist
@@ -129,8 +138,43 @@ impl SimpleCamera {
         assert!(ray_direction.is_normal());
         Ray::new_with_time(ray_origin, ray_direction, time)
     }
-    pub fn get_pixel_for_point(&self, point: Point3) -> (f32, f32) {
-        (0.0, 0.0)
+    // returns None if the point on the lens was not from a valid pixel
+    pub fn get_pixel_for_ray(&self, ray: Ray) -> Option<(f32, f32)> {
+        // would require tracing ray backwards, but for now, try and see what image uv it went through according to the thinlens approximation
+        // thinlens says that the ray {self.origin + offset, (self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin - offset}
+        // was generated for point (s, t) on the film
+        // we know that this ray hit a certain point on the lens. this alone doesn't help determine what pixel coordinate should be returned
+        // let self_origin_and_offset = ray.origin;
+        let transform = self.surface.transform.expect("somehow camera lens was created without a transform, which should never happen for SimpleCamera");
+        let offset_in_uvw_space: Vec3 = transform / (ray.origin - self.origin);
+        let (rdx, rdy) = (offset_in_uvw_space.x(), offset_in_uvw_space.y());
+        if rdx * rdx + rdy * rdy > self.lens_radius * self.lens_radius {
+            None
+        } else {
+            // intersect "ray" with image plane
+            let local_wi: Vec3 = transform / ray.direction;
+            let local_ray_z = local_wi.z();
+            let plane_z = self.focal_distance;
+            let t = plane_z / local_ray_z;
+            if t < 0.0 {
+                return None;
+            }
+            let local_ray = Ray::new(Point3::from(offset_in_uvw_space), local_wi);
+            let point_on_image_plane = local_ray.point_at_parameter(t);
+
+            let (s, t) = (
+                (point_on_image_plane.x() - self.half_width * self.focal_distance)
+                    / (2.0 * self.half_width * self.focal_distance),
+                (point_on_image_plane.y() - self.half_height * self.focal_distance)
+                    / (2.0 * self.half_height * self.focal_distance),
+            );
+
+            if s >= 1.0 || s < 0.0 || t >= 1.0 || t < 0.0 {
+                return None;
+            }
+
+            Some((s, t))
+        }
     }
     pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
         assert!(self.focal_distance > 0.0 && self.vfov > 0.0);

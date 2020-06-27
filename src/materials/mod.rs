@@ -87,6 +87,82 @@ impl Material for MaterialEnum {
             MaterialEnum::DiffuseLight(inner) => inner.generate(hit, s, wi),
         }
     }
+    fn sample_emission(
+        &self,
+        point: Point3,
+        normal: Vec3,
+        wavelength_range: Bounds1D,
+        scatter_sample: Sample2D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(Ray, SingleWavelength, PDF)> {
+        match self {
+            MaterialEnum::GGX(inner) => inner.sample_emission(
+                point,
+                normal,
+                wavelength_range,
+                scatter_sample,
+                wavelength_sample,
+            ),
+            MaterialEnum::Lambertian(inner) => inner.sample_emission(
+                point,
+                normal,
+                wavelength_range,
+                scatter_sample,
+                wavelength_sample,
+            ),
+            MaterialEnum::ParallelLight(inner) => inner.sample_emission(
+                point,
+                normal,
+                wavelength_range,
+                scatter_sample,
+                wavelength_sample,
+            ),
+            MaterialEnum::DiffuseLight(inner) => inner.sample_emission(
+                point,
+                normal,
+                wavelength_range,
+                scatter_sample,
+                wavelength_sample,
+            ),
+        }
+    }
+    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+        match self {
+            MaterialEnum::GGX(inner) => inner.f(hit, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.f(hit, wi, wo),
+            MaterialEnum::ParallelLight(inner) => inner.f(hit, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.f(hit, wi, wo),
+        }
+    }
+    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
+        match self {
+            MaterialEnum::GGX(inner) => inner.emission(hit, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.emission(hit, wi, wo),
+            MaterialEnum::ParallelLight(inner) => inner.emission(hit, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.emission(hit, wi, wo),
+        }
+    }
+    fn sample_emission_spectra(
+        &self,
+        uv: (f32, f32),
+        wavelength_range: Bounds1D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(f32, PDF)> {
+        match self {
+            MaterialEnum::GGX(inner) => {
+                inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
+            }
+            MaterialEnum::Lambertian(inner) => {
+                inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
+            }
+            MaterialEnum::ParallelLight(inner) => {
+                inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
+            }
+            MaterialEnum::DiffuseLight(inner) => {
+                inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
+            }
+        }
+    }
 }
 
 // impl std::convert::Into<usize> for MaterialId {

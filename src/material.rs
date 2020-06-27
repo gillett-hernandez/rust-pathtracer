@@ -37,7 +37,7 @@ pub trait Material: Send + Sync {
         None
     }
     // evaluate bsdf
-    fn f(&self, _hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
         SingleEnergy::ZERO
     }
     // evaluate the spectral power distribution for the given light and angle
