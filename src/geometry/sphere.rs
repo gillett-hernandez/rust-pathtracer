@@ -3,6 +3,7 @@ use crate::hittable::{HitRecord, Hittable};
 use crate::materials::MaterialId;
 use crate::math::*;
 
+#[derive(Clone, Copy, Debug)]
 pub struct Sphere {
     pub radius: f32,
     pub origin: Point3,

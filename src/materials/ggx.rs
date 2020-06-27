@@ -167,7 +167,7 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GGX {
     alpha: f32,
     eta: SPD,
@@ -352,6 +352,7 @@ impl Material for GGX {
 mod tests {
     use super::*;
     use crate::curves;
+    use crate::materials::MaterialId;
     #[test]
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
@@ -368,7 +369,7 @@ mod tests {
             (0.0f32, 0.0f32),
             lambda,
             Vec3::ZERO,
-            0,
+            MaterialId::Material(0),
             0,
         );
         let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), wi);

@@ -26,8 +26,7 @@ use camera::{Camera, SimpleCamera};
 use config::{get_settings, Config};
 use geometry::{AARect, Aggregate, Instance, Sphere};
 
-use material::Material;
-use materials::*;
+// use materials::*;
 use math::*;
 use world::*;
 
@@ -66,21 +65,17 @@ fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
 }
 
 #[allow(dead_code)]
-fn white_furnace_test(material: Box<dyn Material>) -> World {
-    let world = World {
-        accelerator: Accelerator::new(
-            vec![Instance::from(Aggregate::from(Sphere::new(
-                5.0,
-                Point3::new(0.0, 0.0, 0.0),
-                0,
-                0,
-            )))],
-            AcceleratorType::List,
-        ),
-        lights: vec![],
-        environment: EnvironmentMap::new(curves::cie_e(1.0)),
-        materials: vec![material],
-    };
+fn white_furnace_test(material: MaterialEnum) -> World {
+    let world = World::new(
+        vec![Instance::from(Aggregate::from(Sphere::new(
+            5.0,
+            Point3::new(0.0, 0.0, 0.0),
+            MaterialId::Material(0),
+            0,
+        )))],
+        vec![material],
+        EnvironmentMap::new(curves::cie_e(1.0)),
+    );
     world
 }
 
@@ -116,123 +111,122 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let glass = curves::cauchy(1.45, 10000.0);
     let blackbody_illuminant = curves::blackbody(5500.0, 5.0);
 
-    let lambertian = Box::new(Lambertian::new(color));
-    let lambertian_white = Box::new(Lambertian::new(white));
-    let lambertian_red = Box::new(Lambertian::new(red));
-    let lambertian_green = Box::new(Lambertian::new(green));
-    let lambertian_blue = Box::new(Lambertian::new(blue));
-    let ggx_glass = Box::new(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let ggx_glass_rough = Box::new(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let ggx_moissanite = Box::new(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
-    let ggx_silver_metal = Box::new(GGX::new(
+    let lambertian = MaterialEnum::from(Lambertian::new(color));
+    let lambertian_white = MaterialEnum::from(Lambertian::new(white));
+    let lambertian_red = MaterialEnum::from(Lambertian::new(red));
+    let lambertian_green = MaterialEnum::from(Lambertian::new(green));
+    let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
+    let ggx_glass = MaterialEnum::from(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+    let ggx_glass_rough =
+        MaterialEnum::from(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+    let ggx_moissanite =
+        MaterialEnum::from(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
+    let ggx_silver_metal = MaterialEnum::from(GGX::new(
         0.03,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
         0.0,
     ));
-    let ggx_copper_metal = Box::new(GGX::new(
+    let ggx_copper_metal = MaterialEnum::from(GGX::new(
         0.03,
         copper_ior.clone(),
         1.0,
         copper_kappa.clone(),
         0.0,
     ));
-    let ggx_silver_metal_rough = Box::new(GGX::new(
+    let ggx_silver_metal_rough = MaterialEnum::from(GGX::new(
         0.08,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
         0.0,
     ));
-    let ggx_gold_metal = Box::new(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
-    let ggx_lead_metal = Box::new(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
-    let ggx_cold_lead_metal = Box::new(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
-    let ggx_platinum_metal = Box::new(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
-    let ggx_bismuth_metal = Box::new(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-    let ggx_iron_metal = Box::new(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
+    let ggx_gold_metal = MaterialEnum::from(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
+    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
+    let ggx_cold_lead_metal =
+        MaterialEnum::from(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
+    let ggx_platinum_metal =
+        MaterialEnum::from(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
+    let ggx_bismuth_metal =
+        MaterialEnum::from(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
+    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.08, iron_ior, 1.0, iron_kappa, 0.0));
 
     let env_map = EnvironmentMap::new(cie_e_world_illuminant);
-    let diffuse_light = Box::new(DiffuseLight::new(blackbody_illuminant, Sidedness::Dual));
+    let diffuse_light =
+        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant, Sidedness::Dual));
 
-    let world = World {
-        accelerator: Accelerator::new(
-            vec![
-                // Box::new(Sphere::new(10.0, Point3::new(0.0, 0.0, 15.0), Some(2), 0)), // big sphere light above
-                Instance::from(Aggregate::from(AARect::new(
-                    (0.7, 0.7),
-                    Point3::new(0.0, 0.0, 0.9),
-                    Axis::Z,
-                    false,
-                    1,
-                    0,
-                ))),
-                Instance::from(Aggregate::from(AARect::new(
-                    (2.0, 2.0),
-                    Point3::new(0.0, 0.0, 1.0),
-                    Axis::Z,
-                    true,
-                    2,
-                    1,
-                ))),
-                Instance::from(Aggregate::from(Sphere::new(
-                    0.3,
-                    Point3::new(-0.5, 0.0, -0.7),
-                    0,
-                    2,
-                ))), // ball at origin
-                Instance::from(Aggregate::from(Sphere::new(
-                    0.3,
-                    Point3::new(0.1, -0.5, -0.7),
-                    5,
-                    3,
-                ))), // ball at origin
-                Instance::from(Aggregate::from(Sphere::new(
-                    0.3,
-                    Point3::new(0.1, 0.5, -0.7),
-                    6,
-                    4,
-                ))), // ball at origin
-                Instance::from(Aggregate::from(AARect::new(
-                    (2.0, 2.0),
-                    Point3::new(0.0, 0.0, -1.0),
-                    Axis::Z,
-                    true,
-                    2,
-                    5,
-                ))),
-                Instance::from(Aggregate::from(AARect::new(
-                    (2.0, 2.0),
-                    Point3::new(0.0, 1.0, 0.0),
-                    Axis::Y,
-                    true,
-                    3,
-                    6,
-                ))),
-                Instance::from(Aggregate::from(AARect::new(
-                    (2.0, 2.0),
-                    Point3::new(0.0, -1.0, 0.0),
-                    Axis::Y,
-                    true,
-                    4,
-                    7,
-                ))),
-                Instance::from(Aggregate::from(AARect::new(
-                    // back wall
-                    (2.0, 2.0),
-                    Point3::new(1.0, 0.0, 0.0),
-                    Axis::X,
-                    true,
-                    2,
-                    8,
-                ))),
-            ],
-            AcceleratorType::List,
-        ),
-        // the lights vector is in the form of instance indices, which means that 0 points to the first index, which in turn means it points to the lit sphere.
-        lights: vec![0],
-        environment: env_map,
-        materials: vec![
+    let world = World::new(
+        vec![
+            Instance::from(Aggregate::from(AARect::new(
+                (0.7, 0.7),
+                Point3::new(0.0, 0.0, 0.9),
+                Axis::Z,
+                false,
+                MaterialId::Light(1),
+                0,
+            ))),
+            Instance::from(Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 0.0, 1.0),
+                Axis::Z,
+                true,
+                2.into(),
+                1,
+            ))),
+            Instance::from(Aggregate::from(Sphere::new(
+                0.3,
+                Point3::new(-0.5, 0.0, -0.7),
+                0.into(),
+                2,
+            ))), // ball at origin
+            Instance::from(Aggregate::from(Sphere::new(
+                0.3,
+                Point3::new(0.1, -0.5, -0.7),
+                5.into(),
+                3,
+            ))), // ball at origin
+            Instance::from(Aggregate::from(Sphere::new(
+                0.3,
+                Point3::new(0.1, 0.5, -0.7),
+                6.into(),
+                4,
+            ))), // ball at origin
+            Instance::from(Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 0.0, -1.0),
+                Axis::Z,
+                true,
+                2.into(),
+                5,
+            ))),
+            Instance::from(Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Axis::Y,
+                true,
+                3.into(),
+                6,
+            ))),
+            Instance::from(Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, -1.0, 0.0),
+                Axis::Y,
+                true,
+                4.into(),
+                7,
+            ))),
+            Instance::from(Aggregate::from(AARect::new(
+                // back wall
+                (2.0, 2.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Axis::X,
+                true,
+                2.into(),
+                8,
+            ))),
+        ],
+        vec![
             ggx_glass,
             diffuse_light,
             lambertian_white,
@@ -241,7 +235,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
             ggx_gold_metal,
             ggx_copper_metal,
         ],
-    };
+        env_map,
+    );
     world
 }
 

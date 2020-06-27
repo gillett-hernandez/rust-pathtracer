@@ -12,6 +12,13 @@ impl Matrix4x4 {
     const I: Matrix4x4 = Matrix4x4(f32x16::new(
         1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     ));
+    pub fn transpose(&self) -> Matrix4x4 {
+        let [m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44]: [f32;
+            16] = self.0.into();
+        Matrix4x4(f32x16::new(
+            m11, m21, m31, m41, m12, m22, m32, m42, m13, m23, m33, m43, m14, m24, m34, m44,
+        ))
+    }
 }
 
 impl Mul<Vec3> for Matrix4x4 {
@@ -191,14 +198,43 @@ impl Transform3 {
     }
 
     pub fn new_from_raw(forward: Matrix4x4, reverse: Matrix4x4) -> Self {
-        Transform3 {
-            forward,
-            reverse: reverse,
-        }
+        Transform3 { forward, reverse }
+    }
+
+    // assumes vector stack is a tangent frame
+
+    // to world is equivalent to
+    // [ Tx Bx Nx        [ vx
+    //   Ty By Ny    *     vy     =
+    //   Tz Bz Nz ]        vz ]
+
+    // to local is equivalent to
+    // [ Tx Ty Tz        [ vx
+    //   Bx By Bz    *     vy     =   [Tx * vx + Ty * vy + Tz * vz, ...]
+    //   Nx Ny Nz ]        vz ]
+
+    pub fn from_vector_stack(v0: f32x4, v1: f32x4, v2: f32x4) -> Self {
+        let [m11, m12, m13, _]: [f32; 4] = v0.into();
+        let [m21, m22, m23, _]: [f32; 4] = v1.into();
+        let [m31, m32, m33, _]: [f32; 4] = v2.into();
+
+        let m = Matrix4x4(f32x16::new(
+            m11, m12, m13, 0.0, m21, m22, m23, 0.0, m31, m32, m33, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ));
+        Transform3::new_from_raw(m.transpose(), m)
     }
 
     pub fn axis_transform(&self) -> (Vec3, Vec3, Vec3) {
         (*self * Vec3::X, *self * Vec3::Y, *self * Vec3::Z)
+    }
+}
+
+impl From<TangentFrame> for Transform3 {
+    fn from(value: TangentFrame) -> Self {
+        value.tangent;
+        value.bitangent;
+        value.normal;
+        Transform3::from_vector_stack(value.tangent.0, value.bitangent.0, value.normal.0)
     }
 }
 

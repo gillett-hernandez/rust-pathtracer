@@ -1,3 +1,6 @@
+use crate::hittable::*;
+use crate::math::*;
+
 pub use crate::material::Material;
 
 mod diffuse_light;
@@ -11,12 +14,91 @@ pub use lambertian::Lambertian;
 pub use parallel_light::ParallelLight;
 
 // type required for an id into the Material Table
-pub type MaterialId = u8;
+// pub type MaterialId = u8;
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub enum MaterialId {
+    Material(u8),
+    Light(u16),
+    Camera(u8),
+}
+
+impl From<u8> for MaterialId {
+    fn from(value: u8) -> Self {
+        MaterialId::Material(value)
+    }
+}
+
+impl From<MaterialId> for usize {
+    fn from(value: MaterialId) -> Self {
+        match value {
+            MaterialId::Light(v) => v as usize,
+            MaterialId::Camera(v) => v as usize,
+            MaterialId::Material(v) => v as usize,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum MaterialEnum {
+    GGX(GGX),
+    Lambertian(Lambertian),
+    DiffuseLight(DiffuseLight),
+    ParallelLight(ParallelLight),
+}
+
+impl From<DiffuseLight> for MaterialEnum {
+    fn from(value: DiffuseLight) -> Self {
+        MaterialEnum::DiffuseLight(value)
+    }
+}
+
+impl From<Lambertian> for MaterialEnum {
+    fn from(value: Lambertian) -> Self {
+        MaterialEnum::Lambertian(value)
+    }
+}
+
+impl From<ParallelLight> for MaterialEnum {
+    fn from(value: ParallelLight) -> Self {
+        MaterialEnum::ParallelLight(value)
+    }
+}
+
+impl From<GGX> for MaterialEnum {
+    fn from(value: GGX) -> Self {
+        MaterialEnum::GGX(value)
+    }
+}
+
+impl Material for MaterialEnum {
+    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+        match self {
+            MaterialEnum::GGX(inner) => inner.value(hit, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.value(hit, wi, wo),
+            MaterialEnum::ParallelLight(inner) => inner.value(hit, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.value(hit, wi, wo),
+        }
+    }
+    fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Option<Vec3> {
+        match self {
+            MaterialEnum::GGX(inner) => inner.generate(hit, s, wi),
+            MaterialEnum::Lambertian(inner) => inner.generate(hit, s, wi),
+            MaterialEnum::ParallelLight(inner) => inner.generate(hit, s, wi),
+            MaterialEnum::DiffuseLight(inner) => inner.generate(hit, s, wi),
+        }
+    }
+}
+
+// impl std::convert::Into<usize> for MaterialId {
+//     fn into(self) -> usize {
+//         usize::from(self)
+//     }
+// }
 
 // pub struct MaterialTable {
 //     pub materials: Vec<Box<dyn Material>>,
 // }
-pub type MaterialTable = Vec<Box<dyn Material>>;
+pub type MaterialTable = Vec<MaterialEnum>;
 
 // #[cfg(test)]
 // mod tests {

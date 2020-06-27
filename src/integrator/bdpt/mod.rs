@@ -5,9 +5,10 @@ use helpers::*;
 use crate::world::World;
 // use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
-use crate::camera::Camera;
+
 use crate::hittable::Hittable;
 use crate::material::Material;
+use crate::materials::*;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
@@ -20,7 +21,6 @@ pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
     pub specific_pair: Option<(usize, usize)>,
-    pub cameras: Vec<Camera>,
 }
 
 impl GenericIntegrator for BDPTIntegrator {
@@ -28,7 +28,7 @@ impl GenericIntegrator for BDPTIntegrator {
         &self,
         sampler: &mut Box<dyn Sampler>,
         camera_ray: Ray,
-        samples: &mut Vec<(Sample, CameraId)>,
+        _samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, emit ray from light, emit ray from camera, connect light path vertices to camera path vertices.
 
@@ -50,7 +50,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 light.sample_surface(sampler.draw_2d());
 
             let mat_id = light.get_material_id();
-            let material: &Box<dyn Material> = &self.world.get_material(mat_id);
+            let material = self.world.get_material(mat_id);
             // println!("sampled light emission in instance light branch");
             sampled = material
                 .sample_emission(
@@ -101,7 +101,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampled.1.lambda,
                 sampled.0.origin,
                 sampled.0.direction,
-                0,
+                MaterialId::Light(0),
                 0,
                 sampled.1.energy,
                 1.0,
@@ -124,7 +124,7 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             camera_ray.origin,
             camera_ray.direction,
-            0,
+            MaterialId::Camera(0),
             0,
             SingleEnergy::ONE,
             1.0,

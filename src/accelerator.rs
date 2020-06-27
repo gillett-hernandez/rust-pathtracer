@@ -3,19 +3,17 @@ use crate::geometry::Instance;
 use crate::hittable::{HitRecord, Hittable};
 use crate::math::*;
 
+#[derive(Clone, Copy, Debug)]
 pub enum AcceleratorType {
     // BVH,
     List,
 }
 
+#[derive(Clone)]
 pub struct Accelerator {
     pub instances: Vec<Instance>,
     pub accelerator_type: AcceleratorType,
 }
-
-// pub struct HittableList {
-//     pub list: Vec<Box<dyn Hittable>>,
-// }
 
 impl Accelerator {
     pub fn new(list: Vec<Instance>, accel_type: AcceleratorType) -> Self {
@@ -26,6 +24,11 @@ impl Accelerator {
         Accelerator {
             instances: list,
             accelerator_type: accel_type,
+        }
+    }
+    pub fn rebuild(&mut self) {
+        match self.accelerator_type {
+            AcceleratorType::List => {} // _ => {}
         }
     }
 }

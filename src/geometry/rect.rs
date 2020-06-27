@@ -11,6 +11,7 @@ fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct AARect {
     pub size: (f32, f32),
     half_size: (f32, f32),
@@ -85,7 +86,7 @@ impl Hittable for AARect {
         }
         let t = (-tmp_o.z()) / tmp_d.z();
         assert!(t.is_finite(), "{:?} {:?}", tmp_o, tmp_d);
-        if t < t0 || t > t1 || t >= r.tmax {
+        if t <= t0 || t > t1 || t >= r.tmax {
             return None;
         }
         let xh = tmp_o.x() + t * tmp_d.x();
@@ -115,20 +116,31 @@ impl Hittable for AARect {
         ))
     }
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
-        let Sample2D { x, y } = s;
+        let Sample2D { mut x, y } = s;
+        let mut normal = Vec3::from_axis(self.normal);
+        if self.two_sided {
+            let choice = Sample1D { x }.choose(0.5, -1.0f32, 1.0f32);
+            x = choice.0.x;
+            normal = normal * choice.1;
+        }
         let point = self.origin
             + vec_shuffle(
                 Vec3::new((x - 0.5) * self.size.0, (y - 0.5) * self.size.1, 0.0),
                 &self.normal,
             );
         let area = self.size.0 * self.size.1;
-        let normal = Vec3::from_axis(self.normal);
         (point, normal, (1.0 / area).into())
     }
     fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
         let (point, normal, area_pdf) = self.sample_surface(s.draw_2d());
         let direction = point - from;
-        let pdf = area_pdf * direction.norm_squared() / ((normal * direction.normalized()).abs());
+        let cos_i = normal * direction.normalized();
+        if !self.two_sided {
+            if cos_i < 0.0 {
+                return (direction.normalized(), 0.0.into());
+            }
+        }
+        let pdf = area_pdf * direction.norm_squared() / cos_i.abs();
         if !pdf.0.is_finite() {
             // println!("pdf was inf, {:?}", direction);
             (direction.normalized(), 0.0.into())
@@ -138,9 +150,16 @@ impl Hittable for AARect {
     }
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
+        let cos_i = normal * direction.normalized();
+        if !self.two_sided {
+            if cos_i < 0.0 {
+                return 0.0.into();
+            }
+        }
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
-        PDF::from(distance_squared / ((normal * direction.normalized()).abs() * area))
+        // TODO: affirm that it's fine to return 0.0 when not two sided.
+        PDF::from(distance_squared / (cos_i.abs() * area))
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {

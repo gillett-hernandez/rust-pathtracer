@@ -265,7 +265,7 @@ pub trait Renderer {
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config) {
+    fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
         // bin the render settings into bins corresponding to what integrator they need.
 
         let mut bundled_cameras: Vec<Camera> = Vec::new();
@@ -325,10 +325,11 @@ impl Renderer for NaiveRenderer {
             }
         }
         // phase 2, for renders that don't require a splatted render, do them first
-        let arc_world = Arc::new(world);
+
         for (integrator_type, render_settings) in sampled_renders.iter() {
             match integrator_type {
                 IntegratorType::PathTracing => {
+                    let arc_world = Arc::new(world.clone());
                     if let Some(Integrator::PathTracing(integrator)) =
                         Integrator::from_settings_and_world(
                             arc_world.clone(),
@@ -369,18 +370,19 @@ impl Renderer for NaiveRenderer {
                             .iter()
                             .cloned()
                             .unzip();
+                    world.assign_cameras(bundled_cameras.clone(), true);
+                    let arc_world = Arc::new(world.clone());
                     let integrator = BDPTIntegrator {
                         max_bounces: 10,
                         world: arc_world.clone(),
                         specific_pair: None,
-                        cameras: bundled_cameras.clone(),
                     };
 
                     println!("rendering with bidirectional path tracing integrator");
                     let render_splatted_result = NaiveRenderer::render_splatted(
                         integrator,
                         bundled_settings.clone(),
-                        bundled_cameras,
+                        bundled_cameras.clone(),
                     );
                     assert!(render_splatted_result.len() > 0);
                     films.extend(

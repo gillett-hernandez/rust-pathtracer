@@ -2,6 +2,7 @@ use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
 
+#[derive(Clone)]
 pub struct DiffuseLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
     pub color: SPD,

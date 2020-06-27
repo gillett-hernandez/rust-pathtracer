@@ -103,6 +103,7 @@ pub fn veach_v(world: &Arc<World>, point0: Point3, point1: Point3) -> bool {
     hit.is_none()
 }
 
+#[allow(unused_mut)]
 pub fn random_walk(
     mut ray: Ray,
     lambda: f32,
@@ -120,12 +121,6 @@ pub fn random_walk(
     for _ in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, INFINITY) {
             hit.lambda = lambda;
-            let frame = TangentFrame::from_normal(hit.normal);
-            let wi = frame.to_local(&-ray.direction).normalized();
-            let material: &Box<dyn Material> = &world.materials[hit.material as usize];
-
-            // consider accumulating emission in some other form for trace_type == Type::Eye situations, as mentioned in veach.
-            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
             let mut vertex = Vertex::new(
                 trace_type,
                 hit.time,
@@ -139,6 +134,21 @@ pub fn random_walk(
                 0.0,
                 1.0,
             );
+
+            let frame = TangentFrame::from_normal(hit.normal);
+            let wi = frame.to_local(&-ray.direction).normalized();
+            // let id: usize = hit.material.into();
+            if let MaterialId::Camera(_camera_id) = hit.material {
+                if trace_type == Type::Light {
+                    vertex.kind = Type::Camera;
+                    vertices.push(vertex);
+                    break;
+                }
+            }
+            let material = world.get_material(hit.material);
+
+            // consider accumulating emission in some other form for trace_type == Type::Eye situations, as mentioned in veach.
+            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
 
             // what to do in this situation, where there is a wo and there's also emission?
             let emission = material.emission(&hit, wi, maybe_wo);
@@ -208,7 +218,7 @@ pub fn random_walk(
                     lambda,
                     Point3::from(max_world_radius * ray.direction),
                     -ray.direction,
-                    0,
+                    MaterialId::Light(0),
                     0,
                     beta,
                     1.0 / (max_world_radius * max_world_radius * 4.0 * PI),
@@ -612,6 +622,7 @@ impl<'a> Index<usize> for CombinedPath<'a> {
     }
 }
 
+#[allow(unused)]
 pub fn eval_mis<F>(
     world: &Arc<World>,
     light_path: &Vec<Vertex>,

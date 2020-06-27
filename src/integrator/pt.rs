@@ -43,7 +43,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     //     wi
                     // );
 
-                    let material: &Box<dyn Material> = &self.world.get_material(hit.material);
+                    let material = self.world.get_material(hit.material);
 
                     // wo is generated in tangent space.
                     let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);

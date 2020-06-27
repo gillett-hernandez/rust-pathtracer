@@ -1,4 +1,7 @@
+use crate::geometry::*;
+use crate::materials::MaterialId;
 use crate::math::*;
+
 use std::marker::{Send, Sync};
 
 pub struct CameraId(pub usize);
@@ -11,14 +14,19 @@ pub enum Camera {
 impl Camera {
     pub fn get_ray(&self, s: f32, t: f32) -> Ray {
         match self {
-            Camera::SimpleCamera(simple_camera) => simple_camera.get_ray(s, t),
+            Camera::SimpleCamera(inner) => inner.get_ray(s, t),
         }
     }
     pub fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
         match self {
-            Camera::SimpleCamera(simple_camera) => {
-                Camera::SimpleCamera(simple_camera.with_aspect_ratio(aspect_ratio))
+            Camera::SimpleCamera(inner) => {
+                Camera::SimpleCamera(inner.with_aspect_ratio(aspect_ratio))
             }
+        }
+    }
+    pub fn get_surface(&self) -> Option<Instance> {
+        match self {
+            Camera::SimpleCamera(inner) => inner.get_surface(),
         }
     }
 }
@@ -30,6 +38,7 @@ pub struct SimpleCamera {
     focal_distance: f32,
     lower_left_corner: Point3,
     vfov: f32,
+    pub surface: Instance,
     pub horizontal: Vec3,
     pub vertical: Vec3,
     u: Vec3,
@@ -63,6 +72,12 @@ impl SimpleCamera {
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
 
+        let transform = Transform3::stack(
+            Some(Transform3::translation(look_from.into())),
+            Some(TangentFrame::new(u, v, w).into()),
+            None,
+        );
+
         SimpleCamera {
             origin: look_from,
             direction,
@@ -72,6 +87,18 @@ impl SimpleCamera {
                 - v * half_height * focus_dist
                 - w * focus_dist,
             vfov: vertical_fov,
+            surface: Instance::new(
+                Aggregate::from(Disk::new(
+                    aperture / 2.0,
+                    look_from,
+                    false,
+                    MaterialId::Camera(0),
+                    0,
+                )),
+                Some(transform),
+                None,
+                None,
+            ),
             horizontal: u * 2.0 * half_width * focus_dist,
             vertical: v * 2.0 * half_height * focus_dist,
             u,
@@ -81,6 +108,9 @@ impl SimpleCamera {
             t0,
             t1,
         }
+    }
+    pub fn get_surface(&self) -> Option<Instance> {
+        Some(self.surface)
     }
 }
 
@@ -98,6 +128,9 @@ impl SimpleCamera {
         assert!(ray_origin.is_normal());
         assert!(ray_direction.is_normal());
         Ray::new_with_time(ray_origin, ray_direction, time)
+    }
+    pub fn get_pixel_for_point(&self, point: Point3) -> (f32, f32) {
+        (0.0, 0.0)
     }
     pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
         assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
@@ -118,35 +151,6 @@ unsafe impl Send for Camera {}
 unsafe impl Send for SimpleCamera {}
 unsafe impl Sync for Camera {}
 unsafe impl Sync for SimpleCamera {}
-
-use crate::hittable::*;
-
-impl HasBoundingBox for SimpleCamera {
-    fn bounding_box(&self) -> AABB {
-        AABB::new(
-            self.lower_left_corner,
-            self.lower_left_corner + self.horizontal + self.vertical,
-        )
-    }
-}
-
-impl Hittable for SimpleCamera {
-    fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        
-    }
-}
-
-// impl HasBoundingBox for Camera {
-//     fn bounding_box(&self) -> AABB {
-//         match self {
-//             Camera::SimpleCamera(simple_camera) => simple_camera.bounding_box()
-//         }
-//     }
-// }
-
-// impl Hittable for Camera {
-
-// }
 
 #[cfg(test)]
 mod tests {

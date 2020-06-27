@@ -1,12 +1,14 @@
 // use crate::camera::BundledCamera;
+use crate::camera::Camera;
 use crate::hittable::*;
 use crate::materials::MaterialTable;
 use crate::math::*;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::Instance;
-pub use crate::materials::{DiffuseLight, Material, MaterialId};
+pub use crate::materials::*;
 
+#[derive(Clone)]
 pub struct EnvironmentMap {
     pub color: SPD,
 }
@@ -66,15 +68,36 @@ impl From<EnvironmentMap> for DiffuseLight {
     }
 }
 
+#[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
-    // pub cameras: Vec<BundledCamera>,
+    pub cameras: Vec<Camera>,
     pub materials: MaterialTable,
     pub environment: EnvironmentMap,
 }
 
 impl World {
+    pub fn new(
+        instances: Vec<Instance>,
+        materials: MaterialTable,
+        environment: EnvironmentMap,
+    ) -> Self {
+        let mut lights = Vec::new();
+        for instance in instances.iter() {
+            if let MaterialId::Light(id) = instance.get_material_id() {
+                lights.push(id as usize);
+            }
+        }
+        let accelerator = Accelerator::new(instances, AcceleratorType::List);
+        World {
+            accelerator,
+            lights,
+            cameras: Vec::new(),
+            materials,
+            environment,
+        }
+    }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
         let length = self.lights.len();
         if length == 0 {
@@ -101,8 +124,9 @@ impl World {
         self.lights.contains(&instance_id)
     }
 
-    pub fn get_material(&self, mat_id: MaterialId) -> &Box<dyn Material> {
-        &self.materials[mat_id as usize]
+    pub fn get_material(&self, mat_id: MaterialId) -> &MaterialEnum {
+        let id: usize = mat_id.into();
+        &self.materials[id]
     }
 
     pub fn get_primitive(&self, index: usize) -> &Instance {
@@ -115,6 +139,26 @@ impl World {
 
     pub fn get_env_sampling_probability(&self) -> f32 {
         1.0
+    }
+
+    pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
+        // assigns cameras to the internal list and rebuilds the scene accelerator if specified
+        // this should only ever be called when self.cameras is empty and the scene accelerator does not have any camera geometry in it
+        assert!(
+            self.cameras.len() == 0,
+            "assign cameras should only be called on a fresh world"
+        );
+        self.cameras = cameras;
+
+        if add_and_rebuild_scene {
+            let instances = &mut self.accelerator.instances;
+            for cam in self.cameras.iter() {
+                if let Some(surface) = cam.get_surface() {
+                    instances.push(surface);
+                }
+            }
+            self.accelerator.rebuild();
+        }
     }
 }
 
