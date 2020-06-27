@@ -101,8 +101,8 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
-    let moissanite = curves::cauchy(2.5, 40000.0);
-    let glass = curves::cauchy(1.45, 10000.0);
+    let moissanite = curves::cauchy(2.5, 34000.0);
+    let glass = curves::cauchy(1.45, 3540.0);
     let blackbody_illuminant = curves::blackbody(5500.0, 5.0);
 
     let lambertian = MaterialEnum::from(Lambertian::new(color));
@@ -112,7 +112,7 @@ fn cornell_box(color: SPD, world_strength: f32) -> World {
     let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
     let ggx_glass = MaterialEnum::from(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_glass_rough =
-        MaterialEnum::from(GGX::new(0.4, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+        MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_moissanite =
         MaterialEnum::from(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
     let ggx_silver_metal = MaterialEnum::from(GGX::new(

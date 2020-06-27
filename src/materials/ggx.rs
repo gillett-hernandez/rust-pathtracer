@@ -381,7 +381,7 @@ mod tests {
         let wi = Vec3::new(0.01, -0.01, -0.99).normalized();
         let lambda = 500.0;
 
-        let ggx_glass = GGX::new(0.05, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(1.2, glass, 1.0, flat_zero, 1.0);
         let fake_hit_record: HitRecord = HitRecord::new(
             0.0,
             Point3::ZERO,

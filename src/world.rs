@@ -181,6 +181,7 @@ impl World {
             for camera in self.cameras.iter() {
                 let instances = &mut self.accelerator.instances;
                 if let Some(camera_surface) = camera.get_surface() {
+                    println!("removing camera surface {:?}", &camera_surface);
                     instances.remove_item(&camera_surface);
                 }
             }
@@ -195,10 +196,7 @@ impl World {
                     let id = instances.len();
                     surface.instance_id = id;
                     surface.material_id = MaterialId::Camera(cam_id as u8);
-                    println!(
-                        "adding camera to world with instance id {}, material id {:?}, and transform {:?}",
-                        id, surface.material_id, surface.transform
-                    );
+                    println!("adding camera {:?} with id {}", &surface, cam_id);
                     instances.push(surface);
                 }
             }

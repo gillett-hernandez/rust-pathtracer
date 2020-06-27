@@ -39,7 +39,7 @@ impl HasBoundingBox for Disk {
 
 impl Hittable for Disk {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let tmp_o = r.origin;
+        let tmp_o = r.origin - self.origin;
         let tmp_d = r.direction;
         if tmp_d.z() == 0.0 {
             return None;

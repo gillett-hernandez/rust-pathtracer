@@ -80,7 +80,8 @@ impl SimpleCamera {
         let v = w.cross(u).normalized();
 
         let transform = Transform3::stack(
-            Some(Transform3::translation(look_from.into())),
+            // Some(Transform3::translation(look_from.into())),
+            None,
             Some(TangentFrame::new(u, v, w).into()),
             None,
         );
@@ -100,7 +101,7 @@ impl SimpleCamera {
                 Aggregate::from(Disk::new(
                     aperture / 2.0,
                     look_from,
-                    false,
+                    true,
                     MaterialId::Camera(0),
                     0,
                 )),

@@ -116,25 +116,22 @@ impl GenericIntegrator for LightTracingIntegrator {
 
                 let material = self.world.get_material(hit.material);
 
-                if hit.instance_id == 9 {
-                    println!(
-                        "should have checked camera, but material was {:?}",
-                        hit.material
-                    );
-                }
                 if let MaterialId::Camera(camera_id) = hit.material {
                     // consider the case when the camera is hit directly
-                    println!("checking camera id {}", camera_id);
+                    print!("checking camera id {}: ", camera_id);
                     let camera = self.world.get_camera(camera_id as usize);
                     // if we hit it, then it has to have a surface
                     let hit_primitive = camera.get_surface().unwrap();
                     // somehow calculate pixel coordinate
-                    let pixel_uv = camera.get_pixel_for_ray(Ray::new(hit.point, -ray.direction));
+                    let ray = Ray::new(hit.point, -ray.direction);
+                    let pixel_uv = camera.get_pixel_for_ray(ray);
+                    println!("pixel uv for ray {:?} was {:?}", ray, pixel_uv);
                     if let Some(uv) = pixel_uv {
                         if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
                             let energy = beta;
                             let sw = SingleWavelength::new(lambda, energy);
                             let ret = (Sample::LightSample(sw, uv), camera_id);
+                            println!("adding camera sample to splatting list");
                             samples.push(ret);
                         } else {
                             // let hit_primitive = self.world.get_primitive(hit.instance_id);
@@ -145,6 +142,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                             let energy = beta * weight;
                             let sw = SingleWavelength::new(lambda, energy);
                             let ret = (Sample::LightSample(sw, uv), camera_id);
+                            println!("adding camera sample to splatting list");
                             samples.push(ret);
                         }
                     }
@@ -168,17 +166,25 @@ impl GenericIntegrator for LightTracingIntegrator {
                             continue;
                         }
                         let camera_wo = frame.to_local(&direction);
-                        let camera_connect_ray =
-                            Ray::new_with_time(hit.point + hit.normal, direction, ray.time + 0.01);
+                        let camera_connect_ray = Ray::new_with_time(
+                            hit.point + hit.normal * 0.01,
+                            direction,
+                            ray.time + 0.01,
+                        );
                         let reflectance = material.f(&hit, wi, camera_wo);
                         let dropoff = camera_wo.z().max(0.0);
                         if dropoff == 0.0 {
                             continue;
                         }
+                        println!("picked valid camera, {:?}, {:?}", direction, pdf);
                         if let Some(mut camera_hit) =
                             self.world.hit(camera_connect_ray, 0.01, INFINITY)
                         {
                             camera_hit.lambda = lambda;
+
+                            let candidate_camera_ray = Ray::new(camera_hit.point, -direction);
+                            println!("hit {:?}", &hit);
+                            println!("camera_hit {:?}", &camera_hit);
                             let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
                             let weight = power_heuristic(pdf.0, scatter_pdf_into_camera.0);
                             // let camera_wi = (camera_surface
@@ -189,8 +195,11 @@ impl GenericIntegrator for LightTracingIntegrator {
                             if camera_hit.instance_id == camera_surface.instance_id {
                                 if let MaterialId::Camera(camera_id) = camera_hit.material {
                                     // correctly connected.
-                                    let pixel_uv =
-                                        camera.get_pixel_for_ray(Ray::new(hit.point, -direction));
+                                    let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
+                                    println!(
+                                        " weight {}, uv for ray {:?} is {:?}",
+                                        weight, ray, pixel_uv
+                                    );
                                     if let Some(uv) = pixel_uv {
                                         assert!(
                                             !pdf.is_nan() && !weight.is_nan(),
@@ -203,7 +212,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                                             / pdf.0;
                                         let sw = SingleWavelength::new(lambda, energy);
                                         let ret = (Sample::LightSample(sw, uv), camera_id);
-                                        println!("adding camera sample to platting list");
+                                        println!("adding camera sample to splatting list");
                                         samples.push(ret);
                                     }
                                 }
