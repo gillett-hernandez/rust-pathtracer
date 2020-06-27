@@ -254,7 +254,9 @@ impl NaiveRenderer {
             }
         }
 
-        Vec::new()
+        let (_left, right): (Vec<RenderSettings>, Vec<Film<XYZColor>>) =
+            films.iter().cloned().unzip();
+        right
     }
 }
 
@@ -335,7 +337,7 @@ impl Renderer for NaiveRenderer {
                             render_settings,
                         )
                     {
-                        // let integrator: Box<dyn SamplerIntegrator> = Box::new(integrator);
+                        println!("rendering with path tracing integrator");
                         films.push((
                             render_settings.clone(),
                             NaiveRenderer::render_sampled(
@@ -374,20 +376,31 @@ impl Renderer for NaiveRenderer {
                         cameras: bundled_cameras.clone(),
                     };
 
-                    // let integrator: Box<dyn GenericIntegrator> = Box::new(integrator);
-                    films.extend((&bundled_settings).iter().cloned().zip(
-                        NaiveRenderer::render_splatted(
-                            integrator,
-                            bundled_settings.clone(),
-                            bundled_cameras,
-                        ),
-                    ));
+                    let render_splatted_result = NaiveRenderer::render_splatted(
+                        integrator,
+                        bundled_settings.clone(),
+                        bundled_cameras,
+                    );
+                    println!("rendering with bidirectional path tracing integrator");
+                    assert!(render_splatted_result.len() > 0);
+                    films.extend(
+                        (&bundled_settings)
+                            .iter()
+                            .cloned()
+                            .zip(render_splatted_result),
+                    );
                 }
                 _ => {}
             }
         }
 
         // phase 4: tonemap and output all films
+        // println!("films {}", films.len());
+        assert!(
+            films.len() == config.render_settings.len(),
+            "{}",
+            films.len()
+        );
 
         for (render_settings, film) in films.iter() {
             let filename = render_settings.filename.as_ref();

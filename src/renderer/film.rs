@@ -1,4 +1,5 @@
 // use std::vec::Vec;
+#[derive(Clone)]
 pub struct Film<T> {
     pub buffer: Vec<T>,
     pub width: usize,
