@@ -5,6 +5,7 @@ use helpers::*;
 use crate::world::World;
 // use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
+use crate::camera::Camera;
 use crate::hittable::Hittable;
 use crate::material::Material;
 use crate::math::*;
@@ -13,16 +14,22 @@ use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use std::f32::INFINITY;
 use std::sync::Arc;
 
-use crate::integrator::Integrator;
+use crate::integrator::{CameraId, GenericIntegrator, Sample};
 
 pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
     pub specific_pair: Option<(usize, usize)>,
+    pub cameras: Vec<Camera>,
 }
 
-impl Integrator for BDPTIntegrator {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
+impl GenericIntegrator for BDPTIntegrator {
+    fn color(
+        &self,
+        sampler: &mut Box<dyn Sampler>,
+        camera_ray: Ray,
+        samples: &mut Vec<(Sample, CameraId)>,
+    ) -> SingleWavelength {
         // setup: decide light, emit ray from light, emit ray from camera, connect light path vertices to camera path vertices.
 
         let wavelength_sample = sampler.draw_1d();

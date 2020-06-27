@@ -645,7 +645,7 @@ where
         let i1 = i + 1;
         if i == 0 {
             // top case of equation 10.9
-            path_ps[1] = path_ps[0] * combined_path[0].pdf_forward / combined_path[0].pdf_backward;
+            // path_ps[1] = path_ps[0] * combined_path[0].pdf_forward / combined_path[0].pdf_backward;
         }
     }
 

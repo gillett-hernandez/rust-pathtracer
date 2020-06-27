@@ -51,12 +51,12 @@ pub struct RenderSettings {
 }
 
 #[derive(Deserialize, Clone)]
-pub struct Settings {
+pub struct Config {
     pub cameras: Vec<CameraSettings>,
     pub render_settings: Vec<RenderSettings>,
 }
 
-pub fn get_settings(filepath: String) -> Result<Settings, toml::de::Error> {
+pub fn get_settings(filepath: String) -> Result<Config, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
@@ -66,7 +66,7 @@ pub fn get_settings(filepath: String) -> Result<Settings, toml::de::Error> {
     // uncomment the following line to print out the raw contents
     // println!("{:?}", input);
     let num_cpus = num_cpus::get();
-    let mut settings: Settings = toml::from_str(&input)?;
+    let mut settings: Config = toml::from_str(&input)?;
     for render_settings in settings.render_settings.iter_mut() {
         render_settings.threads = match render_settings.threads {
             Some(expr) => Some(expr),
@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_parsing_config() {
-        let settings: Settings = match get_settings("data/config.toml".to_string()) {
+        let settings: Config = match get_settings("data/config.toml".to_string()) {
             Ok(expr) => expr,
             Err(v) => {
                 println!("{:?}", "couldn't read config.toml");

@@ -1,7 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::Hittable;
-use crate::integrator::Integrator;
+use crate::integrator::SamplerIntegrator;
 use crate::material::Material;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
@@ -17,7 +17,7 @@ pub struct PathTracingIntegrator {
     pub only_direct: bool,
 }
 
-impl Integrator for PathTracingIntegrator {
+impl SamplerIntegrator for PathTracingIntegrator {
     fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         let mut ray = camera_ray;
         // println!("{:?}", ray);

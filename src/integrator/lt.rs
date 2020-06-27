@@ -1,6 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
+use crate::camera::Camera;
 use crate::hittable::Hittable;
 use crate::material::Material;
 use crate::math::*;
@@ -8,17 +9,18 @@ use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use std::f32::INFINITY;
 use std::sync::Arc;
 
-use crate::integrator::Integrator;
+use crate::integrator::GenericIntegrator;
 
 pub struct LightTracingIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
     pub russian_roulette: bool,
+    pub cameras: Vec<Camera>,
     // pub only_direct: bool,
 }
-
-impl Integrator for LightTracingIntegrator {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
+/*
+impl Generic for LightTracingIntegrator {
+    fn color(&self, sampler: &mut Box<dyn Sampler>, samples: &mut Vec<(SingleWavelength, (usize, usize, usize))){
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera or to camera ray hit point.
         // two possible formulations: connecting to camera directly and splatting to the pixel buffer
         // or shooting a camera ray and connecting to its hit point.
@@ -269,3 +271,4 @@ impl Integrator for LightTracingIntegrator {
         sum
     }
 }
+*/
