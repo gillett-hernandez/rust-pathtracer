@@ -21,19 +21,44 @@ pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
     pub specific_pair: Option<(usize, usize)>,
+    pub max_lens_sample_attempts: usize,
 }
 
 impl GenericIntegrator for BDPTIntegrator {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
-        camera_ray: Ray,
-        _samples: &mut Vec<(Sample, CameraId)>,
+        camera_sample: (Ray, CameraId),
+        samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
-        // setup: decide light, emit ray from light, emit ray from camera, connect light path vertices to camera path vertices.
+        // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
 
         let wavelength_sample = sampler.draw_1d();
         let mut light_pick_sample = sampler.draw_1d();
+        // let camera_pick = sampler.draw_1d();
+        // let (camera, camera_id, camera_pick_pdf) = self
+        //     .world
+        //     .pick_random_camera(camera_pick)
+        //     .expect("camera pick failed");
+        // let camera_ray;
+        // if let Some(camera_surface) = camera.get_surface() {
+        //     // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
+        //     // let direction = direction.normalized();
+        //     for _ in 0..self.max_lens_sample_attempts {
+        //         let film_sample = sampler.draw_2d();
+        //         let lens_sample = sampler.draw_2d(); // sometimes called aperture sample
+        //         let (point_on_lens, lens_normal, pdf) = camera.sample_we(film_sample, lens_sample);
+        //         let camera_pdf = pdf * camera_pick_pdf;
+        //         if camera_pdf.0 >= 0.0 {
+        //             camera_ray = Ray::new(point_on_lens, lens_normal);
+        //             break;
+        //         }
+        //     }
+        // } else {
+        //     return;
+        // }
+        let camera_ray = camera_sample.0;
+        let _camera_id = camera_sample.1;
 
         let scene_light_sampling_probability = self.world.get_env_sampling_probability();
 
@@ -124,16 +149,16 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             camera_ray.origin,
             camera_ray.direction,
-            MaterialId::Camera(0),
+            MaterialId::Camera(_camera_id),
             0,
             SingleEnergy::ONE,
             1.0,
-            0.0,
+            0.01,
             1.0,
         ));
         light_path.push(start_light_vertex);
 
-        let _additional_contribution = random_walk(
+        let _additional_contribution_eye_path = random_walk(
             camera_ray,
             lambda,
             self.max_bounces,
@@ -158,13 +183,42 @@ impl GenericIntegrator for BDPTIntegrator {
 
         if let Some((s, t)) = self.specific_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
-                let (factor, _g) =
-                    eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
-                return SingleWavelength::new(lambda, factor);
+                match eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t) {
+                    SampleKind::Sampled((factor, _g)) => {
+                        // let sample =
+                        //     Sample::ImageSample(SingleWavelength::new(lambda, factor), (0.0, 0.0));
+                        // samples.push((sample, 0 ));
+                        return SingleWavelength::new(lambda, factor);
+                    }
+
+                    SampleKind::Splatted((factor, _g)) => {
+                        let last_light_vertex = light_path[s - 1];
+                        let other_vertex = if t > 0 {
+                            eye_path[t - 1]
+                        } else {
+                            light_path[s - 2]
+                        };
+                        if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+                            let camera = self.world.get_camera(camera_id as usize);
+                            let ray = Ray::new(
+                                last_light_vertex.point,
+                                (other_vertex.point - last_light_vertex.point).normalized(),
+                            );
+                            if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                                let sample = Sample::LightSample(
+                                    SingleWavelength::new(lambda, factor),
+                                    pixel_uv,
+                                );
+                                samples.push((sample, camera_id));
+                            }
+                        }
+                        return SingleWavelength::BLACK;
+                    }
+                }
             }
         }
 
-        let mis_enabled = false;
+        let mis_enabled = true;
         // let mut mis_nodes: Vec<MISNode> = Vec::new();
         // if mis_enabled {
         //     // for _ in 0..(self.max_bounces + 1) {
@@ -189,8 +243,12 @@ impl GenericIntegrator for BDPTIntegrator {
                     continue;
                 }
                 let mut g = 1.0;
-                let (factor, new_g) =
+                let result =
                     eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
+                let (factor, new_g, calculate_splat) = match result {
+                    SampleKind::Sampled((factor, g)) => (factor, g, false),
+                    SampleKind::Splatted((factor, g)) => (factor, g, true),
+                };
                 if factor == SingleEnergy::ZERO {
                     continue;
                 }
@@ -213,9 +271,35 @@ impl GenericIntegrator for BDPTIntegrator {
                 if weight == 0.0 {
                     continue;
                 }
-                sum += weight * factor;
+                if calculate_splat {
+                    let contribution = weight * factor;
+                    let last_light_vertex = light_path[s - 1];
+                    let other_vertex = if t > 0 {
+                        eye_path[t - 1]
+                    } else {
+                        light_path[s - 2]
+                    };
+                    if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+                        let camera = self.world.get_camera(camera_id as usize);
+                        let ray = Ray::new(
+                            last_light_vertex.point,
+                            (other_vertex.point - last_light_vertex.point).normalized(),
+                        );
+                        if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                            let sample = Sample::LightSample(
+                                SingleWavelength::new(lambda, contribution),
+                                pixel_uv,
+                            );
+                            samples.push((sample, camera_id));
+                        }
+                    }
+                } else {
+                    sum += weight * factor;
+                    assert!(sum.0.is_finite(), "{:?} {:?}", weight, factor);
+                }
             }
         }
+        assert!(sum.0.is_finite());
         SingleWavelength::new(lambda, sum)
     }
 }

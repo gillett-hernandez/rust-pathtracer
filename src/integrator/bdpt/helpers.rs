@@ -1,5 +1,6 @@
 use crate::world::World;
 // use crate::config::Settings;
+// use crate::camera::*;
 use crate::hittable::{HasBoundingBox, HitRecord};
 use crate::integrator::veach_v;
 use crate::material::Material;
@@ -112,8 +113,8 @@ pub fn random_walk(
                 hit.material,
                 hit.instance_id,
                 beta,
-                0.0,
-                0.0,
+                1.0,
+                1.0,
                 1.0,
             );
 
@@ -141,6 +142,7 @@ pub fn random_walk(
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
                 let cos_i = wo.z().abs();
                 let cos_o = wi.z().abs();
+                vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
                 // if emission.0 > 0.0 {
 
                 // }
@@ -159,8 +161,18 @@ pub fn random_walk(
                     // eval pdf in reverse direction
                     vertex.pdf_backward = material.value(&hit, wo, wi).0 / cos_o;
                 }
-
-                vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
+                debug_assert!(
+                    vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
+                    "pdf forward was 0 for material {:?} at vertex {:?}",
+                    material,
+                    vertex
+                );
+                debug_assert!(
+                    vertex.pdf_backward > 0.0 && vertex.pdf_backward.is_finite(),
+                    "pdf backward was 0 for material {:?} at vertex {:?}",
+                    material,
+                    vertex
+                );
 
                 vertices.push(vertex);
 
@@ -182,11 +194,15 @@ pub fn random_walk(
                 // hit a surface and didn't bounce.
                 if emission.0 > 0.0 {
                     vertex.kind = Type::LightSource(Source::Instance);
+                    vertex.pdf_forward = 0.00;
+                    vertex.pdf_backward = 1.0;
+                    vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
+                    vertices.push(vertex);
+                } else {
+                    println!("material {:?} didn't generate outgoing direction", material);
+                    println!("{:?}", vertex);
+                    panic!();
                 }
-                vertex.pdf_forward = 0.0;
-                vertex.pdf_backward = 1.0;
-                vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
-                vertices.push(vertex);
                 break;
             }
         } else {
@@ -213,6 +229,7 @@ pub fn random_walk(
                     1.0 / (max_world_radius_2),
                 );
                 assert!(vertex.point.0.is_finite().all());
+                // println!("sampling env and setting pdf_forward to 0");
                 vertices.push(vertex);
             }
             break;
@@ -225,13 +242,18 @@ pub fn random_walk(
     }
 }
 
+pub enum SampleKind {
+    Sampled((SingleEnergy, f32)),
+    Splatted((SingleEnergy, f32)),
+}
+
 pub fn eval_unweighted_contribution(
     world: &Arc<World>,
     light_path: &Vec<Vertex>,
     s: usize,
     eye_path: &Vec<Vertex>,
     t: usize,
-) -> (SingleEnergy, f32) {
+) -> SampleKind {
     let last_light_vertex_throughput = if s == 0 {
         SingleEnergy::ONE
     } else {
@@ -245,7 +267,8 @@ pub fn eval_unweighted_contribution(
     };
 
     let cst: SingleEnergy;
-    let g;
+    let mut sample = SampleKind::Sampled((SingleEnergy::ONE, 0.0));
+    let mut g = 0.0;
     if s == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
         let second_to_last_eye_vertex = eye_path[t - 2];
@@ -262,11 +285,18 @@ pub fn eval_unweighted_contribution(
             frame.to_local(&wi).normalized(),
             None,
         );
-        g = 1.0;
     } else if t == 0 {
-        // since the light path actually directly hit the camera, ignore it for now. maybe add it to a splatting queue once a more sophisticated renderer is implemented
-        // but the current renderer can't handle contributions that aren't restricted to the current pixel
-        return (SingleEnergy::ZERO, 0.0);
+        let second_to_last_light_vertex = light_path[s - 2];
+        let last_light_vertex = light_path[s - 1];
+        if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+            let camera = world.get_camera(camera_id as usize);
+            cst = SingleEnergy(
+                camera.eval_we(last_light_vertex.point, second_to_last_light_vertex.point),
+            );
+            sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
+        } else {
+            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+        }
     } else {
         // assume light_path[0] and light_path[1] have had their reflectances fixed to be the light radiance values, as that's what the BDPT algorithm seems to expect.
         // also assume that camera_path[0] throughput is set to the so called We value, which is a measure of the importance of the given camera ray and wavelength sample
@@ -305,7 +335,7 @@ pub fn eval_unweighted_contribution(
         };
 
         if fsl == SingleEnergy::ZERO {
-            return (SingleEnergy::ZERO, 0.0);
+            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
 
         // lev means Last Eye Vertex
@@ -314,9 +344,13 @@ pub fn eval_unweighted_contribution(
         let lev_world_eye_to_light = -light_to_eye_direction;
         let lev_local_eye_to_light = lev_frame.to_local(&lev_world_eye_to_light).normalized();
         let fse = if t == 1 {
-            // another unsupported situation. see the above note about the current renderer
-            // camera.eval_we(last_eye_vertex.point, last_light_vertex.point)
-            return (SingleEnergy::ZERO, 0.0);
+            if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+                let camera = world.get_camera(camera_id as usize);
+                sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
+                SingleEnergy(camera.eval_we(last_light_vertex.point, last_eye_vertex.point))
+            } else {
+                SingleEnergy(0.0)
+            }
         } else {
             let second_to_last_eye_vertex = eye_path[t - 2];
             let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
@@ -331,7 +365,7 @@ pub fn eval_unweighted_contribution(
         };
 
         if fse == SingleEnergy::ZERO {
-            return (SingleEnergy::ZERO, 0.0);
+            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
 
         let (cos_i, cos_o) = (
@@ -340,20 +374,25 @@ pub fn eval_unweighted_contribution(
         );
         g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
         if g == 0.0 {
-            return (SingleEnergy::ZERO, 0.0);
+            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
 
         if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
             // not visible
-            return (SingleEnergy::ZERO, 0.0);
+            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
         cst = fsl * g * fse;
     }
-
-    (
-        last_light_vertex_throughput * cst * last_eye_vertex_throughput,
-        g,
-    )
+    match sample {
+        SampleKind::Sampled(_) => SampleKind::Sampled((
+            cst * last_eye_vertex_throughput * last_light_vertex_throughput,
+            g,
+        )),
+        SampleKind::Splatted(_) => SampleKind::Splatted((
+            cst * last_light_vertex_throughput * last_eye_vertex_throughput,
+            g,
+        )),
+    }
 }
 
 pub struct CombinedPath<'a> {
@@ -363,12 +402,33 @@ pub struct CombinedPath<'a> {
     pub path_length: usize,
 }
 
+impl<'a> CombinedPath<'a> {
+    pub fn veach_g_between(&self, vidx0: usize, vidx1: usize) -> f32 {
+        // computes the veach g term between vertex v0 and v1.
+        // veach g terms are stored flowing away from the endpoints, however for the combined path we want them flowing away from 0.
+        // i.e. for the normal paths, eye_path[i] contains the veach g term for eye_path[i] to eye_path[i-1]
+        // and for the normal paths, light_path[i] contains the veach g term for light_path[i] to light_path[i-1]
+        // but we want combined_path[i].veach_g to be between combined_path[i] and combined_path[i-1] at all times
+
+        // naive version: recompute veach g term
+        let vertex0 = self[vidx0];
+        let point0 = vertex0.point;
+        let vertex1 = self[vidx1];
+        let point1 = vertex1.point;
+        let direction = (point1 - point0).normalized();
+        let cos_i = (direction * vertex0.normal).abs();
+        let cos_o = (direction * vertex1.normal).abs();
+
+        veach_g(point0, cos_i, point1, cos_o)
+    }
+}
+
 impl<'a> Index<usize> for CombinedPath<'a> {
     type Output = Vertex;
     fn index(&self, index: usize) -> &Self::Output {
         if index >= self.connection_index {
             let len = self.path_length;
-            assert!(len >= index && index > 0);
+            // assert!(len >= index && index > 0);
             &self.eye_path[len - index]
         } else {
             assert!(index < self.light_path.len());
@@ -401,34 +461,140 @@ where
     let k = s + t - 1;
     let k1 = k + 1;
 
-    let combined_path = CombinedPath {
+    let path = CombinedPath {
         light_path,
         eye_path,
         connection_index: s,
         path_length: k,
     };
 
-    assert!(combined_path[0] == light_path[0]);
-    assert!(combined_path[k] == eye_path[0]);
-    assert!(combined_path[s] == light_path[s]);
-    assert!(combined_path[s + 1] == light_path[k1 - s]);
+    // assert!(
+    //     path[0] == light_path[0],
+    //     "{:?} != {:?}",
+    //     path[0],
+    //     light_path[0]
+    // );
+    // assert!(path[k] == eye_path[0], "{:?} != {:?}", path[k], eye_path[0]);
+    // assert!(
+    //     path[s] == light_path[s],
+    //     "{:?} != {:?}",
+    //     path[s],
+    //     light_path[s]
+    // );
+    // assert!(
+    //     path[s + 1] == light_path[k1 - s],
+    //     "{:?} != {:?}",
+    //     path[s + 1],
+    //     light_path[k1 - s]
+    // );
 
-    let mut path_ps: Vec<f32> = Vec::with_capacity(k1);
-    path_ps.fill(0.0);
-    path_ps[s] = 1.0;
+    let mut probabilities: Vec<f32> = vec![0.0; 1 + k1];
+    // probabilities.fill(0.0);
+    probabilities[s] = 1.0;
     // notes about special cases:
-    // for the eye subpath, vertex0.pdf_forward is 1.0 and vertex0.pdf_backward is 0.0 (cannot sample camera for now)
-    // for the eye subpath, vertex1.pdf_forward is P_A, which technically is the directional pdf times the geometry term for the camera.
-    // and pdf_backward is
-    // for the light subpath, vertex0.pdf_forward
+    // for the eye subpath, vertex0.pdf_forward is P_A, which technically is the directional pdf times the geometry term for the camera.
+    // for the light subpath, vertex0.pdf_forward is 0.0 if it is a delta light
+
     // first build up from index = s to index = k
     for i in s..k1 {
-        let i1 = i + 1;
+        let i_p_1 = i + 1;
         if i == 0 {
             // top case of equation 10.9
-            // path_ps[1] = path_ps[0] * combined_path[0].pdf_forward / combined_path[0].pdf_backward;
+
+            assert!(
+                path[1].pdf_backward > 0.0,
+                "i,s,t,k = ({}, {}, {}, {}). {:?}",
+                i,
+                s,
+                t,
+                k,
+                path[1]
+            );
+            probabilities[1] = probabilities[0] * path[0].pdf_forward
+                / (path[1].pdf_backward * path.veach_g_between(0, 1));
+        } else if i < k {
+            let i_m_1 = i - 1;
+            // middle case of equation 10.9
+            assert!(
+                path[i_p_1].pdf_backward > 0.0,
+                "i,s,t,k = ({}, {}, {}, {}). {:?}",
+                i,
+                s,
+                t,
+                k,
+                path[i_p_1]
+            );
+            probabilities[i_p_1] =
+                probabilities[i] * path[i_m_1].pdf_forward * path.veach_g_between(i_m_1, i)
+                    / (path[i_p_1].pdf_backward * path.veach_g_between(i, i_p_1));
+        } else {
+            // bottom case of equation 10.9
+            assert!(
+                path[k].pdf_backward > 0.0,
+                "i,s,t,k = ({}, {}, {}, {}). {:?}",
+                i,
+                s,
+                t,
+                k,
+                path[k]
+            );
+            probabilities[k1] =
+                probabilities[k] * path[k - 1].pdf_forward * path.veach_g_between(k - 1, k)
+                    / path[k].pdf_backward;
         }
     }
 
-    mis_function(&path_ps)
+    for j in 0..s {
+        let i = s - j;
+        let i_p_1 = i + 1;
+        let i_m_1 = i - 1;
+        if i == k {
+            // reciprocal bottom case of equation 10.9
+            assert!(
+                path[k - 1].pdf_forward > 0.0,
+                "i,s,t,k = ({}, {}, {}, {}). {:?}",
+                i,
+                s,
+                t,
+                k,
+                path[k - 1]
+            );
+            probabilities[k] = probabilities[k1] * path[k].pdf_backward
+                / (path[k - 1].pdf_forward * path.veach_g_between(k - 1, k));
+        } else if i > 1 {
+            // reciprocal middle case of equation 10.9
+            assert!(
+                path[i_m_1].pdf_forward > 0.0,
+                "i,s,t,k = ({}, {}, {}, {}). {:?}",
+                i,
+                s,
+                t,
+                k,
+                path[i_m_1]
+            );
+            probabilities[i] =
+                probabilities[i_p_1] * path[i_p_1].pdf_backward * path.veach_g_between(i, i_p_1)
+                    / (path[i_m_1].pdf_forward * path.veach_g_between(i_m_1, i));
+        } else {
+            // reciprocal top case of equation 10.9
+            assert!(
+                path[0].pdf_forward > 0.0,
+                "i, s,t,k = ({}, {}, {}, {}). {:?}",
+                i,
+                s,
+                t,
+                k,
+                path[0]
+            );
+            probabilities[0] = probabilities[1] * path[1].pdf_backward * path.veach_g_between(0, 1)
+                / path[0].pdf_forward;
+        }
+    }
+
+    for p in probabilities.iter() {
+        assert!(p.is_finite() && !p.is_nan(), "{:?}", probabilities);
+    }
+    let result = mis_function(&probabilities);
+    assert!(result.is_finite());
+    result
 }

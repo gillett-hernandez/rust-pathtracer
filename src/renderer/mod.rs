@@ -154,71 +154,73 @@ impl NaiveRenderer {
 
         println!("");
         // let : Vec<(Sample, CameraId)> = Vec::new();
-        let mut additional_splats: Vec<(Sample, CameraId)> = films
-            .par_iter_mut()
-            .enumerate()
-            .flat_map(
-                |(_film_number, (settings, film)): (
-                    usize,
-                    &mut (RenderSettings, Film<XYZColor>),
-                )|
-                 -> Vec<(Sample, CameraId)> {
-                    let output_divisor = (film.width * film.height / 100).max(1);
-                    let additional_samples = film
-                        .buffer
-                        .par_iter_mut()
-                        // .iter_mut()
-                        .enumerate()
-                        .flat_map(|(pixel_index, pixel_ref)| -> Vec<(Sample, CameraId)> {
-                            let y: usize = pixel_index / settings.resolution.width;
-                            let x: usize = pixel_index - settings.resolution.width * y;
-                            let camera = cameras[settings.camera_id.unwrap() as usize];
-                            // gen ray for pixel x, y
-                            // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                            // let mut temp_color = RGBColor::BLACK;
-                            let mut temp_color = XYZColor::BLACK;
-                            let mut sampler: Box<dyn Sampler> =
-                                Box::new(StratifiedSampler::new(20, 20, 10));
-                            // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                            // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
-                            let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
-                            // use with capacity to preallocate
-                            for _s in 0..settings.min_samples {
-                                let sample = sampler.draw_2d();
-                                let r = camera.get_ray(
-                                    sampler.draw_2d(),
-                                    (x as f32 + sample.x) / (settings.resolution.width as f32),
-                                    (y as f32 + sample.y) / (settings.resolution.height as f32),
-                                );
-                                temp_color += XYZColor::from(integrator.color(
-                                    &mut sampler,
-                                    r,
-                                    &mut local_additional_splats,
-                                ));
-                                // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
-                                assert!(
-                                    temp_color.0.is_finite().all(),
-                                    "{:?} resulted in {:?}",
-                                    r,
-                                    temp_color
-                                );
-                            }
-                            if pixel_index % output_divisor == 0 {
-                                let stdout = std::io::stdout();
-                                let mut handle = stdout.lock();
-                                handle.write_all(b".").unwrap();
-                                std::io::stdout().flush().expect("some error message")
-                            }
-                            // unsafe {
-                            *pixel_ref = temp_color / (settings.min_samples as f32);
-                            local_additional_splats
-                            // }
-                        })
-                        .collect();
-                    additional_samples
-                },
-            )
-            .collect();
+        let mut additional_splats: Vec<(Sample, CameraId)> =
+            films
+                .par_iter_mut()
+                .enumerate()
+                .flat_map(
+                    |(camera_id, (settings, film)): (
+                        usize,
+                        &mut (RenderSettings, Film<XYZColor>),
+                    )|
+                     -> Vec<(Sample, CameraId)> {
+                        let output_divisor = (film.width * film.height / 100).max(1);
+                        let additional_samples = film
+                            .buffer
+                            .par_iter_mut()
+                            // .iter_mut()
+                            .enumerate()
+                            .flat_map(|(pixel_index, pixel_ref)| -> Vec<(Sample, CameraId)> {
+                                let y: usize = pixel_index / settings.resolution.width;
+                                let x: usize = pixel_index - settings.resolution.width * y;
+                                // gen ray for pixel x, y
+                                // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
+                                // let mut temp_color = RGBColor::BLACK;
+                                let mut temp_color = XYZColor::BLACK;
+                                let mut sampler: Box<dyn Sampler> =
+                                    Box::new(StratifiedSampler::new(20, 20, 10));
+                                // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                                let camera = cameras[camera_id];
+                                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                                let mut local_additional_splats: Vec<(Sample, CameraId)> =
+                                    Vec::new();
+                                // use with capacity to preallocate
+                                for _s in 0..settings.min_samples {
+                                    let sample = sampler.draw_2d();
+                                    let r = camera.get_ray(
+                                        sampler.draw_2d(),
+                                        (x as f32 + sample.x) / (settings.resolution.width as f32),
+                                        (y as f32 + sample.y) / (settings.resolution.height as f32),
+                                    );
+                                    temp_color += XYZColor::from(integrator.color(
+                                        &mut sampler,
+                                        (r, camera_id as u8),
+                                        &mut local_additional_splats,
+                                    ));
+                                    // handle image samples that occur in local_additional_splats, as they correspond to the current pixel_index
+                                    // if local_additional_splats.iter().filter()
+                                    assert!(
+                                        temp_color.0.is_finite().all(),
+                                        "integrator returned {:?}",
+                                        temp_color
+                                    );
+                                }
+                                if pixel_index % output_divisor == 0 {
+                                    let stdout = std::io::stdout();
+                                    let mut handle = stdout.lock();
+                                    handle.write_all(b".").unwrap();
+                                    std::io::stdout().flush().expect("some error message")
+                                }
+                                // unsafe {
+                                *pixel_ref = temp_color / (settings.min_samples as f32);
+                                local_additional_splats
+                                // }
+                            })
+                            .collect();
+                        additional_samples
+                    },
+                )
+                .collect();
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!("");
@@ -399,6 +401,7 @@ impl Renderer for NaiveRenderer {
                         max_bounces: 10,
                         world: arc_world.clone(),
                         specific_pair: None,
+                        max_lens_sample_attempts: 4,
                     };
 
                     println!("rendering with bidirectional path tracing integrator");

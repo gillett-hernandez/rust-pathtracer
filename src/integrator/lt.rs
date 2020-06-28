@@ -88,7 +88,7 @@ impl GenericIntegrator for LightTracingIntegrator {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
-        _camera_ray: Ray,
+        _camera_sample: (Ray, CameraId),
         mut samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
@@ -282,9 +282,6 @@ impl GenericIntegrator for LightTracingIntegrator {
                 }
             }
         }
-        // assert!(sum.lambda > 0.0, "{:?}", sum);
-        // println!("{:?}", sum);
-        // sum
         SingleWavelength::BLACK
     }
 }

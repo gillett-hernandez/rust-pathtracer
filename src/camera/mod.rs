@@ -43,6 +43,19 @@ impl Camera {
             // Camera::SimpleCamera(inner) => inner.get_pixel_for_ray(ray),
         }
     }
+
+    pub fn eval_we(&self, _from: Point3, _to: Point3) -> f32 {
+        // from is on surface of camera
+        1.0
+    }
+
+    pub fn _sample_we(
+        &self,
+        _film_sample: Sample2D,
+        _lens_sample: Sample2D,
+    ) -> (Point3, Vec3, PDF) {
+        (Point3::ZERO, Vec3::ZERO, 0.0.into())
+    }
 }
 
 unsafe impl Send for Camera {}

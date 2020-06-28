@@ -2,7 +2,7 @@ use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Lambertian {
     pub color: SPD,
 }

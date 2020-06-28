@@ -157,6 +157,10 @@ fn cornell_box(
 
     let base_length = world_materials.len();
     world_materials.extend_from_slice(additional_materials.as_slice());
+    println!(
+        "extended world materials list by {}",
+        world_materials.len() - base_length
+    );
     for mut instance in additional_instances {
         instance.material_id = match instance.material_id {
             MaterialId::Material(old) => MaterialId::Material((base_length + old as usize) as u16),
@@ -165,6 +169,8 @@ fn cornell_box(
                 continue;
             }
         };
+        instance.instance_id = world_instances.len();
+        println!("adding instance to world: {:?}", instance);
         world_instances.push(instance);
     }
 

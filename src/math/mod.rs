@@ -26,7 +26,7 @@ pub use vec::{Axis, Vec3};
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Sidedness {
     Forward,
     Reverse,

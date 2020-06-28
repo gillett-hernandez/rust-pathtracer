@@ -1,7 +1,7 @@
 mod bdpt;
 mod lt;
 mod pt;
-use crate::camera::{Camera, CameraId};
+pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
 use crate::math::*;
 use crate::world::World;
@@ -12,6 +12,8 @@ pub use pt::PathTracingIntegrator;
 
 use std::hash::Hash;
 use std::sync::Arc;
+
+// pub type CameraId = u8;
 
 #[derive(Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub enum IntegratorType {
@@ -90,7 +92,7 @@ pub trait GenericIntegrator: Send + Sync {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
-        camera_ray: Ray,
+        camera_sample: (Ray, CameraId),
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength;
 }

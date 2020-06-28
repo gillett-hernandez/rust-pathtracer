@@ -38,7 +38,7 @@ impl From<MaterialId> for usize {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MaterialEnum {
     GGX(GGX),
     Lambertian(Lambertian),
