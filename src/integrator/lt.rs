@@ -37,7 +37,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let sampled;
         let mut light_g_term: f32 = 1.0;
 
-        if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
+        if self.world.lights.len() > 0 && light_pick_sample.x > scene_light_sampling_probability {
             light_pick_sample.x =
                 (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
             let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();

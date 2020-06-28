@@ -167,7 +167,7 @@ impl World {
     }
 
     pub fn get_env_sampling_probability(&self) -> f32 {
-        1.0
+        0.1
     }
 
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
