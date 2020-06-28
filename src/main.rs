@@ -22,7 +22,7 @@ pub mod renderer;
 pub mod tonemap;
 pub mod world;
 
-use camera::{Camera, SimpleCamera};
+use camera::*;
 use config::{get_settings, Config};
 use geometry::*;
 use math::*;
@@ -36,7 +36,7 @@ fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
         let camera: Camera = match camera_config {
             config::CameraSettings::SimpleCamera(cam) => {
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
-                Camera::SimpleCamera(SimpleCamera::new(
+                Camera::ProjectiveCamera(ProjectiveCamera::new(
                     Point3::from(cam.look_from),
                     Point3::from(cam.look_at),
                     Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),

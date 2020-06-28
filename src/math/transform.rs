@@ -180,9 +180,9 @@ impl Transform3 {
     // }
 
     pub fn stack(
-        translate: Option<Transform3>,
-        rotate: Option<Transform3>,
         scale: Option<Transform3>,
+        rotate: Option<Transform3>,
+        translate: Option<Transform3>,
     ) -> Transform3 {
         let mut stack = Transform3::new();
         if let Some(scale) = scale {
@@ -226,6 +226,19 @@ impl Transform3 {
 
     pub fn axis_transform(&self) -> (Vec3, Vec3, Vec3) {
         (*self * Vec3::X, *self * Vec3::Y, *self * Vec3::Z)
+    }
+
+    pub fn to_local<T>(&self, value: T) -> <Matrix4x4 as Mul<T>>::Output
+    where
+        Matrix4x4: Mul<T>,
+    {
+        self.forward * value
+    }
+    pub fn to_world<T>(&self, value: T) -> <Matrix4x4 as Mul<T>>::Output
+    where
+        Matrix4x4: Mul<T>,
+    {
+        self.reverse * value
     }
 }
 
@@ -357,7 +370,7 @@ mod tests {
     fn test_reverse() {
         let transform_translate = Transform3::translation(Vec3::new(1.0, 2.0, 3.0));
         let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
-        let transform_scale_uniform = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+        // let _transform_scale_uniform = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
         let transform_scale = Transform3::scale(Vec3::new(2.0, 3.0, 4.0));
 
         let combination_trs = transform_translate * transform_rotate * transform_scale;

@@ -6,20 +6,21 @@ edition = "2018"
 
 [dependencies]
 itertools = "0.9.0"
-rayon = "1.3.0"
+rayon = "1.3.1"
 toml = "0.5"
 num_cpus = "1.13.0"
-serde = { version = "1.0.110", features = ["derive"] }
+serde = { version = "1.0.114", features = ["derive"] }
 rand = "0.7"
-image = "0.23.4"
+image = "0.23.6"
 packed_simd = "0.3.3"
 nalgebra = "0.21"
 ordered-float = "1.0.2"
 exr = "0.8.0"
+rust_optics = { path = "crates/rust_optics" }
 
 [build-dependencies]
-serde = { version = "1.0.110", features = ["derive"] }
-serde_json = "1.0.53"
+serde = { version = "1.0.114", features = ["derive"] }
+serde_json = "1.0.55"
 
 [profile.dev]
 opt-level = 3

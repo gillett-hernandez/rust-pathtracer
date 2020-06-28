@@ -1,6 +1,7 @@
 use crate::math::*;
 
 // also known as an orthonormal basis.
+#[derive(Copy, Clone, Debug)]
 pub struct TangentFrame {
     pub tangent: Vec3,
     pub bitangent: Vec3,

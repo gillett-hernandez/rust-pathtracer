@@ -131,8 +131,8 @@ impl Hittable for AARect {
         let area = self.size.0 * self.size.1;
         (point, normal, (1.0 / area).into())
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
-        let (point, normal, area_pdf) = self.sample_surface(s.draw_2d());
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+        let (point, normal, area_pdf) = self.sample_surface(s);
         let direction = point - from;
         let cos_i = normal * direction.normalized();
         if !self.two_sided {

@@ -75,6 +75,7 @@ impl NaiveRenderer {
                 for _s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
                     let r = camera.get_ray(
+                        sampler.draw_2d(),
                         (x as f32 + sample.x) / (width as f32),
                         (y as f32 + sample.y) / (height as f32),
                     );
@@ -179,6 +180,7 @@ impl NaiveRenderer {
                             for _s in 0..settings.min_samples {
                                 let sample = sampler.draw_2d();
                                 let r = camera.get_ray(
+                                    sampler.draw_2d(),
                                     (x as f32 + sample.x) / (settings.resolution.width as f32),
                                     (y as f32 + sample.y) / (settings.resolution.height as f32),
                                 );
@@ -216,21 +218,24 @@ impl NaiveRenderer {
         additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
             camera_id1.cmp(&camera_id2)
         });
+        println!("found {} splats", additional_splats.len());
         for (sample, camera_id) in additional_splats {
             match sample {
                 Sample::LightSample(radiance, (x, y)) => {
                     let light_film = &mut light_films[camera_id as usize];
+                    // println!("splat index was {} x {}", x, y);
                     let (x, y) = (
                         (x * light_film.width as f32) as usize,
-                        (y * light_film.height as f32) as usize,
+                        light_film.height - (y * light_film.height as f32) as usize - 1,
                     );
                     light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
                 }
                 Sample::ImageSample(radiance, (x, y)) => {
                     let image_film = &mut films[camera_id as usize].1;
+                    // println!("splat index was {} x {}", x, y);
                     let (x, y) = (
                         (x * image_film.width as f32) as usize,
-                        (y * image_film.height as f32) as usize,
+                        image_film.height - (y * image_film.height as f32) as usize - 1,
                     );
                     image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
                 }

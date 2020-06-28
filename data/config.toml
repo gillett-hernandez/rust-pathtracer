@@ -2,13 +2,14 @@
 type="SimpleCamera"
 look_from = [-100, 0, 0]
 look_at = [0, 0, 0]
+aperture_size = 0.05
 vfov = 6
 
 [[cameras]]
 type="SimpleCamera"
-look_from = [-5, 0, 0]
+look_from = [5, 0, 0]
 look_at = [0, 0, 0]
-aperture_size = 0.01
+aperture_size = 0.05
 focal_distance = 5.0
 vfov = 27.2
 
@@ -16,18 +17,19 @@ vfov = 27.2
 type="SimpleCamera"
 look_from = [-1, 0, 0]
 look_at = [0, 0, 0]
+aperture_size = 0.05
 vfov = 90
 
 
 [[render_settings]]
-threads = 1
+threads = 22
 filename = "LT"
 integrator = "LT"
-max_bounces = 4
+max_bounces = 8
 resolution.width = 512
 resolution.height = 512
 exposure = 1.0
-min_samples = 1
+min_samples = 100
 camera_id = 1
 russian_roulette = true
 only_direct = false

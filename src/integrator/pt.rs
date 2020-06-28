@@ -18,7 +18,7 @@ pub struct PathTracingIntegrator {
 }
 
 impl SamplerIntegrator for PathTracingIntegrator {
-    fn color(&self, mut sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
+    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         let mut ray = camera_ray;
         // println!("{:?}", ray);
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, VISIBLE_RANGE);
@@ -73,7 +73,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             // sample the primitive from hit_point
-                            let (direction, light_pdf) = light.sample(&mut sampler, hit.point);
+                            let (direction, light_pdf) = light.sample(sampler.draw_2d(), hit.point);
                             assert!(light_pdf.0.is_finite());
                             if light_pdf.0 == 0.0 {
                                 continue;

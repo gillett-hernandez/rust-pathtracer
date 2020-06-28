@@ -20,7 +20,7 @@ impl Sample1D {
             self.x /= split;
             (self, a)
         } else {
-            self.x = (1.0 - self.x) / (split - self.x);
+            self.x = (self.x - split) / (1.0 - split);
             (self, b)
         }
     }

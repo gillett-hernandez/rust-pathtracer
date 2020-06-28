@@ -92,8 +92,8 @@ impl Hittable for Sphere {
         let surface_area = self.radius * self.radius * 4.0 * PI;
         (point_on_sphere, normal, PDF::from(1.0 / surface_area))
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
-        let (point_on_sphere, normal, area_pdf) = self.sample_surface(s.draw_2d());
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+        let (point_on_sphere, normal, area_pdf) = self.sample_surface(s);
         let direction = point_on_sphere - from;
         debug_assert!(
             direction.0.is_finite().all(),

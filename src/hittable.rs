@@ -56,7 +56,7 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
     // methods related to when the Hittable is an Emissive
     // method that should implement sampling a direction subtended by the solid angle of Self from point P
     // returns the solid angle PDF.
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF);
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF);
     // method that should implement randomly sampling a point and normal on the surface of the object in object space
     // returns a point on the surface, the normal at that point, and the probability of that Point being chosen
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF);

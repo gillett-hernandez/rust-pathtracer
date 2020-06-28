@@ -78,14 +78,23 @@ impl Hittable for Disk {
             u = choice.0.x;
             normal = normal * choice.1;
         }
+        debug_assert!(u.is_finite(), "{:?}", u);
         let phi = u * PI * 2.0;
+        debug_assert!(phi.is_finite(), "{:?}", phi);
         let (sin, cos) = phi.sin_cos();
+        debug_assert!(sin.is_finite(), "{:?}", sin);
+        debug_assert!(cos.is_finite(), "{:?}", cos);
+        debug_assert!(self.radius.is_finite(), "{:?}", self);
+        debug_assert!(r.is_finite());
         let point = self.origin + Vec3::new(self.radius * r * cos, self.radius * r * sin, 0.0);
         let area = PI * self.radius * self.radius;
         (point, normal, (1.0 / area).into())
     }
-    fn sample(&self, s: &mut Box<dyn Sampler>, from: Point3) -> (Vec3, PDF) {
-        let (point, normal, area_pdf) = self.sample_surface(s.draw_2d());
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+        let (point, normal, area_pdf) = self.sample_surface(s);
+        debug_assert!(point.0.is_finite().all());
+        debug_assert!(normal.0.is_finite().all());
+        debug_assert!(area_pdf.0.is_finite());
         let direction = point - from;
         let cos_i = normal * direction.normalized();
         if !self.two_sided {
@@ -111,7 +120,7 @@ impl Hittable for Disk {
         }
         let area = PI * self.radius * self.radius;
         let distance_squared = direction.norm_squared();
-        PDF::from(distance_squared / ((normal * direction.normalized()).abs() * area))
+        PDF::from(distance_squared / ((cos_i.abs() + 0.00001) * area))
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {
