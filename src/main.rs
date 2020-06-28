@@ -65,6 +65,7 @@ fn white_furnace_test(material: MaterialEnum) -> World {
         )))],
         vec![material],
         EnvironmentMap::new(curves::cie_e(1.0)),
+        1.0,
     );
     world
 }
@@ -75,6 +76,7 @@ fn cornell_box(
     additional_materials: Vec<MaterialEnum>,
     light_material: MaterialEnum,
     world_illuminant: SPD,
+    env_sampling_probability: f32,
 ) -> World {
     let env_map = EnvironmentMap::new(world_illuminant);
     let red = curves::red(1.0);
@@ -166,11 +168,16 @@ fn cornell_box(
         world_instances.push(instance);
     }
 
-    let world = World::new(world_instances, world_materials, env_map);
+    let world = World::new(
+        world_instances,
+        world_materials,
+        env_map,
+        env_sampling_probability,
+    );
     world
 }
 
-fn construct_scene() -> World {
+fn construct_scene(config: &Config) -> World {
     // load some curves
     let (silver_ior, silver_kappa) =
         load_ior_and_kappa("data/curves/silver.csv", |x: f32| x * 1000.0).unwrap();
@@ -279,6 +286,7 @@ fn construct_scene() -> World {
         additional_materials,
         light_material,
         world_illuminant,
+        config.env_sampling_probability.unwrap_or(0.5),
     )
 }
 
@@ -301,7 +309,7 @@ fn main() -> () {
         .build_global()
         .unwrap();
 
-    let world = construct_scene();
+    let world = construct_scene(&config);
 
     let cameras: Vec<Camera> = parse_cameras_from(&config);
     // some integrators only work with certain renderers.

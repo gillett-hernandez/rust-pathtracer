@@ -1,15 +1,82 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
-use crate::hittable::Hittable;
+use crate::hittable::{HitRecord, Hittable};
 use crate::material::Material;
-use crate::materials::MaterialId;
+use crate::materials::{MaterialEnum, MaterialId};
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use std::f32::INFINITY;
 use std::sync::Arc;
 
 use crate::integrator::*;
+
+fn evaluate_direct_importance(
+    world: &Arc<World>,
+    camera_pick: Sample1D,
+    lens_sample: Sample2D,
+    lambda: f32,
+    beta: SingleEnergy,
+    material: &MaterialEnum,
+    wi: Vec3,
+    hit: &HitRecord,
+    frame: &TangentFrame,
+    samples: &mut Vec<(Sample, CameraId)>,
+) {
+    let (camera, camera_id, camera_pick_pdf) = world
+        .pick_random_camera(camera_pick)
+        .expect("camera pick failed");
+    if let Some(camera_surface) = camera.get_surface() {
+        // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
+        // let direction = direction.normalized();
+        let (point_on_lens, _lens_normal, pdf) =
+            camera_surface.unwrap().sample_surface(lens_sample);
+        let camera_pdf = pdf * camera_pick_pdf;
+        if camera_pdf.0 == 0.0 {
+            // go to next pick
+            return;
+        }
+        let direction = (point_on_lens - hit.point).normalized();
+
+        // this should be the same as the other method, but maybe not.
+        // camera_surface.unwrap().material_id
+        let camera_wo = frame.to_local(&direction);
+        let reflectance = material.f(&hit, wi, camera_wo);
+        let dropoff = camera_wo.z().max(0.0);
+        if dropoff == 0.0 {
+            return;
+        }
+        // println!("picked valid camera, {:?}, {:?}", direction, pdf);
+        // generate point on camera, then see if it can be connected to.
+        // println!("hit {:?}", &hit);
+        if veach_v(&world, point_on_lens, hit.point) {
+            let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
+            let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
+
+            // correctly connected.
+            let candidate_camera_ray = Ray::new(point_on_lens, -direction);
+            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
+            // println!(
+            //     " weight {}, uv for ray {:?} is {:?}",
+            //     weight, candidate_camera_ray, pixel_uv
+            // );
+            if let Some(uv) = pixel_uv {
+                assert!(
+                    !camera_pdf.is_nan() && !weight.is_nan(),
+                    "{:?}, {}",
+                    camera_pdf,
+                    weight
+                );
+                let energy = reflectance * beta * dropoff * weight / camera_pdf.0;
+                assert!(energy.0.is_finite());
+                let sw = SingleWavelength::new(lambda, energy);
+                let ret = (Sample::LightSample(sw, uv), camera_id as u8);
+                // println!("adding camera sample to splatting list");
+                samples.push(ret);
+            }
+        }
+    }
+}
 
 pub struct LightTracingIntegrator {
     pub max_bounces: u16,
@@ -23,23 +90,21 @@ impl GenericIntegrator for LightTracingIntegrator {
         &self,
         sampler: &mut Box<dyn Sampler>,
         _camera_ray: Ray,
-        samples: &mut Vec<(Sample, CameraId)>,
+        mut samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
-        // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera or to camera ray hit point.
-        // two possible formulations: connecting to camera directly and splatting to the pixel buffer
-        // or shooting a camera ray and connecting to its hit point.
-        // in this integrator, it's the latter
+        // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
         let wavelength_sample = sampler.draw_1d();
         let mut light_pick_sample = sampler.draw_1d();
 
-        let scene_light_sampling_probability = 0.8;
+        let env_sampling_probability = self.world.get_env_sampling_probability();
 
         let sampled;
         let mut light_g_term: f32 = 1.0;
 
-        if self.world.lights.len() > 0 && light_pick_sample.x > scene_light_sampling_probability {
-            light_pick_sample.x =
-                (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
+        if self.world.lights.len() > 0 && light_pick_sample.x > env_sampling_probability {
+            light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
+                / (1.0 - env_sampling_probability))
+                .clamp(0.0, 1.0);
             let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
@@ -68,9 +133,8 @@ impl GenericIntegrator for LightTracingIntegrator {
                 tmp_sampled.2 * pick_pdf * area_pdf,
             );
         } else {
-            light_pick_sample.x = ((light_pick_sample.x - scene_light_sampling_probability)
-                / (1.0 - scene_light_sampling_probability))
-                .clamp(0.0, 1.0);
+            light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
+
             // sample world env
             let world_aabb = self.world.accelerator.bounding_box();
             let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
@@ -86,6 +150,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
         let light_pdf = sampled.2;
+
         // let mut beta = SingleEnergy::ONE;
         // let mut beta = radiance / (sampled.2).0;
         let mut beta = radiance;
@@ -163,65 +228,19 @@ impl GenericIntegrator for LightTracingIntegrator {
                 // attempt to connect to camera
                 for _ in 0..self.camera_samples {
                     let camera_pick = sampler.draw_1d();
-
-                    let (camera, camera_id, camera_pick_pdf) = self
-                        .world
-                        .pick_random_camera(camera_pick)
-                        .expect("camera pick failed");
-                    if let Some(camera_surface) = camera.get_surface() {
-                        let (direction, camera_pdf) =
-                            camera_surface.sample(sampler.draw_2d(), hit.point);
-                        let direction = direction.normalized();
-                        if camera_pdf.0 == 0.0 {
-                            // go to next pick
-                            continue;
-                        }
-
-                        // this should be the same as the other method, but maybe not.
-                        // camera.get_surface().unwrap().material_id
-
-                        let camera_wo = frame.to_local(&direction);
-                        let reflectance = material.f(&hit, wi, camera_wo);
-                        let dropoff = camera_wo.z().max(0.0);
-                        if dropoff == 0.0 {
-                            continue;
-                        }
-                        // println!("picked valid camera, {:?}, {:?}", direction, pdf);
-                        // generate point on camera, then see if it can be connected to.
-                        let (point_on_lens, _lens_normal, pdf) = camera
-                            .get_surface()
-                            .unwrap()
-                            .sample_surface(sampler.draw_2d());
-                        // println!("hit {:?}", &hit);
-                        if veach_v(&self.world, point_on_lens, hit.point) {
-                            let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
-                            let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
-
-                            // correctly connected.
-                            let candidate_camera_ray = Ray::new(point_on_lens, -direction);
-                            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
-                            // println!(
-                            //     " weight {}, uv for ray {:?} is {:?}",
-                            //     weight, candidate_camera_ray, pixel_uv
-                            // );
-                            if let Some(uv) = pixel_uv {
-                                assert!(
-                                    !camera_pdf.is_nan() && !weight.is_nan(),
-                                    "{:?}, {}",
-                                    camera_pdf,
-                                    weight
-                                );
-                                let energy = reflectance * beta * dropoff * weight
-                                    / camera_pick_pdf.0
-                                    / camera_pdf.0;
-                                assert!(energy.0.is_finite());
-                                let sw = SingleWavelength::new(lambda, energy);
-                                let ret = (Sample::LightSample(sw, uv), camera_id as u8);
-                                // println!("adding camera sample to splatting list");
-                                samples.push(ret);
-                            }
-                        }
-                    }
+                    // evaluate_direct_importance(&self.world, camera_pick, &mut samples);
+                    evaluate_direct_importance(
+                        &self.world,
+                        camera_pick,
+                        sampler.draw_2d(),
+                        lambda,
+                        beta,
+                        material,
+                        wi,
+                        &hit,
+                        &frame,
+                        &mut samples,
+                    );
                 }
 
                 if let Some(wo) = maybe_wo {

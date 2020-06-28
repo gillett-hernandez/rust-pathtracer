@@ -75,6 +75,7 @@ pub struct World {
     pub cameras: Vec<Camera>,
     pub materials: MaterialTable,
     pub environment: EnvironmentMap,
+    env_sampling_probability: f32,
 }
 
 impl World {
@@ -82,6 +83,7 @@ impl World {
         instances: Vec<Instance>,
         materials: MaterialTable,
         environment: EnvironmentMap,
+        env_sampling_probability: f32,
     ) -> Self {
         let mut lights = Vec::new();
         for instance in instances.iter() {
@@ -100,6 +102,7 @@ impl World {
             cameras: Vec::new(),
             materials,
             environment,
+            env_sampling_probability,
         }
     }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {

@@ -53,6 +53,7 @@ pub struct RenderSettings {
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
+    pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub cameras: Vec<CameraSettings>,
     pub render_settings: Vec<RenderSettings>,
 }
