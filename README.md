@@ -2,7 +2,7 @@
 
 ![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/pt.png?raw=true)
 
-The above image was rendered at 1024 spp, with a disk light at 5500K and a env color emitting light at 2700K.
+The above image was rendered at 1024 spp, with a disk light at 5500K and an environment map emitting light at 2700K.
 
 The colors of the left and right walls are set to have relatively narrow peaks at 420nm(blue) and 640nm(red) respectively. the curves used are at [curves.rs](src/curves.rs). The left sphere is Gold, and the right sphere is Iron. refractive indices and data obtained from https://refractiveindex.info/
 
