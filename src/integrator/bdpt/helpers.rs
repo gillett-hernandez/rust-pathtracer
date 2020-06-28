@@ -154,7 +154,7 @@ pub fn random_walk(
 
                 vertex.pdf_forward = pdf.0 / cos_i;
 
-                if cos_i < 0.00001 {
+                if false && cos_o < 0.00001 {
                     // considered specular
                     vertex.pdf_backward = vertex.pdf_forward;
                 } else {
@@ -224,7 +224,7 @@ pub fn random_walk(
                     MaterialId::Light(0),
                     0,
                     beta,
-                    0.0,
+                    1.0,
                     1.0 / (max_world_radius_2 * 4.0 * PI),
                     1.0 / (max_world_radius_2),
                 );
@@ -399,6 +399,7 @@ pub struct CombinedPath<'a> {
     pub light_path: &'a Vec<Vertex>,
     pub eye_path: &'a Vec<Vertex>,
     pub connection_index: usize,
+    pub connecting_g: f32,
     pub path_length: usize,
 }
 
@@ -411,15 +412,61 @@ impl<'a> CombinedPath<'a> {
         // but we want combined_path[i].veach_g to be between combined_path[i] and combined_path[i-1] at all times
 
         // naive version: recompute veach g term
-        let vertex0 = self[vidx0];
-        let point0 = vertex0.point;
-        let vertex1 = self[vidx1];
-        let point1 = vertex1.point;
-        let direction = (point1 - point0).normalized();
-        let cos_i = (direction * vertex0.normal).abs();
-        let cos_o = (direction * vertex1.normal).abs();
+        // let vertex0 = self[vidx0];
+        // let point0 = vertex0.point;
+        // let vertex1 = self[vidx1];
+        // let point1 = vertex1.point;
+        // assert!(point0 != point1);
+        // let direction = (point1 - point0).normalized();
+        // let cos_i = (direction * vertex0.normal).abs();
+        // let cos_o = (direction * vertex1.normal).abs();
+        // assert!(
+        //     cos_i * cos_o > 0.0,
+        //     "direction, normals: {:?} {:?} {:?}, and vertices: {:?} {:?}",
+        //     direction,
+        //     vertex0.normal,
+        //     vertex1.normal,
+        //     vertex0,
+        //     vertex1,
+        // );
 
-        veach_g(point0, cos_i, point1, cos_o)
+        // veach_g(point0, cos_i, point1, cos_o)
+
+        // smart version
+        // veach g is already computed and stored in vertices, only the order is reversed.
+        // for both the eye and light subpaths, vertex[i].veach_g is the G term between y[i] and y[i-1] or z[i] and z[i-1]
+        // however our indices are switched, and x_i.veach_g needs to be between x_i-1 and x_i
+        // on the light side, the indices don't need to be switched
+        // however on the eye side, the indices need to be switched slightly.
+        if vidx1 >= self.connection_index && vidx0 < self.connection_index {
+            // self.eye_path[t].veach_g
+            // self.eye_path[self.path_length - vidx1].veach_g
+            self.connecting_g
+        } else if vidx1 >= self.connection_index {
+            self.eye_path[self.path_length - vidx1 - 1].veach_g
+        } else {
+            self.light_path[vidx1].veach_g
+        }
+    }
+
+    pub fn pdf_forward(&self, vidx: usize) -> f32 {
+        let vertex = self[vidx];
+        if vidx >= self.connection_index {
+            // has to be swapped.
+            vertex.pdf_backward
+        } else {
+            vertex.pdf_forward
+        }
+    }
+
+    pub fn pdf_backward(&self, vidx: usize) -> f32 {
+        let vertex = self[vidx];
+        if vidx >= self.connection_index {
+            // has to be swapped.
+            vertex.pdf_forward
+        } else {
+            vertex.pdf_backward
+        }
     }
 }
 
@@ -429,9 +476,15 @@ impl<'a> Index<usize> for CombinedPath<'a> {
         if index >= self.connection_index {
             let len = self.path_length;
             // assert!(len >= index && index > 0);
-            &self.eye_path[len - index]
+            // println!(
+            //     "eye: path index {}, subpath index {}",
+            //     index,
+            //     len - index - 1
+            // );
+            &self.eye_path[len - index - 1]
         } else {
             assert!(index < self.light_path.len());
+            // println!("light: path index and subpath index {}", index);
             &self.light_path[index]
         }
     }
@@ -465,44 +518,33 @@ where
         light_path,
         eye_path,
         connection_index: s,
-        path_length: k,
+        connecting_g: veach_g,
+        path_length: k1,
     };
 
-    // assert!(
-    //     path[0] == light_path[0],
-    //     "{:?} != {:?}",
-    //     path[0],
-    //     light_path[0]
-    // );
-    // assert!(path[k] == eye_path[0], "{:?} != {:?}", path[k], eye_path[0]);
-    // assert!(
-    //     path[s] == light_path[s],
-    //     "{:?} != {:?}",
-    //     path[s],
-    //     light_path[s]
-    // );
-    // assert!(
-    //     path[s + 1] == light_path[k1 - s],
-    //     "{:?} != {:?}",
-    //     path[s + 1],
-    //     light_path[k1 - s]
-    // );
+    // println!("{:?} {:?} {:?} {:?}", light_path, eye_path, s, k);
+    // println!("{:?}", path[0]);
+    // println!("{:?}", path[s - 1]);
+    // println!("{:?}", path[s]);
+    // println!("{:?}", path[k]);
+    // panic!();
 
-    let mut probabilities: Vec<f32> = vec![0.0; 1 + k1];
-    // probabilities.fill(0.0);
-    probabilities[s] = 1.0;
+    let mut ps: Vec<f32> = vec![0.0; s + t + 1];
+    ps[s] = 1.0;
+
     // notes about special cases:
     // for the eye subpath, vertex0.pdf_forward is P_A, which technically is the directional pdf times the geometry term for the camera.
-    // for the light subpath, vertex0.pdf_forward is 0.0 if it is a delta light
+    // it is 0.0 if the camera is a pinhole camera.
+    // for the light subpath, vertex0.pdf_forward is 0.0 if it is a delta light, otherwise it's P_A
 
     // first build up from index = s to index = k
     for i in s..k1 {
-        let i_p_1 = i + 1;
+        let ip1 = i + 1;
         if i == 0 {
             // top case of equation 10.9
 
             assert!(
-                path[1].pdf_backward > 0.0,
+                path.pdf_backward(1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
                 s,
@@ -510,27 +552,41 @@ where
                 k,
                 path[1]
             );
-            probabilities[1] = probabilities[0] * path[0].pdf_forward
-                / (path[1].pdf_backward * path.veach_g_between(0, 1));
+            ps[1] =
+                ps[0] * path.pdf_forward(0) / (path.pdf_backward(1) * path.veach_g_between(0, 1));
+            assert!(!ps[1].is_nan(), "{:?}", ps);
         } else if i < k {
-            let i_m_1 = i - 1;
+            let im1 = i - 1;
             // middle case of equation 10.9
             assert!(
-                path[i_p_1].pdf_backward > 0.0,
+                path.pdf_backward(ip1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
                 s,
                 t,
                 k,
-                path[i_p_1]
+                path[ip1]
             );
-            probabilities[i_p_1] =
-                probabilities[i] * path[i_m_1].pdf_forward * path.veach_g_between(i_m_1, i)
-                    / (path[i_p_1].pdf_backward * path.veach_g_between(i, i_p_1));
+            let veach_im1_i = path.veach_g_between(im1, i);
+            let veach_i_ip1 = path.veach_g_between(i, ip1);
+            ps[ip1] = ps[i] * path.pdf_forward(im1) * veach_im1_i
+                / (path.pdf_backward(ip1) * veach_i_ip1);
+            assert!(
+                    !ps[ip1].is_nan(),
+                    "path probabilities: {:?}, path[i]: {:?}, veach_G between: {:?}, path[i+1]: {:?}\n{:?} * {:?} / ({:?} * {:?})",
+                    ps,
+                    path[i],
+                    veach_g,
+                    path[i + 1],
+                    path.pdf_forward(im1),
+                    veach_im1_i,
+                    path.pdf_backward(ip1),
+                    veach_i_ip1,
+                );
         } else {
             // bottom case of equation 10.9
             assert!(
-                path[k].pdf_backward > 0.0,
+                path.pdf_backward(k) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
                 s,
@@ -538,20 +594,20 @@ where
                 k,
                 path[k]
             );
-            probabilities[k1] =
-                probabilities[k] * path[k - 1].pdf_forward * path.veach_g_between(k - 1, k)
-                    / path[k].pdf_backward;
+            ps[k1] = ps[k] * path.pdf_forward(k - 1) * path.veach_g_between(k - 1, k)
+                / path.pdf_backward(k);
+            assert!(!ps[k1].is_nan(), "{:?}", ps);
         }
     }
 
     for j in 0..s {
         let i = s - j;
-        let i_p_1 = i + 1;
-        let i_m_1 = i - 1;
+        let ip1 = i + 1;
+        let im1 = i - 1;
         if i == k {
             // reciprocal bottom case of equation 10.9
             assert!(
-                path[k - 1].pdf_forward > 0.0,
+                path.pdf_forward(k - 1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
                 s,
@@ -559,26 +615,40 @@ where
                 k,
                 path[k - 1]
             );
-            probabilities[k] = probabilities[k1] * path[k].pdf_backward
-                / (path[k - 1].pdf_forward * path.veach_g_between(k - 1, k));
+            ps[k] = ps[k1] * path.pdf_backward(k)
+                / (path.pdf_forward(k - 1) * path.veach_g_between(k - 1, k));
+            assert!(!ps[k].is_nan(), "{:?}", ps);
         } else if i > 1 {
             // reciprocal middle case of equation 10.9
             assert!(
-                path[i_m_1].pdf_forward > 0.0,
+                path.pdf_forward(im1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
                 s,
                 t,
                 k,
-                path[i_m_1]
+                path[im1]
             );
-            probabilities[i] =
-                probabilities[i_p_1] * path[i_p_1].pdf_backward * path.veach_g_between(i, i_p_1)
-                    / (path[i_m_1].pdf_forward * path.veach_g_between(i_m_1, i));
+            let veach_i_ip1 = path.veach_g_between(i, ip1);
+            let veach_im1_i = path.veach_g_between(im1, i);
+            ps[i] = ps[ip1] * path.pdf_backward(ip1) * veach_i_ip1
+                / (path.pdf_forward(im1) * veach_im1_i);
+            assert!(
+                !ps[i].is_nan(),
+                "path probabilities: {:?}, path[i]: {:?}, veach_G between: {:?}, path[i+1]: {:?}\n{:?} * {:?} / ({:?} * {:?})",
+                ps,
+                path[i],
+                veach_g,
+                path[i + 1],
+                path.pdf_backward(ip1),
+                veach_i_ip1,
+                path.pdf_forward(im1),
+                veach_im1_i
+            );
         } else {
             // reciprocal top case of equation 10.9
             assert!(
-                path[0].pdf_forward > 0.0,
+                path.pdf_forward(0) > 0.0,
                 "i, s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
                 s,
@@ -586,15 +656,15 @@ where
                 k,
                 path[0]
             );
-            probabilities[0] = probabilities[1] * path[1].pdf_backward * path.veach_g_between(0, 1)
-                / path[0].pdf_forward;
+            ps[0] = ps[1] * path.pdf_backward(1) * path.veach_g_between(0, 1) / path.pdf_forward(0);
+            assert!(!ps[0].is_nan(), "{:?}", ps);
         }
     }
 
-    for p in probabilities.iter() {
-        assert!(p.is_finite() && !p.is_nan(), "{:?}", probabilities);
+    for p in ps.iter() {
+        assert!(p.is_finite() && !p.is_nan(), "{:?}", ps);
     }
-    let result = mis_function(&probabilities);
+    let result = mis_function(&ps);
     assert!(result.is_finite());
     result
 }

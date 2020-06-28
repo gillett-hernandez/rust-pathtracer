@@ -60,14 +60,13 @@ impl GenericIntegrator for BDPTIntegrator {
         let camera_ray = camera_sample.0;
         let _camera_id = camera_sample.1;
 
-        let scene_light_sampling_probability = self.world.get_env_sampling_probability();
+        let env_sampling_probability = self.world.get_env_sampling_probability();
 
         let sampled;
 
         let start_light_vertex;
-        if self.world.lights.len() > 0 && light_pick_sample.x < scene_light_sampling_probability {
-            light_pick_sample.x =
-                (light_pick_sample.x / scene_light_sampling_probability).clamp(0.0, 1.0);
+        if self.world.lights.len() > 0 && light_pick_sample.x > env_sampling_probability {
+            light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
             let (light, light_pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
@@ -107,8 +106,8 @@ impl GenericIntegrator for BDPTIntegrator {
                 1.0,
             );
         } else {
-            light_pick_sample.x = ((light_pick_sample.x - scene_light_sampling_probability)
-                / (1.0 - scene_light_sampling_probability))
+            light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
+                / (1.0 - env_sampling_probability))
                 .clamp(0.0, 1.0);
             // sample world env
             let world_aabb = self.world.accelerator.bounding_box();
@@ -179,19 +178,54 @@ impl GenericIntegrator for BDPTIntegrator {
             &mut light_path,
         );
 
+        for vertex in eye_path.iter() {
+            assert!(vertex.pdf_forward.is_finite(), "{:?}", eye_path);
+            assert!(vertex.pdf_backward.is_finite(), "{:?}", eye_path);
+            assert!(vertex.veach_g.is_finite(), "{:?}", eye_path);
+            assert!(vertex.point.0.is_finite().all(), "{:?}", eye_path);
+            assert!(vertex.normal.0.is_finite().all(), "{:?}", eye_path);
+        }
+
+        for vertex in light_path.iter() {
+            assert!(vertex.pdf_forward.is_finite(), "{:?}", light_path);
+            assert!(vertex.pdf_backward.is_finite(), "{:?}", light_path);
+            assert!(vertex.veach_g.is_finite(), "{:?}", light_path);
+            assert!(vertex.point.0.is_finite().all(), "{:?}", light_path);
+            assert!(vertex.normal.0.is_finite().all(), "{:?}", light_path);
+        }
+
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
 
+        let mis_enabled = true;
         if let Some((s, t)) = self.specific_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
-                match eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t) {
-                    SampleKind::Sampled((factor, _g)) => {
-                        // let sample =
-                        //     Sample::ImageSample(SingleWavelength::new(lambda, factor), (0.0, 0.0));
-                        // samples.push((sample, 0 ));
-                        return SingleWavelength::new(lambda, factor);
+                let res = eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
+
+                match res {
+                    SampleKind::Sampled((factor, g)) => {
+                        if g == 0.0 || factor == SingleEnergy::ZERO {
+                            return SingleWavelength::BLACK;
+                        }
+                        let weight = if mis_enabled {
+                            eval_mis(
+                                &self.world,
+                                &light_path,
+                                s,
+                                &eye_path,
+                                t,
+                                g,
+                                |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                            )
+                        } else {
+                            1.0 / ((s + t) as f32)
+                        };
+                        return SingleWavelength::new(lambda, weight * factor);
                     }
 
-                    SampleKind::Splatted((factor, _g)) => {
+                    SampleKind::Splatted((factor, g)) => {
+                        if g == 0.0 || factor == SingleEnergy::ZERO {
+                            return SingleWavelength::BLACK;
+                        }
                         let last_light_vertex = light_path[s - 1];
                         let other_vertex = if t > 0 {
                             eye_path[t - 1]
@@ -205,8 +239,23 @@ impl GenericIntegrator for BDPTIntegrator {
                                 (other_vertex.point - last_light_vertex.point).normalized(),
                             );
                             if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                                let weight = if mis_enabled {
+                                    eval_mis(
+                                        &self.world,
+                                        &light_path,
+                                        s,
+                                        &eye_path,
+                                        t,
+                                        g,
+                                        |weights: &Vec<f32>| -> f32 {
+                                            1.0 / weights.iter().sum::<f32>()
+                                        },
+                                    )
+                                } else {
+                                    1.0 / ((s + t) as f32)
+                                };
                                 let sample = Sample::LightSample(
-                                    SingleWavelength::new(lambda, factor),
+                                    SingleWavelength::new(lambda, weight * factor),
                                     pixel_uv,
                                 );
                                 samples.push((sample, camera_id));
@@ -218,14 +267,6 @@ impl GenericIntegrator for BDPTIntegrator {
             }
         }
 
-        let mis_enabled = true;
-        // let mut mis_nodes: Vec<MISNode> = Vec::new();
-        // if mis_enabled {
-        //     // for _ in 0..(self.max_bounces + 1) {
-        //     //     mis_nodes.push(MISNode::new(1.0, 1.0, false));
-        //     // }
-        //     weights.fill(MISNode::new(1.0, 1.0, false));
-        // }
         let mut sum = SingleEnergy::ZERO;
         // sum += additional_contribution.unwrap_or(SingleEnergy::ZERO);
         for path_length in 1..(1 + self.max_bounces as usize) {
@@ -252,8 +293,8 @@ impl GenericIntegrator for BDPTIntegrator {
                 if factor == SingleEnergy::ZERO {
                     continue;
                 }
-                if new_g > 0.0 {
-                    g = new_g;
+                if g == 0.0 {
+                    continue;
                 }
                 let weight = if mis_enabled {
                     eval_mis(

@@ -357,7 +357,7 @@ impl Material for GGX {
 
             let mut wo = refract(wi, wh, eta_rel);
             if wo.is_none() {
-                wo = Some(reflect(wi, wh));
+                wo = Some(reflect(wi, -wh));
             }
             return wo;
         }
@@ -401,6 +401,13 @@ mod tests {
             println!("sampled f is {:?}", sampled_f);
             let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
             println!("sampled pdf is {:?}", sampled_pdf);
+
+            // check swapping wi and wo
+            let (wi, wo) = (wo, wi);
+            let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
+            println!("sampled f with swap is {:?}", sampled_f);
+            let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+            println!("sampled pdf with swap is {:?}", sampled_pdf);
         } else {
             println!("failed to sample ggx");
         }

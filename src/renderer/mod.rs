@@ -400,6 +400,7 @@ impl Renderer for NaiveRenderer {
                     let integrator = BDPTIntegrator {
                         max_bounces: 10,
                         world: arc_world.clone(),
+                        // specific_pair: Some((2, 2)),
                         specific_pair: None,
                         max_lens_sample_attempts: 4,
                     };

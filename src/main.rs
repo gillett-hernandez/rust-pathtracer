@@ -183,6 +183,7 @@ fn cornell_box(
     world
 }
 
+#[allow(unused_variables)]
 fn construct_scene(config: &Config) -> World {
     // load some curves
     let (silver_ior, silver_kappa) =
@@ -204,10 +205,10 @@ fn construct_scene(config: &Config) -> World {
         load_ior_and_kappa("data/curves/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
 
     // create some curves
-    let _white = curves::cie_e(1.0);
+    let white = curves::cie_e(1.0);
     let flat_zero = curves::void();
-    let _flat_one = curves::cie_e(1.0);
-    let _cie_e_illuminant = curves::cie_e(15.0);
+    let flat_one = curves::cie_e(1.0);
+    let cie_e_illuminant = curves::cie_e(15.0);
     let red = curves::red(1.0);
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
@@ -216,31 +217,31 @@ fn construct_scene(config: &Config) -> World {
     let glass = curves::cauchy(1.45, 3540.0);
 
     // create materials
-    let _lambertian_white = MaterialEnum::from(Lambertian::new(white));
-    let _lambertian_red = MaterialEnum::from(Lambertian::new(red));
-    let _lambertian_green = MaterialEnum::from(Lambertian::new(green));
-    let _lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
+    let lambertian_white = MaterialEnum::from(Lambertian::new(white));
+    let lambertian_red = MaterialEnum::from(Lambertian::new(red));
+    let lambertian_green = MaterialEnum::from(Lambertian::new(green));
+    let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
 
     let ggx_glass = MaterialEnum::from(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let _ggx_glass_rough =
+    let ggx_glass_rough =
         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-    let _ggx_moissanite =
+    let ggx_moissanite =
         MaterialEnum::from(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
-    let _ggx_silver_metal = MaterialEnum::from(GGX::new(
+    let ggx_silver_metal = MaterialEnum::from(GGX::new(
         0.03,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
         0.0,
     ));
-    let _ggx_copper_metal = MaterialEnum::from(GGX::new(
+    let ggx_copper_metal = MaterialEnum::from(GGX::new(
         0.03,
         copper_ior.clone(),
         1.0,
         copper_kappa.clone(),
         0.0,
     ));
-    let _ggx_silver_metal_rough = MaterialEnum::from(GGX::new(
+    let ggx_silver_metal_rough = MaterialEnum::from(GGX::new(
         0.08,
         silver_ior.clone(),
         1.0,
@@ -248,19 +249,19 @@ fn construct_scene(config: &Config) -> World {
         0.0,
     ));
     let ggx_gold_metal = MaterialEnum::from(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
-    let _ggx_lead_metal = MaterialEnum::from(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
-    let _ggx_cold_lead_metal =
+    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
+    let ggx_cold_lead_metal =
         MaterialEnum::from(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
-    let _ggx_platinum_metal =
+    let ggx_platinum_metal =
         MaterialEnum::from(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
-    let _ggx_bismuth_metal =
+    let ggx_bismuth_metal =
         MaterialEnum::from(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.03, iron_ior, 1.0, iron_kappa, 0.0));
 
     // create some illuminants and lights
     let blackbody_illuminant1 = curves::blackbody(2700.0, 1.0);
     let blackbody_illuminant2 = curves::blackbody(5500.0, 10.0);
-    let _cie_e_illuminant_low_power = curves::cie_e(0.25);
+    let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
     let light_material =
         MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Dual));
@@ -286,7 +287,8 @@ fn construct_scene(config: &Config) -> World {
             2,
         ))),
     ]; // ball at origin
-    let additional_materials = vec![ggx_glass, ggx_gold_metal, ggx_iron_metal];
+       // let additional_materials = vec![ggx_glass, ggx_gold_metal, ggx_iron_metal];
+    let additional_materials = vec![lambertian_blue, lambertian_green, lambertian_red];
     cornell_box(
         additional_instances,
         additional_materials,
