@@ -141,6 +141,12 @@ impl NaiveRenderer {
         }
         println!("total pixels: {}", total_pixels);
         println!("minimum total samples: {}", total_camera_samples);
+        let maximum_threads = renders
+            .iter()
+            .max_by_key(|s| s.threads)
+            .unwrap()
+            .threads
+            .unwrap();
 
         for _ in 0..100 {
             print!("-");
@@ -214,7 +220,18 @@ impl NaiveRenderer {
             )
             .collect();
 
-        // additional_splats.;
+        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        println!("");
+
+        println!(
+            "\ntook {}s at {} rays per second and {} rays per second per thread\n",
+            elapsed,
+            (total_camera_samples as f32) / elapsed,
+            (total_camera_samples as f32) / elapsed / (maximum_threads as f32)
+        );
+
+        let now = Instant::now();
+
         additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
             camera_id1.cmp(&camera_id2)
         });
@@ -242,34 +259,25 @@ impl NaiveRenderer {
             }
         }
 
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!("");
-        let maximum_threads = renders
-            .iter()
-            .max_by_key(|s| s.threads)
-            .unwrap()
-            .threads
-            .unwrap();
-        println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread\n",
-            elapsed,
-            (total_camera_samples as f32) / elapsed,
-            (total_camera_samples as f32) / elapsed / (maximum_threads as f32)
-        );
-
         for i in 0..films.len() {
-            let image_film = &mut films[i].1;
+            let (settings, image_film) = &mut films[i];
             let light_film = &light_films[i];
             for (image_pixel, light_pixel) in
                 image_film.buffer.iter_mut().zip(light_film.buffer.iter())
             {
                 // use veach section 10.3.4.3 here
-                *image_pixel += *light_pixel;
+                *image_pixel += *light_pixel / settings.min_samples.into();
             }
         }
 
         let (_left, right): (Vec<RenderSettings>, Vec<Film<XYZColor>>) =
             films.iter().cloned().unzip();
+
+        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        println!(
+            "\ntook {}s to sort and deserialize the splats and save to film\n",
+            elapsed,
+        );
         right
     }
 }
