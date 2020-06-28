@@ -29,8 +29,7 @@ fn evaluate_direct_importance(
     if let Some(camera_surface) = camera.get_surface() {
         // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
         // let direction = direction.normalized();
-        let (point_on_lens, _lens_normal, pdf) =
-            camera_surface.unwrap().sample_surface(lens_sample);
+        let (point_on_lens, _lens_normal, pdf) = camera_surface.sample_surface(lens_sample);
         let camera_pdf = pdf * camera_pick_pdf;
         if camera_pdf.0 == 0.0 {
             // go to next pick
@@ -39,7 +38,7 @@ fn evaluate_direct_importance(
         let direction = (point_on_lens - hit.point).normalized();
 
         // this should be the same as the other method, but maybe not.
-        // camera_surface.unwrap().material_id
+        // camera_surface.material_id
         let camera_wo = frame.to_local(&direction);
         let reflectance = material.f(&hit, wi, camera_wo);
         let dropoff = camera_wo.z().max(0.0);
