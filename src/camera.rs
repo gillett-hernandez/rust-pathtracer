@@ -78,11 +78,15 @@ impl SimpleCamera {
         let w = -direction;
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
+        println!(
+            "constructing camera with point, direction, and uvw = {:?} {:?} {:?} {:?} {:?}",
+            look_from, direction, u, v, w
+        );
 
         let transform = Transform3::stack(
             // Some(Transform3::translation(look_from.into())),
             None,
-            Some(TangentFrame::new(u, v, w).into()),
+            Some(TangentFrame::new(u, v, -w).into()),
             None,
         );
 
@@ -104,7 +108,7 @@ impl SimpleCamera {
             surface: Instance::new(
                 Aggregate::from(Disk::new(
                     lens_radius,
-                    look_from,
+                    Point3::ORIGIN,
                     true,
                     MaterialId::Camera(0),
                     0,
@@ -150,32 +154,58 @@ impl SimpleCamera {
         // was generated for point (s, t) on the film
         // we know that this ray hit a certain point on the lens. this alone doesn't help determine what pixel coordinate should be returned
         // let self_origin_and_offset = ray.origin;
+        let point_on_surface = ray.origin;
         let transform = self.surface.transform.expect("somehow camera lens was created without a transform, which should never happen for SimpleCamera");
-        let offset_in_uvw_space: Vec3 = transform / (ray.origin - self.origin);
+        let point_in_local_space = Point3::from(point_on_surface - self.origin);
+        let ray = Ray::new(point_in_local_space, ray.direction);
+        let ray = transform * ray;
+        let offset_in_uvw_space: Point3 = ray.origin;
         let (rdx, rdy) = (offset_in_uvw_space.x(), offset_in_uvw_space.y());
         if rdx * rdx + rdy * rdy > self.lens_radius * self.lens_radius {
+            println!("rdx, rdy was {}, {}, dist_from_origin = {}, which is larger than self.lens_radius {}", rdx, rdy, (rdx * rdx + rdy * rdy).sqrt(), self.lens_radius);
             None
         } else {
-            print!("+");
             // intersect "ray" with image plane
-            let local_wi: Vec3 = transform / ray.direction;
+            let local_wi: Vec3 = ray.direction;
+            let local_ray = Ray::new(offset_in_uvw_space, local_wi);
+
             let local_ray_z = local_wi.z();
             let plane_z = self.focal_distance;
             let t = plane_z / local_ray_z;
+            /*look_from
+            - u * half_width * focus_dist
+            - v * half_height * focus_dist
+            - w * focus_dist*/
+            println!("lower left corner {:?}", self.lower_left_corner);
+            println!(
+                "lower left corner transformed {:?}",
+                transform * self.lower_left_corner
+            );
+            let lower_left_corner = Vec3::new(
+                self.half_width * self.focal_distance,
+                self.half_height * self.focal_distance,
+                self.focal_distance,
+            );
+            println!("lower left corner vec {:?}", lower_left_corner);
+            let point_on_image_plane = local_ray.point_at_parameter(t) - offset_in_uvw_space;
+            // let inverse_point_on_image_plane =
+            //     local_ray.point_at_parameter(-t) - offset_in_uvw_space;
             if t < 0.0 {
+                println!("t was {}", t);
                 return None;
             }
-            let local_ray = Ray::new(Point3::from(offset_in_uvw_space), local_wi);
-            let point_on_image_plane = local_ray.point_at_parameter(t);
 
-            let (s, t) = (
-                (point_on_image_plane.x() - self.half_width * self.focal_distance)
-                    / (2.0 * self.half_width * self.focal_distance),
-                (point_on_image_plane.y() - self.half_height * self.focal_distance)
-                    / (2.0 * self.half_height * self.focal_distance),
-            );
+            println!("local ray {:?} ", local_ray);
+            println!("point on image plane {:?}", point_on_image_plane);
+            // println!(
+            //     "inverse point on image plane {:?}",
+            //     inverse_point_on_image_plane
+            // );
 
-            if s >= 1.0 || s < 0.0 || t >= 1.0 || t < 0.0 {
+            let (s, t) = (-point_on_image_plane.x(), -point_on_image_plane.y());
+
+            if s >= 1.0 || s < -1.0 || t >= 1.0 || t < -1.0 {
+                println!("s and t were calculated but were {} and {}", s, t);
                 return None;
             }
 
@@ -209,26 +239,53 @@ mod tests {
     #[test]
     fn test_camera() {
         let camera: SimpleCamera = SimpleCamera::new(
-            Point3::new(-100.0, 0.0, 0.0),
+            Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
             Vec3::Z,
-            45.0,
+            27.0,
             0.6,
-            1.0,
-            1.0,
+            5.0,
+            0.08,
             0.0,
             1.0,
         );
-        println!("camera origin {:?}", camera.origin);
-        println!("camera direction {:?}", camera.direction);
         let s = random();
         let t = random();
         let r: Ray = camera.get_ray(s, t);
-        println!("ray origin {:?}", r.origin);
-        println!("ray direction {:?}", r.direction);
-        assert!(
-            r.direction * Vec3::X > 0.0,
-            "x component of direction of camera ray pointed wrong"
-        );
+        println!("ray {:?}", r);
+        let pixel_uv = camera.get_pixel_for_ray(r);
+        println!("s and t are actually {} and {}", s, t);
+        println!("{:?}", pixel_uv);
+        if let Some((u, v)) = pixel_uv {
+            println!("remapped {} {}", (u + 1.0) / 2.0, (v + 1.0) / 2.0);
+        }
+    }
+    #[test]
+    fn test_debug() {
+        let look_from = Point3::new(-5.0, 0.0, 0.0);
+        let look_at = Point3::ZERO;
+
+        let origin = look_from;
+        let lens_radius = 0.01;
+        let u = Vec3::new(0.0, 1.0, 0.0);
+        let v = Vec3::new(0.0, 0.0, -1.0);
+        let w = Vec3::new(-1.0, 0.0, 0.0);
+        let focus_dist = 5.0;
+        let half_width = 0.5;
+        let half_height = 0.3;
+        let rd: Vec3 = lens_radius * random_in_unit_disk(Sample2D::new_random_sample());
+        let offset = u * rd.x() + v * rd.y();
+        let ray_origin: Point3 = origin + offset;
+        // println!("{:?}", ;
+        let s = 0.3;
+        let t = 0.7;
+        let u_halfwidth_focus_dist = u * half_width * focus_dist;
+        let v_halfheight_focus_dist = v * half_height * focus_dist;
+        let ray_direction = (u_halfwidth_focus_dist * (s * 2.0 - 1.0)
+            + v_halfheight_focus_dist * (t * 2.0 - 1.0)
+            - w * focus_dist
+            - offset)
+            .normalized();
+        // let un_normalized = Vec3::new()
     }
 }

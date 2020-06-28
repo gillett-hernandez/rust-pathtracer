@@ -334,11 +334,11 @@ mod tests {
     use super::*;
     #[test]
     fn test_transform() {
-        let transform_translate = Transform3::translation(Vec3::new(1.0, 1.0, 1.0));
+        let transform_translate = Transform3::translation(Vec3::new(1.0, 2.0, 3.0));
         let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
         let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
 
-        let test_vec = Vec3::X;
+        let test_vec = Vec3::new(1.0, 1.0, 1.0);
         println!("testing vec {:?}", test_vec);
 
         println!("{:?}", transform_translate * test_vec);
@@ -355,9 +355,10 @@ mod tests {
 
     #[test]
     fn test_reverse() {
-        let transform_translate = Transform3::translation(Vec3::new(1.0, 1.0, 1.0));
+        let transform_translate = Transform3::translation(Vec3::new(1.0, 2.0, 3.0));
         let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
-        let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+        let transform_scale_uniform = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+        let transform_scale = Transform3::scale(Vec3::new(2.0, 3.0, 4.0));
 
         let combination_trs = transform_translate * transform_rotate * transform_scale;
         let combination_rs = transform_rotate * transform_scale;
@@ -436,15 +437,25 @@ mod tests {
     #[test]
     fn test_translate() {
         let n_translate =
-            nalgebra::Matrix4::new_translation(&nalgebra::Vector3::new(1.0, 1.0, 1.0));
+            nalgebra::Matrix4::new_translation(&nalgebra::Vector3::new(1.0, 2.0, 3.0));
 
         let matrix = Matrix4x4::from(n_translate);
-        let vec = nalgebra::Vector4::new(1.0, 0.0, 0.0, 1.0);
-        let simd_vec = Vec3::from_raw(f32x4::new(1.0, 0.0, 0.0, 0.0));
-        let simd_point = Point3::from_raw(f32x4::new(1.0, 0.0, 0.0, 1.0));
-        let result1 = n_translate * vec;
+        let point = nalgebra::Vector4::new(1.0, 2.0, 3.0, 1.0);
+        let simd_vec = Vec3::from_raw(f32x4::new(1.0, 2.0, 3.0, 0.0));
+        let simd_point = Point3::from_raw(f32x4::new(1.0, 2.0, 3.0, 1.0));
+
+        let transform = Transform3::new_from_matrix(n_translate);
+        let result1 = n_translate * point;
         let result2 = matrix * simd_vec;
         let result3 = matrix * simd_point;
-        println!("{:?} {:?} {:?}", result1, result2, result3);
+        let result4 = transform * simd_vec;
+        let result5 = transform / simd_vec;
+        let result6 = transform * simd_point;
+        let result7 = transform / simd_point;
+        println!(
+            "{:?} {:?} {:?} {:?} {:?}",
+            result1, result2, result3, result4, result5
+        );
+        println!("{:?} {:?}", result6, result7);
     }
 }

@@ -125,7 +125,7 @@ impl World {
         }
     }
 
-    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&Camera, PDF)> {
+    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&Camera, usize, PDF)> {
         // currently just uniform sampling
         let length = self.cameras.len();
         if length == 0 {
@@ -141,7 +141,7 @@ impl World {
                 idx,
                 length as usize
             );
-            Some((self.get_camera(idx), PDF::from(1.0 / length as f32)))
+            Some((self.get_camera(idx), idx, PDF::from(1.0 / length as f32)))
         }
     }
 

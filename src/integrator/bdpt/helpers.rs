@@ -1,6 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HasBoundingBox, HitRecord};
+use crate::integrator::veach_v;
 use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;
@@ -82,25 +83,6 @@ impl From<Vertex> for HitRecord {
 
 pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
-}
-
-pub fn veach_v(world: &Arc<World>, point0: Point3, point1: Point3) -> bool {
-    // returns if the points are visible
-    let diff = point1 - point0;
-    let norm = diff.norm();
-    let tmax = norm * 0.95;
-    let point0_to_point1 = Ray::new_with_time_and_tmax(point0, diff / norm, 0.0, tmax);
-    let hit = world.hit(point0_to_point1, 0.01, tmax);
-    // if (point0.x() == 1.0 || point1.x() == 1.0) && !hit.as_ref().is_none() {
-    //     // from back wall to something
-    //     println!(
-    //         "{:?} {:?}, hit was {:?}",
-    //         point0,
-    //         point1,
-    //         hit.as_ref().unwrap()
-    //     );
-    // }
-    hit.is_none()
 }
 
 #[allow(unused_mut)]

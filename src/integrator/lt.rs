@@ -9,7 +9,7 @@ use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use std::f32::INFINITY;
 use std::sync::Arc;
 
-use crate::integrator::{CameraId, GenericIntegrator, Sample};
+use crate::integrator::*;
 
 pub struct LightTracingIntegrator {
     pub max_bounces: u16,
@@ -154,7 +154,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 // attempt to connect to camera
                 for _ in 0..self.camera_samples {
                     let camera_pick = sampler.draw_1d();
-                    let (camera, camera_pick_pdf) = self
+                    let (camera, camera_id, camera_pick_pdf) = self
                         .world
                         .pick_random_camera(camera_pick)
                         .expect("camera pick failed");
@@ -165,57 +165,42 @@ impl GenericIntegrator for LightTracingIntegrator {
                             // go to next pick
                             continue;
                         }
+
+                        // this should be the same as the other method, but maybe not.
+                        // camera.get_surface().unwrap().material_id
                         let camera_wo = frame.to_local(&direction);
-                        let camera_connect_ray = Ray::new_with_time(
-                            hit.point + hit.normal * 0.01,
-                            direction,
-                            ray.time + 0.01,
-                        );
                         let reflectance = material.f(&hit, wi, camera_wo);
                         let dropoff = camera_wo.z().max(0.0);
                         if dropoff == 0.0 {
                             continue;
                         }
-                        println!("picked valid camera, {:?}, {:?}", direction, pdf);
-                        if let Some(mut camera_hit) =
-                            self.world.hit(camera_connect_ray, 0.01, INFINITY)
-                        {
-                            camera_hit.lambda = lambda;
-
-                            let candidate_camera_ray = Ray::new(camera_hit.point, -direction);
-                            println!("hit {:?}", &hit);
-                            println!("camera_hit {:?}", &camera_hit);
+                        // println!("picked valid camera, {:?}, {:?}", direction, pdf);
+                        // generate point on camera, then see if it can be connected to.
+                        let (point_on_lens, _lens_normal, pdf) = camera
+                            .get_surface()
+                            .unwrap()
+                            .sample_surface(sampler.draw_2d());
+                        // println!("hit {:?}", &hit);
+                        if veach_v(&self.world, point_on_lens, hit.point) {
                             let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
                             let weight = power_heuristic(pdf.0, scatter_pdf_into_camera.0);
-                            // let camera_wi = (camera_surface
-                            //     .transform
-                            //     .expect("camera did not have transform")
-                            //     / (-direction))
-                            //     .normalized();
-                            if camera_hit.instance_id == camera_surface.instance_id {
-                                if let MaterialId::Camera(camera_id) = camera_hit.material {
-                                    // correctly connected.
-                                    let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
-                                    println!(
-                                        " weight {}, uv for ray {:?} is {:?}",
-                                        weight, ray, pixel_uv
-                                    );
-                                    if let Some(uv) = pixel_uv {
-                                        assert!(
-                                            !pdf.is_nan() && !weight.is_nan(),
-                                            "{:?}, {}",
-                                            pdf,
-                                            weight
-                                        );
-                                        let energy = reflectance * beta * dropoff * weight
-                                            / camera_pick_pdf.0
-                                            / pdf.0;
-                                        let sw = SingleWavelength::new(lambda, energy);
-                                        let ret = (Sample::LightSample(sw, uv), camera_id);
-                                        println!("adding camera sample to splatting list");
-                                        samples.push(ret);
-                                    }
-                                }
+
+                            // correctly connected.
+                            let candidate_camera_ray = Ray::new(point_on_lens, -direction);
+                            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
+                            println!(
+                                " weight {}, uv for ray {:?} is {:?}",
+                                weight, candidate_camera_ray, pixel_uv
+                            );
+                            if let Some(uv) = pixel_uv {
+                                assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                                let energy = reflectance * beta * dropoff * weight
+                                    / camera_pick_pdf.0
+                                    / pdf.0;
+                                let sw = SingleWavelength::new(lambda, energy);
+                                let ret = (Sample::LightSample(sw, uv), camera_id as u8);
+                                println!("adding camera sample to splatting list");
+                                samples.push(ret);
                             }
                         }
                     }

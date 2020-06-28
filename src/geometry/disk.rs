@@ -80,7 +80,7 @@ impl Hittable for Disk {
         }
         let phi = u * PI * 2.0;
         let (sin, cos) = phi.sin_cos();
-        let point = Point3::new(self.radius * r * cos, self.radius * r * sin, 0.0);
+        let point = self.origin + Vec3::new(self.radius * r * cos, self.radius * r * sin, 0.0);
         let area = PI * self.radius * self.radius;
         (point, normal, (1.0 / area).into())
     }

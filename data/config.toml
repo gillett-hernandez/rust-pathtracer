@@ -20,14 +20,14 @@ vfov = 90
 
 
 [[render_settings]]
-threads = 23
-filename = "PT"
-integrator = "PT"
-max_bounces = 8
-resolution.width = 1024
-resolution.height = 1024
-exposure = 2.0
-min_samples = 1024
+threads = 1
+filename = "LT"
+integrator = "LT"
+max_bounces = 4
+resolution.width = 512
+resolution.height = 512
+exposure = 1.0
+min_samples = 1
 camera_id = 1
 russian_roulette = true
 only_direct = false
