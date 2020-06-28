@@ -36,6 +36,11 @@ In addition, much of the code emphasizes matching reality as closely as possible
     * This allows for physically correct color and reflectance behavior so that Gold, Copper, and other metals can be represented and traced accurately.
 
 
+However, there are some concepts that I'm still unfamiliar with or that I'm working on that aren't properly implemented yet. that includes the following:
+* Image reconstruction theory and pixel filtering. this seems to be very important for Light tracing, but less important for normal Path tracing.
+* Real physical units for Radiance and for Camera importance.
+
+
 ## Installing and running:
 
 Requirements are Rust nightly.
@@ -49,9 +54,9 @@ it comes preloaded with many options and most are commented out.
 
 ## Experimental implementations:
 
-The Light Tracing Integrator and the Bidirectional Path tracing integrator can represent the camera's lens in the scene, and allow for light to intersect the camera lens. While typically this is done with one camera at a time, I've taken the liberty of trying to implement it so that multiple cameras can be in the scene at once, and if light happens to intersect *any* camera, the contribution will be recorded to that film. This is batched so that all the films that use the Light Tracing integrator will all have their cameras in the scene at once, and the same for Bidirectional Path Tracing.
+The World generally is able to represent the camera's lens in the scene, and allow for light to intersect the camera lens. While typically this is done with one camera at a time, for the LT and BDPT integrators I've taken the liberty of trying to implement it so that multiple cameras can be in the scene at once and each can potentially be sampled randomly, and if light happens to intersect *any* camera, the contribution will be recorded to that camera's film. This is batched so that all the films that use the Light Tracing integrator will all have their cameras in the scene at once, and the same for Bidirectional Path Tracing.
 
-That should theoretically cause images to converge faster, though the feature is still a WIP and may be changed in the future. Renders using the Path tracing integrator will be unaffected, and their cameras will not physically exist in the World.
+That should theoretically cause images to converge faster, though the feature is still a WIP and may be changed or deprecated in the future. Renders using the Path tracing integrator will be unaffected, and their cameras will not physically exist in the World.
 
 
 ## To Do: an incomplete list
@@ -71,6 +76,8 @@ That should theoretically cause images to converge faster, though the feature is
 - [ ] implement light tracing
 - [ ] implement BDPT
 - [ ] refactor bsdf trait methods to reduce duplication
+- [ ] implement real units for radiance and camera importance
+- [ ] research image reconstruction theory and implement proper pixel filtering
 
 ## Credits:
 
