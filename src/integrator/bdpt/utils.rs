@@ -275,7 +275,7 @@ pub fn eval_unweighted_contribution(
 
     let cst: SingleEnergy;
     let mut sample = SampleKind::Sampled((SingleEnergy::ONE, 0.0));
-    let mut g = 0.0;
+    let g;
     if s == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
         let second_to_last_eye_vertex = eye_path[t - 2];
@@ -691,7 +691,7 @@ where
     debug_assert!(result.is_finite());
     result
 }
-
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -707,4 +707,4 @@ mod tests {
         //      Vertex { kind: Eye, time: 4.5407047, lambda: 603.45825, point: Point3(f32x4(-0.5422344, -0.26931095, -0.81934977, 1.0)), normal: Vec3(f32x4(-0.80744135, 0.4356266, -0.3978293, 0.0)), material_id: Material(4), instance_id: 7, throughput: SingleEnergy(1.0), pdf_forward: 69214.664, pdf_backward: 10360.568, veach_g: 0.035089824 }
         // ]
     }
-}
+}*/

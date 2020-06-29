@@ -88,7 +88,7 @@ impl GenericIntegrator for LightTracingIntegrator {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
-        settings: &RenderSettings,
+        _settings: &RenderSettings,
         _camera_sample: (Ray, CameraId),
         mut samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
