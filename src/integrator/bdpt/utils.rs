@@ -452,7 +452,7 @@ impl<'a> CombinedPath<'a> {
             // self.eye_path[t].veach_g
             // self.eye_path[self.path_length - vidx1].veach_g
             self.connecting_g
-        } else if vidx1 > self.connection_index {
+        } else if vidx1 >= self.connection_index {
             self.eye_path[self.path_length - vidx1 - 1].veach_g
         } else {
             self.light_path[vidx1].veach_g
@@ -517,12 +517,12 @@ where
     let k = s + t - 1; // for 2,0 case, k is 1
     let k1 = k + 1; // k1 is 2
 
-    if t == 0 {
-        // hit camera directly, would have caused index error.
-        // for now, return 0
-        println!("{:?} ={:?}= {:?}", light_path, veach_g, eye_path);
-        return 1.0;
-    }
+    // if t == 0 {
+    //     // hit camera directly, would have caused index error.
+    //     // for now, return 0
+    //     println!("{:?} ={:?}= {:?}", light_path, veach_g, eye_path);
+    //     return 1.0;
+    // }
     if s + t == 2 {
         return 1.0;
     }

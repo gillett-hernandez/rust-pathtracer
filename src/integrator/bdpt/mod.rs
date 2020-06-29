@@ -340,7 +340,9 @@ impl GenericIntegrator for BDPTIntegrator {
                         &eye_path,
                         t,
                         g,
-                        |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                        |weights: &Vec<f32>| -> f32 {
+                            1.0 / weights.iter().map(|&v| v * v).sum::<f32>()
+                        },
                     )
                 } else {
                     1.0 / ((s + t) as f32)
