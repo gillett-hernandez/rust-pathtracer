@@ -41,7 +41,7 @@ impl EnvironmentMap {
         let phi = PI * (2.0 * uv.0 - 1.0);
         let (y, x) = phi.sin_cos();
         let z = (PI * uv.1).cos();
-        assert!(lambda > 0.0);
+        debug_assert!(lambda > 0.0);
         // SingleEnergy::new(self.color.evaluate_power(lambda))
         SingleEnergy::new(self.color.evaluate_power(lambda) * self.strength)
     }
@@ -116,7 +116,7 @@ impl World {
         } else {
             let x = s.x;
             let idx = (length as f32 * x).clamp(0.0, length as f32 - 1.0) as usize;
-            assert!(
+            debug_assert!(
                 idx < self.lights.len(),
                 "{}, {}, {}, {}",
                 x,
@@ -139,7 +139,7 @@ impl World {
         } else {
             let x = s.x;
             let idx = (length as f32 * x).clamp(0.0, length as f32 - 1.0) as usize;
-            assert!(
+            debug_assert!(
                 idx < self.lights.len(),
                 "{}, {}, {}, {}",
                 x,
@@ -181,12 +181,7 @@ impl World {
     }
 
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
-        // assigns cameras to the internal list and rebuilds the scene accelerator if specified
-        // this should only ever be called when self.cameras is empty and the scene accelerator does not have any camera geometry in it
-        // assert!(
-        //     self.cameras.len() == 0,
-        //     "assign cameras should only be called on a fresh world"
-        // );
+        // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
         if add_and_rebuild_scene {
             for camera in self.cameras.iter() {
                 let instances = &mut self.accelerator.instances;

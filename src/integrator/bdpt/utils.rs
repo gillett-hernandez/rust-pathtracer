@@ -130,9 +130,7 @@ pub fn random_walk(
                 }
             } else {
                 // if directly hit a light while tracing a camera path.
-                if let MaterialId::Light(_light_id) = hit.material {
-
-                }
+                if let MaterialId::Light(_light_id) = hit.material {}
             }
 
             let material = world.get_material(hit.material);
@@ -176,9 +174,13 @@ pub fn random_walk(
                 );
                 debug_assert!(
                     vertex.pdf_backward > 0.0 && vertex.pdf_backward.is_finite(),
-                    "pdf backward was 0 for material {:?} at vertex {:?}",
+                    "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}",
                     material,
-                    vertex
+                    vertex,
+                    wi,
+                    wo,
+                    cos_o,
+                    cos_i
                 );
 
                 vertices.push(vertex);
@@ -201,14 +203,12 @@ pub fn random_walk(
                 // hit a surface and didn't bounce.
                 if emission.0 > 0.0 {
                     vertex.kind = Type::LightSource(Source::Instance);
-                    vertex.pdf_forward = 0.00;
+                    vertex.pdf_forward = 0.0;
                     vertex.pdf_backward = 1.0;
                     vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
                     vertices.push(vertex);
                 } else {
-                    println!("material {:?} didn't generate outgoing direction", material);
-                    println!("{:?}", vertex);
-                    panic!();
+                    // this happens when the backside of a light is hit.
                 }
                 break;
             }
@@ -218,10 +218,10 @@ pub fn random_walk(
                 let max_world_radius =
                     (world.bounding_box().max - world.bounding_box().min).norm() / 2.0;
                 let max_world_radius_2 = max_world_radius * max_world_radius;
-                assert!(max_world_radius.is_finite());
+                debug_assert!(max_world_radius.is_finite());
                 let at_env = max_world_radius * ray.direction;
-                assert!(at_env.0.is_finite().all());
-                assert!(Point3::from(at_env).0.is_finite().all());
+                debug_assert!(at_env.0.is_finite().all());
+                debug_assert!(Point3::from(at_env).0.is_finite().all());
                 let vertex = Vertex::new(
                     Type::LightSource(Source::Environment),
                     1.0 * max_world_radius,
@@ -235,7 +235,7 @@ pub fn random_walk(
                     1.0,
                     1.0 / (max_world_radius_2),
                 );
-                assert!(vertex.point.0.is_finite().all());
+                debug_assert!(vertex.point.0.is_finite().all());
                 // println!("sampling env and setting pdf_forward to 0");
                 vertices.push(vertex);
             }
@@ -285,7 +285,7 @@ pub fn eval_unweighted_contribution(
         let normal = last_eye_vertex.normal;
         let frame = TangentFrame::from_normal(normal);
         let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
-        assert!(wi.0.is_finite().all(), "{:?}", eye_path);
+        debug_assert!(wi.0.is_finite().all(), "{:?}", eye_path);
 
         cst = hit_light_material.emission(
             &last_eye_vertex.into(),
@@ -490,7 +490,7 @@ impl<'a> Index<usize> for CombinedPath<'a> {
             // );
             &self.eye_path[len - index - 1]
         } else {
-            assert!(index < self.light_path.len());
+            debug_assert!(index < self.light_path.len());
             // println!("light: path index and subpath index {}", index);
             &self.light_path[index]
         }
@@ -550,7 +550,7 @@ where
         if i == 0 {
             // top case of equation 10.9
 
-            assert!(
+            debug_assert!(
                 path.pdf_backward(1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
@@ -561,11 +561,11 @@ where
             );
             ps[1] =
                 ps[0] * path.pdf_forward(0) / (path.pdf_backward(1) * path.veach_g_between(0, 1));
-            assert!(!ps[1].is_nan(), "{:?}", ps);
+            debug_assert!(!ps[1].is_nan(), "{:?}", ps);
         } else if i < k {
             let im1 = i - 1;
             // middle case of equation 10.9
-            assert!(
+            debug_assert!(
                 path.pdf_backward(ip1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
@@ -578,7 +578,7 @@ where
             let veach_i_ip1 = path.veach_g_between(i, ip1);
             ps[ip1] = ps[i] * path.pdf_forward(im1) * veach_im1_i
                 / (path.pdf_backward(ip1) * veach_i_ip1);
-            assert!(
+            debug_assert!(
                     !ps[ip1].is_nan(),
                     "path probabilities: {:?}, path[i]: {:?}, veach_G between: {:?}, path[i+1]: {:?}\n{:?} * {:?} / ({:?} * {:?})",
                     ps,
@@ -592,7 +592,7 @@ where
                 );
         } else {
             // bottom case of equation 10.9
-            assert!(
+            debug_assert!(
                 path.pdf_backward(k) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
@@ -603,7 +603,7 @@ where
             );
             ps[k1] = ps[k] * path.pdf_forward(k - 1) * path.veach_g_between(k - 1, k)
                 / path.pdf_backward(k);
-            assert!(!ps[k1].is_nan(), "{:?}", ps);
+            debug_assert!(!ps[k1].is_nan(), "{:?}", ps);
         }
     }
 
@@ -613,7 +613,7 @@ where
         let im1 = i - 1;
         if i == k {
             // reciprocal bottom case of equation 10.9
-            assert!(
+            debug_assert!(
                 path.pdf_forward(k - 1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
@@ -624,10 +624,10 @@ where
             );
             ps[k] = ps[k1] * path.pdf_backward(k)
                 / (path.pdf_forward(k - 1) * path.veach_g_between(k - 1, k));
-            assert!(!ps[k].is_nan(), "{:?}", ps);
+            debug_assert!(!ps[k].is_nan(), "{:?}", ps);
         } else if i > 1 {
             // reciprocal middle case of equation 10.9
-            assert!(
+            debug_assert!(
                 path.pdf_forward(im1) > 0.0,
                 "i,s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
@@ -640,7 +640,7 @@ where
             let veach_im1_i = path.veach_g_between(im1, i);
             ps[i] = ps[ip1] * path.pdf_backward(ip1) * veach_i_ip1
                 / (path.pdf_forward(im1) * veach_im1_i);
-            assert!(
+            debug_assert!(
                 !ps[i].is_nan(),
                 "path probabilities: {:?}, path[i]: {:?}, veach_G between: {:?}, path[i+1]: {:?}\n{:?} * {:?} / ({:?} * {:?})",
                 ps,
@@ -654,7 +654,7 @@ where
             );
         } else {
             // reciprocal top case of equation 10.9
-            assert!(
+            debug_assert!(
                 path.pdf_forward(0) > 0.0,
                 "i, s,t,k = ({}, {}, {}, {}). {:?}",
                 i,
@@ -664,14 +664,14 @@ where
                 path[0]
             );
             ps[0] = ps[1] * path.pdf_backward(1) * path.veach_g_between(0, 1) / path.pdf_forward(0);
-            assert!(!ps[0].is_nan(), "{:?}", ps);
+            debug_assert!(!ps[0].is_nan(), "{:?}", ps);
         }
     }
 
     for p in ps.iter() {
-        assert!(p.is_finite() && !p.is_nan(), "{:?}", ps);
+        debug_assert!(p.is_finite() && !p.is_nan(), "{:?}", ps);
     }
     let result = mis_function(&ps);
-    assert!(result.is_finite());
+    debug_assert!(result.is_finite());
     result
 }

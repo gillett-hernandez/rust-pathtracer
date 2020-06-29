@@ -81,7 +81,7 @@ impl NaiveRenderer {
                     );
                     temp_color += XYZColor::from(integrator.color(&mut sampler, r));
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
-                    assert!(
+                    debug_assert!(
                         temp_color.0.is_finite().all(),
                         "{:?} resulted in {:?}",
                         r,
@@ -199,7 +199,7 @@ impl NaiveRenderer {
                                     ));
                                     // handle image samples that occur in local_additional_splats, as they correspond to the current pixel_index
                                     // if local_additional_splats.iter().filter()
-                                    assert!(
+                                    debug_assert!(
                                         temp_color.0.is_finite().all(),
                                         "integrator returned {:?}",
                                         temp_color

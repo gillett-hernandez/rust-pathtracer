@@ -94,23 +94,23 @@ impl GenericIntegrator for BDPTIntegrator {
             let pdf_forward: PDF =
                 directional_pdf / (light_surface_normal * (&sampled.0).direction).abs();
             let pdf_backward: PDF = light_pick_pdf * area_pdf;
-            assert!(
+            debug_assert!(
                 pdf_forward.0.is_finite(),
-                "{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                material,
+                "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                 pdf_forward,
                 pdf_backward,
+                material,
                 directional_pdf,
                 light_surface_point,
                 light_surface_normal,
                 sampled.1.energy
             );
-            assert!(
+            debug_assert!(
                 pdf_backward.0.is_finite(),
-                "{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                material,
-                pdf_forward,
+                "pdf_backward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                 pdf_backward,
+                pdf_forward,
+                material,
                 directional_pdf,
                 light_surface_point,
                 light_surface_normal,
@@ -205,19 +205,19 @@ impl GenericIntegrator for BDPTIntegrator {
         );
 
         for vertex in eye_path.iter() {
-            assert!(vertex.pdf_forward.is_finite(), "{:?}", eye_path);
-            assert!(vertex.pdf_backward.is_finite(), "{:?}", eye_path);
-            assert!(vertex.veach_g.is_finite(), "{:?}", eye_path);
-            assert!(vertex.point.0.is_finite().all(), "{:?}", eye_path);
-            assert!(vertex.normal.0.is_finite().all(), "{:?}", eye_path);
+            debug_assert!(vertex.pdf_forward.is_finite(), "{:?}", eye_path);
+            debug_assert!(vertex.pdf_backward.is_finite(), "{:?}", eye_path);
+            debug_assert!(vertex.veach_g.is_finite(), "{:?}", eye_path);
+            debug_assert!(vertex.point.0.is_finite().all(), "{:?}", eye_path);
+            debug_assert!(vertex.normal.0.is_finite().all(), "{:?}", eye_path);
         }
 
         for vertex in light_path.iter() {
-            assert!(vertex.pdf_forward.is_finite(), "{:?}", light_path);
-            assert!(vertex.pdf_backward.is_finite(), "{:?}", light_path);
-            assert!(vertex.veach_g.is_finite(), "{:?}", light_path);
-            assert!(vertex.point.0.is_finite().all(), "{:?}", light_path);
-            assert!(vertex.normal.0.is_finite().all(), "{:?}", light_path);
+            debug_assert!(vertex.pdf_forward.is_finite(), "{:?}", light_path);
+            debug_assert!(vertex.pdf_backward.is_finite(), "{:?}", light_path);
+            debug_assert!(vertex.veach_g.is_finite(), "{:?}", light_path);
+            debug_assert!(vertex.point.0.is_finite().all(), "{:?}", light_path);
+            debug_assert!(vertex.normal.0.is_finite().all(), "{:?}", light_path);
         }
 
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
@@ -362,11 +362,11 @@ impl GenericIntegrator for BDPTIntegrator {
                     }
                 } else {
                     sum += weight * factor;
-                    assert!(sum.0.is_finite(), "{:?} {:?}", weight, factor);
+                    debug_assert!(sum.0.is_finite(), "{:?} {:?}", weight, factor);
                 }
             }
         }
-        assert!(sum.0.is_finite());
+        debug_assert!(sum.0.is_finite());
         SingleWavelength::new(lambda, sum)
     }
 }

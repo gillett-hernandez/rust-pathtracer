@@ -256,7 +256,7 @@ impl SpectralPowerDistributionFunction for SPD {
         use ordered_float::OrderedFloat;
         match &self {
             SPD::Linear { signal, bounds } => {
-                assert!(
+                debug_assert!(
                     bounds.contains(&lambda),
                     "lambda was {:?}, bounds were {:?}",
                     lambda,

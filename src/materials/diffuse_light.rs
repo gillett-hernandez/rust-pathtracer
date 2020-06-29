@@ -48,7 +48,7 @@ impl Material for DiffuseLight {
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
-            Ray::new(point + object_wo * 0.04, object_wo),
+            Ray::new(point, object_wo),
             sw.with_energy(sw.energy / PI),
             PDF::from(local_wo.z().abs() / PI),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),

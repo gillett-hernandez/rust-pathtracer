@@ -148,10 +148,10 @@ mod tests {
             0,
         );
 
-        let transform = Transform3::stack(
-            Some(Transform3::scale(Vec3::new(3.0, 3.0, 3.0))),
-            Some(Transform3::axis_angle(Vec3::Z, 1.0)),
-            Some(Transform3::translation(Vec3::new(1.0, 1.0, 1.0))),
+        let transform = Transform3::from_stack(
+            Some(Transform3::from_scale(Vec3::new(3.0, 3.0, 3.0))),
+            Some(Transform3::from_axis_angle(Vec3::Z, 1.0)),
+            Some(Transform3::from_translation(Vec3::new(1.0, 1.0, 1.0))),
         );
 
         let aggregate1 = Aggregate::from(sphere);

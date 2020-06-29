@@ -250,17 +250,23 @@ fn construct_scene(config: &Config) -> World {
     let light_material =
         MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Reverse));
 
-    let world_illuminant = blackbody_illuminant1_bright;
+    let world_illuminant = blackbody_illuminant1_dim;
     let additional_instances = vec![
         Instance::new(
             Aggregate::from(Disk::new(
                 0.4,
-                Point3::new(0.0, 0.0, 0.9),
+                Point3::new(0.0, 0.0, 0.0),
                 false,
                 MaterialId::Light(0),
                 0,
             )),
-            None,
+            Some(Transform3::from_stack(
+                Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
+                None,
+                Some(Transform3::from_translation(
+                    Point3::ORIGIN - Point3::new(0.0, 0.0, 0.9),
+                )),
+            )),
             None,
             None,
         ),

@@ -34,7 +34,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     hit.lambda = sum.lambda;
                     let frame = TangentFrame::from_normal(hit.normal);
                     let wi = frame.to_local(&-ray.direction).normalized();
-                    // assert!(
+                    // debug_assert!(
                     //     wi.z() > 0.0,
                     //     "point: {:?}, normal {:?}, incoming: {:?}, in local space: {:?}",
                     //     hit.point,
@@ -53,15 +53,20 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         // check stuff here
                         if last_bsdf_pdf.0 <= 0.0 || self.light_samples == 0 {
                             sum.energy += beta * emission;
-                            assert!(!sum.energy.is_nan());
+                            debug_assert!(!sum.energy.is_nan());
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // // println!("{:?}", hit);
                             let pdf = hit_primitive.pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
-                            assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                            debug_assert!(
+                                !pdf.is_nan() && !weight.is_nan(),
+                                "{:?}, {}",
+                                pdf,
+                                weight
+                            );
                             sum.energy += beta * emission * weight;
-                            assert!(!sum.energy.is_nan());
+                            debug_assert!(!sum.energy.is_nan());
                         }
                     }
                     let mut light_contribution = SingleEnergy::ZERO;
@@ -74,7 +79,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             // sample the primitive from hit_point
                             let (direction, light_pdf) = light.sample(sampler.draw_2d(), hit.point);
-                            assert!(light_pdf.0.is_finite());
+                            debug_assert!(light_pdf.0.is_finite());
                             if light_pdf.0 == 0.0 {
                                 continue;
                             }
@@ -117,7 +122,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                                         .to_local(&-direction);
                                     let sampled_light_emission =
                                         emission_material.emission(&light_hit, light_wi, None);
-                                    assert!(sampled_light_emission.0 >= 0.0);
+                                    debug_assert!(sampled_light_emission.0 >= 0.0);
                                     // successful_light_samples += 1;
                                     light_contribution += reflectance
                                         * beta
@@ -126,7 +131,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                                         * weight
                                         / light_pdf.0
                                         / pick_pdf.0;
-                                    assert!(
+                                    debug_assert!(
                                         !light_contribution.0.is_nan(),
                                         "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} lp {:?}",
                                         light_contribution,
@@ -147,7 +152,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     if self.light_samples > 0 {
                         // println!("light contribution: {:?}", light_contribution);
                         sum.energy += light_contribution / (self.light_samples as f32);
-                        assert!(
+                        debug_assert!(
                             !sum.energy.is_nan(),
                             "{:?} {:?}",
                             light_contribution,
@@ -202,7 +207,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
 
                     let world_emission = self.world.environment.emission((u, v), sum.lambda);
                     sum.energy += beta * world_emission;
-                    assert!(!sum.energy.is_nan(), "{:?} {:?}", beta, world_emission);
+                    debug_assert!(!sum.energy.is_nan(), "{:?} {:?}", beta, world_emission);
                     break;
                 }
             }
@@ -210,7 +215,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
         // let xyz_from_sum = XYZColor::from(sum);
         // let rgb_from_xyz = RGBColor::from(xyz_from_sum);
 
-        assert!(!sum.energy.is_nan(), "{:?}", sum);
+        debug_assert!(!sum.energy.is_nan(), "{:?}", sum);
         sum
     }
 }

@@ -31,6 +31,9 @@ impl sRGB {
                 let color = film.at(x, y);
                 let lum = color.y();
                 assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
+                if lum.is_nan() {
+                    continue;
+                }
                 total_luminance += lum;
                 if lum > max_luminance {
                     // println!("max lum {} at ({}, {})", max_luminance, x, y);
@@ -43,10 +46,10 @@ impl sRGB {
             "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
             max_luminance,
             avg_luminance,
-            exposure_adjustment / max_luminance
+            exposure_adjustment / avg_luminance
         );
         sRGB {
-            factor: (1.0 / max_luminance).min(1000000.0),
+            factor: (1.0 / avg_luminance).min(1000000.0),
             exposure_adjustment,
             // gamma_adjustment,
         }
@@ -56,7 +59,10 @@ impl sRGB {
 impl Tonemapper for sRGB {
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> (f32x4, f32x4) {
         let cie_xyz_color = film.at(pixel.0, pixel.1);
-        let scaled_cie_xyz_color = cie_xyz_color * self.factor * self.exposure_adjustment;
+        let mut scaled_cie_xyz_color = cie_xyz_color * self.factor * self.exposure_adjustment;
+        if !scaled_cie_xyz_color.0.is_finite().all() {
+            scaled_cie_xyz_color = XYZColor::BLACK;
+        }
 
         let xyz_to_rgb: Matrix3<f32> = Matrix3::new(
             3.24096994,

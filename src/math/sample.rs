@@ -15,7 +15,7 @@ impl Sample1D {
         Sample1D { x: random() }
     }
     pub fn choose<T>(mut self, split: f32, a: T, b: T) -> (Self, T) {
-        assert!(0.0 <= split && split < 1.0);
+        debug_assert!(0.0 <= split && split < 1.0);
         if self.x < split {
             self.x /= split;
             (self, a)
@@ -190,7 +190,7 @@ mod test {
         let mut s = 0.0;
         for _i in 0..1000000 {
             let sample = sampler.draw_1d();
-            assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
+            debug_assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             s += function(sample.x);
         }
         println!("{}", s / 1000000.0);
@@ -201,7 +201,7 @@ mod test {
         let mut s = 0.0;
         for _i in 0..1000000 {
             let sample = sampler.draw_1d();
-            assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
+            debug_assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             s += function(sample.x);
         }
         println!("{}", s / 1000000.0);

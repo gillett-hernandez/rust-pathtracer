@@ -60,14 +60,14 @@ fn evaluate_direct_importance(
             //     weight, candidate_camera_ray, pixel_uv
             // );
             if let Some(uv) = pixel_uv {
-                assert!(
+                debug_assert!(
                     !camera_pdf.is_nan() && !weight.is_nan(),
                     "{:?}, {}",
                     camera_pdf,
                     weight
                 );
                 let energy = reflectance * beta * dropoff * weight / camera_pdf.0;
-                assert!(energy.0.is_finite());
+                debug_assert!(energy.0.is_finite());
                 let sw = SingleWavelength::new(lambda, energy);
                 let ret = (Sample::LightSample(sw, uv), camera_id as u8);
                 // println!("adding camera sample to splatting list");
@@ -156,7 +156,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut beta_pdf = PDF::from(1.0);
         // camera_vertex.lambda = lambda;
 
-        assert!(radiance.0 > 0.0, "radiance was 0, {}", lambda);
+        debug_assert!(radiance.0 > 0.0, "radiance was 0, {}", lambda);
 
         let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
@@ -167,7 +167,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 // println!("whatever1");
                 hit.lambda = lambda;
 
-                assert!(lambda > 0.0);
+                debug_assert!(lambda > 0.0);
                 let frame = TangentFrame::from_normal(hit.normal);
                 let wi = frame.to_local(&-ray.direction).normalized();
                 // println!("{:?}. wi {:?} ", hit, wi);
@@ -194,7 +194,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                         if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
                             // not dividing by pdf because it was already handled in the prior iteration loop.
                             let energy = beta;
-                            assert!(energy.0.is_finite());
+                            debug_assert!(energy.0.is_finite());
                             let sw = SingleWavelength::new(lambda, energy);
                             let ret = (Sample::LightSample(sw, uv), camera_id);
                             // println!("adding camera sample to splatting list");
@@ -205,7 +205,7 @@ impl GenericIntegrator for LightTracingIntegrator {
 
                             let pdf = camera_surface.pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
-                            assert!(
+                            debug_assert!(
                                 !pdf.is_nan() && !weight.is_nan(),
                                 "{:?}, {:?}, {}",
                                 last_bsdf_pdf,
@@ -214,7 +214,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                             );
                             // not dividing by pdf because it was already handled in the prior iteration loop.
                             let energy = beta * weight;
-                            assert!(energy.0.is_finite());
+                            debug_assert!(energy.0.is_finite());
                             let sw = SingleWavelength::new(lambda, energy);
                             let ret = (Sample::LightSample(sw, uv), camera_id);
                             // println!("adding camera sample to splatting list");

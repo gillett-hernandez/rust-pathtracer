@@ -71,10 +71,10 @@ pub fn fresnel_conductor(eta_i: f32, eta_t: f32, k_t: f32, cos_theta_i: f32) -> 
     let etak2 = etak * etak;
 
     let t0 = eta2 - etak2 - sin_theta_i2;
-    assert!(t0 * t0 + eta2 * etak2 > 0.0);
+    debug_assert!(t0 * t0 + eta2 * etak2 > 0.0);
     let a2plusb2 = (t0 * t0 + eta2 * etak2 * 4.0).sqrt();
     let t1 = a2plusb2 + cos_theta_i2;
-    assert!(a2plusb2 + t0 > 0.0);
+    debug_assert!(a2plusb2 + t0 > 0.0);
     let a = ((a2plusb2 + t0) * 0.5).sqrt();
     let t2 = a * cos_theta_i * 2.0;
     let rs = (t1 - t2) / (t1 + t2);
@@ -115,7 +115,7 @@ fn ggx_g(alpha: f32, wi: Vec3, wo: Vec3) -> f32 {
 
 fn ggx_vnpdf(alpha: f32, wi: Vec3, wh: Vec3) -> f32 {
     let inv_gl = 1.0 + ggx_lambda(alpha, wi);
-    assert!(wh.0.is_finite().all());
+    debug_assert!(wh.0.is_finite().all());
     (ggx_d(alpha, wh) * (wi * wh).abs()) / (inv_gl * wi.z().abs())
 }
 
@@ -249,7 +249,7 @@ impl GGX {
 
             ndotv = wi * wh;
             let refl = self.reflectance(eta_inner, kappa, ndotv);
-            assert!(wh.0.is_finite().all());
+            debug_assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
             glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
         } else {
@@ -257,7 +257,7 @@ impl GGX {
                 let eta_rel = self.eta_rel(eta_inner, wi);
 
                 let ggxg = ggx_g(self.alpha, wi, wo);
-                assert!(
+                debug_assert!(
                     wi.0.is_finite().all() && wo.0.is_finite().all(),
                     "{:?} {:?} {:?} {:?}",
                     wi,
@@ -277,7 +277,7 @@ impl GGX {
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
                 let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
-                assert!(
+                debug_assert!(
                     wh.0.is_finite().all(),
                     "{:?} {:?} {:?} {:?}",
                     eta_rel,
@@ -289,8 +289,18 @@ impl GGX {
                 let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
                 transmission_pdf = (ggxd * partial * dwh_dwo).abs();
 
-                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
+                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv.abs());
                 transmission.0 = self.permeability * inv_reflectance * weight.abs();
+                // println!(
+                //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
+                //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo, g
+                // );
+
+                // println!(
+                //     "transmission_pdf = {:?} = {:?}*{:?}*{:?}",
+                //     transmission_pdf, ggxd, partial, dwh_dwo
+                // );
+
                 debug_assert!(
                     !transmission.is_nan(),
                     "ir {} ggxd {} ggxg {} g {} nv {} dwh {}",
@@ -311,8 +321,14 @@ impl GGX {
             }
         }
 
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, ndotv);
-        // let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, ndotv.abs());
+        // println!("glossy: {:?}, transmission: {:?}", glossy, transmission);
+        // println!(
+        //     "glossy_pdf: {:?}, transmission_pdf: {:?}, refl_prob: {:?}",
+        //     glossy_pdf, transmission_pdf, refl_prob
+        // );
+        // println!(" ndotv: {:?}, cos_i: {:?}", ndotv, cos_i);
+        // println!();
 
         let f = glossy + transmission;
         let pdf = refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf;
@@ -339,7 +355,6 @@ impl Material for GGX {
             self.kappa.evaluate_power(hit.lambda)
         };
         let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
-        // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
         if refl_prob == 1.0 || sample.x < refl_prob {
             // rescale sample x value to 0 to 1 range
             sample.x = sample.x / refl_prob;
@@ -349,7 +364,7 @@ impl Material for GGX {
             return Some(wo);
         } else {
             // rescale sample x value to 0 to 1 range
-            sample.x = sample.x / (1.0 - refl_prob);
+            sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
             // transmission
             let wh = sample_wh(self.alpha, wi, sample).normalized();
 
@@ -375,41 +390,103 @@ mod tests {
     use super::*;
     use crate::curves;
     use crate::materials::MaterialId;
+    use packed_simd::f32x4;
     #[test]
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
+        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
+
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
 
-        let wi = Vec3::new(0.01, -0.01, -0.99).normalized();
         let lambda = 500.0;
-
-        let ggx_glass = GGX::new(1.2, glass, 1.0, flat_zero, 1.0);
         let fake_hit_record: HitRecord = HitRecord::new(
             0.0,
             Point3::ZERO,
             (0.0f32, 0.0f32),
             lambda,
-            Vec3::ZERO,
+            Vec3::Z,
             MaterialId::Material(0),
             0,
         );
-        let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), wi);
-        if let Some(wo) = maybe_wo {
-            println!("sampled wo is {:?}", wo);
-            let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
-            println!("sampled f is {:?}", sampled_f);
-            let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
-            println!("sampled pdf is {:?}", sampled_pdf);
 
-            // check swapping wi and wo
+        let test_many = false;
+        if test_many {
+            let mut wi_s: Vec<Vec3> = Vec::new();
+
+            wi_s.push(Vec3::new(0.01, -0.01, -0.99).normalized());
+            wi_s.push(Vec3::new(0.5, -0.1, -0.99).normalized());
+            wi_s.push(Vec3::new(0.8, -0.1, -0.49).normalized());
+            for _ in 0..100000 {
+                wi_s.push(random_on_unit_sphere(sampler.draw_2d()));
+            }
+
+            for wi in wi_s {
+                let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), wi);
+                if let Some(wo) = maybe_wo {
+                    let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
+                    let orig_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+
+                    // check swapping wi and wo
+                    let (wi, wo) = (wo, wi);
+                    let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
+                    let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+                    assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                    assert!(sampled_pdf.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                    assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                    assert!(orig_pdf.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                } else {
+                    println!("failed to sample ggx");
+                }
+            }
+        } else {
+            let wi = Vec3(f32x4::new(0.9709351, 0.18724124, 0.14908342, -0.0));
+            let wo = Vec3(f32x4::new(-0.008856451, 0.6295874, -0.7768792, 0.0));
+            let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
+            let orig_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
             let (wi, wo) = (wo, wi);
             let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
-            println!("sampled f with swap is {:?}", sampled_f);
             let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
-            println!("sampled pdf with swap is {:?}", sampled_pdf);
-        } else {
-            println!("failed to sample ggx");
+            assert!(
+            sampled_f.0 > 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
+            assert!(
+            sampled_pdf.0 > 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
+            assert!(
+            orig_f.0 > 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
+            assert!(
+            orig_pdf.0 > 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
         }
     }
 }

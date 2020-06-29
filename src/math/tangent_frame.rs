@@ -10,19 +10,19 @@ pub struct TangentFrame {
 
 impl TangentFrame {
     pub fn new(tangent: Vec3, bitangent: Vec3, normal: Vec3) -> Self {
-        assert!(
+        debug_assert!(
             (tangent * bitangent).abs() < 0.000001,
             "tbit:{:?} * {:?} was != 0",
             tangent,
             bitangent
         );
-        assert!(
+        debug_assert!(
             (tangent * normal).abs() < 0.000001,
             "tn: {:?} * {:?} was != 0",
             tangent,
             normal
         );
-        assert!(
+        debug_assert!(
             (bitangent * normal).abs() < 0.000001,
             "bitn:{:?} * {:?} was != 0",
             bitangent,

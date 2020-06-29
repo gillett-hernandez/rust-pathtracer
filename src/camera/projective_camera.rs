@@ -48,10 +48,10 @@ impl ProjectiveCamera {
         //     look_from, direction, u, v, w
         // );
 
-        let transform = Transform3::stack(
+        let transform = Transform3::from_stack(
             None,
             Some(TangentFrame::new(u, -v, w).into()), // rotate and stuff
-            Some(Transform3::translation((Point3::ORIGIN - look_from))), // move to match camera origin
+            Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
         );
 
         if lens_radius == 0.0 {
@@ -108,8 +108,8 @@ impl ProjectiveCamera {
 
         // println!("point on focal plane {:?}", point_on_plane);
         let ray_direction = (point_on_plane - ray_origin).normalized();
-        assert!(ray_origin.is_normal());
-        assert!(ray_direction.is_normal());
+        debug_assert!(ray_origin.is_normal());
+        debug_assert!(ray_direction.is_normal());
         Ray::new_with_time(ray_origin, ray_direction, time)
     }
     // returns None if the point on the lens was not from a valid pixel

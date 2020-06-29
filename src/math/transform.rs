@@ -151,7 +151,7 @@ impl Transform3 {
         Transform3::new_from_raw(self.reverse, self.forward)
     }
 
-    pub fn translation(shift: Vec3) -> Self {
+    pub fn from_translation(shift: Vec3) -> Self {
         // let mut m = Matrix4x4::I;
         // let v = shift.0;
         // // m.0 = shuffle!(
@@ -170,13 +170,13 @@ impl Transform3 {
         )))
     }
 
-    pub fn scale(scale: Vec3) -> Self {
+    pub fn from_scale(scale: Vec3) -> Self {
         Transform3::new_from_matrix(nalgebra::Matrix4::new_nonuniform_scaling(
             &nalgebra::Vector3::new(scale.x(), scale.y(), scale.z()),
         ))
     }
 
-    pub fn axis_angle(axis: Vec3, radians: f32) -> Self {
+    pub fn from_axis_angle(axis: Vec3, radians: f32) -> Self {
         let axisangle = radians * nalgebra::Vector3::new(axis.x(), axis.y(), axis.z());
 
         let affine = nalgebra::Matrix4::from_scaled_axis(axisangle);
@@ -190,7 +190,7 @@ impl Transform3 {
     //     Transform3::new_from_matrix(affine)
     // }
 
-    pub fn stack(
+    pub fn from_stack(
         scale: Option<Transform3>,
         rotate: Option<Transform3>,
         translate: Option<Transform3>,
@@ -358,9 +358,9 @@ mod tests {
     use super::*;
     #[test]
     fn test_transform() {
-        let transform_translate = Transform3::translation(Vec3::new(1.0, 2.0, 3.0));
-        let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
-        let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+        let transform_translate = Transform3::from_translation(Vec3::new(1.0, 2.0, 3.0));
+        let transform_rotate = Transform3::from_axis_angle(Vec3::Z, PI / 2.0);
+        let transform_scale = Transform3::from_scale(Vec3::new(2.0, 2.0, 2.0));
 
         let test_vec = Vec3::new(1.0, 1.0, 1.0);
         println!("testing vec {:?}", test_vec);
@@ -379,10 +379,10 @@ mod tests {
 
     #[test]
     fn test_reverse() {
-        let transform_translate = Transform3::translation(Vec3::new(1.0, 2.0, 3.0));
-        let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
+        let transform_translate = Transform3::from_translation(Vec3::new(1.0, 2.0, 3.0));
+        let transform_rotate = Transform3::from_axis_angle(Vec3::Z, PI / 2.0);
         // let _transform_scale_uniform = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
-        let transform_scale = Transform3::scale(Vec3::new(2.0, 3.0, 4.0));
+        let transform_scale = Transform3::from_scale(Vec3::new(2.0, 3.0, 4.0));
 
         let combination_trs = transform_translate * transform_rotate * transform_scale;
         let combination_rs = transform_rotate * transform_scale;
@@ -432,9 +432,9 @@ mod tests {
 
     #[test]
     fn test_transform_combination() {
-        let transform_translate = Transform3::translation(Vec3::new(1.0, 1.0, 1.0));
-        let transform_rotate = Transform3::axis_angle(Vec3::Z, PI / 2.0);
-        let transform_scale = Transform3::scale(Vec3::new(2.0, 2.0, 2.0));
+        let transform_translate = Transform3::from_translation(Vec3::new(1.0, 1.0, 1.0));
+        let transform_rotate = Transform3::from_axis_angle(Vec3::Z, PI / 2.0);
+        let transform_scale = Transform3::from_scale(Vec3::new(2.0, 2.0, 2.0));
 
         let combination_trs = transform_translate * transform_rotate * transform_scale;
         let combination_rs = transform_rotate * transform_scale;

@@ -85,7 +85,7 @@ impl Hittable for AARect {
             return None;
         }
         let t = (-tmp_o.z()) / tmp_d.z();
-        assert!(t.is_finite(), "{:?} {:?}", tmp_o, tmp_d);
+        debug_assert!(t.is_finite(), "{:?} {:?}", tmp_o, tmp_d);
         if t <= t0 || t > t1 || t >= r.tmax {
             return None;
         }
