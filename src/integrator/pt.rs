@@ -16,6 +16,7 @@ pub struct PathTracingIntegrator {
     pub russian_roulette: bool,
     pub light_samples: u16,
     pub only_direct: bool,
+    pub wavelength_bounds: Bounds1D,
 }
 
 impl SamplerIntegrator for PathTracingIntegrator {

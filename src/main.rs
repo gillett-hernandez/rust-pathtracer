@@ -30,8 +30,8 @@ use parsing::*;
 use renderer::{NaiveRenderer, Renderer};
 use world::*;
 
-pub const NORMAL_OFFSET:f32 = 0.00001;
-pub const INTERSECTION_TIME_OFFSET:f32 = 0.000001;
+pub const NORMAL_OFFSET: f32 = 0.00001;
+pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 
 fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
     let mut cameras = Vec::<Camera>::new();
@@ -82,16 +82,24 @@ fn cornell_box(
     env_sampling_probability: f32,
 ) -> World {
     let env_map = EnvironmentMap::new(world_illuminant, world_strength);
-    let red = curves::red(1.0);
-    let green = curves::green(1.0);
+    // let red = curves::red(1.0);
+    // let green = curves::green(1.0);
     let blue = curves::blue(1.0);
-    let white = curves::cie_e(1.0);
-    let lambertian_white = MaterialEnum::from(Lambertian::new(white));
-    let lambertian_red = MaterialEnum::from(Lambertian::new(red));
-    let lambertian_green = MaterialEnum::from(Lambertian::new(green));
-    let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
+    // let white = curves::cie_e(1.0);
+    let cornell_colors = load_csv("data/curves/cornell.csv", 3, |x| x)
+        .expect("data/curves/cornell.csv was not formatted correctly");
+    let mut iter = cornell_colors.iter();
+    let (cornell_white, cornell_green, cornell_red) = (
+        iter.next().unwrap().clone(),
+        iter.next().unwrap().clone(),
+        iter.next().unwrap().clone(),
+    );
+    let lambertian_white = MaterialEnum::from(Lambertian::new(cornell_white));
+    let lambertian_red = MaterialEnum::from(Lambertian::new(cornell_red));
+    let lambertian_green = MaterialEnum::from(Lambertian::new(cornell_green));
+    let _lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
 
-    let mut world_materials = vec![lambertian_white, lambertian_blue, lambertian_red];
+    let mut world_materials = vec![lambertian_white, lambertian_green, lambertian_red];
 
     let mut world_instances = vec![
         Instance::from(Aggregate::from(AARect::new(
@@ -248,7 +256,7 @@ fn construct_scene(config: &Config) -> World {
     let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);
     let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
     let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
-    let blackbody_illuminant2 = curves::blackbody(5500.0, 10.0);
+    let blackbody_illuminant2 = curves::blackbody(4500.0, 18.0);
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
     let light_material =

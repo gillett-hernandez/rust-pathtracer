@@ -24,6 +24,7 @@ aperture_size = 0.03
 vfov = 90
 
 [[render_settings]]
+wavelength_bounds = [400.0,700.0]
 threads = 22
 filename = "PT"
 integrator = "PT"

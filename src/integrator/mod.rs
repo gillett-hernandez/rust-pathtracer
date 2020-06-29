@@ -68,6 +68,8 @@ impl Integrator {
         _cameras: &Vec<Camera>,
         settings: &RenderSettings,
     ) -> Option<Self> {
+        let (lower, upper) = settings.wavelength_bounds.unwrap();
+        assert!(lower < upper);
         match integrator_type {
             _ => Some(Integrator::PathTracing(PathTracingIntegrator {
                 max_bounces: settings.max_bounces.unwrap(),
@@ -75,6 +77,7 @@ impl Integrator {
                 russian_roulette: settings.russian_roulette.unwrap_or(true),
                 light_samples: settings.light_samples.unwrap_or(4),
                 only_direct: settings.only_direct.unwrap_or(false),
+                wavelength_bounds: Bounds1D::new(lower, upper),
             })),
         }
     }

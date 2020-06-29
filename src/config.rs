@@ -49,6 +49,7 @@ pub struct RenderSettings {
     pub russian_roulette: Option<bool>,
     pub light_samples: Option<u16>,
     pub only_direct: Option<bool>,
+    pub wavelength_bounds: Option<(f32, f32)>,
 }
 
 #[derive(Deserialize, Clone)]

@@ -20,6 +20,7 @@ use crate::integrator::{CameraId, GenericIntegrator, Sample};
 pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
+    pub wavelength_bounds: Bounds1D,
 }
 
 impl GenericIntegrator for BDPTIntegrator {

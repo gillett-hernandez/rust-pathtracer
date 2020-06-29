@@ -83,6 +83,7 @@ pub struct LightTracingIntegrator {
     pub world: Arc<World>,
     pub russian_roulette: bool,
     pub camera_samples: u16,
+    pub wavelength_bounds: Bounds1D,
 }
 
 impl GenericIntegrator for LightTracingIntegrator {

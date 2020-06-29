@@ -49,13 +49,27 @@ pub fn load_ior_and_kappa<F>(filename: &str, func: F) -> Result<(SPD, SPD), Box<
 where
     F: Clone + Copy + Fn(f32) -> f32,
 {
+    let curves = load_csv(filename, 2, func)?;
+    Ok((curves[0].clone(), curves[1].clone()))
+}
+
+pub fn load_csv<F>(filename: &str, num_columns: usize, func: F) -> Result<Vec<SPD>, Box<dyn Error>>
+where
+    F: Clone + Copy + Fn(f32) -> f32,
+{
     let path = Path::new(filename);
     let mut file = File::open(path)?;
     let mut buf = String::new();
     file.read_to_string(&mut buf)?;
-    let ior = parse_tabulated_curve_from_csv(buf.as_ref(), 1, InterpolationMode::Cubic, func)?;
-    let kappa = parse_tabulated_curve_from_csv(buf.as_ref(), 2, InterpolationMode::Cubic, func)?;
-    Ok((ior, kappa))
+
+    let mut curves: Vec<SPD> = Vec::new();
+    for column in 1..=num_columns {
+        let curve =
+            parse_tabulated_curve_from_csv(buf.as_ref(), column, InterpolationMode::Cubic, func)?;
+        curves.push(curve);
+    }
+    // let kappa = parse_tabulated_curve_from_csv(buf.as_ref(), 2, InterpolationMode::Cubic, func)?;
+    Ok(curves)
 }
 
 #[cfg(test)]
@@ -68,5 +82,47 @@ mod tests {
 
         println!("{:?}", gold_ior.evaluate_power(500.0));
         println!("{:?}", gold_kappa.evaluate_power(500.0));
+    }
+    #[test]
+    fn test_parse_cornell() {
+        let cornell_colors = load_csv("data/curves/cornell.csv", 3, |x| x)
+            .expect("data/curves/cornell.csv was not formatted correctly");
+        let mut iter = cornell_colors.iter();
+        let (cornell_white, cornell_green, cornell_red) = (
+            iter.next().unwrap().clone(),
+            iter.next().unwrap().clone(),
+            iter.next().unwrap().clone(),
+        );
+
+        println!(
+            "{:?} {:?}",
+            cornell_white.evaluate(520.0),
+            cornell_white.evaluate(660.0)
+        );
+        println!(
+            "{:?} {:?}",
+            cornell_green.evaluate(520.0),
+            cornell_green.evaluate(660.0)
+        );
+        println!(
+            "{:?} {:?}",
+            cornell_red.evaluate(520.0),
+            cornell_red.evaluate(660.0)
+        );
+
+        println!(
+            "{:?}",
+            cornell_white.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+        );
+
+        println!(
+            "{:?}",
+            cornell_red.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+        );
+
+        println!(
+            "{:?}",
+            cornell_green.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+        );
     }
 }

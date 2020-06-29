@@ -7,6 +7,7 @@ use crate::config::Config;
 use crate::config::RenderSettings;
 use crate::integrator::*;
 use crate::math::*;
+use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 
@@ -25,6 +26,28 @@ pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
 
     let srgb_tonemapper = sRGB::new(film, render_settings.exposure.unwrap_or(1.0));
     srgb_tonemapper.write_to_files(film, &exr_filename, &png_filename);
+}
+
+pub fn parse_wavelength_bounds(config: &Vec<RenderSettings>, default: Bounds1D) -> Bounds1D {
+    let mut wavelength_bounds: Option<Bounds1D> = None;
+    for settings in config.iter() {
+        if let Some((lower, upper)) = settings.wavelength_bounds {
+            if wavelength_bounds.is_none() {
+                wavelength_bounds = Some(Bounds1D::new(lower, upper));
+            } else {
+                let mut modified_bounds = wavelength_bounds.take().unwrap();
+                modified_bounds.lower = modified_bounds.lower.min(lower);
+                modified_bounds.upper = modified_bounds.upper.max(lower);
+                wavelength_bounds = Some(modified_bounds);
+            }
+        }
+    }
+    let result = match wavelength_bounds {
+        Some(bounds) => bounds,
+        None => default,
+    };
+    println!("parsed wavelength bounds to be {:?}", result);
+    result
 }
 
 pub struct NaiveRenderer {}
@@ -413,14 +436,18 @@ impl Renderer for NaiveRenderer {
                             .cloned()
                             .unzip();
                     let mut max_bounces = 0;
+
                     for settings in bundled_settings.iter() {
                         max_bounces = max_bounces.max(settings.max_bounces.unwrap_or(2));
                     }
+                    let wavelength_bounds =
+                        parse_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
                     world.assign_cameras(bundled_cameras.clone(), true);
                     let arc_world = Arc::new(world.clone());
                     let integrator = BDPTIntegrator {
                         max_bounces,
                         world: arc_world.clone(),
+                        wavelength_bounds,
                     };
 
                     println!("rendering with bidirectional path tracing integrator");
@@ -452,13 +479,16 @@ impl Renderer for NaiveRenderer {
                     for settings in bundled_settings.iter() {
                         max_bounces = max_bounces.max(settings.max_bounces.unwrap_or(2));
                     }
+                    let wavelength_bounds =
+                        parse_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
                     world.assign_cameras(bundled_cameras.clone(), true);
                     let arc_world = Arc::new(world.clone());
                     let integrator = LightTracingIntegrator {
-                        max_bounces: max_bounces,
+                        max_bounces,
                         world: arc_world.clone(),
                         russian_roulette: true,
                         camera_samples: 4,
+                        wavelength_bounds,
                     };
 
                     println!("rendering with light tracing integrator");
