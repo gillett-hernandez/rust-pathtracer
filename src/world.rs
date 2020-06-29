@@ -42,8 +42,8 @@ impl EnvironmentMap {
         let (y, x) = phi.sin_cos();
         let z = (PI * uv.1).cos();
         assert!(lambda > 0.0);
-        SingleEnergy::new(self.color.evaluate_power(lambda))
-        // SingleEnergy::new(self.color.evaluate_power(lambda) * self.strength)
+        // SingleEnergy::new(self.color.evaluate_power(lambda))
+        SingleEnergy::new(self.color.evaluate_power(lambda) * self.strength)
     }
 
     pub fn sample_emission(
@@ -58,13 +58,9 @@ impl EnvironmentMap {
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
 
-        // force overwrite point and direction for testing purposes
-        // let point = Point3::new(0.0, 0.0, 10.0 * world_radius);
         let random_on_unit_sphere = random_on_unit_sphere(sample);
         let point = Point3::from(world_radius * random_on_unit_sphere);
-        // let disk_sample = random_in_unit_disk(_sample);
 
-        // let direction = (disk_sample - Vec3::Z).normalized();
         (Ray::new(point, -random_on_unit_sphere), sw, pdf)
     }
 }

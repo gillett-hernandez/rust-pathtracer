@@ -50,8 +50,8 @@ impl ProjectiveCamera {
 
         let transform = Transform3::stack(
             None,
-            Some(TangentFrame::new(u, v, w).into()), // rotate and stuff
-            Some(Transform3::translation(-(Point3::ORIGIN - look_from))), // move to match camera origin
+            Some(TangentFrame::new(u, -v, w).into()), // rotate and stuff
+            Some(Transform3::translation((Point3::ORIGIN - look_from))), // move to match camera origin
         );
 
         if lens_radius == 0.0 {

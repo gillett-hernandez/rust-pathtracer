@@ -121,12 +121,17 @@ pub fn random_walk(
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
 
-            // if hit camera directly while tracing a light path
             if trace_type == Type::Light {
+                // if hit camera directly while tracing a light path
                 if let MaterialId::Camera(_camera_id) = hit.material {
                     vertex.kind = Type::Camera;
                     vertices.push(vertex);
                     break;
+                }
+            } else {
+                // if directly hit a light while tracing a camera path.
+                if let MaterialId::Light(_light_id) = hit.material {
+
                 }
             }
 

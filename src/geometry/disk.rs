@@ -69,24 +69,16 @@ impl Hittable for Disk {
             self.instance_id,
         ))
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
-        let Sample2D { x: mut u, y: v } = s;
-        let r = v.sqrt();
+    fn sample_surface(&self, mut s: Sample2D) -> (Point3, Vec3, PDF) {
         let mut normal = Vec3::Z;
+        // if dual sided, randomly pick the opposite side when sampling
         if self.two_sided {
-            let choice = Sample1D { x: u }.choose(0.5, -1.0f32, 1.0f32);
-            u = choice.0.x;
+            let choice = Sample1D { x: s.x }.choose(0.5, -1.0f32, 1.0f32);
+            s.x = choice.0.x;
             normal = normal * choice.1;
         }
-        debug_assert!(u.is_finite(), "{:?}", u);
-        let phi = u * PI * 2.0;
-        debug_assert!(phi.is_finite(), "{:?}", phi);
-        let (sin, cos) = phi.sin_cos();
-        debug_assert!(sin.is_finite(), "{:?}", sin);
-        debug_assert!(cos.is_finite(), "{:?}", cos);
-        debug_assert!(self.radius.is_finite(), "{:?}", self);
-        debug_assert!(r.is_finite());
-        let point = self.origin + Vec3::new(self.radius * r * cos, self.radius * r * sin, 0.0);
+        // otherwise stick with Z+
+        let point = self.origin + self.radius * random_in_unit_disk(s);
         let area = PI * self.radius * self.radius;
         (point, normal, (1.0 / area).into())
     }

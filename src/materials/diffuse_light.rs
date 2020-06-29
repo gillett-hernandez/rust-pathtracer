@@ -16,8 +16,6 @@ impl DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-    // don't implement the other functions, since the fallback default implementation does the exact same thing
-
     fn sample_emission(
         &self,
         point: Point3,
@@ -30,9 +28,7 @@ impl Material for DiffuseLight {
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
             swap = true;
-        }
-
-        if self.sidedness == Sidedness::Dual {
+        } else if self.sidedness == Sidedness::Dual {
             if scatter_sample.x < 0.5 {
                 swap = true;
                 scatter_sample.x *= 2.0;
@@ -72,10 +68,10 @@ impl Material for DiffuseLight {
     }
 
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
-        if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
-            || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
-            || self.sidedness == Sidedness::Dual
-        {
+        // if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
+        //     || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
+        //     || self.sidedness == Sidedness::Dual
+        if wi.z() > 0.0 {
             SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
         } else {
             SingleEnergy::ZERO

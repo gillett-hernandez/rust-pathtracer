@@ -248,7 +248,7 @@ fn construct_scene(config: &Config) -> World {
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
     let light_material =
-        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Dual));
+        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Reverse));
 
     let world_illuminant = blackbody_illuminant1_bright;
     let additional_instances = vec![
@@ -256,7 +256,7 @@ fn construct_scene(config: &Config) -> World {
             Aggregate::from(Disk::new(
                 0.4,
                 Point3::new(0.0, 0.0, 0.9),
-                true,
+                false,
                 MaterialId::Light(0),
                 0,
             )),
@@ -283,13 +283,13 @@ fn construct_scene(config: &Config) -> World {
             3,
         ))),
     ]; // ball at origin
-       // let additional_materials = vec![ggx_glass, ggx_gold_metal, ggx_iron_metal];
-    let additional_materials = vec![
-        light_material,
-        lambertian_blue,
-        lambertian_green,
-        lambertian_red,
-    ];
+    let additional_materials = vec![light_material, ggx_glass, ggx_gold_metal, ggx_iron_metal];
+    // let additional_materials = vec![
+    //     light_material,
+    //     lambertian_blue,
+    //     lambertian_green,
+    //     lambertian_red,
+    // ];
     cornell_box(
         additional_instances,
         additional_materials,
