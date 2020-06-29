@@ -33,6 +33,7 @@ impl EnvironmentMap {
         Some((sw, pdf))
     }
 
+    #[allow(unused_variables)]
     pub fn emission(&self, uv: (f32, f32), lambda: f32) -> SingleEnergy {
         // evaluate emission at uv coordinate and wavelength
 
