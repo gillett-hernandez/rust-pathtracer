@@ -164,6 +164,9 @@ impl NaiveRenderer {
                         &mut (RenderSettings, Film<XYZColor>),
                     )|
                      -> Vec<(Sample, CameraId)> {
+                        if let Some((s, t)) = settings.selected_pair {
+                            println!("rendering specific pair {} {}", s, t);
+                        }
                         let output_divisor = (film.width * film.height / 100).max(1);
                         let additional_samples = film
                             .buffer
@@ -194,6 +197,7 @@ impl NaiveRenderer {
                                     );
                                     temp_color += XYZColor::from(integrator.color(
                                         &mut sampler,
+                                        settings,
                                         (r, camera_id as u8),
                                         &mut local_additional_splats,
                                     ));
@@ -335,21 +339,13 @@ impl Renderer for NaiveRenderer {
                     let list = splatting_renders_and_cameras.get_mut(&t).unwrap();
                     let mut updated_render_settings = render_settings.clone();
                     updated_render_settings.camera_id = Some(list.len() as u16);
-                    // let mut updated_render_settings = RenderSettings {
-                    //     camera_id: Some(bundled_cameras.len() as u16),
-                    //     ..*render_settings
-                    // };
-
-                    // and push to cameras to be used for splatting
-                    // bundled_cameras.push(copied_camera);
-                    // splatted_renders.push((t, updated_render_settings));
 
                     list.push((updated_render_settings, copied_camera))
                 }
                 _ => {}
             }
         }
-        // phase 2, for renders that don't require a splatted render, do them first
+        // phase 2, for renders that don't require a splatted render, do them first, and output results as soon as they're finished
 
         for (integrator_type, render_settings) in sampled_renders.iter() {
             match integrator_type {
@@ -364,21 +360,22 @@ impl Renderer for NaiveRenderer {
                         )
                     {
                         println!("rendering with path tracing integrator");
-                        films.push((
+                        let (render_settings, film) = (
                             render_settings.clone(),
                             NaiveRenderer::render_sampled(
                                 integrator,
                                 render_settings,
                                 &bundled_cameras[render_settings.camera_id.unwrap() as usize],
                             ),
-                        ));
+                        );
+                        output_film(&render_settings, &film);
                     }
                 }
                 _ => {}
             }
         }
 
-        // phase 3, do renders where cameras can be combined
+        // phase 3, do renders where cameras can be combined, and output results as soon as they're finished
 
         for integrator_type in splatting_renders_and_cameras.keys() {
             if let Some(l) = splatting_renders_and_cameras.get(integrator_type) {
@@ -400,9 +397,6 @@ impl Renderer for NaiveRenderer {
                     let integrator = BDPTIntegrator {
                         max_bounces: 10,
                         world: arc_world.clone(),
-                        // specific_pair: Some((2, 2)),
-                        specific_pair: None,
-                        max_lens_sample_attempts: 4,
                     };
 
                     println!("rendering with bidirectional path tracing integrator");
@@ -412,12 +406,17 @@ impl Renderer for NaiveRenderer {
                         bundled_cameras.clone(),
                     );
                     assert!(render_splatted_result.len() > 0);
-                    films.extend(
-                        (&bundled_settings)
-                            .iter()
-                            .cloned()
-                            .zip(render_splatted_result),
-                    );
+                    // films.extend(
+                    //     (&bundled_settings)
+                    //         .iter()
+                    //         .cloned()
+                    //         .zip(render_splatted_result),
+                    // );
+                    for (render_settings, film) in
+                        bundled_settings.iter().cloned().zip(render_splatted_result)
+                    {
+                        output_film(&render_settings, &film);
+                    }
                 }
                 IntegratorType::LightTracing => {
                     let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
@@ -452,17 +451,6 @@ impl Renderer for NaiveRenderer {
                 }
                 _ => {}
             }
-        }
-
-        // phase 4: tonemap and output all films
-        assert!(
-            films.len() == config.render_settings.len(),
-            "{}",
-            films.len()
-        );
-
-        for (render_settings, film) in films.iter() {
-            output_film(render_settings, film);
         }
     }
 }

@@ -2,9 +2,9 @@ mod utils;
 
 use utils::*;
 
-use crate::world::World;
-// use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
+use crate::config::RenderSettings;
+use crate::world::World;
 
 use crate::hittable::Hittable;
 use crate::material::Material;
@@ -20,14 +20,13 @@ use crate::integrator::{CameraId, GenericIntegrator, Sample};
 pub struct BDPTIntegrator {
     pub max_bounces: u16,
     pub world: Arc<World>,
-    pub specific_pair: Option<(usize, usize)>,
-    pub max_lens_sample_attempts: usize,
 }
 
 impl GenericIntegrator for BDPTIntegrator {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
+        settings: &RenderSettings,
         camera_sample: (Ray, CameraId),
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
@@ -66,7 +65,10 @@ impl GenericIntegrator for BDPTIntegrator {
 
         let start_light_vertex;
         if light_pick_sample.x > env_sampling_probability {
-            light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
+            light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
+                / (1.0 - env_sampling_probability))
+                .clamp(0.0, 1.0);
+
             if self.world.lights.len() == 0 {
                 return SingleWavelength::BLACK;
             }
@@ -133,9 +135,7 @@ impl GenericIntegrator for BDPTIntegrator {
             );
         } else {
             // world
-            light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
-                / (1.0 - env_sampling_probability))
-                .clamp(0.0, 1.0);
+            light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
             // sample world env
             let world_aabb = self.world.accelerator.bounding_box();
             let world_radius = (world_aabb.max - world_aabb.min).norm() / 2.0;
@@ -224,7 +224,7 @@ impl GenericIntegrator for BDPTIntegrator {
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
 
         let mis_enabled = true;
-        if let Some((s, t)) = self.specific_pair {
+        if let Some((s, t)) = settings.selected_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
                 let res = eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
 

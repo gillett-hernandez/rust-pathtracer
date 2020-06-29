@@ -205,20 +205,20 @@ fn construct_scene(config: &Config) -> World {
     let lambertian_green = MaterialEnum::from(Lambertian::new(green));
     let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
 
-    let ggx_glass = MaterialEnum::from(GGX::new(0.01, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+    let ggx_glass = MaterialEnum::from(GGX::new(0.001, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_glass_rough =
         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_moissanite =
-        MaterialEnum::from(GGX::new(0.01, moissanite, 1.0, flat_zero.clone(), 1.0));
+        MaterialEnum::from(GGX::new(0.001, moissanite, 1.0, flat_zero.clone(), 1.0));
     let ggx_silver_metal = MaterialEnum::from(GGX::new(
-        0.03,
+        0.003,
         silver_ior.clone(),
         1.0,
         silver_kappa.clone(),
         0.0,
     ));
     let ggx_copper_metal = MaterialEnum::from(GGX::new(
-        0.03,
+        0.003,
         copper_ior.clone(),
         1.0,
         copper_kappa.clone(),
@@ -231,15 +231,15 @@ fn construct_scene(config: &Config) -> World {
         silver_kappa.clone(),
         0.0,
     ));
-    let ggx_gold_metal = MaterialEnum::from(GGX::new(0.03, gold_ior, 1.0, gold_kappa, 0.0));
-    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.03, lead_ior, 1.0, lead_kappa, 0.0));
+    let ggx_gold_metal = MaterialEnum::from(GGX::new(0.003, gold_ior, 1.0, gold_kappa, 0.0));
+    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.003, lead_ior, 1.0, lead_kappa, 0.0));
     let ggx_cold_lead_metal =
-        MaterialEnum::from(GGX::new(0.03, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
+        MaterialEnum::from(GGX::new(0.003, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
     let ggx_platinum_metal =
-        MaterialEnum::from(GGX::new(0.03, platinum_ior, 1.0, platinum_kappa, 0.0));
+        MaterialEnum::from(GGX::new(0.003, platinum_ior, 1.0, platinum_kappa, 0.0));
     let ggx_bismuth_metal =
-        MaterialEnum::from(GGX::new(0.08, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.03, iron_ior, 1.0, iron_kappa, 0.0));
+        MaterialEnum::from(GGX::new(0.008, bismuth_ior, 1.0, bismuth_kappa, 0.0));
+    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.003, iron_ior, 1.0, iron_kappa, 0.0));
 
     // create some illuminants and lights
     let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);

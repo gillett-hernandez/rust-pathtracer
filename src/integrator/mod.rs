@@ -92,6 +92,7 @@ pub trait GenericIntegrator: Send + Sync {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
+        settings: &RenderSettings,
         camera_sample: (Ray, CameraId),
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength;

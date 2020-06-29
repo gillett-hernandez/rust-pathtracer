@@ -21,10 +21,12 @@ look_at = [0, 0, 0]
 aperture_size = 0.03
 vfov = 90
 
+
 [[render_settings]]
 threads = 22
-filename = "BDPT"
+filename = "BDPT_1_2"
 integrator = "BDPT"
+selected_pair = [1,2]
 max_bounces = 8
 resolution.width = 1024
 resolution.height = 1024
@@ -32,4 +34,19 @@ exposure = 1.0
 min_samples = 16
 camera_id = 1
 russian_roulette = true
-only_direct = false
+only_direct = true
+
+[[render_settings]]
+threads = 22
+filename = "PT_direct"
+integrator = "PT"
+selected_pair = [1,2]
+max_bounces = 8
+resolution.width = 1024
+resolution.height = 1024
+exposure = 1.0
+min_samples = 16
+camera_id = 1
+russian_roulette = true
+only_direct = true
+light_samples = 4
