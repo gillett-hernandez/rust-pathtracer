@@ -52,7 +52,6 @@ impl ProjectiveCamera {
             None,
             Some(TangentFrame::new(u, v, w).into()), // rotate and stuff
             Some(Transform3::translation(-(Point3::ORIGIN - look_from))), // move to match camera origin
-                                                                          // None,
         );
 
         if lens_radius == 0.0 {
@@ -118,7 +117,8 @@ impl ProjectiveCamera {
         // would require tracing ray backwards, but for now, try and see what image uv it went through according to the thinlens approximation
 
         // println!("ray is {:?}", ray);
-        let ray_in_local_space = self.lens.transform.unwrap() * ray;
+        let ray_in_local_space = self.lens.transform.unwrap().to_local(ray);
+        // let ray_in_local_space = self.lens.transform.unwrap() * ray;
         // println!("ray in local space is {:?}", ray_in_local_space);
 
         // trace ray in local space to intersect with virtual focal plane

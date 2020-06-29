@@ -11,11 +11,15 @@ pub use crate::materials::*;
 #[derive(Clone)]
 pub struct EnvironmentMap {
     pub color: SPD,
+    pub strength: f32,
 }
 
 impl EnvironmentMap {
     pub const fn new(color: SPD) -> Self {
-        EnvironmentMap { color }
+        EnvironmentMap {
+            color,
+            strength: 10.0,
+        }
     }
     pub fn sample_spd(
         &self,
@@ -31,34 +35,37 @@ impl EnvironmentMap {
         Some(self.color.sample_power_and_pdf(wavelength_range, sample))
     }
 
-    pub fn emission(&self, _uv: (f32, f32), lambda: f32) -> SingleEnergy {
+    pub fn emission(&self, uv: (f32, f32), lambda: f32) -> SingleEnergy {
         // evaluate emission at uv coordinate and wavelength
 
-        // let phi = PI * (2.0 * uv.0 - 1.0);
-        // let (y, x) = phi.sin_cos();
-        // let z = (PI * uv.1).cos();
+        let phi = PI * (2.0 * uv.0 - 1.0);
+        let (y, x) = phi.sin_cos();
+        let z = (PI * uv.1).cos();
         assert!(lambda > 0.0);
         SingleEnergy::new(self.color.evaluate_power(lambda))
+        // SingleEnergy::new(self.color.evaluate_power(lambda) * self.strength)
     }
 
     pub fn sample_emission(
         &self,
         world_radius: f32,
-        _sample: Sample2D,
+        sample: Sample2D,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> (Ray, SingleWavelength, PDF) {
         // sample env map cdf to get light ray, based on env map strength
-        // let _point = Point3::from_raw((f32x4::new(x, y, z, 0.0) * world_radius).replace(3, 1.0));
-        // let _direction = Vec3::new(-x, -y, -z);
         let (sw, pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
 
         // force overwrite point and direction for testing purposes
-        let point = Point3::new(0.0, 0.0, 10.0 * world_radius);
-        let direction = -Vec3::Z;
-        (Ray::new(point, direction), sw, pdf)
+        // let point = Point3::new(0.0, 0.0, 10.0 * world_radius);
+        let random_on_unit_sphere = random_on_unit_sphere(sample);
+        let point = Point3::from(world_radius * random_on_unit_sphere);
+        // let disk_sample = random_in_unit_disk(_sample);
+
+        // let direction = (disk_sample - Vec3::Z).normalized();
+        (Ray::new(point, -random_on_unit_sphere), sw, pdf)
     }
 }
 
@@ -170,7 +177,11 @@ impl World {
     }
 
     pub fn get_env_sampling_probability(&self) -> f32 {
-        0.1
+        if self.lights.len() > 0 {
+            self.env_sampling_probability
+        } else {
+            1.0
+        }
     }
 
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {

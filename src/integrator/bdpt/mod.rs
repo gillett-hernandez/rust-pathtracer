@@ -1,6 +1,6 @@
-mod helpers;
+mod utils;
 
-use helpers::*;
+use utils::*;
 
 use crate::world::World;
 // use crate::config::Settings;
@@ -58,15 +58,18 @@ impl GenericIntegrator for BDPTIntegrator {
         //     return;
         // }
         let camera_ray = camera_sample.0;
-        let _camera_id = camera_sample.1;
+        let camera_id = camera_sample.1;
 
         let env_sampling_probability = self.world.get_env_sampling_probability();
 
         let sampled;
 
         let start_light_vertex;
-        if self.world.lights.len() > 0 && light_pick_sample.x > env_sampling_probability {
+        if light_pick_sample.x > env_sampling_probability {
             light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
+            if self.world.lights.len() == 0 {
+                return SingleWavelength::BLACK;
+            }
             let (light, light_pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
@@ -85,12 +88,34 @@ impl GenericIntegrator for BDPTIntegrator {
                     wavelength_sample,
                 )
                 .unwrap();
-            let light_g_term = (light_surface_normal * (&sampled.0).direction).abs();
 
             let directional_pdf = sampled.2;
             // if delta light, the pdf_forward is only directional_pdf
-            let pdf_forward: PDF = directional_pdf / light_g_term;
+            let pdf_forward: PDF =
+                directional_pdf / (light_surface_normal * (&sampled.0).direction).abs();
             let pdf_backward: PDF = light_pick_pdf * area_pdf;
+            assert!(
+                pdf_forward.0.is_finite(),
+                "{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+                material,
+                pdf_forward,
+                pdf_backward,
+                directional_pdf,
+                light_surface_point,
+                light_surface_normal,
+                sampled.1.energy
+            );
+            assert!(
+                pdf_backward.0.is_finite(),
+                "{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+                material,
+                pdf_forward,
+                pdf_backward,
+                directional_pdf,
+                light_surface_point,
+                light_surface_normal,
+                sampled.1.energy
+            );
 
             start_light_vertex = Vertex::new(
                 Type::LightSource(Source::Instance),
@@ -106,12 +131,13 @@ impl GenericIntegrator for BDPTIntegrator {
                 1.0,
             );
         } else {
+            // world
             light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
                 / (1.0 - env_sampling_probability))
                 .clamp(0.0, 1.0);
             // sample world env
             let world_aabb = self.world.accelerator.bounding_box();
-            let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
+            let world_radius = (world_aabb.max - world_aabb.min).norm() / 2.0;
             // println!("sampled light emission in world light branch");
             sampled = self.world.environment.sample_emission(
                 world_radius,
@@ -139,8 +165,8 @@ impl GenericIntegrator for BDPTIntegrator {
         let radiance = sampled.1.energy;
 
         // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
-        let mut light_path: Vec<Vertex> = Vec::with_capacity(self.max_bounces as usize);
-        let mut eye_path: Vec<Vertex> = Vec::with_capacity(self.max_bounces as usize);
+        let mut light_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut eye_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
         eye_path.push(Vertex::new(
             Type::Camera,
@@ -148,7 +174,7 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             camera_ray.origin,
             camera_ray.direction,
-            MaterialId::Camera(_camera_id),
+            MaterialId::Camera(camera_id),
             0,
             SingleEnergy::ONE,
             1.0,
@@ -283,10 +309,10 @@ impl GenericIntegrator for BDPTIntegrator {
                 if t < 2 {
                     continue;
                 }
-                let mut g = 1.0;
+                // let mut g = 1.0;
                 let result =
                     eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
-                let (factor, new_g, calculate_splat) = match result {
+                let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),
                     SampleKind::Splatted((factor, g)) => (factor, g, true),
                 };

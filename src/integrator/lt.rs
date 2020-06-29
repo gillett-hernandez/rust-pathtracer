@@ -192,6 +192,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     // println!("pixel uv for ray {:?} was {:?}", ray, pixel_uv);
                     if let Some(uv) = pixel_uv {
                         if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
+                            // not dividing by pdf because it was already handled in the prior iteration loop.
                             let energy = beta;
                             assert!(energy.0.is_finite());
                             let sw = SingleWavelength::new(lambda, energy);
@@ -211,6 +212,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                                 pdf,
                                 weight
                             );
+                            // not dividing by pdf because it was already handled in the prior iteration loop.
                             let energy = beta * weight;
                             assert!(energy.0.is_finite());
                             let sw = SingleWavelength::new(lambda, energy);

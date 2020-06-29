@@ -3,14 +3,14 @@ env_sampling_probability = 0.0
 type="SimpleCamera"
 look_from = [-100, 0, 0]
 look_at = [0, 0, 0]
-aperture_size = 0.01
+aperture_size = 0.03
 vfov = 6
 
 [[cameras]]
 type="SimpleCamera"
 look_from = [-5, 0, 0]
 look_at = [0, 0, 0]
-aperture_size = 0.01
+aperture_size = 0.03
 focal_distance = 5.0
 vfov = 27.2
 
@@ -18,14 +18,14 @@ vfov = 27.2
 type="SimpleCamera"
 look_from = [-1, 0, 0]
 look_at = [0, 0, 0]
-aperture_size = 0.01
+aperture_size = 0.03
 vfov = 90
 
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
-integrator = "BDPT"
+filename = "LT"
+integrator = "LT"
 max_bounces = 8
 resolution.width = 1024
 resolution.height = 1024

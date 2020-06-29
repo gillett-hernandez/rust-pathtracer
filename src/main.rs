@@ -74,7 +74,6 @@ fn white_furnace_test(material: MaterialEnum) -> World {
 fn cornell_box(
     additional_instances: Vec<Instance>,
     additional_materials: Vec<MaterialEnum>,
-    light_material: MaterialEnum,
     world_illuminant: SPD,
     env_sampling_probability: f32,
 ) -> World {
@@ -88,34 +87,17 @@ fn cornell_box(
     let lambertian_green = MaterialEnum::from(Lambertian::new(green));
     let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
 
-    let mut world_materials = vec![
-        light_material,
-        lambertian_white,
-        lambertian_blue,
-        lambertian_red,
-    ];
+    let mut world_materials = vec![lambertian_white, lambertian_blue, lambertian_red];
 
     let mut world_instances = vec![
-        Instance::new(
-            Aggregate::from(Disk::new(
-                0.4,
-                Point3::new(0.0, 0.0, 0.9),
-                false,
-                MaterialId::Light(0),
-                0,
-            )),
-            None,
-            None,
-            None,
-        ),
         Instance::from(Aggregate::from(AARect::new(
             // ceiling
             (2.0, 2.0),
             Point3::new(0.0, 0.0, 1.0),
             Axis::Z,
             true,
-            1.into(),
-            1,
+            0.into(),
+            0,
         ))),
         Instance::from(Aggregate::from(AARect::new(
             // floor
@@ -123,8 +105,8 @@ fn cornell_box(
             Point3::new(0.0, 0.0, -1.0),
             Axis::Z,
             true,
-            1.into(),
-            2,
+            0.into(),
+            1,
         ))),
         Instance::from(Aggregate::from(AARect::new(
             // left wall
@@ -132,8 +114,8 @@ fn cornell_box(
             Point3::new(0.0, 1.0, 0.0),
             Axis::Y,
             true,
-            3.into(),
-            3,
+            1.into(),
+            2,
         ))),
         Instance::from(Aggregate::from(AARect::new(
             // right wall
@@ -142,7 +124,7 @@ fn cornell_box(
             Axis::Y,
             true,
             2.into(),
-            4,
+            3,
         ))),
         Instance::from(Aggregate::from(AARect::new(
             // back wall
@@ -150,8 +132,8 @@ fn cornell_box(
             Point3::new(1.0, 0.0, 0.0),
             Axis::X,
             true,
-            1.into(),
-            5,
+            0.into(),
+            4,
         ))),
     ];
 
@@ -259,40 +241,58 @@ fn construct_scene(config: &Config) -> World {
     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.03, iron_ior, 1.0, iron_kappa, 0.0));
 
     // create some illuminants and lights
-    let blackbody_illuminant1 = curves::blackbody(2700.0, 1.0);
+    let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);
+    let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
+    let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
     let blackbody_illuminant2 = curves::blackbody(5500.0, 10.0);
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
     let light_material =
         MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Dual));
 
-    let world_illuminant = blackbody_illuminant1;
+    let world_illuminant = blackbody_illuminant1_bright;
     let additional_instances = vec![
+        Instance::new(
+            Aggregate::from(Disk::new(
+                0.4,
+                Point3::new(0.0, 0.0, 0.9),
+                true,
+                MaterialId::Light(0),
+                0,
+            )),
+            None,
+            None,
+            None,
+        ),
         Instance::from(Aggregate::from(Sphere::new(
             0.3,
             Point3::new(-0.5, 0.0, -0.7),
-            0.into(),
-            0,
-        ))), // ball at origin
-        Instance::from(Aggregate::from(Sphere::new(
-            0.3,
-            Point3::new(0.1, -0.5, -0.7),
             1.into(),
             1,
         ))), // ball at origin
         Instance::from(Aggregate::from(Sphere::new(
             0.3,
-            Point3::new(0.1, 0.5, -0.7),
+            Point3::new(0.1, -0.5, -0.7),
             2.into(),
             2,
+        ))), // ball at origin
+        Instance::from(Aggregate::from(Sphere::new(
+            0.3,
+            Point3::new(0.1, 0.5, -0.7),
+            3.into(),
+            3,
         ))),
     ]; // ball at origin
        // let additional_materials = vec![ggx_glass, ggx_gold_metal, ggx_iron_metal];
-    let additional_materials = vec![lambertian_blue, lambertian_green, lambertian_red];
+    let additional_materials = vec![
+        light_material,
+        lambertian_blue,
+        lambertian_green,
+        lambertian_red,
+    ];
     cornell_box(
         additional_instances,
         additional_materials,
-        light_material,
         world_illuminant,
         config.env_sampling_probability.unwrap_or(0.5),
     )

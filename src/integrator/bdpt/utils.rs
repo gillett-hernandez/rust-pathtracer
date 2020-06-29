@@ -120,14 +120,16 @@ pub fn random_walk(
 
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
-            // let id: usize = hit.material.into();
-            if let MaterialId::Camera(_camera_id) = hit.material {
-                if trace_type == Type::Light {
+
+            // if hit camera directly while tracing a light path
+            if trace_type == Type::Light {
+                if let MaterialId::Camera(_camera_id) = hit.material {
                     vertex.kind = Type::Camera;
                     vertices.push(vertex);
                     break;
                 }
             }
+
             let material = world.get_material(hit.material);
 
             // consider accumulating emission in some other form for trace_type == Type::Eye situations, as mentioned in veach.
@@ -224,8 +226,8 @@ pub fn random_walk(
                     MaterialId::Light(0),
                     0,
                     beta,
-                    1.0,
                     1.0 / (max_world_radius_2 * 4.0 * PI),
+                    1.0,
                     1.0 / (max_world_radius_2),
                 );
                 assert!(vertex.point.0.is_finite().all());
