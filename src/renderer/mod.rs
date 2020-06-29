@@ -392,10 +392,14 @@ impl Renderer for NaiveRenderer {
                             .iter()
                             .cloned()
                             .unzip();
+                    let mut max_bounces = 0;
+                    for settings in bundled_settings.iter() {
+                        max_bounces = max_bounces.max(settings.max_bounces.unwrap_or(2));
+                    }
                     world.assign_cameras(bundled_cameras.clone(), true);
                     let arc_world = Arc::new(world.clone());
                     let integrator = BDPTIntegrator {
-                        max_bounces: 10,
+                        max_bounces: max_bounces,
                         world: arc_world.clone(),
                     };
 
@@ -429,7 +433,7 @@ impl Renderer for NaiveRenderer {
                     world.assign_cameras(bundled_cameras.clone(), true);
                     let arc_world = Arc::new(world.clone());
                     let integrator = LightTracingIntegrator {
-                        max_bounces: 10,
+                        max_bounces: 4,
                         world: arc_world.clone(),
                         russian_roulette: true,
                         camera_samples: 4,

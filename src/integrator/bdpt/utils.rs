@@ -286,7 +286,16 @@ pub fn eval_unweighted_contribution(
         let frame = TangentFrame::from_normal(normal);
         let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
         debug_assert!(wi.0.is_finite().all(), "{:?}", eye_path);
-
+        let (cos_i, cos_o) = (
+            (wi * normal).abs(), // these are cosines relative to their surface normals btw.
+            (wi * second_to_last_eye_vertex.normal).abs(), // i.e. eye_to_light.dot(eye_vertex_normal) and light_to_eye.dot(light_vertex_normal)
+        );
+        g = veach_g(
+            last_eye_vertex.point,
+            cos_i,
+            second_to_last_eye_vertex.point,
+            cos_o,
+        );
         cst = hit_light_material.emission(
             &last_eye_vertex.into(),
             frame.to_local(&wi).normalized(),
@@ -297,10 +306,22 @@ pub fn eval_unweighted_contribution(
         let last_light_vertex = light_path[s - 1];
         if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
             let camera = world.get_camera(camera_id as usize);
+            let direction = last_light_vertex.point - second_to_last_light_vertex.point;
             cst = SingleEnergy(
                 camera.eval_we(last_light_vertex.point, second_to_last_light_vertex.point),
             );
             sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
+
+            let (cos_i, cos_o) = (
+                (direction * second_to_last_light_vertex.normal).abs(), // these are cosines relative to their surface normals btw.
+                (direction * last_light_vertex.normal).abs(), // i.e. eye_to_light.dot(eye_vertex_normal) and light_to_eye.dot(light_vertex_normal)
+            );
+            g = veach_g(
+                last_light_vertex.point,
+                cos_i,
+                second_to_last_light_vertex.point,
+                cos_o,
+            );
         } else {
             return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
@@ -351,10 +372,11 @@ pub fn eval_unweighted_contribution(
         let lev_world_eye_to_light = -light_to_eye_direction;
         let lev_local_eye_to_light = lev_frame.to_local(&lev_world_eye_to_light).normalized();
         let fse = if t == 1 {
-            if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+            // connected to surface of camera
+            if let MaterialId::Camera(camera_id) = last_eye_vertex.material_id {
                 let camera = world.get_camera(camera_id as usize);
                 sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
-                SingleEnergy(camera.eval_we(last_light_vertex.point, last_eye_vertex.point))
+                SingleEnergy(camera.eval_we(last_eye_vertex.point, last_light_vertex.point))
             } else {
                 SingleEnergy(0.0)
             }
@@ -419,25 +441,6 @@ impl<'a> CombinedPath<'a> {
         // but we want combined_path[i].veach_g to be between combined_path[i] and combined_path[i-1] at all times
 
         // naive version: recompute veach g term
-        // let vertex0 = self[vidx0];
-        // let point0 = vertex0.point;
-        // let vertex1 = self[vidx1];
-        // let point1 = vertex1.point;
-        // assert!(point0 != point1);
-        // let direction = (point1 - point0).normalized();
-        // let cos_i = (direction * vertex0.normal).abs();
-        // let cos_o = (direction * vertex1.normal).abs();
-        // assert!(
-        //     cos_i * cos_o > 0.0,
-        //     "direction, normals: {:?} {:?} {:?}, and vertices: {:?} {:?}",
-        //     direction,
-        //     vertex0.normal,
-        //     vertex1.normal,
-        //     vertex0,
-        //     vertex1,
-        // );
-
-        // veach_g(point0, cos_i, point1, cos_o)
 
         // smart version
         // veach g is already computed and stored in vertices, only the order is reversed.
@@ -449,7 +452,7 @@ impl<'a> CombinedPath<'a> {
             // self.eye_path[t].veach_g
             // self.eye_path[self.path_length - vidx1].veach_g
             self.connecting_g
-        } else if vidx1 >= self.connection_index {
+        } else if vidx1 > self.connection_index {
             self.eye_path[self.path_length - vidx1 - 1].veach_g
         } else {
             self.light_path[vidx1].veach_g
@@ -480,19 +483,12 @@ impl<'a> CombinedPath<'a> {
 impl<'a> Index<usize> for CombinedPath<'a> {
     type Output = Vertex;
     fn index(&self, index: usize) -> &Self::Output {
-        if index >= self.connection_index {
-            let len = self.path_length;
-            // assert!(len >= index && index > 0);
-            // println!(
-            //     "eye: path index {}, subpath index {}",
-            //     index,
-            //     len - index - 1
-            // );
-            &self.eye_path[len - index - 1]
-        } else {
+        if index < self.connection_index {
             debug_assert!(index < self.light_path.len());
             // println!("light: path index and subpath index {}", index);
             &self.light_path[index]
+        } else {
+            &self.eye_path[self.path_length - index - 1]
         }
     }
 }
@@ -518,8 +514,40 @@ where
     // the scaling factor towards the light root is p_i+1 / p_i
     // refer to veach (1997) page 306 equation 10.9
 
-    let k = s + t - 1;
-    let k1 = k + 1;
+    let k = s + t - 1; // for 2,0 case, k is 1
+    let k1 = k + 1; // k1 is 2
+
+    if t == 0 {
+        // hit camera directly, would have caused index error.
+        // for now, return 0
+        println!("{:?} ={:?}= {:?}", light_path, veach_g, eye_path);
+        return 1.0;
+    }
+    if s + t == 2 {
+        return 1.0;
+    }
+
+    // general notes:
+
+    // a light subpath of length s = 5 is indexed from 0 to s-1, or 0 to 4. [0, 1, 2, 3, 4]
+    // a eye subpath of length t = 3 is index from 0 to t-1, or from 0 to 2. [0, 1, 2]
+    // so a combined path should only ever index into its componenet paths by s-1 for a light subpath, or t-1 for an eye subpath.
+    // for k1 = s + t, the maximal index of a light subpath is connection_index - 1, and the maximal index of a eye subpath is k1 - connection_index - 1
+    // in general, those are the bounds that should be checked. inclusive checking would be <= connection_index -1, but exclusive checking may be used as well
+    // exclusive checking would be < connection_index for light subpaths, and < k1 - connection_index for eye subpath
+    // for some generic index i then, if i < connection_index, it should be used to access the light subpath,
+    // however on the other hand, we can define a new number to index into the eye subpath as j = k1 - i - 1
+    // eye subpath should be indexed in 0 <= some_index < k1 - connection_index - 1
+    // and should be indexed from furthest from the root to closest to the root
+    // i.e. combined_path[s] should be eye_path[t-1]
+    // and combined_path[s-1] should be light_path[s-1]
+    // and combined_path[k = s + t - 1] should be eye_path[0]
+    // thus 0 == N - (s + t - 1)
+    // => 0 == N - s - t + 1
+    // => N = s + t - 1
+    // => N = k
+    // the new_index should then be k - index
+    // for index = s + 1, then new_index = k - (s + 1) = s + t - 1 - s - 1 = t - 1, which matches what is desired
 
     let path = CombinedPath {
         light_path,
@@ -529,23 +557,11 @@ where
         path_length: k1,
     };
 
-    // println!("{:?} {:?} {:?} {:?}", light_path, eye_path, s, k);
-    // println!("{:?}", path[0]);
-    // println!("{:?}", path[s - 1]);
-    // println!("{:?}", path[s]);
-    // println!("{:?}", path[k]);
-    // panic!();
-
     let mut ps: Vec<f32> = vec![0.0; s + t + 1];
     ps[s] = 1.0;
 
-    // notes about special cases:
-    // for the eye subpath, vertex0.pdf_forward is P_A, which technically is the directional pdf times the geometry term for the camera.
-    // it is 0.0 if the camera is a pinhole camera.
-    // for the light subpath, vertex0.pdf_forward is 0.0 if it is a delta light, otherwise it's P_A
-
     // first build up from index = s to index = k
-    for i in s..k1 {
+    for i in s..=k {
         let ip1 = i + 1;
         if i == 0 {
             // top case of equation 10.9
@@ -674,4 +690,21 @@ where
     let result = mis_function(&ps);
     debug_assert!(result.is_finite());
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_mis_weights_for_short_paths() {
+        // [
+        //      Vertex { kind: LightSource(Instance), time: 0.0, lambda: 603.45825, point: Point3(f32x4(-0.027535105, -0.19972621, 0.9, 1.0)), normal: Vec3(f32x4(0.0, 0.0, -1.0, 0.0)), material_id: Light(3), instance_id: 5, throughput: SingleEnergy(3.0513232), pdf_forward: 0.31831563, pdf_backward: 1.9894367, veach_g: 1.0 },
+        //      Vertex { kind: Camera, time: 5.0592623, lambda: 603.45825, point: Point3(f32x4(-5.0, -0.007217303, -0.013055563, 1.0)), normal: Vec3(f32x4(1.0, -0.0, -0.0, -0.0)), material_id: Camera(0), instance_id: 10, throughput: SingleEnergy(3.0513232), pdf_forward: 1.0, pdf_backward: 1.0, veach_g: 1.0 }
+        // ]
+
+        // [
+        //      Vertex { kind: Camera, time: 0.59899455, lambda: 603.45825, point: Point3(f32x4(-5.0, 0.013205296, -0.0029486567, 1.0)), normal: Vec3(f32x4(0.98173434, -0.06221859, -0.17979613, 0.0)), material_id: Camera(0), instance_id: 0, throughput: SingleEnergy(1.0), pdf_forward: 1.0, pdf_backward: 0.01, veach_g: 1.0 },
+        //      Vertex { kind: Eye, time: 4.5407047, lambda: 603.45825, point: Point3(f32x4(-0.5422344, -0.26931095, -0.81934977, 1.0)), normal: Vec3(f32x4(-0.80744135, 0.4356266, -0.3978293, 0.0)), material_id: Material(4), instance_id: 7, throughput: SingleEnergy(1.0), pdf_forward: 69214.664, pdf_backward: 10360.568, veach_g: 0.035089824 }
+        // ]
+    }
 }

@@ -1,7 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::Hittable;
-use crate::integrator::SamplerIntegrator;
+use crate::integrator::{veach_v, SamplerIntegrator};
 use crate::material::Material;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
@@ -72,78 +72,68 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let mut light_contribution = SingleEnergy::ZERO;
                     let mut _successful_light_samples = 0;
                     for _i in 0..self.light_samples {
-                        if let Some((light, pick_pdf)) =
+                        if let Some((light, light_pick_pdf)) =
                             self.world.pick_random_light(sampler.draw_1d())
                         {
                             // determine pick pdf
                             // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
                             // sample the primitive from hit_point
-                            let (direction, light_pdf) = light.sample(sampler.draw_2d(), hit.point);
-                            debug_assert!(light_pdf.0.is_finite());
-                            if light_pdf.0 == 0.0 {
+                            // let (direction, light_pdf) = light.sample(sampler.draw_2d(), hit.point);
+                            let (point_on_light, normal, light_area_pdf) =
+                                light.sample_surface(sampler.draw_2d());
+                            debug_assert!(light_area_pdf.0.is_finite());
+                            if light_area_pdf.0 == 0.0 {
                                 continue;
                             }
-                            let direction = direction.normalized();
+                            let direction = (point_on_light - hit.point).normalized();
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
                             let wo = frame.to_local(&direction);
-                            let light_ray = Ray::new_with_time(
-                                hit.point + hit.normal * 0.01,
-                                direction,
-                                ray.time,
-                                // hit.time,
-                            );
-                            // note: time was changed to ray.time. change to hit.time?
+                            let light_wi =
+                                TangentFrame::from_normal(normal).to_local(&(-direction));
+
+                            let dropoff = wo.z().max(0.0);
+                            if dropoff == 0.0 {
+                                continue;
+                            }
                             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
                             let reflectance = material.f(&hit, wi, wo);
                             // if reflectance.0 < 0.00001 {
                             //     // if reflectance is 0 for all components, skip this light sample
                             //     continue;
                             // }
-                            let dropoff = wo.z().max(0.0);
-                            if dropoff == 0.0 {
+
+                            let pdf = light.pdf(normal, hit.point, point_on_light);
+                            let light_pdf = pdf * light_pick_pdf;
+                            if light_pdf.0 == 0.0 {
+                                // go to next pick
                                 continue;
                             }
-                            // let dropoff = wo.z().abs();
-                            if let Some(mut light_hit) = self.world.hit(light_ray, 0.01, INFINITY) {
-                                light_hit.lambda = sum.lambda;
-                                // note: changed t0 to 0.0. change back to hit.time maybe?
-                                //
-                                // maybe if the instance that was hit was a light as well, redo the sampling calculations for that light instead?
-                                // let light_pdf =
-                                //     light.pdf(light_hit.normal, hit.point, light_hit.point);
+
+                            let light_material = self.world.get_material(light.get_material_id());
+                            let emission = light_material.emission(&hit, light_wi, None);
+                            // this should be the same as the other method, but maybe not.
+
+                            if veach_v(&self.world, point_on_light, hit.point) {
                                 let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
                                 let weight =
                                     power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-                                if light_hit.instance_id == light.get_instance_id() {
-                                    let emission_material =
-                                        self.world.get_material(light_hit.material);
-                                    let light_wi = TangentFrame::from_normal(light_hit.normal)
-                                        .to_local(&-direction);
-                                    let sampled_light_emission =
-                                        emission_material.emission(&light_hit, light_wi, None);
-                                    debug_assert!(sampled_light_emission.0 >= 0.0);
-                                    // successful_light_samples += 1;
-                                    light_contribution += reflectance
-                                        * beta
-                                        * dropoff
-                                        * sampled_light_emission
-                                        * weight
-                                        / light_pdf.0
-                                        / pick_pdf.0;
-                                    debug_assert!(
-                                        !light_contribution.0.is_nan(),
-                                        "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} lp {:?}",
-                                        light_contribution,
-                                        reflectance,
-                                        beta,
-                                        dropoff,
-                                        sampled_light_emission,
-                                        weight,
-                                        pick_pdf,
-                                        light_pdf
-                                    );
-                                }
+
+                                debug_assert!(emission.0 >= 0.0);
+                                // successful_light_samples += 1;
+                                light_contribution +=
+                                    reflectance * beta * dropoff * emission * weight / light_pdf.0;
+                                debug_assert!(
+                                    !light_contribution.0.is_nan(),
+                                    "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} ",
+                                    light_contribution,
+                                    reflectance,
+                                    beta,
+                                    dropoff,
+                                    emission,
+                                    weight,
+                                    light_pdf
+                                );
                             }
                         } else {
                             break;

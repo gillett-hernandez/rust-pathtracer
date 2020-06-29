@@ -250,48 +250,60 @@ impl GenericIntegrator for BDPTIntegrator {
                     }
 
                     SampleKind::Splatted((factor, g)) => {
+                        // println!("should be splatting0 {:?} and {}", factor, g);
                         if g == 0.0 || factor == SingleEnergy::ZERO {
                             return SingleWavelength::BLACK;
                         }
-                        let last_light_vertex = light_path[s - 1];
-                        let other_vertex = if t > 0 {
-                            eye_path[t - 1]
+                        let weight = if mis_enabled {
+                            eval_mis(
+                                &self.world,
+                                &light_path,
+                                s,
+                                &eye_path,
+                                t,
+                                g,
+                                |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                            )
                         } else {
-                            light_path[s - 2]
+                            1.0 / ((s + t) as f32)
                         };
-                        if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+                        let contribution = weight * factor;
+                        let last_light_vertex = light_path[s - 1];
+                        let (vert_on_lens, vert_in_scene) = if t == 1 {
+                            // t = 1 case
+                            // light path hit somewhere in the scene, and is being connected to the vertex on the camera lens.
+                            // in which case, the vertex on the camera lens is eye_path[0] and the vertex in the scene is light_path[s-1]
+                            (eye_path[0], last_light_vertex)
+                        } else if t == 0 {
+                            // t = 0 case, light path directly intersected camera lens element, and thus the point on the camera is last_light_vertex
+                            // and the other point that determines the ray is light_path[s-2];
+                            (last_light_vertex, light_path[s - 2])
+                        } else {
+                            panic!()
+                        };
+                        if let MaterialId::Camera(camera_id) = vert_on_lens.material_id {
                             let camera = self.world.get_camera(camera_id as usize);
                             let ray = Ray::new(
-                                last_light_vertex.point,
-                                (other_vertex.point - last_light_vertex.point).normalized(),
+                                vert_on_lens.point,
+                                (vert_in_scene.point - vert_on_lens.point).normalized(),
                             );
+
                             if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
-                                let weight = if mis_enabled {
-                                    eval_mis(
-                                        &self.world,
-                                        &light_path,
-                                        s,
-                                        &eye_path,
-                                        t,
-                                        g,
-                                        |weights: &Vec<f32>| -> f32 {
-                                            1.0 / weights.iter().sum::<f32>()
-                                        },
-                                    )
-                                } else {
-                                    1.0 / ((s + t) as f32)
-                                };
+                                // println!("found good pixel uv at {:?}", pixel_uv);
                                 let sample = Sample::LightSample(
-                                    SingleWavelength::new(lambda, weight * factor),
+                                    SingleWavelength::new(lambda, contribution),
                                     pixel_uv,
                                 );
                                 samples.push((sample, camera_id));
+                            } else {
+                                // println!("pixel uv was nothing");
                             }
                         }
                         return SingleWavelength::BLACK;
                     }
                 }
             }
+            return SingleWavelength::BLACK;
         }
 
         let mut sum = SingleEnergy::ZERO;
@@ -307,9 +319,6 @@ impl GenericIntegrator for BDPTIntegrator {
                     continue;
                 }
 
-                if t < 2 {
-                    continue;
-                }
                 // let mut g = 1.0;
                 let result =
                     eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
@@ -340,25 +349,37 @@ impl GenericIntegrator for BDPTIntegrator {
                     continue;
                 }
                 if calculate_splat {
+                    // println!("should be splatting2");
                     let contribution = weight * factor;
                     let last_light_vertex = light_path[s - 1];
-                    let other_vertex = if t > 0 {
-                        eye_path[t - 1]
+                    let (vert_on_lens, vert_in_scene) = if t == 1 {
+                        // t = 1 case
+                        // light path hit somewhere in the scene, and is being connected to the vertex on the camera lens.
+                        // in which case, the vertex on the camera lens is eye_path[0] and the vertex in the scene is light_path[s-1]
+                        (eye_path[0], last_light_vertex)
+                    } else if t == 0 {
+                        // t = 0 case, light path directly intersected camera lens element, and thus the point on the camera is last_light_vertex
+                        // and the other point that determines the ray is light_path[s-2];
+                        (last_light_vertex, light_path[s - 2])
                     } else {
-                        light_path[s - 2]
+                        panic!()
                     };
-                    if let MaterialId::Camera(camera_id) = last_light_vertex.material_id {
+                    if let MaterialId::Camera(camera_id) = vert_on_lens.material_id {
                         let camera = self.world.get_camera(camera_id as usize);
                         let ray = Ray::new(
-                            last_light_vertex.point,
-                            (other_vertex.point - last_light_vertex.point).normalized(),
+                            vert_on_lens.point,
+                            (vert_in_scene.point - vert_on_lens.point).normalized(),
                         );
+
                         if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                            // println!("found good pixel uv at {:?}", pixel_uv);
                             let sample = Sample::LightSample(
                                 SingleWavelength::new(lambda, contribution),
                                 pixel_uv,
                             );
                             samples.push((sample, camera_id));
+                        } else {
+                            // println!("pixel uv was nothing");
                         }
                     }
                 } else {
