@@ -6,6 +6,7 @@ use crate::integrator::veach_v;
 use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;
+use crate::NORMAL_OFFSET;
 
 use std::ops::Index;
 use std::sync::Arc;
@@ -196,7 +197,7 @@ pub fn random_walk(
                 // add normal to avoid self intersection
                 // also convert wo back to world space when spawning the new ray
                 ray = Ray::new(
-                    hit.point + hit.normal * 0.01 * if wo.z() > 0.0 { 1.0 } else { -1.0 },
+                    hit.point + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
                     frame.to_world(&wo).normalized(),
                 );
             } else {

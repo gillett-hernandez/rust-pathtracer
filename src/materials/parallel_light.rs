@@ -1,6 +1,7 @@
 use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
+use crate::NORMAL_OFFSET;
 
 #[derive(Clone, Debug)]
 pub struct ParallelLight {
@@ -53,7 +54,7 @@ impl Material for ParallelLight {
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
-            Ray::new(point + object_wo * 0.01, object_wo),
+            Ray::new(point + object_wo * NORMAL_OFFSET, object_wo),
             // sw.with_energy(sw.energy / PI),
             sw,
             // PDF::from(local_wo.z().abs() / PI),

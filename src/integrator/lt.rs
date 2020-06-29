@@ -6,6 +6,7 @@ use crate::material::Material;
 use crate::materials::{MaterialEnum, MaterialId};
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 use std::f32::INFINITY;
 use std::sync::Arc;
 
@@ -142,6 +143,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             sampled = self.world.environment.sample_emission(
                 world_radius,
                 sampler.draw_2d(),
+                sampler.draw_2d(),
                 VISIBLE_RANGE,
                 wavelength_sample,
             );
@@ -162,7 +164,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
         for bounce_count in 0..self.max_bounces {
-            if let Some(mut hit) = self.world.hit(ray, 0.01, INFINITY) {
+            if let Some(mut hit) = self.world.hit(ray, INTERSECTION_TIME_OFFSET, INFINITY) {
                 // hit some bsdf surface
                 // debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                 // println!("whatever1");
@@ -277,7 +279,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     // also convert wo back to world space when spawning the new ray
                     // println!("whatever!!");
                     ray = Ray::new(
-                        hit.point + hit.normal * 0.001 * if wo.z() > 0.0 { 1.0 } else { -1.0 },
+                        hit.point + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
                         frame.to_world(&wo).normalized(),
                     );
                 } else {

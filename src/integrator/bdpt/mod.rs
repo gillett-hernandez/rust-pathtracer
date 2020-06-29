@@ -143,6 +143,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled = self.world.environment.sample_emission(
                 world_radius,
                 sampler.draw_2d(),
+                sampler.draw_2d(),
                 VISIBLE_RANGE,
                 wavelength_sample,
             );

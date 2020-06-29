@@ -30,6 +30,9 @@ use parsing::*;
 use renderer::{NaiveRenderer, Renderer};
 use world::*;
 
+pub const NORMAL_OFFSET:f32 = 0.00001;
+pub const INTERSECTION_TIME_OFFSET:f32 = 0.000001;
+
 fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
     let mut cameras = Vec::<Camera>::new();
     for camera_config in &settings.cameras {
@@ -317,7 +320,7 @@ fn construct_scene(config: &Config) -> World {
         additional_instances,
         additional_materials,
         world_illuminant,
-        1.0,
+        config.env_strength.unwrap_or(0.0),
         config.env_sampling_probability.unwrap_or(0.5),
     )
 }

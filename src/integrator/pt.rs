@@ -5,6 +5,7 @@ use crate::integrator::{veach_v, SamplerIntegrator};
 use crate::material::Material;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::NORMAL_OFFSET;
 
 use std::f32::INFINITY;
 use std::sync::Arc;
@@ -182,7 +183,10 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         // also convert wo back to world space when spawning the new ray
                         // println!("whatever!!");
                         ray = Ray::new(
-                            hit.point + hit.normal * 0.001 * if wo.z() > 0.0 { 1.0 } else { -1.0 },
+                            hit.point
+                                + hit.normal
+                                    * NORMAL_OFFSET
+                                    * if wo.z() > 0.0 { 1.0 } else { -1.0 },
                             frame.to_world(&wo).normalized(),
                         );
                     } else {

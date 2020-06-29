@@ -47,7 +47,8 @@ impl EnvironmentMap {
     pub fn sample_emission(
         &self,
         world_radius: f32,
-        sample: Sample2D,
+        position_sample: Sample2D,
+        direction_sample: Sample2D,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> (Ray, SingleWavelength, PDF) {
@@ -56,10 +57,11 @@ impl EnvironmentMap {
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         sw.energy *= self.strength;
-        let random_on_unit_sphere = random_on_unit_sphere(sample);
-        let point = Point3::from(world_radius * random_on_unit_sphere);
+        let random_direction = random_on_unit_sphere(direction_sample);
+        let random_on_world = world_radius * random_on_unit_sphere(position_sample);
+        let point = Point3::from(random_on_world);
 
-        (Ray::new(point, -random_on_unit_sphere), sw, pdf)
+        (Ray::new(point, random_direction), sw, pdf)
     }
 }
 

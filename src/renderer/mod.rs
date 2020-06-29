@@ -113,7 +113,7 @@ impl NaiveRenderer {
         integrator: I,
         renders: Vec<RenderSettings>,
         cameras: Vec<Camera>,
-    ) -> Vec<Film<XYZColor>> {
+    ) -> Vec<(RenderSettings, Film<XYZColor>)> {
         // let (width, height) = (settings.resolution.width, settings.resolution.height);
         // let min_camera_rays = width * height * settings.min_samples as usize;
 
@@ -265,26 +265,46 @@ impl NaiveRenderer {
             }
         }
 
-        for i in 0..films.len() {
-            let (settings, image_film) = &mut films[i];
-            let light_film = &light_films[i];
-            for (image_pixel, light_pixel) in
-                image_film.buffer.iter_mut().zip(light_film.buffer.iter())
-            {
-                // use veach section 10.3.4.3 here
-                *image_pixel += *light_pixel / settings.min_samples.into();
-            }
+        // for i in 0..films.len() {
+        //     let (settings, image_film) = &mut films[i];
+        //     let light_film = &light_films[i];
+        // films.push((*settings, light_film));
+        // for (image_pixel, light_pixel) in
+        //     image_film.buffer.iter_mut().zip(light_film.buffer.iter())
+        // {
+        //     // use veach section 10.3.4.3 here
+        //     *image_pixel += *light_pixel / settings.min_samples.into();
+        // }
+        // }
+        let mut i = 0;
+        for light_film in light_films {
+            let mut render_settings = films[i].0.clone();
+            let new_filename = format!(
+                "{}{}",
+                render_settings
+                    .filename
+                    .expect("render didn't have filename, wtf"),
+                "_lightfilm"
+            );
+            println!("new filename is {}", new_filename);
+            render_settings.filename = Some(new_filename);
+            films.push((render_settings, light_film));
+            println!(
+                "added light film to films vec, films vec length is now {}",
+                films.len()
+            );
+            i += 1;
         }
 
-        let (_left, right): (Vec<RenderSettings>, Vec<Film<XYZColor>>) =
-            films.iter().cloned().unzip();
+        // let (_left, right): (Vec<RenderSettings>, Vec<Film<XYZColor>>) =
+        //     films.iter().cloned().unzip();
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!(
             "\ntook {}s to sort and deserialize the splats and save to film\n",
             elapsed,
         );
-        right
+        films
     }
 }
 
@@ -297,7 +317,7 @@ impl Renderer for NaiveRenderer {
         // bin the render settings into bins corresponding to what integrator they need.
 
         let mut bundled_cameras: Vec<Camera> = Vec::new();
-        let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
+        // let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
         let mut sampled_renders: Vec<(IntegratorType, RenderSettings)> = Vec::new();
         let mut splatting_renders_and_cameras: HashMap<
             IntegratorType,
@@ -416,9 +436,7 @@ impl Renderer for NaiveRenderer {
                     //         .cloned()
                     //         .zip(render_splatted_result),
                     // );
-                    for (render_settings, film) in
-                        bundled_settings.iter().cloned().zip(render_splatted_result)
-                    {
+                    for (render_settings, film) in render_splatted_result {
                         output_film(&render_settings, &film);
                     }
                 }
@@ -456,9 +474,7 @@ impl Renderer for NaiveRenderer {
                     //         .cloned()
                     //         .zip(render_splatted_result),
                     // );
-                    for (render_settings, film) in
-                        bundled_settings.iter().cloned().zip(render_splatted_result)
-                    {
+                    for (render_settings, film) in render_splatted_result {
                         output_film(&render_settings, &film);
                     }
                 }

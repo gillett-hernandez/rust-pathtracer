@@ -5,6 +5,7 @@ pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
 use crate::math::*;
 use crate::world::World;
+use crate::INTERSECTION_TIME_OFFSET;
 
 pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
@@ -41,7 +42,7 @@ pub fn veach_v(world: &Arc<World>, point0: Point3, point1: Point3) -> bool {
     let norm = diff.norm();
     let tmax = norm * 0.99;
     let point0_to_point1 = Ray::new_with_time_and_tmax(point0, diff / norm, 0.0, tmax);
-    let hit = world.hit(point0_to_point1, 0.001, tmax);
+    let hit = world.hit(point0_to_point1, INTERSECTION_TIME_OFFSET, tmax);
     // if (point0.x() == 1.0 || point1.x() == 1.0) && !hit.as_ref().is_none() {
     //     // from back wall to something
     //     println!(
