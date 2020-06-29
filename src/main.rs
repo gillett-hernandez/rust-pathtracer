@@ -249,7 +249,7 @@ fn construct_scene(config: &Config) -> World {
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
     let light_material =
-        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Reverse));
+        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
 
     let world_illuminant = blackbody_illuminant1_dim;
     let additional_instances = vec![
@@ -272,25 +272,41 @@ fn construct_scene(config: &Config) -> World {
             None,
         ),
         Instance::from(Aggregate::from(Sphere::new(
+            // ball in front left
             0.3,
-            Point3::new(-0.5, 0.0, -0.7),
+            Point3::new(-0.3, 0.4, -0.7),
             1.into(),
             1,
-        ))), // ball at origin
+        ))),
         Instance::from(Aggregate::from(Sphere::new(
+            // ball in front right
             0.3,
-            Point3::new(0.1, -0.5, -0.7),
-            2.into(),
+            Point3::new(-0.3, -0.4, -0.7),
+            1.into(),
             2,
+        ))),
+        Instance::from(Aggregate::from(Sphere::new(
+            // ball on back right
+            0.3,
+            Point3::new(0.5, -0.5, -0.7),
+            2.into(),
+            3,
         ))), // ball at origin
         Instance::from(Aggregate::from(Sphere::new(
+            // ball on back left
             0.3,
-            Point3::new(0.1, 0.5, -0.7),
+            Point3::new(0.5, 0.5, -0.7),
             3.into(),
-            3,
+            4,
         ))),
     ]; // ball at origin
-    let additional_materials = vec![light_material, ggx_glass, ggx_gold_metal, ggx_iron_metal];
+    let additional_materials = vec![
+        light_material,
+        ggx_moissanite,
+        ggx_gold_metal,
+        ggx_iron_metal,
+    ];
+    // let additional_materials = vec![light_material, ggx_glass, ggx_gold_metal, ggx_iron_metal];
     // let additional_materials = vec![
     //     light_material,
     //     lambertian_blue,

@@ -192,9 +192,17 @@ impl GGX {
 
     fn reflectance(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
         if self.permeability > 0.0 {
-            fresnel_dielectric(self.eta_o, eta_inner, cos_theta_i)
+            if cos_theta_i >= 0.0 {
+                fresnel_dielectric(self.eta_o, eta_inner, cos_theta_i)
+            } else {
+                fresnel_dielectric(eta_inner, self.eta_o, cos_theta_i)
+            }
         } else {
-            fresnel_conductor(self.eta_o, eta_inner, kappa, cos_theta_i)
+            if cos_theta_i >= 0.0 {
+                fresnel_conductor(self.eta_o, eta_inner, kappa, cos_theta_i)
+            } else {
+                fresnel_conductor(eta_inner, self.eta_o, kappa, cos_theta_i)
+            }
         }
     }
 
@@ -239,7 +247,6 @@ impl GGX {
         } else {
             self.kappa.evaluate_power(lambda)
         };
-        let mut ndotv = cos_i;
         if same_hemisphere {
             let mut wh = (wo + wi).normalized();
             // normal invert mark
@@ -247,7 +254,7 @@ impl GGX {
                 wh = -wh;
             }
 
-            ndotv = wi * wh;
+            let ndotv = wi * wh;
             let refl = self.reflectance(eta_inner, kappa, ndotv);
             debug_assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
@@ -272,7 +279,7 @@ impl GGX {
                 }
 
                 let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
-                ndotv = wi * wh;
+                let ndotv = wi * wh;
                 let ndotl = wo * wh;
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
@@ -291,6 +298,7 @@ impl GGX {
 
                 let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
                 transmission.0 = self.permeability * inv_reflectance * weight.abs();
+                // println!("{:?}, {:?}, {:?}", eta_inner, kappa, ndotv);
                 // println!(
                 //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
                 //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo, g
@@ -303,20 +311,19 @@ impl GGX {
 
                 debug_assert!(
                     !transmission.is_nan(),
-                    "ir {} ggxd {} ggxg {} g {} nv {} dwh {}",
-                    inv_reflectance,
-                    ggxd,
-                    ggxg,
-                    g,
-                    ndotv,
-                    dwh_dwo
+                    "transmission was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
+                    self,
+                    lambda,
+                    wi,
+                    wo
                 );
                 debug_assert!(
                     !transmission_pdf.is_nan(),
-                    "{} {} {}",
-                    ggxd,
-                    partial,
-                    dwh_dwo
+                    "pdf was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
+                    self,
+                    lambda,
+                    wi,
+                    wo
                 );
             }
         }
@@ -327,7 +334,7 @@ impl GGX {
         //     "glossy_pdf: {:?}, transmission_pdf: {:?}, refl_prob: {:?}",
         //     glossy_pdf, transmission_pdf, refl_prob
         // );
-        // println!(" ndotv: {:?}, cos_i: {:?}", ndotv, cos_i);
+        // println!("cos_i: {:?}", cos_i);
         // println!();
 
         let f = glossy + transmission;
@@ -410,7 +417,7 @@ mod tests {
             0,
         );
 
-        let test_many = false;
+        let test_many = true;
         if test_many {
             let mut wi_s: Vec<Vec3> = Vec::new();
 
@@ -488,5 +495,19 @@ mod tests {
             wo
         );
         }
+    }
+
+    #[test]
+    fn test_failure_case() {
+        let lambda = 762.2971;
+        let wi = Vec3(f32x4::new(0.073927574, -0.9872729, 0.14080834, 0.0));
+        let wo = Vec3(f32x4::new(0.048132252, 0.5836164, -0.81060183, -0.0));
+
+        let glass = curves::cauchy(1.45, 3540.0);
+        let flat_zero = curves::void();
+        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
+
+        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo);
+        println!("{:?} {:?}", f, pdf);
     }
 }

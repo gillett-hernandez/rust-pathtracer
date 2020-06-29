@@ -115,8 +115,7 @@ impl Sampler for StratifiedSampler {
         if self.indices[0] == 0 {
             // shuffle, then draw.
             self.first.shuffle(&mut self.rng);
-            // println!("shuffled strata order for draw_1d");
-            // print!(".");
+            // print!("#");
         }
         let idx = self.first[self.indices[0]];
         let (width, _depth, _height) = (self.dims[0], self.dims[1], self.dims[2]);
@@ -134,8 +133,7 @@ impl Sampler for StratifiedSampler {
         if self.indices[1] == 0 {
             // shuffle, then draw.
             self.second.shuffle(&mut self.rng);
-            // println!("shuffled strata order for draw_2d");
-            // print!("*");
+            // print!("#");
         }
         let idx = self.second[self.indices[1]];
         let (width, depth, _height) = (self.dims[0], self.dims[1], self.dims[2]);
@@ -154,22 +152,22 @@ impl Sampler for StratifiedSampler {
         if self.indices[2] == 0 {
             // shuffle, then draw.
             self.third.shuffle(&mut self.rng);
-            println!("shuffled strata order for draw_3d");
+            // print!("#");
         }
-        let (width, depth, height) = (self.dims[0], self.dims[1], self.dims[2]);
         let idx = self.third[self.indices[2]];
+        let (width, depth, height) = (self.dims[0], self.dims[1], self.dims[2]);
         self.indices[2] += 1;
         if self.indices[2] >= width * depth * height {
             self.indices[2] = 0;
         }
         // idx = x + width * y + width * depth * z
         // convert idx to the "pixel" based on dims
-        let z = idx / (depth * width);
         // z coordinate is how many slices high the sample is
-        let y = (idx / width) % depth;
+        let z = idx / (depth * width);
         // y coordinate is how far into a slice a given "pixel" is
-        let x = idx % width;
+        let y = (idx / width) % depth;
         // x coordinate is how far along width a given pixel is
+        let x = idx % width;
         let mut sample = Sample3D::new_random_sample();
         sample.x = sample.x / (width as f32) + (x as f32) / (width as f32);
         sample.y = sample.y / (depth as f32) + (y as f32) / (depth as f32);
@@ -197,7 +195,7 @@ mod test {
     }
     #[test]
     fn test_stratified_sampler_1d() {
-        let mut sampler = Box::new(StratifiedSampler::new(10, 10, 10));
+        let mut sampler = Box::new(StratifiedSampler::new(100, 100, 10));
         let mut s = 0.0;
         for _i in 0..1000000 {
             let sample = sampler.draw_1d();
@@ -208,23 +206,23 @@ mod test {
     }
     #[test]
     fn test_stratified_sampler_2d() {
-        let mut sampler = Box::new(StratifiedSampler::new(10, 10, 10));
+        let mut sampler = Box::new(StratifiedSampler::new(100, 100, 10));
 
         for _i in 0..1000000 {
             let sample = sampler.draw_2d();
-            assert!(0.0 <= sample.x && sample.x <= 1.0, "{}", sample.x);
-            assert!(0.0 <= sample.y && sample.y <= 1.0, "{}", sample.y);
+            assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
+            assert!(0.0 <= sample.y && sample.y < 1.0, "{}", sample.y);
         }
     }
     #[test]
     fn test_stratified_sampler_3d() {
-        let mut sampler = Box::new(StratifiedSampler::new(10, 10, 10));
+        let mut sampler = Box::new(StratifiedSampler::new(100, 100, 10));
 
         for _i in 0..1000000 {
             let sample = sampler.draw_3d();
-            assert!(0.0 <= sample.x && sample.x <= 1.0, "{}", sample.x);
-            assert!(0.0 <= sample.y && sample.y <= 1.0, "{}", sample.y);
-            assert!(0.0 <= sample.z && sample.z <= 1.0, "{}", sample.z);
+            assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
+            assert!(0.0 <= sample.y && sample.y < 1.0, "{}", sample.y);
+            assert!(0.0 <= sample.z && sample.z < 1.0, "{}", sample.z);
         }
     }
 }

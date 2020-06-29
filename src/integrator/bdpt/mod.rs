@@ -96,13 +96,14 @@ impl GenericIntegrator for BDPTIntegrator {
             let pdf_backward: PDF = light_pick_pdf * area_pdf;
             debug_assert!(
                 pdf_forward.0.is_finite(),
-                "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                pdf_forward,
-                pdf_backward,
+                "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+                pdf_forward,  // NaN
+                pdf_backward, // 1.989
+                sampled.0,
                 material,
-                directional_pdf,
+                directional_pdf, // 0.0
                 light_surface_point,
-                light_surface_normal,
+                light_surface_normal, // -Z
                 sampled.1.energy
             );
             debug_assert!(

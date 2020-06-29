@@ -36,7 +36,7 @@ impl Material for DiffuseLight {
                 scatter_sample.x = (1.0 - scatter_sample.x) * 2.0;
             }
         }
-        let mut local_wo = random_cosine_direction(scatter_sample);
+        let mut local_wo = random_cosine_direction(scatter_sample) + 0.0001 * Vec3::Z;
 
         if swap {
             local_wo = -local_wo;
@@ -44,13 +44,15 @@ impl Material for DiffuseLight {
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
         let object_wo = frame.to_world(&local_wo).normalized();
+        let directional_pdf = local_wo.z().abs() / PI;
+        debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
         let (sw, _pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy / PI),
-            PDF::from(local_wo.z().abs() / PI),
+            PDF::from(directional_pdf),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
     }

@@ -37,13 +37,12 @@ pub fn random_in_unit_disk(r: Sample2D) -> Vec3 {
 }
 
 pub fn random_cosine_direction(r: Sample2D) -> Vec3 {
-    let r1: f32 = r.x;
-    let r2: f32 = r.y;
-    let z: f32 = (1.0 - r2).sqrt();
-    let phi: f32 = 2.0 * PI * r1;
+    let Sample2D { x: u, y: v } = r;
+    let z: f32 = (1.0 - v).sqrt();
+    let phi: f32 = 2.0 * PI * u;
     let (mut y, mut x) = phi.sin_cos();
-    x *= r2.sqrt();
-    y *= r2.sqrt();
+    x *= v.sqrt();
+    y *= v.sqrt();
     Vec3::new(x, y, z)
 }
 
