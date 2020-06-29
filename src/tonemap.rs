@@ -46,10 +46,10 @@ impl sRGB {
             "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
             max_luminance,
             avg_luminance,
-            exposure_adjustment / avg_luminance
+            exposure_adjustment / max_luminance
         );
         sRGB {
-            factor: (1.0 / avg_luminance).min(1000000.0),
+            factor: (1.0 / max_luminance).min(1000000.0),
             exposure_adjustment,
             // gamma_adjustment,
         }

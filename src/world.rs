@@ -15,11 +15,8 @@ pub struct EnvironmentMap {
 }
 
 impl EnvironmentMap {
-    pub const fn new(color: SPD) -> Self {
-        EnvironmentMap {
-            color,
-            strength: 10.0,
-        }
+    pub const fn new(color: SPD, strength: f32) -> Self {
+        EnvironmentMap { color, strength }
     }
     pub fn sample_spd(
         &self,
@@ -31,8 +28,9 @@ impl EnvironmentMap {
         // used when a camera ray hits an environment map without ever having been assigned a wavelength.
 
         // later use uv for texture accessing
-
-        Some(self.color.sample_power_and_pdf(wavelength_range, sample))
+        let (mut sw, pdf) = self.color.sample_power_and_pdf(wavelength_range, sample);
+        sw.energy *= self.strength;
+        Some((sw, pdf))
     }
 
     pub fn emission(&self, uv: (f32, f32), lambda: f32) -> SingleEnergy {
@@ -54,10 +52,10 @@ impl EnvironmentMap {
         wavelength_sample: Sample1D,
     ) -> (Ray, SingleWavelength, PDF) {
         // sample env map cdf to get light ray, based on env map strength
-        let (sw, pdf) = self
+        let (mut sw, pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
-
+        sw.energy *= self.strength;
         let random_on_unit_sphere = random_on_unit_sphere(sample);
         let point = Point3::from(world_radius * random_on_unit_sphere);
 

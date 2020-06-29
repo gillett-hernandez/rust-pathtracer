@@ -64,7 +64,7 @@ fn white_furnace_test(material: MaterialEnum) -> World {
             0,
         )))],
         vec![material],
-        EnvironmentMap::new(curves::cie_e(1.0)),
+        EnvironmentMap::new(curves::cie_e(1.0), 1.0),
         1.0,
     );
     world
@@ -75,9 +75,10 @@ fn cornell_box(
     additional_instances: Vec<Instance>,
     additional_materials: Vec<MaterialEnum>,
     world_illuminant: SPD,
+    world_strength: f32,
     env_sampling_probability: f32,
 ) -> World {
-    let env_map = EnvironmentMap::new(world_illuminant);
+    let env_map = EnvironmentMap::new(world_illuminant, world_strength);
     let red = curves::red(1.0);
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
@@ -300,6 +301,7 @@ fn construct_scene(config: &Config) -> World {
         additional_instances,
         additional_materials,
         world_illuminant,
+        1.0,
         config.env_sampling_probability.unwrap_or(0.5),
     )
 }

@@ -289,7 +289,7 @@ impl GGX {
                 let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
                 transmission_pdf = (ggxd * partial * dwh_dwo).abs();
 
-                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv.abs());
+                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
                 transmission.0 = self.permeability * inv_reflectance * weight.abs();
                 // println!(
                 //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
@@ -321,7 +321,7 @@ impl GGX {
             }
         }
 
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, ndotv.abs());
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);
         // println!("glossy: {:?}, transmission: {:?}", glossy, transmission);
         // println!(
         //     "glossy_pdf: {:?}, transmission_pdf: {:?}, refl_prob: {:?}",

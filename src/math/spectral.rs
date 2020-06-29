@@ -55,6 +55,13 @@ impl MulAssign for SingleEnergy {
         self.0 = self.0 * other.0
     }
 }
+
+impl MulAssign<f32> for SingleEnergy {
+    fn mul_assign(&mut self, other: f32) {
+        self.0 = self.0 * other
+    }
+}
+
 impl Div<f32> for SingleEnergy {
     type Output = SingleEnergy;
     fn div(self, rhs: f32) -> Self::Output {
