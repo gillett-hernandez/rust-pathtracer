@@ -389,6 +389,7 @@ impl SpectralPowerDistributionFunction for SPD {
         }
     }
     fn evaluate(&self, lambda: f32) -> f32 {
+        // use the same curves as power distributions for reflectance functions, but cap it to 1.0 so no energy is ever added
         self.evaluate_power(lambda).min(1.0)
     }
     fn sample_power_and_pdf(

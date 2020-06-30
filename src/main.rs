@@ -221,6 +221,13 @@ fn construct_scene(config: &Config) -> World {
         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_moissanite =
         MaterialEnum::from(GGX::new(0.001, moissanite, 1.0, flat_zero.clone(), 1.0));
+    let ggx_unrealistic_dispersion = MaterialEnum::from(GGX::new(
+        0.001,
+        curves::cauchy(1.45, 50000.0),
+        1.0,
+        flat_zero.clone(),
+        1.0,
+    ));
     let ggx_silver_metal = MaterialEnum::from(GGX::new(
         0.003,
         silver_ior.clone(),
@@ -260,7 +267,10 @@ fn construct_scene(config: &Config) -> World {
     let xenon_lamp = curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
-    let light_material = MaterialEnum::from(DiffuseLight::new(xenon_lamp, Sidedness::Forward));
+    let light_material =
+        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
+    // let light_material =
+    //      MaterialEnum::from(DiffuseLight::new(xenon_lamp, Sidedness::Forward));
 
     let world_illuminant = blackbody_illuminant1_dim;
     let additional_instances = vec![
@@ -293,7 +303,7 @@ fn construct_scene(config: &Config) -> World {
             // ball in front right
             0.3,
             Point3::new(-0.3, -0.4, -0.7),
-            1.into(),
+            4.into(),
             2,
         ))),
         Instance::from(Aggregate::from(Sphere::new(
@@ -314,10 +324,13 @@ fn construct_scene(config: &Config) -> World {
     let additional_materials = vec![
         light_material,
         ggx_moissanite,
+        // ggx_glass,
         ggx_gold_metal,
+        // lambertian_green,
         ggx_iron_metal,
+        // lambertian_red,
+        ggx_unrealistic_dispersion,
     ];
-    // let additional_materials = vec![light_material, ggx_glass, ggx_gold_metal, ggx_iron_metal];
     // let additional_materials = vec![
     //     light_material,
     //     lambertian_blue,

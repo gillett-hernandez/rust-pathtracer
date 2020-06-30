@@ -4,6 +4,7 @@ mod pt;
 pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
 use crate::math::*;
+use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::world::World;
 use crate::INTERSECTION_TIME_OFFSET;
 
@@ -68,7 +69,9 @@ impl Integrator {
         _cameras: &Vec<Camera>,
         settings: &RenderSettings,
     ) -> Option<Self> {
-        let (lower, upper) = settings.wavelength_bounds.unwrap();
+        let (lower, upper) = settings
+            .wavelength_bounds
+            .unwrap_or((VISIBLE_RANGE.lower, VISIBLE_RANGE.upper));
         assert!(lower < upper);
         match integrator_type {
             _ => Some(Integrator::PathTracing(PathTracingIntegrator {
