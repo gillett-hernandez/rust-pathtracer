@@ -24,30 +24,30 @@ aperture_size = 0.03
 vfov = 90
 
 
-#[[render_settings]]
-#threads = 22
-#filename = "BDPT"
-#integrator = "BDPT"
-#max_bounces = 8
-#resolution.width = 1024
-#resolution.height = 1024
-#exposure = 1.0
-#min_samples = 128
-#camera_id = 1
-#russian_roulette = true
-#only_direct = false
-
-
 [[render_settings]]
 threads = 22
-filename = "LT"
-integrator = "LT"
+filename = "BDPT"
+integrator = "BDPT"
 max_bounces = 8
 resolution.width = 1024
 resolution.height = 1024
 exposure = 1.0
-min_samples = 1
+min_samples = 16
 camera_id = 1
 russian_roulette = true
 only_direct = false
-camera_samples = 8
+
+
+#[[render_settings]]
+#threads = 22
+#filename = "LT"
+#integrator = "LT"
+#max_bounces = 8
+#resolution.width = 1024
+#resolution.height = 1024
+#exposure = 1.0
+#min_samples = 8
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#camera_samples = 8

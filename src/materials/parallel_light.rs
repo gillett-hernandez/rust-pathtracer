@@ -55,7 +55,7 @@ impl Material for ParallelLight {
         Some((
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy),
-            PDF::from(0.0),
+            PDF::from(1.0),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
     }

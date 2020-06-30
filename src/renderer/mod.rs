@@ -23,8 +23,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use pbr::ProgressBar;
-use rayon::iter::ParallelIterator;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
+use std::cmp::Ordering as CmpOrdering;
 
 pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
     let filename = render_settings.filename.as_ref();
@@ -231,6 +232,7 @@ impl NaiveRenderer {
 
         let clone2 = pixel_count.clone();
 
+        // let (tx, rx) = mpsc::sync_channel(1000000);
         let (tx, rx) = mpsc::channel();
 
         let total_splats = Arc::new(Mutex::new(0usize));
@@ -241,7 +243,38 @@ impl NaiveRenderer {
             let films = &mut light_films_ref.lock().unwrap();
             let mut local_total_splats = total_splats_ref.lock().unwrap();
             loop {
-                for v in rx.try_iter() {
+                let mut samples: Vec<(Sample, u8)> = rx.try_iter().collect();
+                // samples.par_sort_unstable_by(|(a0, b0), (a1, b1)| {
+                //     // primary sort by camera id
+                //     match b0.cmp(b1) {
+                //         CmpOrdering::Equal => match (a0, a1) {
+                //             // if camera ids match, secondary sort by pixel
+                //             (
+                //                 Sample::LightSample(_, (p0x, p0y)),
+                //                 Sample::LightSample(_, (p1x, p1y)),
+                //             ) => {
+                //                 // let (p0x, p0y) = a0.1;
+                //                 // let (p1x, p1y) = a1.1;
+                //                 if p0y < p1y {
+                //                     CmpOrdering::Less
+                //                 } else if p0y > p1y {
+                //                     CmpOrdering::Greater
+                //                 } else {
+                //                     if p0x < p1x {
+                //                         CmpOrdering::Less
+                //                     } else if p0x > p1x {
+                //                         CmpOrdering::Greater
+                //                     } else {
+                //                         CmpOrdering::Equal
+                //                     }
+                //                 }
+                //             }
+                //             _ => CmpOrdering::Equal,
+                //         },
+                //         t => t,
+                //     }
+                // });
+                for v in samples {
                     let (sample, film_id): (Sample, u8) = v;
                     match sample {
                         Sample::LightSample(sw, pixel) => {
@@ -283,13 +316,15 @@ impl NaiveRenderer {
 
         // let tx1 = mpsc::Sender::clone(&tx);
         let tx_arc = Arc::new(Mutex::new(tx));
+        // need to rate limit based on the speed at which splatting is occurring.
+        let per_splat_sleep_time = Duration::from_nanos(10);
 
         films.par_iter_mut().enumerate().for_each(
             |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
                 if let Some((s, t)) = settings.selected_pair {
                     println!("rendering specific pair {} {}", s, t);
                 }
-                let output_divisor = (film.width * film.height / 100).max(1);
+                // let output_divisor = (film.width * film.height / 100).max(1);
 
                 film.buffer
                     .par_iter_mut()
@@ -331,15 +366,16 @@ impl NaiveRenderer {
                                 temp_color
                             );
                         }
-                        if pixel_index % output_divisor == 0 {
-                            let stdout = std::io::stdout();
-                            let mut handle = stdout.lock();
-                            handle.write_all(b".").unwrap();
-                            std::io::stdout().flush().expect("some error message")
-                        }
+                        // if pixel_index % output_divisor == 0 {
+                        //     let stdout = std::io::stdout();
+                        //     let mut handle = stdout.lock();
+                        //     handle.write_all(b".").unwrap();
+                        //     std::io::stdout().flush().expect("some error message")
+                        // }
                         // unsafe {
                         *pixel_ref = temp_color / (settings.min_samples as f32);
                         clone2.fetch_add(1, Ordering::Relaxed);
+                        thread::sleep(per_splat_sleep_time * local_additional_splats.len() as u32);
                         for splat in local_additional_splats {
                             tx1.send(splat).unwrap();
                         }
