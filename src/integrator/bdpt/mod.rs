@@ -122,7 +122,7 @@ impl GenericIntegrator for BDPTIntegrator {
             );
 
             start_light_vertex = Vertex::new(
-                Type::LightSource(Source::Instance),
+                VertexType::LightSource(LightSourceType::Instance),
                 0.0,
                 sampled.1.lambda,
                 light_surface_point,
@@ -149,7 +149,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 wavelength_sample,
             );
             start_light_vertex = Vertex::new(
-                Type::LightSource(Source::Environment),
+                VertexType::LightSource(LightSourceType::Environment),
                 0.0,
                 sampled.1.lambda,
                 sampled.0.origin,
@@ -172,7 +172,7 @@ impl GenericIntegrator for BDPTIntegrator {
         let mut eye_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
         eye_path.push(Vertex::new(
-            Type::Camera,
+            VertexType::Camera,
             camera_ray.time,
             lambda,
             camera_ray.origin,
@@ -191,7 +191,7 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             self.max_bounces,
             SingleEnergy::ONE,
-            Type::Eye,
+            VertexType::Eye,
             sampler,
             &self.world,
             &mut eye_path,
@@ -201,7 +201,7 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             self.max_bounces,
             radiance,
-            Type::Light,
+            VertexType::Light,
             sampler,
             &self.world,
             &mut light_path,

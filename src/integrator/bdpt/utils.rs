@@ -12,13 +12,13 @@ use std::ops::Index;
 use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Source {
+pub enum LightSourceType {
     Instance,
     Environment,
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Type {
-    LightSource(Source),
+pub enum VertexType {
+    LightSource(LightSourceType),
     Light,
     Eye,
     Camera,
@@ -26,7 +26,7 @@ pub enum Type {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vertex {
-    pub kind: Type,
+    pub kind: VertexType,
     pub time: f32,
     pub lambda: f32,
     pub point: Point3,
@@ -41,7 +41,7 @@ pub struct Vertex {
 
 impl Vertex {
     pub fn new(
-        kind: Type,
+        kind: VertexType,
         time: f32,
         lambda: f32,
         point: Point3,
@@ -93,7 +93,7 @@ pub fn random_walk(
     lambda: f32,
     bounce_limit: u16,
     start_throughput: SingleEnergy,
-    trace_type: Type,
+    trace_type: VertexType,
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
@@ -122,10 +122,10 @@ pub fn random_walk(
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
 
-            if trace_type == Type::Light {
+            if trace_type == VertexType::Light {
                 // if hit camera directly while tracing a light path
                 if let MaterialId::Camera(_camera_id) = hit.material {
-                    vertex.kind = Type::Camera;
+                    vertex.kind = VertexType::Camera;
                     vertices.push(vertex);
                     break;
                 }
@@ -203,7 +203,7 @@ pub fn random_walk(
             } else {
                 // hit a surface and didn't bounce.
                 if emission.0 > 0.0 {
-                    vertex.kind = Type::LightSource(Source::Instance);
+                    vertex.kind = VertexType::LightSource(LightSourceType::Instance);
                     vertex.pdf_forward = 0.0;
                     vertex.pdf_backward = 1.0;
                     vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
@@ -215,7 +215,7 @@ pub fn random_walk(
             }
         } else {
             // add a vertex when a camera ray hits the environment
-            if trace_type == Type::Eye {
+            if trace_type == VertexType::Eye {
                 let max_world_radius =
                     (world.bounding_box().max - world.bounding_box().min).norm() / 2.0;
                 let max_world_radius_2 = max_world_radius * max_world_radius;
@@ -224,7 +224,7 @@ pub fn random_walk(
                 debug_assert!(at_env.0.is_finite().all());
                 debug_assert!(Point3::from(at_env).0.is_finite().all());
                 let vertex = Vertex::new(
-                    Type::LightSource(Source::Environment),
+                    VertexType::LightSource(LightSourceType::Environment),
                     1.0 * max_world_radius,
                     lambda,
                     Point3::from(at_env),
