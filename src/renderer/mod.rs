@@ -1,3 +1,5 @@
+extern crate pbr;
+
 mod film;
 
 pub use film::Film;
@@ -13,9 +15,13 @@ use crate::world::World;
 
 use std::collections::HashMap;
 use std::io::Write;
-use std::sync::Arc;
-use std::time::Instant;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc};
+use std::thread;
+use std::time::{Duration, Instant};
 
+use pbr::ProgressBar;
+use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
 pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
@@ -69,23 +75,43 @@ impl NaiveRenderer {
 
         let now = Instant::now();
 
-        let total_camera_rays =
-            width * height * (settings.max_samples.unwrap_or(settings.min_samples) as usize);
-
         // do stuff with film here
 
         let mut film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
 
-        for _ in 0..100 {
-            print!("-");
-        }
-        println!("");
-        let output_divisor = (film.width * film.height / 100).max(1);
+        // for _ in 0..100 {
+        //     print!("-");
+        // }
+        // println!("");
+        // let output_divisor = (film.width * film.height / 100).max(1);
+        let mut pb = ProgressBar::new((width * height) as u64);
+
+        let total_pixels = width * height;
+
+        let pixel_count = Arc::new(AtomicUsize::new(0));
+        let clone1 = pixel_count.clone();
+        let thread = thread::spawn(move || {
+            let mut local_index = 0;
+            while local_index < total_pixels {
+                let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
+                pb.add(pixels_to_increment as u64);
+                local_index += pixels_to_increment;
+                // pixels_to_increment = 0;
+                // while pixels_to_increment > 0 {
+                //     pb.inc();
+                //     pixels_to_increment -= 1;
+                //     local_index += 1;
+                // }
+                thread::sleep(Duration::from_millis(1));
+            }
+        });
+
+        let clone2 = pixel_count.clone();
         film.buffer
             .par_iter_mut()
-            // .iter_mut()
             .enumerate()
             .for_each(|(pixel_index, pixel_ref)| {
+                // let clone = pixel_count.clone();
                 let y: usize = pixel_index / width;
                 let x: usize = pixel_index - width * y;
                 // gen ray for pixel x, y
@@ -111,24 +137,34 @@ impl NaiveRenderer {
                         temp_color
                     );
                 }
-                if pixel_index % output_divisor == 0 {
-                    let stdout = std::io::stdout();
-                    let mut handle = stdout.lock();
-                    handle.write_all(b".").unwrap();
-                    std::io::stdout().flush().expect("some error message")
-                }
+
+                clone2.fetch_add(1, Ordering::Relaxed);
+                // if pixel_index % output_divisor == 0 {
+                //     let stdout = std::io::stdout();
+                //     let mut handle = stdout.lock();
+                //     handle.write_all(b".").unwrap();
+                //     std::io::stdout().flush().expect("some error message")
+                // }
+                // pb.inc();
                 // unsafe {
                 *pixel_ref = temp_color / (settings.min_samples as f32);
                 // }
             });
+
+        if let Err(panic) = thread.join() {
+            println!(
+                "progress bar incrememnting thread threw an error {:?}",
+                panic
+            );
+        }
         println!("");
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
         println!(
             "\ntook {}s at {} rays per second and {} rays per second per thread\n",
             elapsed,
-            (total_camera_rays as f32) / elapsed,
-            (total_camera_rays as f32) / elapsed / (settings.threads.unwrap() as f32)
+            (min_camera_rays as f32) / elapsed,
+            (min_camera_rays as f32) / elapsed / (settings.threads.unwrap() as f32)
         );
         film
     }
@@ -171,12 +207,36 @@ impl NaiveRenderer {
             .threads
             .unwrap();
 
-        for _ in 0..100 {
-            print!("-");
-        }
+        let mut pb = ProgressBar::new(total_pixels as u64);
 
-        println!("");
-        // let : Vec<(Sample, CameraId)> = Vec::new();
+        let pixel_count = Arc::new(AtomicUsize::new(0));
+        let clone1 = pixel_count.clone();
+        let thread = thread::spawn(move || {
+            let mut local_index = 0;
+            while local_index < total_pixels {
+                let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
+                pb.add(pixels_to_increment as u64);
+                local_index += pixels_to_increment;
+                // pixels_to_increment = 0;
+                // while pixels_to_increment > 0 {
+                //     pb.inc();
+                //     pixels_to_increment -= 1;
+                //     local_index += 1;
+                // }
+                thread::sleep(Duration::from_millis(1));
+            }
+        });
+
+        let clone2 = pixel_count.clone();
+
+        // let (tx, rx) = mpsc::channel();
+
+        // let splatting_thread = thread::spawn(move || {
+
+        // });
+
+        // let tx1 = mpsc::Sender::clone(&tx);
+
         let mut additional_splats: Vec<(Sample, CameraId)> =
             films
                 .par_iter_mut()
@@ -240,6 +300,7 @@ impl NaiveRenderer {
                                 }
                                 // unsafe {
                                 *pixel_ref = temp_color / (settings.min_samples as f32);
+                                clone2.fetch_add(1, Ordering::Relaxed);
                                 local_additional_splats
                                 // }
                             })
@@ -250,7 +311,14 @@ impl NaiveRenderer {
                 .collect();
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!("");
+
+        if let Err(panic) = thread.join() {
+            println!(
+                "progress bar incrememnting thread threw an error {:?}",
+                panic
+            );
+        }
+        // println!("");
 
         println!(
             "\ntook {}s at {} rays per second and {} rays per second per thread\n",
