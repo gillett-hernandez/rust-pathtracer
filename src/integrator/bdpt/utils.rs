@@ -26,7 +26,7 @@ pub enum VertexType {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vertex {
-    pub kind: VertexType,
+    pub vertex_type: VertexType,
     pub time: f32,
     pub lambda: f32,
     pub point: Point3,
@@ -41,7 +41,7 @@ pub struct Vertex {
 
 impl Vertex {
     pub fn new(
-        kind: VertexType,
+        vertex_type: VertexType,
         time: f32,
         lambda: f32,
         point: Point3,
@@ -54,7 +54,7 @@ impl Vertex {
         veach_g: f32,
     ) -> Self {
         Vertex {
-            kind,
+            vertex_type,
             time,
             lambda,
             point,
@@ -125,7 +125,7 @@ pub fn random_walk(
             if trace_type == VertexType::Light {
                 // if hit camera directly while tracing a light path
                 if let MaterialId::Camera(_camera_id) = hit.material {
-                    vertex.kind = VertexType::Camera;
+                    vertex.vertex_type = VertexType::Camera;
                     vertices.push(vertex);
                     break;
                 }
@@ -203,7 +203,7 @@ pub fn random_walk(
             } else {
                 // hit a surface and didn't bounce.
                 if emission.0 > 0.0 {
-                    vertex.kind = VertexType::LightSource(LightSourceType::Instance);
+                    vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
                     vertex.pdf_forward = 0.0;
                     vertex.pdf_backward = 1.0;
                     vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
