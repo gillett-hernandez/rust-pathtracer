@@ -272,11 +272,6 @@ impl NaiveRenderer {
                 } else {
                     break;
                 }
-
-                // if done_splatting_clone.load(Ordering::Acquire) {
-                //     println!("broke because done splatting?");
-                //     break;
-                // }
             }
         });
 

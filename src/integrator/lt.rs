@@ -103,7 +103,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let sampled;
         let mut light_g_term: f32 = 1.0;
 
-        if self.world.lights.len() > 0 && light_pick_sample.x > env_sampling_probability {
+        if self.world.lights.len() > 0 && light_pick_sample.x >= env_sampling_probability {
             light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
                 / (1.0 - env_sampling_probability))
                 .clamp(0.0, 1.0);
@@ -134,6 +134,14 @@ impl GenericIntegrator for LightTracingIntegrator {
                 tmp_sampled.1,
                 tmp_sampled.2 * pick_pdf * area_pdf,
             );
+            debug_assert!(
+                sampled.1.energy.0 > 0.0,
+                "radiance was 0, {}, {:?}, {:?} {:?}",
+                sampled.1.lambda,
+                material,
+                sampled.0,
+                sampled.2
+            );
         } else {
             light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
 
@@ -148,10 +156,20 @@ impl GenericIntegrator for LightTracingIntegrator {
                 VISIBLE_RANGE,
                 wavelength_sample,
             );
+            // debug_assert!(
+            //     sampled.1.energy.0 > 0.0,
+            //     "radiance was 0, {}, {:?} {:?}",
+            //     sampled.1.lambda,
+            //     sampled.0,
+            //     sampled.2
+            // );
         };
         let mut ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
+        if radiance.0 == 0.0 {
+            return SingleWavelength::BLACK;
+        }
         let light_pdf = sampled.2;
 
         // let mut beta = SingleEnergy::ONE;
@@ -159,8 +177,6 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut beta = radiance;
         let mut beta_pdf = PDF::from(1.0);
         // camera_vertex.lambda = lambda;
-
-        debug_assert!(radiance.0 > 0.0, "radiance was 0, {}", lambda);
 
         let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
@@ -280,7 +296,8 @@ impl GenericIntegrator for LightTracingIntegrator {
                     // also convert wo back to world space when spawning the new ray
                     // println!("whatever!!");
                     ray = Ray::new(
-                        hit.point + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
+                        hit.point
+                            + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
                         frame.to_world(&wo).normalized(),
                     );
                 } else {
