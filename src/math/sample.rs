@@ -15,11 +15,15 @@ impl Sample1D {
         Sample1D { x: random() }
     }
     pub fn choose<T>(mut self, split: f32, a: T, b: T) -> (Self, T) {
-        debug_assert!(0.0 <= split && split < 1.0);
+        debug_assert!(0.0 <= split && split <= 1.0);
         if self.x < split {
+            assert!(split > 0.0);
             self.x /= split;
             (self, a)
         } else {
+            // if split was 1.0, there's no way for self.x to be greather than or equal to it
+            // since self.x in [0, 1)
+            assert!(split < 1.0);
             self.x = (self.x - split) / (1.0 - split);
             (self, b)
         }

@@ -324,6 +324,7 @@ fn construct_scene(config: &Config) -> World {
     ]; // ball at origin
     let additional_materials = vec![
         light_material,
+        // lambertian_red,
         // ggx_moissanite,
         ggx_unrealistic_dispersion,
         // ggx_glass,
@@ -342,7 +343,7 @@ fn construct_scene(config: &Config) -> World {
         additional_instances,
         additional_materials,
         world_illuminant,
-        config.env_strength.unwrap_or(0.0),
+        config.env_strength.unwrap_or(1.0),
         config.env_sampling_probability.unwrap_or(0.5),
     )
 }

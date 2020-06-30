@@ -80,7 +80,7 @@ impl World {
             let x = s.x;
             let idx = (length as f32 * x).clamp(0.0, length as f32 - 1.0) as usize;
             debug_assert!(
-                idx < self.lights.len(),
+                idx < self.cameras.len(),
                 "{}, {}, {}, {}",
                 x,
                 length as f32 * x,

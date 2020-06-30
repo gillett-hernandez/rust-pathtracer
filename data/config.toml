@@ -1,5 +1,5 @@
-env_sampling_probability = 0.0
-env_strength = 0.0
+env_sampling_probability = 0.9
+env_strength = 10.0
 
 [[cameras]]
 type="SimpleCamera"
@@ -25,29 +25,43 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "PT_DI"
-integrator = "PT"
+filename = "BDPT"
+integrator = "BDPT"
 max_bounces = 8
-resolution.width = 1024
-resolution.height = 1024
-exposure = 1.0
-min_samples = 16
-camera_id = 1
-russian_roulette = true
-only_direct = true
-light_samples = 8
-
-[[render_settings]]
-threads = 22
-filename = "PT"
-integrator = "PT"
-max_bounces = 8
-resolution.width = 1024
-resolution.height = 1024
+resolution.width = 512
+resolution.height = 512
 exposure = 1.0
 min_samples = 16
 camera_id = 1
 russian_roulette = true
 only_direct = false
-light_samples = 8
 
+#[[render_settings]]
+#threads = 22
+#filename = "PT"
+#integrator = "PT"
+#max_bounces = 8
+#resolution.width = 512
+#resolution.height = 512
+#exposure = 1.0
+#min_samples = 8
+#camera_id = 1
+#russian_roulette = true
+#only_direct = false
+#light_samples = 4
+#
+
+[[render_settings]]
+threads = 22
+filename = "LT"
+integrator = "LT"
+max_bounces = 8
+resolution.width = 512
+resolution.height = 512
+exposure = 1.0
+min_samples = 8
+camera_id = 1
+russian_roulette = true
+only_direct = false
+light_samples = 4
+camera_samples = 4

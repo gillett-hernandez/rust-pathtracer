@@ -148,6 +148,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 VISIBLE_RANGE,
                 wavelength_sample,
             );
+            let directional_pdf = sampled.2;
             start_light_vertex = Vertex::new(
                 Type::LightSource(Source::Environment),
                 0.0,
@@ -157,7 +158,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 MaterialId::Light(0),
                 0,
                 sampled.1.energy,
-                1.0,
+                directional_pdf.0,
                 1.0,
                 1.0,
             );
