@@ -233,9 +233,13 @@ impl NaiveRenderer {
 
         let (tx, rx) = mpsc::channel();
 
+        let total_splats = Arc::new(Mutex::new(0usize));
+
         let light_films_ref = Arc::clone(&light_films);
+        let total_splats_ref = Arc::clone(&total_splats);
         let splatting_thread = thread::spawn(move || {
             let films = &mut light_films_ref.lock().unwrap();
+            let mut local_total_splats = total_splats_ref.lock().unwrap();
             loop {
                 for v in rx.try_iter() {
                     let (sample, film_id): (Sample, u8) = v;
@@ -250,6 +254,7 @@ impl NaiveRenderer {
                             // let existing_triplet = film.buffer[y * film.width + x];
                             film.buffer[y * film.width + x] += color;
                             // thread::sleep(Duration::from_millis(10));
+                            (*local_total_splats) += 1usize;
                         }
                         _ => {}
                     }
@@ -266,6 +271,7 @@ impl NaiveRenderer {
                             );
                             // let existing_triplet = film.buffer[y * film.width + x];
                             film.buffer[y * film.width + x] += color;
+                            (*local_total_splats) += 1usize;
                         }
                         _ => {}
                     }
@@ -277,83 +283,72 @@ impl NaiveRenderer {
 
         // let tx1 = mpsc::Sender::clone(&tx);
         let tx_arc = Arc::new(Mutex::new(tx));
-        let mut additional_splats: Vec<(Sample, CameraId)> =
-            films
-                .par_iter_mut()
-                .enumerate()
-                .flat_map(
-                    |(camera_id, (settings, film)): (
-                        usize,
-                        &mut (RenderSettings, Film<XYZColor>),
-                    )|
-                     -> Vec<(Sample, CameraId)> {
-                        if let Some((s, t)) = settings.selected_pair {
-                            println!("rendering specific pair {} {}", s, t);
-                        }
-                        let output_divisor = (film.width * film.height / 100).max(1);
 
-                        let additional_samples = film
-                            .buffer
-                            .par_iter_mut()
-                            // .iter_mut()
-                            .enumerate()
-                            .flat_map(|(pixel_index, pixel_ref)| -> Vec<(Sample, CameraId)> {
-                                let tx1 = tx_arc.lock().unwrap().clone();
-                                let y: usize = pixel_index / settings.resolution.width;
-                                let x: usize = pixel_index - settings.resolution.width * y;
-                                // gen ray for pixel x, y
-                                // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                                // let mut temp_color = RGBColor::BLACK;
-                                let mut temp_color = XYZColor::BLACK;
-                                // let mut sampler: Box<dyn Sampler> =
-                                //     Box::new(StratifiedSampler::new(20, 20, 10));
-                                let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                                let camera = cameras[camera_id];
-                                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
-                                let mut local_additional_splats: Vec<(Sample, CameraId)> =
-                                    Vec::new();
-                                // use with capacity to preallocate
-                                for _s in 0..settings.min_samples {
-                                    let sample = sampler.draw_2d();
-                                    let r = camera.get_ray(
-                                        sampler.draw_2d(),
-                                        (x as f32 + sample.x) / (settings.resolution.width as f32),
-                                        (y as f32 + sample.y) / (settings.resolution.height as f32),
-                                    );
-                                    temp_color += XYZColor::from(integrator.color(
-                                        &mut sampler,
-                                        settings,
-                                        (r, camera_id as u8),
-                                        &mut local_additional_splats,
-                                    ));
-                                    // handle image samples that occur in local_additional_splats, as they correspond to the current pixel_index
-                                    // if local_additional_splats.iter().filter()
-                                    debug_assert!(
-                                        temp_color.0.is_finite().all(),
-                                        "integrator returned {:?}",
-                                        temp_color
-                                    );
-                                }
-                                if pixel_index % output_divisor == 0 {
-                                    let stdout = std::io::stdout();
-                                    let mut handle = stdout.lock();
-                                    handle.write_all(b".").unwrap();
-                                    std::io::stdout().flush().expect("some error message")
-                                }
-                                // unsafe {
-                                *pixel_ref = temp_color / (settings.min_samples as f32);
-                                clone2.fetch_add(1, Ordering::Relaxed);
-                                for splat in local_additional_splats {
-                                    tx1.send(splat).unwrap();
-                                }
-                                Vec::new()
-                                // }
-                            })
-                            .collect();
-                        additional_samples
-                    },
-                )
-                .collect();
+        films.par_iter_mut().enumerate().for_each(
+            |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
+                if let Some((s, t)) = settings.selected_pair {
+                    println!("rendering specific pair {} {}", s, t);
+                }
+                let output_divisor = (film.width * film.height / 100).max(1);
+
+                film.buffer
+                    .par_iter_mut()
+                    // .iter_mut()
+                    .enumerate()
+                    .for_each(|(pixel_index, pixel_ref)| {
+                        let tx1 = tx_arc.lock().unwrap().clone();
+                        let y: usize = pixel_index / settings.resolution.width;
+                        let x: usize = pixel_index - settings.resolution.width * y;
+                        // gen ray for pixel x, y
+                        // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
+                        // let mut temp_color = RGBColor::BLACK;
+                        let mut temp_color = XYZColor::BLACK;
+                        // let mut sampler: Box<dyn Sampler> =
+                        //     Box::new(StratifiedSampler::new(20, 20, 10));
+                        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                        let camera = cameras[camera_id];
+                        // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                        let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
+                        // use with capacity to preallocate
+                        for _s in 0..settings.min_samples {
+                            let sample = sampler.draw_2d();
+                            let r = camera.get_ray(
+                                sampler.draw_2d(),
+                                (x as f32 + sample.x) / (settings.resolution.width as f32),
+                                (y as f32 + sample.y) / (settings.resolution.height as f32),
+                            );
+                            temp_color += XYZColor::from(integrator.color(
+                                &mut sampler,
+                                settings,
+                                (r, camera_id as u8),
+                                &mut local_additional_splats,
+                            ));
+                            // handle image samples that occur in local_additional_splats, as they correspond to the current pixel_index
+                            // if local_additional_splats.iter().filter()
+                            debug_assert!(
+                                temp_color.0.is_finite().all(),
+                                "integrator returned {:?}",
+                                temp_color
+                            );
+                        }
+                        if pixel_index % output_divisor == 0 {
+                            let stdout = std::io::stdout();
+                            let mut handle = stdout.lock();
+                            handle.write_all(b".").unwrap();
+                            std::io::stdout().flush().expect("some error message")
+                        }
+                        // unsafe {
+                        *pixel_ref = temp_color / (settings.min_samples as f32);
+                        clone2.fetch_add(1, Ordering::Relaxed);
+                        for splat in local_additional_splats {
+                            tx1.send(splat).unwrap();
+                        }
+                        // Vec::new()
+                        // }
+                    });
+                // additional_samples
+            },
+        );
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
@@ -374,10 +369,10 @@ impl NaiveRenderer {
 
         let now = Instant::now();
 
-        additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
-            camera_id1.cmp(&camera_id2)
-        });
-        println!("found {} splats", additional_splats.len());
+        // additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
+        //     camera_id1.cmp(&camera_id2)
+        // });
+        println!("found {} splats", total_splats.lock().unwrap());
         // for (sample, camera_id) in additional_splats {
         //     match sample {
         //         Sample::LightSample(radiance, (x, y)) => {
@@ -415,6 +410,8 @@ impl NaiveRenderer {
         if let Err(panic) = splatting_thread.join() {
             println!("panic occurred within thread: {:?}", panic);
         }
+
+        // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
         let mut i = 0;
         for light_film in light_films.lock().unwrap().iter() {
             let mut render_settings = films[i].0.clone();
@@ -439,10 +436,7 @@ impl NaiveRenderer {
         //     films.iter().cloned().unzip();
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!(
-            "\ntook {}s to sort and deserialize the splats and save to film\n",
-            elapsed,
-        );
+        println!("\ntook {}s to save to film\n", elapsed,);
         films
     }
 }
