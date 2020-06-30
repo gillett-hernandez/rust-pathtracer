@@ -1,5 +1,5 @@
 env_sampling_probability = 0.0
-env_strength = 1.0
+env_strength = 0.0
 
 [[cameras]]
 type="SimpleCamera"
@@ -24,7 +24,6 @@ aperture_size = 0.03
 vfov = 90
 
 [[render_settings]]
-wavelength_bounds = [400.0,700.0]
 threads = 22
 filename = "PT"
 integrator = "PT"
@@ -32,7 +31,7 @@ max_bounces = 8
 resolution.width = 1024
 resolution.height = 1024
 exposure = 1.0
-min_samples = 1024
+min_samples = 512
 camera_id = 1
 russian_roulette = true
 only_direct = false

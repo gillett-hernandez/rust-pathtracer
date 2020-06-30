@@ -202,6 +202,7 @@ pub enum SPD {
     Linear {
         signal: Vec<f32>,
         bounds: Bounds1D,
+        mode: InterpolationMode,
     },
     Tabulated {
         signal: Vec<(f32, f32)>,
@@ -262,7 +263,11 @@ impl SpectralPowerDistributionFunction for SPD {
     fn evaluate_power(&self, lambda: f32) -> f32 {
         use ordered_float::OrderedFloat;
         match &self {
-            SPD::Linear { signal, bounds } => {
+            SPD::Linear {
+                signal,
+                bounds,
+                mode,
+            } => {
                 debug_assert!(
                     bounds.contains(&lambda),
                     "lambda was {:?}, bounds were {:?}",
@@ -271,7 +276,31 @@ impl SpectralPowerDistributionFunction for SPD {
                 );
                 let step_size = bounds.span() / (signal.len() as f32);
                 let index = ((lambda - bounds.lower) / step_size) as usize;
-                signal[index]
+                let left = signal[index];
+                let right = if index + 1 < signal.len() {
+                    signal[index + 1]
+                } else {
+                    return signal[index];
+                };
+                let t = lambda - (bounds.lower + index as f32 * step_size);
+                // println!("t is {}", t);
+                match mode {
+                    InterpolationMode::Linear => (1.0 - t) * left + t * right,
+                    InterpolationMode::Nearest => {
+                        if t < 0.5 {
+                            left
+                        } else {
+                            right
+                        }
+                    }
+                    InterpolationMode::Cubic => {
+                        let t2 = 2.0 * t;
+                        let one_sub_t = 1.0 - t;
+                        let h00 = (1.0 + t2) * one_sub_t * one_sub_t;
+                        let h01 = t * t * (3.0 - t2);
+                        h00 * left + h01 * right
+                    }
+                }
             }
             SPD::Polynomial {
                 xoffset,

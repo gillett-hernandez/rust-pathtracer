@@ -86,8 +86,8 @@ fn cornell_box(
     // let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     // let white = curves::cie_e(1.0);
-    let cornell_colors = load_csv("data/curves/cornell.csv", 3, |x| x)
-        .expect("data/curves/cornell.csv was not formatted correctly");
+    let cornell_colors = load_csv("data/curves/csv/cornell.csv", 3, |x| x)
+        .expect("data/curves/csv/cornell.csv was not formatted correctly");
     let mut iter = cornell_colors.iter();
     let (cornell_white, cornell_green, cornell_red) = (
         iter.next().unwrap().clone(),
@@ -181,22 +181,22 @@ fn cornell_box(
 fn construct_scene(config: &Config) -> World {
     // load some curves
     let (silver_ior, silver_kappa) =
-        load_ior_and_kappa("data/curves/silver.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/silver.csv", |x: f32| x * 1000.0).unwrap();
     let (gold_ior, gold_kappa) =
-        load_ior_and_kappa("data/curves/gold.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/gold.csv", |x: f32| x * 1000.0).unwrap();
 
     let (bismuth_ior, bismuth_kappa) =
-        load_ior_and_kappa("data/curves/bismuth.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/bismuth.csv", |x: f32| x * 1000.0).unwrap();
     let (copper_ior, copper_kappa) =
-        load_ior_and_kappa("data/curves/copper-mcpeak.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/copper-mcpeak.csv", |x: f32| x * 1000.0).unwrap();
     let (lead_ior, lead_kappa) =
-        load_ior_and_kappa("data/curves/lead.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/lead.csv", |x: f32| x * 1000.0).unwrap();
     let (cold_lead_ior, cold_lead_kappa) =
-        load_ior_and_kappa("data/curves/lead-140K.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/lead-140K.csv", |x: f32| x * 1000.0).unwrap();
     let (platinum_ior, platinum_kappa) =
-        load_ior_and_kappa("data/curves/platinum.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/platinum.csv", |x: f32| x * 1000.0).unwrap();
     let (iron_ior, iron_kappa) =
-        load_ior_and_kappa("data/curves/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
+        load_ior_and_kappa("data/curves/csv/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
 
     // create some curves
     let white = curves::cie_e(1.0);
@@ -207,7 +207,7 @@ fn construct_scene(config: &Config) -> World {
     let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     let white = curves::cie_e(1.0);
-    let moissanite = curves::cauchy(2.5, 34000.0);
+    let moissanite = curves::cauchy(2.5415, 28665.0);
     let glass = curves::cauchy(1.45, 3540.0);
 
     // create materials
@@ -257,10 +257,10 @@ fn construct_scene(config: &Config) -> World {
     let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
     let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
     let blackbody_illuminant2 = curves::blackbody(4500.0, 18.0);
+    let xenon_lamp = curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
-    let light_material =
-        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
+    let light_material = MaterialEnum::from(DiffuseLight::new(xenon_lamp, Sidedness::Forward));
 
     let world_illuminant = blackbody_illuminant1_dim;
     let additional_instances = vec![
