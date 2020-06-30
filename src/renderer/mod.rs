@@ -16,7 +16,9 @@ use crate::world::World;
 use std::collections::HashMap;
 use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::{
+    mpsc, {Arc, Mutex},
+};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -186,7 +188,7 @@ impl NaiveRenderer {
         let mut total_camera_samples = 0;
         let mut total_pixels = 0;
         let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
-        let mut light_films: Vec<Film<XYZColor>> = Vec::new();
+        let light_films: Arc<Mutex<Vec<Film<XYZColor>>>> = Arc::new(Mutex::new(Vec::new()));
         for settings in renders.iter() {
             let (width, height) = (settings.resolution.width, settings.resolution.height);
             println!("starting render with film resolution {}x{}", width, height);
@@ -196,7 +198,7 @@ impl NaiveRenderer {
             let image_film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
             let light_film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
             films.push((settings.clone(), image_film));
-            light_films.push(light_film);
+            light_films.lock().unwrap().push(light_film);
         }
         println!("total pixels: {}", total_pixels);
         println!("minimum total samples: {}", total_camera_samples);
@@ -229,14 +231,57 @@ impl NaiveRenderer {
 
         let clone2 = pixel_count.clone();
 
-        // let (tx, rx) = mpsc::channel();
+        let (tx, rx) = mpsc::channel();
 
-        // let splatting_thread = thread::spawn(move || {
+        let light_films_ref = Arc::clone(&light_films);
+        let splatting_thread = thread::spawn(move || {
+            let films = &mut light_films_ref.lock().unwrap();
+            loop {
+                for v in rx.try_iter() {
+                    let (sample, film_id): (Sample, u8) = v;
+                    match sample {
+                        Sample::LightSample(sw, pixel) => {
+                            let film = &mut films[film_id as usize];
+                            let color = XYZColor::from(sw);
+                            let (x, y) = (
+                                (pixel.0 * film.width as f32) as usize,
+                                film.height - (pixel.1 * film.height as f32) as usize - 1,
+                            );
+                            // let existing_triplet = film.buffer[y * film.width + x];
+                            film.buffer[y * film.width + x] += color;
+                            // thread::sleep(Duration::from_millis(10));
+                        }
+                        _ => {}
+                    }
+                }
+                if let Ok(v) = rx.recv_timeout(Duration::from_millis(200)) {
+                    let (sample, film_id): (Sample, u8) = v;
+                    match sample {
+                        Sample::LightSample(sw, pixel) => {
+                            let film = &mut films[film_id as usize];
+                            let color = XYZColor::from(sw);
+                            let (x, y) = (
+                                (pixel.0 * film.width as f32) as usize,
+                                film.height - (pixel.1 * film.height as f32) as usize - 1,
+                            );
+                            // let existing_triplet = film.buffer[y * film.width + x];
+                            film.buffer[y * film.width + x] += color;
+                        }
+                        _ => {}
+                    }
+                } else {
+                    break;
+                }
 
-        // });
+                // if done_splatting_clone.load(Ordering::Acquire) {
+                //     println!("broke because done splatting?");
+                //     break;
+                // }
+            }
+        });
 
         // let tx1 = mpsc::Sender::clone(&tx);
-
+        let tx_arc = Arc::new(Mutex::new(tx));
         let mut additional_splats: Vec<(Sample, CameraId)> =
             films
                 .par_iter_mut()
@@ -251,12 +296,14 @@ impl NaiveRenderer {
                             println!("rendering specific pair {} {}", s, t);
                         }
                         let output_divisor = (film.width * film.height / 100).max(1);
+
                         let additional_samples = film
                             .buffer
                             .par_iter_mut()
                             // .iter_mut()
                             .enumerate()
                             .flat_map(|(pixel_index, pixel_ref)| -> Vec<(Sample, CameraId)> {
+                                let tx1 = tx_arc.lock().unwrap().clone();
                                 let y: usize = pixel_index / settings.resolution.width;
                                 let x: usize = pixel_index - settings.resolution.width * y;
                                 // gen ray for pixel x, y
@@ -301,7 +348,10 @@ impl NaiveRenderer {
                                 // unsafe {
                                 *pixel_ref = temp_color / (settings.min_samples as f32);
                                 clone2.fetch_add(1, Ordering::Relaxed);
-                                local_additional_splats
+                                for splat in local_additional_splats {
+                                    tx1.send(splat).unwrap();
+                                }
+                                Vec::new()
                                 // }
                             })
                             .collect();
@@ -333,28 +383,28 @@ impl NaiveRenderer {
             camera_id1.cmp(&camera_id2)
         });
         println!("found {} splats", additional_splats.len());
-        for (sample, camera_id) in additional_splats {
-            match sample {
-                Sample::LightSample(radiance, (x, y)) => {
-                    let light_film = &mut light_films[camera_id as usize];
-                    // println!("splat index was {} x {}", x, y);
-                    let (x, y) = (
-                        (x * light_film.width as f32) as usize,
-                        light_film.height - (y * light_film.height as f32) as usize - 1,
-                    );
-                    light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
-                }
-                Sample::ImageSample(radiance, (x, y)) => {
-                    let image_film = &mut films[camera_id as usize].1;
-                    // println!("splat index was {} x {}", x, y);
-                    let (x, y) = (
-                        (x * image_film.width as f32) as usize,
-                        image_film.height - (y * image_film.height as f32) as usize - 1,
-                    );
-                    image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
-                }
-            }
-        }
+        // for (sample, camera_id) in additional_splats {
+        //     match sample {
+        //         Sample::LightSample(radiance, (x, y)) => {
+        //             let light_film = &mut light_films[camera_id as usize];
+        //             // println!("splat index was {} x {}", x, y);
+        //             let (x, y) = (
+        //                 (x * light_film.width as f32) as usize,
+        //                 light_film.height - (y * light_film.height as f32) as usize - 1,
+        //             );
+        //             light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
+        //         }
+        //         Sample::ImageSample(radiance, (x, y)) => {
+        //             let image_film = &mut films[camera_id as usize].1;
+        //             // println!("splat index was {} x {}", x, y);
+        //             let (x, y) = (
+        //                 (x * image_film.width as f32) as usize,
+        //                 image_film.height - (y * image_film.height as f32) as usize - 1,
+        //             );
+        //             image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
+        //         }
+        //     }
+        // }
 
         // for i in 0..films.len() {
         //     let (settings, image_film) = &mut films[i];
@@ -367,8 +417,11 @@ impl NaiveRenderer {
         //     *image_pixel += *light_pixel / settings.min_samples.into();
         // }
         // }
+        if let Err(panic) = splatting_thread.join() {
+            println!("panic occurred within thread: {:?}", panic);
+        }
         let mut i = 0;
-        for light_film in light_films {
+        for light_film in light_films.lock().unwrap().iter() {
             let mut render_settings = films[i].0.clone();
             let new_filename = format!(
                 "{}{}",
@@ -379,7 +432,7 @@ impl NaiveRenderer {
             );
             println!("new filename is {}", new_filename);
             render_settings.filename = Some(new_filename);
-            films.push((render_settings, light_film));
+            films.push((render_settings, light_film.clone()));
             println!(
                 "added light film to films vec, films vec length is now {}",
                 films.len()
