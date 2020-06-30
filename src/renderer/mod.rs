@@ -372,7 +372,6 @@ impl NaiveRenderer {
         // additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
         //     camera_id1.cmp(&camera_id2)
         // });
-        println!("found {} splats", total_splats.lock().unwrap());
         // for (sample, camera_id) in additional_splats {
         //     match sample {
         //         Sample::LightSample(radiance, (x, y)) => {
@@ -410,6 +409,13 @@ impl NaiveRenderer {
         if let Err(panic) = splatting_thread.join() {
             println!("panic occurred within thread: {:?}", panic);
         }
+        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        println!(
+            "found {} splats, and took {}s to finish splatting them to film",
+            total_splats.lock().unwrap(),
+            elapsed
+        );
+        // let now = Instant::now();
 
         // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
         let mut i = 0;
@@ -435,8 +441,8 @@ impl NaiveRenderer {
         // let (_left, right): (Vec<RenderSettings>, Vec<Film<XYZColor>>) =
         //     films.iter().cloned().unzip();
 
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        println!("\ntook {}s to save to film\n", elapsed,);
+        // let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        // println!("\ntook {}s to merge films\n", elapsed,);
         films
     }
 }

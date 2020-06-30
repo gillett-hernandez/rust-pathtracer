@@ -27,7 +27,6 @@ impl Material for ParallelLight {
         wavelength_sample: Sample1D,
     ) -> Option<(Ray, SingleWavelength, PDF)> {
         // wo localized to point and normal
-        // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
             swap = true;
