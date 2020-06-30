@@ -402,7 +402,7 @@ mod tests {
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
 
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
 
@@ -506,6 +506,19 @@ mod tests {
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
         let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
+
+        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo);
+        println!("{:?} {:?}", f, pdf);
+    }
+    #[test]
+    fn test_extremely_low_roughness() {
+        let lambda = 762.2971;
+        let wi = Vec3(f32x4::new(0.073927574, -0.9872729, 0.14080834, 0.0));
+        let wo = Vec3(f32x4::new(0.048132252, 0.5836164, -0.81060183, -0.0));
+
+        let glass = curves::cauchy(1.45, 3540.0);
+        let flat_zero = curves::void();
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo);
         println!("{:?} {:?}", f, pdf);

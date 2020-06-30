@@ -216,11 +216,12 @@ fn construct_scene(config: &Config) -> World {
     let lambertian_green = MaterialEnum::from(Lambertian::new(green));
     let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
 
-    let ggx_glass = MaterialEnum::from(GGX::new(0.001, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+    let ggx_glass =
+        MaterialEnum::from(GGX::new(0.0001, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_glass_rough =
         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
     let ggx_moissanite =
-        MaterialEnum::from(GGX::new(0.001, moissanite, 1.0, flat_zero.clone(), 1.0));
+        MaterialEnum::from(GGX::new(0.0001, moissanite, 1.0, flat_zero.clone(), 1.0));
     let ggx_unrealistic_dispersion = MaterialEnum::from(GGX::new(
         0.001,
         curves::cauchy(1.45, 50000.0),
@@ -249,15 +250,15 @@ fn construct_scene(config: &Config) -> World {
         silver_kappa.clone(),
         0.0,
     ));
-    let ggx_gold_metal = MaterialEnum::from(GGX::new(0.003, gold_ior, 1.0, gold_kappa, 0.0));
-    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.003, lead_ior, 1.0, lead_kappa, 0.0));
+    let ggx_gold_metal = MaterialEnum::from(GGX::new(0.0003, gold_ior, 1.0, gold_kappa, 0.0));
+    let ggx_lead_metal = MaterialEnum::from(GGX::new(0.0003, lead_ior, 1.0, lead_kappa, 0.0));
     let ggx_cold_lead_metal =
-        MaterialEnum::from(GGX::new(0.003, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
+        MaterialEnum::from(GGX::new(0.0003, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
     let ggx_platinum_metal =
-        MaterialEnum::from(GGX::new(0.003, platinum_ior, 1.0, platinum_kappa, 0.0));
+        MaterialEnum::from(GGX::new(0.0003, platinum_ior, 1.0, platinum_kappa, 0.0));
     let ggx_bismuth_metal =
-        MaterialEnum::from(GGX::new(0.008, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.003, iron_ior, 1.0, iron_kappa, 0.0));
+        MaterialEnum::from(GGX::new(0.0008, bismuth_ior, 1.0, bismuth_kappa, 0.0));
+    let ggx_iron_metal = MaterialEnum::from(GGX::new(0.0003, iron_ior, 1.0, iron_kappa, 0.0));
 
     // create some illuminants and lights
     let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);
@@ -295,41 +296,41 @@ fn construct_scene(config: &Config) -> World {
         Instance::from(Aggregate::from(Sphere::new(
             // ball in front left
             0.3,
-            Point3::new(-0.3, 0.4, -0.7),
+            Point3::new(-0.1, 0.0, -0.6),
             1.into(),
             1,
         ))),
-        Instance::from(Aggregate::from(Sphere::new(
-            // ball in front right
-            0.3,
-            Point3::new(-0.3, -0.4, -0.7),
-            4.into(),
-            2,
-        ))),
+        // Instance::from(Aggregate::from(Sphere::new(
+        //     // ball in front right
+        //     0.3,
+        //     Point3::new(-0.3, -0.4, -0.7),
+        //     4.into(),
+        //     2,
+        // ))),
         Instance::from(Aggregate::from(Sphere::new(
             // ball on back right
             0.3,
-            Point3::new(0.5, -0.5, -0.7),
+            Point3::new(0.5, -0.35, -0.7),
             2.into(),
             3,
         ))), // ball at origin
         Instance::from(Aggregate::from(Sphere::new(
             // ball on back left
             0.3,
-            Point3::new(0.5, 0.5, -0.7),
+            Point3::new(0.5, 0.35, -0.7),
             3.into(),
             4,
         ))),
     ]; // ball at origin
     let additional_materials = vec![
         light_material,
-        ggx_moissanite,
+        // ggx_moissanite,
+        ggx_unrealistic_dispersion,
         // ggx_glass,
         ggx_gold_metal,
         // lambertian_green,
         ggx_iron_metal,
         // lambertian_red,
-        ggx_unrealistic_dispersion,
     ];
     // let additional_materials = vec![
     //     light_material,
