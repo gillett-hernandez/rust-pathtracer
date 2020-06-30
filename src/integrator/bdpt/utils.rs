@@ -518,12 +518,6 @@ where
     let k = s + t - 1; // for 2,0 case, k is 1
     let k1 = k + 1; // k1 is 2
 
-    // if t == 0 {
-    //     // hit camera directly, would have caused index error.
-    //     // for now, return 0
-    //     println!("{:?} ={:?}= {:?}", light_path, veach_g, eye_path);
-    //     return 1.0;
-    // }
     if s + t == 2 {
         return 1.0;
     }
@@ -671,16 +665,22 @@ where
             );
         } else {
             // reciprocal top case of equation 10.9
-            debug_assert!(
-                path.pdf_forward(0) > 0.0,
-                "i, s,t,k = ({}, {}, {}, {}). {:?}",
-                i,
-                s,
-                t,
-                k,
-                path[0]
-            );
-            ps[0] = ps[1] * path.pdf_backward(1) * path.veach_g_between(0, 1) / path.pdf_forward(0);
+            let pdf_forward = path.pdf_forward(0);
+            let pdf_backward = path.pdf_backward(1);
+            if pdf_forward == 0.0 {
+                ps[0] = 0.0;
+                continue;
+            }
+            // debug_assert!(
+            //     path.pdf_forward(0) > 0.0,
+            //     "i, s,t,k = ({}, {}, {}, {}). {:?}",
+            //     i,
+            //     s,
+            //     t,
+            //     k,
+            //     path[0]
+            // );
+            ps[0] = ps[1] * pdf_backward * path.veach_g_between(0, 1) / pdf_forward;
             debug_assert!(!ps[0].is_nan(), "{:?}", ps);
         }
     }

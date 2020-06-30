@@ -1,7 +1,6 @@
 use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
-use crate::NORMAL_OFFSET;
 
 #[derive(Clone, Debug)]
 pub struct ParallelLight {
@@ -28,12 +27,11 @@ impl Material for ParallelLight {
         wavelength_sample: Sample1D,
     ) -> Option<(Ray, SingleWavelength, PDF)> {
         // wo localized to point and normal
+        // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
             swap = true;
-        }
-
-        if self.sidedness == Sidedness::Dual {
+        } else if self.sidedness == Sidedness::Dual {
             if scatter_sample.x < 0.5 {
                 swap = true;
                 scatter_sample.x *= 2.0;
@@ -41,7 +39,7 @@ impl Material for ParallelLight {
                 scatter_sample.x = (1.0 - scatter_sample.x) * 2.0;
             }
         }
-        // let mut local_wo = (random_cosine_direction(scatter_sample) + 10.0 * Vec3::Z).normalized();
+        // let mut local_wo = random_cosine_direction(scatter_sample) + 0.0001 * Vec3::Z;
         let mut local_wo = Vec3::Z;
 
         if swap {
@@ -50,14 +48,14 @@ impl Material for ParallelLight {
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
         let object_wo = frame.to_world(&local_wo).normalized();
+        // let directional_pdf = local_wo.z().abs() / PI;
+        // debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
         let (sw, _pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
-            Ray::new(point + object_wo * NORMAL_OFFSET, object_wo),
-            // sw.with_energy(sw.energy / PI),
-            sw,
-            // PDF::from(local_wo.z().abs() / PI),
+            Ray::new(point, object_wo),
+            sw.with_energy(sw.energy),
             PDF::from(0.0),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
@@ -76,12 +74,9 @@ impl Material for ParallelLight {
     }
 
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
-        if (wi.z() > 0.0 && self.sidedness == Sidedness::Forward)
-            || (wi.z() < 0.0 && self.sidedness == Sidedness::Reverse)
-            || self.sidedness == Sidedness::Dual
-        {
-            if wi.z().abs() > 0.9 {
-                SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
+        if wi.z() > 0.0 {
+            if wi.z().abs() > 0.99 {
+                SingleEnergy::new(self.color.evaluate_power(hit.lambda))
             } else {
                 SingleEnergy::ZERO
             }

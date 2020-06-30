@@ -65,7 +65,7 @@ impl GenericIntegrator for BDPTIntegrator {
         let sampled;
 
         let start_light_vertex;
-        if light_pick_sample.x > env_sampling_probability {
+        if light_pick_sample.x >= env_sampling_probability {
             light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
                 / (1.0 - env_sampling_probability))
                 .clamp(0.0, 1.0);
