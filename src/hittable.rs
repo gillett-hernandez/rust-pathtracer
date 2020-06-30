@@ -61,7 +61,7 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
     // returns a point on the surface, the normal at that point, and the probability of that Point being chosen
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF);
 
-    // method that should implement the solid angle pdf of sampling this hittable from Vertex {from, normal}
+    // method that should implement the solid angle pdf of sampling this primitive from Vertex {from, normal}
     // to is on the surface of the hittable/light
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF;
     fn surface_area(&self, transform: &Transform3) -> f32;

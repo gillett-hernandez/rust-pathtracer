@@ -87,37 +87,40 @@ impl SamplerIntegrator for PathTracingIntegrator {
                             if light_area_pdf.0 == 0.0 {
                                 continue;
                             }
+                            // direction is from shading point to light
                             let direction = (point_on_light - hit.point).normalized();
                             // direction is already in world space.
                             // direction is also oriented away from the shading point already, so no need to negate directions until later.
-                            let wo = frame.to_local(&direction);
-                            let light_wi =
+                            let local_light_direction = frame.to_local(&direction);
+                            let light_vertex_wi =
                                 TangentFrame::from_normal(normal).to_local(&(-direction));
 
-                            let dropoff = wo.z().max(0.0);
+                            let dropoff = light_vertex_wi.z().max(0.0);
                             if dropoff == 0.0 {
                                 continue;
                             }
                             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
-                            let reflectance = material.f(&hit, wi, wo);
+                            let reflectance = material.f(&hit, wi, local_light_direction);
                             // if reflectance.0 < 0.00001 {
                             //     // if reflectance is 0 for all components, skip this light sample
                             //     continue;
                             // }
 
-                            let pdf = light.pdf(normal, hit.point, point_on_light);
-                            let light_pdf = pdf * light_pick_pdf;
+                            let pdf = light.pdf(hit.normal, hit.point, point_on_light);
+                            let light_pdf = pdf * light_pick_pdf; // / light_vertex_wi.z().abs();
                             if light_pdf.0 == 0.0 {
+                                // println!("light pdf was 0");
                                 // go to next pick
                                 continue;
                             }
 
                             let light_material = self.world.get_material(light.get_material_id());
-                            let emission = light_material.emission(&hit, light_wi, None);
+                            let emission = light_material.emission(&hit, light_vertex_wi, None);
                             // this should be the same as the other method, but maybe not.
 
                             if veach_v(&self.world, point_on_light, hit.point) {
-                                let scatter_pdf_for_light_ray = material.value(&hit, wi, wo);
+                                let scatter_pdf_for_light_ray =
+                                    material.value(&hit, wi, local_light_direction);
                                 let weight =
                                     power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
 
@@ -178,7 +181,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         let f = material.f(&hit, wi, wo);
                         beta *= f * cos_i.abs() / pdf.into();
                         debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
-                        last_bsdf_pdf = pdf.into();
+                        last_bsdf_pdf = pdf / cos_i.abs();
 
                         // add normal to avoid self intersection
                         // also convert wo back to world space when spawning the new ray
