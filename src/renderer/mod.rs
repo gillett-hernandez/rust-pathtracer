@@ -331,7 +331,7 @@ impl NaiveRenderer {
                     // .iter_mut()
                     .enumerate()
                     .for_each(|(pixel_index, pixel_ref)| {
-                        let tx1 = tx_arc.lock().unwrap().clone();
+                        let tx1 = { tx_arc.lock().unwrap().clone() };
                         let y: usize = pixel_index / settings.resolution.width;
                         let x: usize = pixel_index - settings.resolution.width * y;
                         // gen ray for pixel x, y

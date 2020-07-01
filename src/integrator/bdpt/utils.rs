@@ -278,41 +278,18 @@ pub fn eval_unweighted_contribution(
     if s == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
         // consider resampling last_eye_vertex to be in a more favorable position.
-        // definitely resample if it hit the environment
-        let second_to_last_eye_vertex = eye_path[t - 2];
-        // mut because it might be changed to be some other vertex for DI.
-        let mut last_eye_vertex = eye_path[t - 1];
-        if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
-            // let (uv, light_pdf) = world
-            //     .environment
-            //     .sample_env_uv_given_wavelength(sampler.draw_2d(), last_eye_vertex.lambda);
-            // let direction = uv_to_direction(uv);
-            // let frame = TangentFrame::from_normal(second_to_last_eye_vertex.normal);
-            // let local_light_direction = frame.to_local(&direction);
-            // if veach_v(
-            //     world,
-            //     last_eye_vertex.point,
-            //     second_to_last_eye_vertex.point,
-            // ) {
-            //     // successfully hit nothing, which is to say, hit the world
-            //     let material = world.get_material(second_to_last_eye_vertex.material_id);
-            //     let emission = world.environment.emission(uv, last_eye_vertex.lambda);
-            //     let reflectance =
-            //         material.f(&second_to_last_eye_vertex.into(), wi, local_light_direction);
 
-            //     let scatter_pdf_for_light_ray = material.value(&hit, wi, local_light_direction);
-            //     let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            //     // reflectance  * emission * weight / light_pdf.0
-            //     g = 1.0;
-            //     cst = emission * reflectance;
-            // } else {
-            //     cst = SingleEnergy::ZERO;
-            // }
+        let second_to_last_eye_vertex = eye_path[t - 2];
+        let last_eye_vertex = eye_path[t - 1];
+        if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
+            // second to last eye vertex is the one in the scene
+            // last_eye_vertex is on env.
             let wo = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
             let uv = direction_to_uv(wo);
             let emission = world.environment.emission(uv, last_eye_vertex.lambda);
             cst = emission;
-            g = 1.0;
+            let cos_o = (wo * second_to_last_eye_vertex.normal).abs();
+            g = cos_o;
         } else {
             let hit_light_material = world.get_material(last_eye_vertex.material_id);
 
@@ -367,81 +344,7 @@ pub fn eval_unweighted_contribution(
         // a valid connection can be made.
         let last_light_vertex = light_path[s - 1]; // s_end_v
         let last_eye_vertex = eye_path[t - 1]; // t_end_v
-
-        let fsl = if s == 1 {
-            // connected to surface of light
-            // consider resampling last_light_vertex to be in a more favorable position.
-            // definitely resample if it hit the environment
-
-            if last_light_vertex.vertex_type
-                == VertexType::LightSource(LightSourceType::Environment)
-            {
-                // last_eye_vertex is the vertex in the scene, last_eye_vertex is the one being "modified"
-                // this only modifies the "vertex" locally and temporarily.
-                // in veach's terms, this would only modify and help compute the unweighted contribution
-                // it does not inlude the MIS weight
-                let lev_normal = last_eye_vertex.normal;
-                let lev_frame = TangentFrame::from_normal(lev_normal);
-                let light_to_eye_vec = last_eye_vertex.point - last_light_vertex.point;
-                let light_to_eye_direction = light_to_eye_vec.normalized();
-                let lev_world_eye_to_light = -light_to_eye_direction;
-                let lev_local_eye_to_light =
-                    lev_frame.to_local(&lev_world_eye_to_light).normalized();
-                let (uv, light_pdf) = world
-                    .environment
-                    .sample_env_uv_given_wavelength(_sampler.draw_2d(), last_eye_vertex.lambda);
-                let direction = uv_to_direction(uv);
-                let local_light_direction = lev_frame.to_local(&direction);
-                if world
-                    .hit(
-                        Ray::new(last_eye_vertex.point, direction),
-                        0.00001,
-                        INFINITY,
-                    )
-                    .is_none()
-                {
-                    // successfully hit nothing, which is to say, hit the world
-
-                    world.environment.emission(uv, last_eye_vertex.lambda)
-                } else {
-                    SingleEnergy::ZERO
-                }
-            } else {
-                let light_to_eye_vec = last_eye_vertex.point - last_light_vertex.point;
-                let light_to_eye_direction = light_to_eye_vec.normalized();
-
-                // llv means Last Light Vertex
-                let llv_normal = last_light_vertex.normal;
-                let llv_frame = TangentFrame::from_normal(llv_normal);
-                let llv_world_light_to_eye = light_to_eye_direction;
-                let llv_local_light_to_eye =
-                    llv_frame.to_local(&llv_world_light_to_eye).normalized();
-                let hit_light_material = world.get_material(last_light_vertex.material_id);
-                let emission = hit_light_material.emission(
-                    &last_light_vertex.into(),
-                    llv_local_light_to_eye,
-                    None,
-                );
-                emission
-            }
-        } else {
-            let light_to_eye_vec = last_eye_vertex.point - last_light_vertex.point;
-            let light_to_eye_direction = light_to_eye_vec.normalized();
-
-            // llv means Last Light Vertex
-            let llv_normal = last_light_vertex.normal;
-            let llv_frame = TangentFrame::from_normal(llv_normal);
-            let llv_world_light_to_eye = light_to_eye_direction;
-            let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
-            let second_to_last_light_vertex = light_path[s - 2];
-            let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
-            let hit_material = world.get_material(last_light_vertex.material_id);
-            hit_material.f(
-                &last_light_vertex.into(),
-                llv_frame.to_local(&wi).normalized(),
-                llv_local_light_to_eye,
-            )
-        };
+        let mut ignore_distance_and_cos_o = false;
 
         let light_to_eye_vec = last_eye_vertex.point - last_light_vertex.point;
         let light_to_eye_direction = light_to_eye_vec.normalized();
@@ -451,6 +354,40 @@ pub fn eval_unweighted_contribution(
         let llv_frame = TangentFrame::from_normal(llv_normal);
         let llv_world_light_to_eye = light_to_eye_direction;
         let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
+
+        let fsl = if s == 1 {
+            // connected to surface of light
+            // consider resampling last_light_vertex to be in a more favorable position.
+
+            if last_light_vertex.vertex_type
+                == VertexType::LightSource(LightSourceType::Environment)
+            {
+                // connected to env vertex, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
+                // ignore the actual Point3 location of the env vertex and instead use its direction as the connection direction
+                let wo = -last_light_vertex.normal;
+                let uv = direction_to_uv(wo);
+                let emission = world.environment.emission(uv, last_eye_vertex.lambda);
+                ignore_distance_and_cos_o = true;
+                emission
+            } else {
+                let hit_light_material = world.get_material(last_light_vertex.material_id);
+                let emission = hit_light_material.emission(
+                    &last_light_vertex.into(),
+                    llv_local_light_to_eye,
+                    None,
+                );
+                emission
+            }
+        } else {
+            let second_to_last_light_vertex = light_path[s - 2];
+            let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
+            let hit_material = world.get_material(last_light_vertex.material_id);
+            hit_material.f(
+                &last_light_vertex.into(),
+                llv_frame.to_local(&wi).normalized(),
+                llv_local_light_to_eye,
+            )
+        };
 
         if fsl == SingleEnergy::ZERO {
             return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
@@ -491,7 +428,11 @@ pub fn eval_unweighted_contribution(
             lev_local_eye_to_light.z().abs(), // these are cosines relative to their surface normals btw.
             llv_local_light_to_eye.z().abs(), // i.e. eye_to_light.dot(eye_vertex_normal) and light_to_eye.dot(light_vertex_normal)
         );
-        g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
+        if ignore_distance_and_cos_o {
+            g = cos_i;
+        } else {
+            g = veach_g(last_eye_vertex.point, cos_i, last_light_vertex.point, cos_o);
+        }
         if g == 0.0 {
             return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }

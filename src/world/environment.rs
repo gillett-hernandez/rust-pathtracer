@@ -168,12 +168,13 @@ impl EnvironmentMap {
         // CDF for this situation can be stored as the Y values of the XYZ representation, as a greyscale image potentially.
         // consider summed area table as well.
         match self {
-            EnvironmentMap::Constant { color, strength } => {
-                ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
-            }
+            EnvironmentMap::Constant {
+                color: _color,
+                strength: _strength,
+            } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
             EnvironmentMap::Sun {
-                color,
-                strength,
+                color: _color,
+                strength: _strength,
                 solid_angle,
                 sun_direction,
             } => {
