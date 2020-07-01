@@ -150,10 +150,9 @@ impl GenericIntegrator for LightTracingIntegrator {
         } else {
             if env_sampling_probability > 0.0 {
                 // sample world env
-                let world_aabb = self.world.accelerator.bounding_box();
-                let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
                 // println!("sampled light emission in world light branch");
                 // println!("sampling world, world radius is {}", world_radius);
+                let world_radius = self.world.get_world_radius();
                 sampled = self.world.environment.sample_emission(
                     world_radius,
                     sampler.draw_2d(),
@@ -196,6 +195,9 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
+        if radiance.0 == 0.0 {
+            return SingleWavelength::BLACK;
+        }
         let light_pdf = sampled.2;
 
         // let mut beta = SingleEnergy::ONE;
@@ -203,8 +205,6 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut beta = radiance;
         let mut beta_pdf = PDF::from(1.0);
         // camera_vertex.lambda = lambda;
-
-        debug_assert!(radiance.0 > 0.0, "radiance was 0, {}", lambda);
 
         let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here

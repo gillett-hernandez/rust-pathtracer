@@ -260,24 +260,10 @@ fn construct_scene(config: &Config) -> World {
         MaterialEnum::from(GGX::new(0.0008, bismuth_ior, 1.0, bismuth_kappa, 0.0));
     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.0003, iron_ior, 1.0, iron_kappa, 0.0));
 
-    // create some illuminants and lights
-    let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);
-    let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
-    let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
-    let blackbody_illuminant2 = curves::blackbody(4500.0, 18.0);
-    let xenon_lamp = curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
-    let cie_e_illuminant_low_power = curves::cie_e(0.25);
-
-    let light_material =
-        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
-    // let light_material =
-    //      MaterialEnum::from(DiffuseLight::new(xenon_lamp, Sidedness::Forward));
-
-    let world_illuminant = blackbody_illuminant1_dim;
     let additional_instances = vec![
         Instance::new(
             Aggregate::from(Disk::new(
-                0.4,
+                0.8,
                 Point3::new(0.0, 0.0, 0.0),
                 false,
                 MaterialId::Light(0),
@@ -287,7 +273,7 @@ fn construct_scene(config: &Config) -> World {
                 Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
                 None,
                 Some(Transform3::from_translation(
-                    Point3::ORIGIN - Point3::new(0.0, 0.0, 0.9),
+                    Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
                 )),
             )),
             None,
@@ -322,6 +308,30 @@ fn construct_scene(config: &Config) -> World {
             4,
         ))),
     ]; // ball at origin
+
+    // create some illuminants and lights
+    let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);
+    let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
+    let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
+    let blackbody_illuminant2 = curves::blackbody(4500.0, 18.0);
+    let xenon_lamp = curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
+    let cie_e_illuminant_low_power = curves::cie_e(0.25);
+
+    // let light_material =MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
+    // parallel light with low sharpness should approximate a diffuse light
+    // let light_material = MaterialEnum::from(ParallelLight::new(
+    //     blackbody_illuminant2,
+    //     0.0,
+    //     Sidedness::Forward,
+    // ));
+    let light_material = MaterialEnum::from(ParallelLight::new(
+        blackbody_illuminant2,
+        20.0,
+        Sidedness::Forward,
+    ));
+
+    let world_illuminant = blackbody_illuminant1_dim;
+
     let additional_materials = vec![
         light_material,
         // lambertian_red,

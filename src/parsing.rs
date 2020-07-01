@@ -66,7 +66,6 @@ where
     let mut values: Vec<f32> = Vec::new();
     for line in lines {
         let value = line.trim().parse::<f32>()?;
-        // print!("{} ", value);
         values.push(func(value));
     }
 

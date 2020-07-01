@@ -16,6 +16,7 @@ packed_simd = "0.3.3"
 nalgebra = "0.21"
 ordered-float = "1.0.2"
 exr = "0.8.0"
+pbr = "1.0.3"
 
 [build-dependencies]
 serde = { version = "1.0.114", features = ["derive"] }

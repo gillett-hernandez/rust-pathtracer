@@ -120,6 +120,12 @@ impl World {
         }
     }
 
+    pub fn get_world_radius(&self) -> f32 {
+        let world_aabb = self.accelerator.bounding_box();
+        let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
+        world_radius
+    }
+
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
         // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
         if add_and_rebuild_scene {

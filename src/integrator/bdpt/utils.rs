@@ -12,13 +12,13 @@ use std::ops::Index;
 use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Source {
+pub enum LightSourceType {
     Instance,
     Environment,
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Type {
-    LightSource(Source),
+pub enum VertexType {
+    LightSource(LightSourceType),
     Light,
     Eye,
     Camera,
@@ -26,7 +26,7 @@ pub enum Type {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vertex {
-    pub kind: Type,
+    pub vertex_type: VertexType,
     pub time: f32,
     pub lambda: f32,
     pub point: Point3,
@@ -41,7 +41,7 @@ pub struct Vertex {
 
 impl Vertex {
     pub fn new(
-        kind: Type,
+        vertex_type: VertexType,
         time: f32,
         lambda: f32,
         point: Point3,
@@ -54,7 +54,7 @@ impl Vertex {
         veach_g: f32,
     ) -> Self {
         Vertex {
-            kind,
+            vertex_type,
             time,
             lambda,
             point,
@@ -93,7 +93,7 @@ pub fn random_walk(
     lambda: f32,
     bounce_limit: u16,
     start_throughput: SingleEnergy,
-    trace_type: Type,
+    trace_type: VertexType,
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
@@ -122,10 +122,10 @@ pub fn random_walk(
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
 
-            if trace_type == Type::Light {
+            if trace_type == VertexType::Light {
                 // if hit camera directly while tracing a light path
                 if let MaterialId::Camera(_camera_id) = hit.material {
-                    vertex.kind = Type::Camera;
+                    vertex.vertex_type = VertexType::Camera;
                     vertices.push(vertex);
                     break;
                 }
@@ -203,7 +203,7 @@ pub fn random_walk(
             } else {
                 // hit a surface and didn't bounce.
                 if emission.0 > 0.0 {
-                    vertex.kind = Type::LightSource(Source::Instance);
+                    vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
                     vertex.pdf_forward = 0.0;
                     vertex.pdf_backward = 1.0;
                     vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
@@ -215,13 +215,13 @@ pub fn random_walk(
             }
         } else {
             // add a vertex when a camera ray hits the environment
-            if trace_type == Type::Eye {
+            if trace_type == VertexType::Eye {
                 let ray_direction = ray.direction;
                 let bounding_box = world.bounding_box();
                 let world_radius = (bounding_box.max - bounding_box.min).norm();
                 let at_env = ray_direction * world_radius;
                 let vertex = Vertex::new(
-                    Type::LightSource(Source::Environment),
+                    VertexType::LightSource(LightSourceType::Environment),
                     ray.time,
                     lambda,
                     Point3::from(at_env),
@@ -276,9 +276,10 @@ pub fn eval_unweighted_contribution(
     let g;
     if s == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
+        // consider resampling last_eye_vertex to be in a more favorable position.
         let second_to_last_eye_vertex = eye_path[t - 2];
         let last_eye_vertex = eye_path[t - 1];
-        if last_eye_vertex.kind == Type::LightSource(Source::Environment) {
+        if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
 
             // let uv = EnvironmentMap::direction_to_uv(ray_direction);
             // let fsl =
@@ -346,8 +347,11 @@ pub fn eval_unweighted_contribution(
         let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
         let fsl = if s == 1 {
             // connected to surface of light
+            // consider resampling last_light_vertex to be in a more favorable position.
 
-            if last_light_vertex.kind == Type::LightSource(Source::Environment) {
+            if last_light_vertex.vertex_type
+                == VertexType::LightSource(LightSourceType::Environment)
+            {
 
                 // let uv = EnvironmentMap::direction_to_uv(ray_direction);
                 // let fsl =
@@ -525,12 +529,6 @@ where
     let k = s + t - 1; // for 2,0 case, k is 1
     let k1 = k + 1; // k1 is 2
 
-    // if t == 0 {
-    //     // hit camera directly, would have caused index error.
-    //     // for now, return 0
-    //     println!("{:?} ={:?}= {:?}", light_path, veach_g, eye_path);
-    //     return 1.0;
-    // }
     if s + t == 2 {
         return 1.0;
     }
@@ -678,16 +676,22 @@ where
             );
         } else {
             // reciprocal top case of equation 10.9
-            debug_assert!(
-                path.pdf_forward(0) > 0.0,
-                "i, s,t,k = ({}, {}, {}, {}). {:?}",
-                i,
-                s,
-                t,
-                k,
-                path[0]
-            );
-            ps[0] = ps[1] * path.pdf_backward(1) * path.veach_g_between(0, 1) / path.pdf_forward(0);
+            let pdf_forward = path.pdf_forward(0);
+            let pdf_backward = path.pdf_backward(1);
+            if pdf_forward == 0.0 {
+                ps[0] = 0.0;
+                continue;
+            }
+            // debug_assert!(
+            //     path.pdf_forward(0) > 0.0,
+            //     "i, s,t,k = ({}, {}, {}, {}). {:?}",
+            //     i,
+            //     s,
+            //     t,
+            //     k,
+            //     path[0]
+            // );
+            ps[0] = ps[1] * pdf_backward * path.veach_g_between(0, 1) / pdf_forward;
             debug_assert!(!ps[0].is_nan(), "{:?}", ps);
         }
     }
