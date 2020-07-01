@@ -206,7 +206,7 @@ pub fn random_walk(
                     vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
                     vertex.pdf_forward = 0.0;
                     vertex.pdf_backward = 1.0;
-                    vertex.veach_g = veach_g(hit.point, 1.0, ray.origin, 1.0);
+                    vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
                     vertices.push(vertex);
                 } else {
                     // this happens when the backside of a light is hit.

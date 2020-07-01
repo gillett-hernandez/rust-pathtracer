@@ -153,7 +153,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 0.0,
                 sampled.1.lambda,
                 //TODO: Fix the env sampling in eval_unweighted_contribution so that it picks a better env vertex
-                sampled.0.origin + -1000.0 * sampled.0.direction, // push back env sample very far. temporary hack
+                sampled.0.origin, // + -1000.0 * sampled.0.direction, // push back env sample very far. temporary hack
                 sampled.0.direction,
                 MaterialId::Light(0),
                 0,

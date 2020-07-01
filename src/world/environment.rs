@@ -114,11 +114,7 @@ impl EnvironmentMap {
                 let point = Point3::from(-direction * world_radius)
                     + frame.to_world(&random_on_normal_disk);
 
-                (
-                    Ray::new(point, direction),
-                    sw,
-                    PDF::from(1.0 / (2.0 * PI * (1.0 - *solid_angle))),
-                )
+                (Ray::new(point, direction), sw, directional_pdf)
             }
         }
     }
