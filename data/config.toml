@@ -27,7 +27,6 @@ vfov = 90
 [[render_settings]]
 threads = 22
 filename = "BDPT02"
-selected_pair = [0, 2]
 integrator = "BDPT"
 max_bounces = 8
 resolution.width = 1024
