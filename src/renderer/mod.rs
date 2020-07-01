@@ -16,12 +16,11 @@ use crate::world::World;
 use std::collections::HashMap;
 // use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{
-    mpsc, {Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crossbeam::channel::unbounded;
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
@@ -233,7 +232,7 @@ impl NaiveRenderer {
         let clone2 = pixel_count.clone();
 
         // let (tx, rx) = mpsc::sync_channel(1000000);
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx) = unbounded();
 
         let total_splats = Arc::new(Mutex::new(0usize));
 

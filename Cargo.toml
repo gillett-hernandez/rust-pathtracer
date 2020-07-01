@@ -14,13 +14,15 @@ rand = "0.7"
 image = "0.23.6"
 packed_simd = "0.3.3"
 nalgebra = "0.21"
-ordered-float = "1.0.2"
+ordered-float = "1.1.0"
 exr = "0.8.0"
 pbr = "1.0.3"
+parking_lot = "0.11.0"
+crossbeam = "0.7.3"
 
 [build-dependencies]
 serde = { version = "1.0.114", features = ["derive"] }
-serde_json = "1.0.55"
+serde_json = "1.0.56"
 
 [profile.dev]
 opt-level = 3
