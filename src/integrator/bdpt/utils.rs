@@ -283,31 +283,33 @@ pub fn eval_unweighted_contribution(
         // mut because it might be changed to be some other vertex for DI.
         let mut last_eye_vertex = eye_path[t - 1];
         if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
-            let (uv, light_pdf) = world
-                .environment
-                .sample_env_uv_given_wavelength(sampler.draw_2d(), last_eye_vertex.lambda);
-            let direction = uv_to_direction(uv);
-            let frame = TangentFrame::from_normal(second_to_last_eye_vertex.normal);
-            let local_light_direction = frame.to_local(&direction);
-            if veach_v(
-                world,
-                last_eye_vertex.point,
-                second_to_last_eye_vertex.point,
-            ) {
-                // successfully hit nothing, which is to say, hit the world
-                let material = world.get_material(second_to_last_eye_vertex.material_id);
-                let emission = world.environment.emission(uv, last_eye_vertex.lambda);
-                let reflectance =
-                    material.f(&second_to_last_eye_vertex.into(), wi, local_light_direction);
+            // let (uv, light_pdf) = world
+            //     .environment
+            //     .sample_env_uv_given_wavelength(sampler.draw_2d(), last_eye_vertex.lambda);
+            // let direction = uv_to_direction(uv);
+            // let frame = TangentFrame::from_normal(second_to_last_eye_vertex.normal);
+            // let local_light_direction = frame.to_local(&direction);
+            // if veach_v(
+            //     world,
+            //     last_eye_vertex.point,
+            //     second_to_last_eye_vertex.point,
+            // ) {
+            //     // successfully hit nothing, which is to say, hit the world
+            //     let material = world.get_material(second_to_last_eye_vertex.material_id);
+            //     let emission = world.environment.emission(uv, last_eye_vertex.lambda);
+            //     let reflectance =
+            //         material.f(&second_to_last_eye_vertex.into(), wi, local_light_direction);
 
-                let scatter_pdf_for_light_ray = material.value(&hit, wi, local_light_direction);
-                let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-                // reflectance  * emission * weight / light_pdf.0
-                g = 1.0;
-                cst = emission * reflectance;
-            } else {
-                cst = SingleEnergy::ZERO;
-            }
+            //     let scatter_pdf_for_light_ray = material.value(&hit, wi, local_light_direction);
+            //     let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+            //     // reflectance  * emission * weight / light_pdf.0
+            //     g = 1.0;
+            //     cst = emission * reflectance;
+            // } else {
+            //     cst = SingleEnergy::ZERO;
+            // }
+            cst = SingleEnergy::ZERO;
+            g = 0.0;
         } else {
             let hit_light_material = world.get_material(last_eye_vertex.material_id);
 
