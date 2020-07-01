@@ -262,24 +262,24 @@ fn construct_scene(config: &Config) -> World {
     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.0003, iron_ior, 1.0, iron_kappa, 0.0));
 
     let additional_instances = vec![
-        Instance::new(
-            Aggregate::from(Disk::new(
-                0.8,
-                Point3::new(0.0, 0.0, 0.0),
-                false,
-                MaterialId::Light(0),
-                0,
-            )),
-            Some(Transform3::from_stack(
-                Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
-                None,
-                Some(Transform3::from_translation(
-                    Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
-                )),
-            )),
-            None,
-            None,
-        ),
+        // Instance::new(
+        //     Aggregate::from(Disk::new(
+        //         0.8,
+        //         Point3::new(0.0, 0.0, 0.0),
+        //         false,
+        //         MaterialId::Light(0),
+        //         0,
+        //     )),
+        //     Some(Transform3::from_stack(
+        //         Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
+        //         None,
+        //         Some(Transform3::from_translation(
+        //             Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
+        //         )),
+        //     )),
+        //     None,
+        //     None,
+        // ),
         Instance::from(Aggregate::from(Sphere::new(
             // ball in front left
             0.3,
