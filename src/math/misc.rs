@@ -1,4 +1,4 @@
-use crate::math::PI;
+use crate::math::{Vec3, PI};
 
 pub fn power_heuristic(a: f32, b: f32) -> f32 {
     (a * a) / (a * a + b * b)
@@ -24,4 +24,17 @@ pub fn blackbody(temperature: f32, lambda: f32) -> f32 {
 
 pub fn max_blackbody_lambda(temp: f32) -> f32 {
     2.8977721e-3 / (temp * 1e-9)
+}
+
+pub fn uv_to_direction(uv: (f32, f32)) -> Vec3 {
+    let phi = PI * (2.0 * uv.0 - 1.0);
+    let (y, x) = phi.sin_cos();
+    let z = (PI * uv.1).cos();
+    Vec3::new(x, y, z)
+}
+
+pub fn direction_to_uv(direction: Vec3) -> (f32, f32) {
+    let u = (PI + direction.y().atan2(direction.x())) / (2.0 * PI);
+    let v = direction.z().acos() / PI;
+    (u, v)
 }

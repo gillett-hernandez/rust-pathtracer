@@ -1,4 +1,3 @@
-use crate::world::World;
 // use crate::config::Settings;
 // use crate::camera::*;
 use crate::hittable::{HasBoundingBox, HitRecord};
@@ -6,6 +5,7 @@ use crate::integrator::veach_v;
 use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;
+use crate::world::{EnvironmentMap, World};
 use crate::NORMAL_OFFSET;
 
 use std::ops::Index;
@@ -216,25 +216,22 @@ pub fn random_walk(
         } else {
             // add a vertex when a camera ray hits the environment
             if trace_type == VertexType::Eye {
-                let max_world_radius =
-                    (world.bounding_box().max - world.bounding_box().min).norm() / 2.0;
-                let max_world_radius_2 = max_world_radius * max_world_radius;
-                debug_assert!(max_world_radius.is_finite());
-                let at_env = max_world_radius * ray.direction;
-                debug_assert!(at_env.0.is_finite().all());
-                debug_assert!(Point3::from(at_env).0.is_finite().all());
+                let ray_direction = ray.direction;
+                let bounding_box = world.bounding_box();
+                let world_radius = (bounding_box.max - bounding_box.min).norm();
+                let at_env = ray_direction * world_radius;
                 let vertex = Vertex::new(
                     VertexType::LightSource(LightSourceType::Environment),
-                    1.0 * max_world_radius,
+                    ray.time,
                     lambda,
                     Point3::from(at_env),
                     -ray.direction,
                     MaterialId::Light(0),
                     0,
                     beta,
-                    1.0 / (max_world_radius_2 * 4.0 * PI),
+                    0.0,
+                    1.0 / (4.0 * PI),
                     1.0,
-                    1.0 / (max_world_radius_2),
                 );
                 debug_assert!(vertex.point.0.is_finite().all());
                 // println!("sampling env and setting pdf_forward to 0");
@@ -282,6 +279,11 @@ pub fn eval_unweighted_contribution(
         // consider resampling last_eye_vertex to be in a more favorable position.
         let second_to_last_eye_vertex = eye_path[t - 2];
         let last_eye_vertex = eye_path[t - 1];
+        if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
+
+            // let uv = EnvironmentMap::direction_to_uv(ray_direction);
+            // let fsl =
+        }
         let hit_light_material = world.get_material(last_eye_vertex.material_id);
 
         let normal = last_eye_vertex.normal;
@@ -347,6 +349,13 @@ pub fn eval_unweighted_contribution(
             // connected to surface of light
             // consider resampling last_light_vertex to be in a more favorable position.
 
+            if last_light_vertex.vertex_type
+                == VertexType::LightSource(LightSourceType::Environment)
+            {
+
+                // let uv = EnvironmentMap::direction_to_uv(ray_direction);
+                // let fsl =
+            }
             let hit_light_material = world.get_material(last_light_vertex.material_id);
             let emission = hit_light_material.emission(
                 &last_light_vertex.into(),

@@ -67,7 +67,10 @@ fn white_furnace_test(material: MaterialEnum) -> World {
             0,
         )))],
         vec![material],
-        EnvironmentMap::new(curves::cie_e(1.0), 1.0),
+        EnvironmentMap::Constant {
+            color: curves::cie_e(1.0),
+            strength: 1.0,
+        },
         1.0,
     );
     world
@@ -77,11 +80,9 @@ fn white_furnace_test(material: MaterialEnum) -> World {
 fn cornell_box(
     additional_instances: Vec<Instance>,
     additional_materials: Vec<MaterialEnum>,
-    world_illuminant: SPD,
-    world_strength: f32,
+    env_map: EnvironmentMap,
     env_sampling_probability: f32,
 ) -> World {
-    let env_map = EnvironmentMap::new(world_illuminant, world_strength);
     // let red = curves::red(1.0);
     // let green = curves::green(1.0);
     let blue = curves::blue(1.0);
@@ -102,15 +103,15 @@ fn cornell_box(
     let mut world_materials = vec![lambertian_white, lambertian_green, lambertian_red];
 
     let mut world_instances = vec![
-        Instance::from(Aggregate::from(AARect::new(
-            // ceiling
-            (2.0, 2.0),
-            Point3::new(0.0, 0.0, 1.0),
-            Axis::Z,
-            true,
-            0.into(),
-            0,
-        ))),
+        // Instance::from(Aggregate::from(AARect::new(
+        //     // ceiling
+        //     (2.0, 2.0),
+        //     Point3::new(0.0, 0.0, 1.0),
+        //     Axis::Z,
+        //     true,
+        //     0.into(),
+        //     0,
+        // ))),
         Instance::from(Aggregate::from(AARect::new(
             // floor
             (2.0, 2.0),
@@ -261,24 +262,24 @@ fn construct_scene(config: &Config) -> World {
     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.0003, iron_ior, 1.0, iron_kappa, 0.0));
 
     let additional_instances = vec![
-        Instance::new(
-            Aggregate::from(Disk::new(
-                0.8,
-                Point3::new(0.0, 0.0, 0.0),
-                false,
-                MaterialId::Light(0),
-                0,
-            )),
-            Some(Transform3::from_stack(
-                Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
-                None,
-                Some(Transform3::from_translation(
-                    Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
-                )),
-            )),
-            None,
-            None,
-        ),
+        // Instance::new(
+        //     Aggregate::from(Disk::new(
+        //         0.8,
+        //         Point3::new(0.0, 0.0, 0.0),
+        //         false,
+        //         MaterialId::Light(0),
+        //         0,
+        //     )),
+        //     Some(Transform3::from_stack(
+        //         Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
+        //         None,
+        //         Some(Transform3::from_translation(
+        //             Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
+        //         )),
+        //     )),
+        //     None,
+        //     None,
+        // ),
         Instance::from(Aggregate::from(Sphere::new(
             // ball in front left
             0.3,
@@ -330,10 +331,9 @@ fn construct_scene(config: &Config) -> World {
         Sidedness::Forward,
     ));
 
-    let world_illuminant = blackbody_illuminant1_dim;
-
     let additional_materials = vec![
         light_material,
+        // lambertian_red,
         // ggx_moissanite,
         ggx_unrealistic_dispersion,
         // ggx_glass,
@@ -348,11 +348,23 @@ fn construct_scene(config: &Config) -> World {
     //     lambertian_green,
     //     lambertian_red,
     // ];
+    let world_illuminant = blackbody_illuminant1_dim;
+
+    // let env_map = EnvironmentMap::Constant {
+    //     color: world_illuminant,
+    //     strength: config.env_strength.unwrap_or(1.0),
+    // };
+
+    let env_map = EnvironmentMap::Sun {
+        color: blackbody_illuminant1,
+        strength: config.env_strength.unwrap_or(1.0),
+        solid_angle: 0.1,
+        sun_direction: Vec3::Z,
+    };
     cornell_box(
         additional_instances,
         additional_materials,
-        world_illuminant,
-        config.env_strength.unwrap_or(0.0),
+        env_map,
         config.env_sampling_probability.unwrap_or(0.5),
     )
 }

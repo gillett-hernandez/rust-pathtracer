@@ -80,7 +80,7 @@ impl World {
             let x = s.x;
             let idx = (length as f32 * x).clamp(0.0, length as f32 - 1.0) as usize;
             debug_assert!(
-                idx < self.lights.len(),
+                idx < self.cameras.len(),
                 "{}, {}, {}, {}",
                 x,
                 length as f32 * x,
@@ -118,6 +118,12 @@ impl World {
         } else {
             1.0
         }
+    }
+
+    pub fn get_world_radius(&self) -> f32 {
+        let world_aabb = self.accelerator.bounding_box();
+        let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
+        world_radius
     }
 
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
