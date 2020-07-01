@@ -279,6 +279,7 @@ pub fn eval_unweighted_contribution(
     let g;
     if s == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
+        // consider resampling last_eye_vertex to be in a more favorable position.
         let second_to_last_eye_vertex = eye_path[t - 2];
         let last_eye_vertex = eye_path[t - 1];
         let hit_light_material = world.get_material(last_eye_vertex.material_id);
@@ -344,6 +345,7 @@ pub fn eval_unweighted_contribution(
         let llv_local_light_to_eye = llv_frame.to_local(&llv_world_light_to_eye).normalized();
         let fsl = if s == 1 {
             // connected to surface of light
+            // consider resampling last_light_vertex to be in a more favorable position.
 
             let hit_light_material = world.get_material(last_light_vertex.material_id);
             let emission = hit_light_material.emission(

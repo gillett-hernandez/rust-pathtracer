@@ -14,7 +14,7 @@ use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 
 use std::collections::HashMap;
-use std::io::Write;
+// use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{
     mpsc, {Arc, Mutex},
@@ -23,9 +23,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use pbr::ProgressBar;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
-use std::cmp::Ordering as CmpOrdering;
+// use std::cmp::Ordering as CmpOrdering;
 
 pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
     let filename = render_settings.filename.as_ref();
@@ -243,7 +243,7 @@ impl NaiveRenderer {
             let films = &mut light_films_ref.lock().unwrap();
             let mut local_total_splats = total_splats_ref.lock().unwrap();
             loop {
-                let mut samples: Vec<(Sample, u8)> = rx.try_iter().collect();
+                // let mut samples: Vec<(Sample, u8)> = rx.try_iter().collect();
                 // samples.par_sort_unstable_by(|(a0, b0), (a1, b1)| {
                 //     // primary sort by camera id
                 //     match b0.cmp(b1) {
@@ -274,7 +274,7 @@ impl NaiveRenderer {
                 //         t => t,
                 //     }
                 // });
-                for v in samples {
+                for v in rx.try_iter() {
                     let (sample, film_id): (Sample, u8) = v;
                     match sample {
                         Sample::LightSample(sw, pixel) => {
@@ -317,7 +317,7 @@ impl NaiveRenderer {
         // let tx1 = mpsc::Sender::clone(&tx);
         let tx_arc = Arc::new(Mutex::new(tx));
         // need to rate limit based on the speed at which splatting is occurring.
-        let per_splat_sleep_time = Duration::from_nanos(10);
+        let per_splat_sleep_time = Duration::from_nanos(0);
 
         films.par_iter_mut().enumerate().for_each(
             |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
@@ -375,7 +375,11 @@ impl NaiveRenderer {
                         // unsafe {
                         *pixel_ref = temp_color / (settings.min_samples as f32);
                         clone2.fetch_add(1, Ordering::Relaxed);
-                        thread::sleep(per_splat_sleep_time * local_additional_splats.len() as u32);
+                        if per_splat_sleep_time.as_nanos() > 0 {
+                            thread::sleep(
+                                per_splat_sleep_time * local_additional_splats.len() as u32,
+                            );
+                        }
                         for splat in local_additional_splats {
                             tx1.send(splat).unwrap();
                         }

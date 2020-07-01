@@ -46,6 +46,16 @@ pub fn random_cosine_direction(r: Sample2D) -> Vec3 {
     Vec3::new(x, y, z)
 }
 
+pub fn weighted_cosine_direction(r: Sample2D, weight: f32) -> Vec3 {
+    let Sample2D { x: u, y: v } = r;
+    let z: f32 = weight * (1.0 - v).sqrt();
+    let phi: f32 = 2.0 * PI * u;
+    let (mut y, mut x) = phi.sin_cos();
+    x *= v.sqrt();
+    y *= v.sqrt();
+    Vec3::new(x, y, z).normalized()
+}
+
 pub fn random_to_sphere(r: Sample2D, radius: f32, distance_squared: f32) -> Vec3 {
     let r1 = r.x;
     let r2 = r.y;

@@ -6,12 +6,17 @@ use crate::math::*;
 pub struct ParallelLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
     pub color: SPD,
+    pub sharpness: f32,
     pub sidedness: Sidedness,
 }
 
 impl ParallelLight {
-    pub fn new(color: SPD, sidedness: Sidedness) -> ParallelLight {
-        ParallelLight { color, sidedness }
+    pub fn new(color: SPD, sharpness: f32, sidedness: Sidedness) -> ParallelLight {
+        ParallelLight {
+            color,
+            sharpness: 1.0 + sharpness,
+            sidedness,
+        }
     }
 }
 
@@ -38,15 +43,24 @@ impl Material for ParallelLight {
                 scatter_sample.x = (1.0 - scatter_sample.x) * 2.0;
             }
         }
-        // let mut local_wo = random_cosine_direction(scatter_sample) + 0.0001 * Vec3::Z;
-        let mut local_wo = Vec3::Z;
+
+        // let mut local_wo =
+        // (random_cosine_direction(scatter_sample) + self.sharpness * Vec3::Z).normalized();
+        let mut non_normalized_local_wo = if self.sharpness == 1.0 {
+            random_cosine_direction(scatter_sample)
+        } else {
+            random_on_unit_sphere(scatter_sample) + Vec3::Z * self.sharpness
+        };
+        // let mut local_wo = Vec3::Z;
 
         if swap {
-            local_wo = -local_wo;
+            non_normalized_local_wo = -non_normalized_local_wo;
         }
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
-        let object_wo = frame.to_world(&local_wo).normalized();
+        let object_wo = frame
+            .to_world(&non_normalized_local_wo.normalized())
+            .normalized();
         // let directional_pdf = local_wo.z().abs() / PI;
         // debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
         let (sw, _pdf) = self
@@ -55,7 +69,7 @@ impl Material for ParallelLight {
         Some((
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy),
-            PDF::from(1.0),
+            PDF::from(non_normalized_local_wo.z().abs() / PI),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
     }
@@ -73,12 +87,13 @@ impl Material for ParallelLight {
     }
 
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
-        if wi.z() > 0.0 {
-            if wi.z().abs() > 0.99 {
-                SingleEnergy::new(self.color.evaluate_power(hit.lambda))
-            } else {
-                SingleEnergy::ZERO
-            }
+        // wi is in local space, and is normalized
+        // lets check if it could have been constructed by sample_emission.
+
+        let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
+        if wi.z() >= min_z {
+            // could have been generated
+            SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
         } else {
             SingleEnergy::ZERO
         }
