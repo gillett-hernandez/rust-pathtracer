@@ -1,15 +1,29 @@
 use crate::materials::*;
 use crate::math::*;
+// #[derive(Clone)]
+// pub struct EnvironmentMap {
+//     pub color: SPD,
+//     pub strength: f32,
+// }
+
 #[derive(Clone)]
-pub struct EnvironmentMap {
-    pub color: SPD,
-    pub strength: f32,
+pub enum EnvironmentMap {
+    Constant {
+        color: SPD,
+        strength: f32,
+    },
+    Sun {
+        color: SPD,
+        strength: f32,
+        solid_angle: f32,
+        uv: (f32, f32),
+    },
 }
 
 impl EnvironmentMap {
-    pub const fn new(color: SPD, strength: f32) -> Self {
-        EnvironmentMap { color, strength }
-    }
+    // pub const fn new(color: SPD, strength: f32) -> Self {
+    //     EnvironmentMap { color, strength }
+    // }
     pub fn sample_spd(
         &self,
         _uv: (f32, f32),
@@ -55,11 +69,5 @@ impl EnvironmentMap {
         let point = Point3::from(random_on_world);
 
         (Ray::new(point, random_direction), sw, pdf)
-    }
-}
-
-impl From<EnvironmentMap> for DiffuseLight {
-    fn from(map: EnvironmentMap) -> Self {
-        DiffuseLight::new(map.color, Sidedness::Dual)
     }
 }
