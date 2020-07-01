@@ -138,9 +138,7 @@ impl GenericIntegrator for BDPTIntegrator {
             // world
             light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
             // sample world env
-            let world_aabb = self.world.accelerator.bounding_box();
-            let world_radius = (world_aabb.max - world_aabb.min).norm() / 2.0;
-            // println!("sampled light emission in world light branch");
+            let world_radius = self.world.get_world_radius();
             sampled = self.world.environment.sample_emission(
                 world_radius,
                 sampler.draw_2d(),
@@ -148,19 +146,21 @@ impl GenericIntegrator for BDPTIntegrator {
                 VISIBLE_RANGE,
                 wavelength_sample,
             );
+            let light_g_term = 1.0;
             let directional_pdf = sampled.2;
             start_light_vertex = Vertex::new(
                 VertexType::LightSource(LightSourceType::Environment),
                 0.0,
                 sampled.1.lambda,
-                sampled.0.origin,
+                //TODO: Fix the env sampling in eval_unweighted_contribution so that it picks a better env vertex
+                sampled.0.origin + -1000.0 * sampled.0.direction, // push back env sample very far. temporary hack
                 sampled.0.direction,
                 MaterialId::Light(0),
                 0,
                 sampled.1.energy,
                 directional_pdf.0,
                 1.0,
-                1.0,
+                light_g_term,
             );
         };
 
@@ -229,7 +229,14 @@ impl GenericIntegrator for BDPTIntegrator {
         let mis_enabled = true;
         if let Some((s, t)) = settings.selected_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
-                let res = eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
+                let res = eval_unweighted_contribution(
+                    &self.world,
+                    &light_path,
+                    s,
+                    &eye_path,
+                    t,
+                    sampler,
+                );
 
                 match res {
                     SampleKind::Sampled((factor, g)) => {
@@ -323,8 +330,14 @@ impl GenericIntegrator for BDPTIntegrator {
                 }
 
                 // let mut g = 1.0;
-                let result =
-                    eval_unweighted_contribution(&self.world, &light_path, s, &eye_path, t);
+                let result = eval_unweighted_contribution(
+                    &self.world,
+                    &light_path,
+                    s,
+                    &eye_path,
+                    t,
+                    sampler,
+                );
                 let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),
                     SampleKind::Splatted((factor, g)) => (factor, g, true),

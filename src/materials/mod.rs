@@ -6,12 +6,12 @@ pub use crate::material::Material;
 mod diffuse_light;
 mod ggx;
 mod lambertian;
-mod parallel_light;
+mod sharp_light;
 
 pub use diffuse_light::DiffuseLight;
 pub use ggx::GGX;
 pub use lambertian::Lambertian;
-pub use parallel_light::ParallelLight;
+pub use sharp_light::SharpLight;
 
 // type required for an id into the Material Table
 // pub type MaterialId = u8;
@@ -43,7 +43,7 @@ pub enum MaterialEnum {
     GGX(GGX),
     Lambertian(Lambertian),
     DiffuseLight(DiffuseLight),
-    ParallelLight(ParallelLight),
+    ParallelLight(SharpLight),
 }
 
 impl From<DiffuseLight> for MaterialEnum {
@@ -58,8 +58,8 @@ impl From<Lambertian> for MaterialEnum {
     }
 }
 
-impl From<ParallelLight> for MaterialEnum {
-    fn from(value: ParallelLight) -> Self {
+impl From<SharpLight> for MaterialEnum {
+    fn from(value: SharpLight) -> Self {
         MaterialEnum::ParallelLight(value)
     }
 }

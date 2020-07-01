@@ -3,16 +3,16 @@ use crate::material::Material;
 use crate::math::*;
 
 #[derive(Clone, Debug)]
-pub struct ParallelLight {
+pub struct SharpLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
     pub color: SPD,
     pub sharpness: f32,
     pub sidedness: Sidedness,
 }
 
-impl ParallelLight {
-    pub fn new(color: SPD, sharpness: f32, sidedness: Sidedness) -> ParallelLight {
-        ParallelLight {
+impl SharpLight {
+    pub fn new(color: SPD, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+        SharpLight {
             color,
             sharpness: 1.0 + sharpness,
             sidedness,
@@ -20,7 +20,7 @@ impl ParallelLight {
     }
 }
 
-impl Material for ParallelLight {
+impl Material for SharpLight {
     // don't implement the other functions, since the fallback default implementation does the exact same thing
 
     fn sample_emission(

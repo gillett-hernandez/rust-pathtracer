@@ -38,7 +38,7 @@ pub trait Material: Send + Sync {
     }
     // evaluate bsdf
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
-        SingleEnergy::ZERO
+        SingleEnergy::new(0.1)
     }
     // evaluate the spectral power distribution for the given light and angle
     fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
