@@ -350,17 +350,17 @@ fn construct_scene(config: &Config) -> World {
     // ];
     let world_illuminant = blackbody_illuminant1_dim;
 
-    // let env_map = EnvironmentMap::Constant {
-    //     color: world_illuminant,
-    //     strength: config.env_strength.unwrap_or(1.0),
-    // };
-
+    let env_map = EnvironmentMap::Constant {
+        color: world_illuminant,
+        strength: config.env_strength.unwrap_or(1.0),
+    };
+    /*
     let env_map = EnvironmentMap::Sun {
         color: blackbody_illuminant1,
         strength: config.env_strength.unwrap_or(1.0),
         solid_angle: 0.1,
         sun_direction: Vec3::Z,
-    };
+    }; */
 
     cornell_box(
         additional_instances,

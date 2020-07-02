@@ -209,6 +209,7 @@ impl NaiveRenderer {
             .threads
             .unwrap();
 
+        // static SHOW_PROGRESS_BAR: bool = false;
         let mut pb = ProgressBar::new(total_pixels as u64);
 
         let pixel_count = Arc::new(AtomicUsize::new(0));
@@ -217,7 +218,9 @@ impl NaiveRenderer {
             let mut local_index = 0;
             while local_index < total_pixels {
                 let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
+                // if SHOW_PROGRESS_BAR {
                 pb.add(pixels_to_increment as u64);
+                // }
                 local_index += pixels_to_increment;
                 // pixels_to_increment = 0;
                 // while pixels_to_increment > 0 {

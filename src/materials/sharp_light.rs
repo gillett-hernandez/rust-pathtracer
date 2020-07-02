@@ -20,6 +20,23 @@ impl SharpLight {
     }
 }
 
+fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
+    let cos_phi = vec.z();
+    let cos_phi2 = cos_phi * cos_phi;
+    let sin_phi2 = 1.0 - cos_phi2;
+    // let sin_phi = sin_phi2.sqrt();
+    let sharpness2 = sharpness * sharpness;
+
+    let mut top_z = sharpness * cos_phi2;
+    let mut bottom_z = top_z;
+    let offset = cos_phi * (1.0 - sharpness2 * sin_phi2).sqrt();
+    top_z += offset;
+    bottom_z -= offset;
+    let dist_top = ((1.0 - (top_z - sharpness).powi(2)) + top_z.powi(2)).sqrt();
+    let dist_bottom = ((1.0 - (bottom_z - sharpness).powi(2)) + bottom_z.powi(2)).sqrt();
+    (dist_top - dist_bottom) / (2.0 * PI)
+}
+
 impl Material for SharpLight {
     // don't implement the other functions, since the fallback default implementation does the exact same thing
 
@@ -56,6 +73,8 @@ impl Material for SharpLight {
         if swap {
             non_normalized_local_wo = -non_normalized_local_wo;
         }
+
+        let fac = evaluate(non_normalized_local_wo.normalized(), self.sharpness);
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
         let object_wo = frame
@@ -69,7 +88,7 @@ impl Material for SharpLight {
         Some((
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy),
-            PDF::from(non_normalized_local_wo.z().abs() / PI),
+            PDF::from(fac),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
     }
@@ -91,11 +110,41 @@ impl Material for SharpLight {
         // lets check if it could have been constructed by sample_emission.
 
         let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
-        if wi.z() >= min_z {
+        if wi.z() > min_z {
             // could have been generated
-            SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
+            let fac = evaluate(wi, self.sharpness);
+            SingleEnergy::new(fac * self.color.evaluate_power(hit.lambda))
         } else {
             SingleEnergy::ZERO
         }
     }
+    // evaluate the directional pdf if the spectral power distribution
+    fn emission_pdf(&self, _hit: &HitRecord, wo: Vec3) -> PDF {
+        let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
+        if wo.z() > min_z {
+            let pdf = evaluate(wo, self.sharpness);
+            pdf.into()
+        } else {
+            0.0.into()
+        }
+    }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::curves;
+//     #[test]
+//     fn test_integral() {
+//         let light = SharpLight::new(curves::void(), 4.0, Sidedness::Forward);
+//         for _ in 0..10000 {
+//             let generated = light.sample_emission(
+//                 Point3::ORIGIN,
+//                 Vec3::Z,
+//                 curves::EXTENDED_VISIBLE_RANGE,
+//                 Sample2D::new_random_sample(),
+//                 Sample1D::new_random_sample(),
+//             );
+//         }
+//     }
+// }

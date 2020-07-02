@@ -79,4 +79,14 @@ impl Material for DiffuseLight {
             SingleEnergy::ZERO
         }
     }
+
+    // evaluate the directional pdf if the spectral power distribution
+    fn emission_pdf(&self, hit: &HitRecord, wo: Vec3) -> PDF {
+        let cosine = wo.z();
+        if cosine > 0.0 {
+            (cosine / PI).into()
+        } else {
+            0.0.into()
+        }
+    }
 }
