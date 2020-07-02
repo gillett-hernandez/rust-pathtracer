@@ -28,8 +28,7 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "BDPT03"
-selected_pair = [0, 3]
+filename = "BDPT"
 integrator = "BDPT"
 max_bounces = 8
 exposure = 1.0
@@ -43,53 +42,53 @@ camera_samples = 4
 width = 1024
 height = 1024
 
-[[render_settings]]
-threads = 22
-filename = "BDPT12"
-selected_pair = [1, 2]
-integrator = "BDPT"
-max_bounces = 8
-exposure = 1.0
-min_samples = 32
-camera_id = 1
-russian_roulette = true
-only_direct = false
-light_samples = 4
-camera_samples = 4
-[render_settings.resolution]
-width = 1024
-height = 1024
+# [[render_settings]]
+# threads = 22
+# filename = "BDPT12"
+# selected_pair = [1, 2]
+# integrator = "BDPT"
+# max_bounces = 8
+# exposure = 1.0
+# min_samples = 32
+# camera_id = 1
+# russian_roulette = true
+# only_direct = false
+# light_samples = 4
+# camera_samples = 4
+# [render_settings.resolution]
+# width = 1024
+# height = 1024
 
-[[render_settings]]
-threads = 22
-filename = "BDPT21"
-selected_pair = [2, 1]
-integrator = "BDPT"
-max_bounces = 8
-exposure = 1.0
-min_samples = 32
-camera_id = 1
-russian_roulette = true
-only_direct = false
-light_samples = 4
-camera_samples = 4
-[render_settings.resolution]
-width = 1024
-height = 1024
+# [[render_settings]]
+# threads = 22
+# filename = "BDPT21"
+# selected_pair = [2, 1]
+# integrator = "BDPT"
+# max_bounces = 8
+# exposure = 1.0
+# min_samples = 32
+# camera_id = 1
+# russian_roulette = true
+# only_direct = false
+# light_samples = 4
+# camera_samples = 4
+# [render_settings.resolution]
+# width = 1024
+# height = 1024
 
-[[render_settings]]
-threads = 22
-filename = "BDPT30"
-selected_pair = [3, 0]
-integrator = "BDPT"
-max_bounces = 8
-exposure = 1.0
-min_samples = 32
-camera_id = 1
-russian_roulette = true
-only_direct = false
-light_samples = 4
-camera_samples = 4
-[render_settings.resolution]
-width = 1024
-height = 1024
+# [[render_settings]]
+# threads = 22
+# filename = "BDPT30"
+# selected_pair = [3, 0]
+# integrator = "BDPT"
+# max_bounces = 8
+# exposure = 1.0
+# min_samples = 32
+# camera_id = 1
+# russian_roulette = true
+# only_direct = false
+# light_samples = 4
+# camera_samples = 4
+# [render_settings.resolution]
+# width = 1024
+# height = 1024

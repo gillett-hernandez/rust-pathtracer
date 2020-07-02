@@ -209,19 +209,20 @@ impl NaiveRenderer {
             .threads
             .unwrap();
 
-        // static SHOW_PROGRESS_BAR: bool = false;
+        const SHOW_PROGRESS_BAR: bool = true;
+        // if SHOW_PROGRESS_BAR {
         let mut pb = ProgressBar::new(total_pixels as u64);
-
+        // }
         let pixel_count = Arc::new(AtomicUsize::new(0));
         let clone1 = pixel_count.clone();
         let thread = thread::spawn(move || {
             let mut local_index = 0;
             while local_index < total_pixels {
                 let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
-                // if SHOW_PROGRESS_BAR {
-                pb.add(pixels_to_increment as u64);
-                // pb.tick();
-                // }
+                if SHOW_PROGRESS_BAR {
+                    pb.add(pixels_to_increment as u64);
+                    // pb.tick();
+                }
                 local_index += pixels_to_increment;
                 // pixels_to_increment = 0;
                 // while pixels_to_increment > 0 {

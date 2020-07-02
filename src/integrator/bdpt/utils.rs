@@ -465,11 +465,13 @@ pub fn eval_unweighted_contribution(
 pub struct CombinedPath<'a> {
     pub light_path: &'a Vec<Vertex>,
     pub eye_path: &'a Vec<Vertex>,
-    pub connection_index: usize,
+    pub s: usize,
+    pub t: usize,
     pub connecting_g: f32,
-    pub connecting_backward_pdf: f32,
-    pub connecting_forward_pdf: f32,
-    pub path_length: usize,
+    pub light_vertex_pdf_forward: f32,
+    pub light_vertex_pdf_backward: f32,
+    pub eye_vertex_pdf_forward: f32,
+    pub eye_vertex_pdf_backward: f32,
 }
 
 impl<'a> CombinedPath<'a> {
@@ -488,23 +490,22 @@ impl<'a> CombinedPath<'a> {
         // however our indices are switched, and x_i.veach_g needs to be between x_i-1 and x_i
         // on the light side, the indices don't need to be switched
         // however on the eye side, the indices need to be modified.
-        if vidx1 == self.connection_index && vidx0 == self.connection_index - 1 {
+        if vidx1 == self.s && vidx0 == self.s - 1 {
             // self.eye_path[t].veach_g
             // self.eye_path[self.path_length - vidx1].veach_g
             self.connecting_g
-        } else if vidx1 < self.connection_index {
+        } else if vidx1 < self.s {
             // if vidx1 is less than s, which is to say <= s-1
             self.light_path[vidx1].veach_g
         } else {
             // vidx1 must be > connection_index
-            let t = self.path_length - self.connection_index;
-            let mapped_index = 1 + self.path_length - vidx1;
+            let mapped_index = self.s + self.t - vidx0 - 1;
             assert!(
-                mapped_index <= t,
+                mapped_index <= self.t,
                 "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
                 mapped_index,
-                self.path_length,
-                self.connection_index,
+                self.s + self.t,
+                self.s,
                 self
             );
             // let mapped_index = t - mapped_index;
@@ -514,12 +515,15 @@ impl<'a> CombinedPath<'a> {
 
     pub fn pdf_forward(&self, vidx: usize) -> f32 {
         let vertex = self[vidx];
-        let s = self.connection_index;
+        let s = self.s;
         // if the request for the forward pdf is for the path connection, return it
         // forward connection pdf is the forward connection of index vidx == s-1;
         if vidx + 1 == s {
-            // vidx == s - 1
-            self.connecting_forward_pdf
+            // vidx == s - 1 is still a light vertex, but its probability is overridden
+            self.light_vertex_pdf_forward
+        } else if vidx == s {
+            // vidx == s is the last eye vertex, but its probability is overridden
+            self.eye_vertex_pdf_backward
         } else if vidx + 1 > s {
             // has to be swapped.
             vertex.pdf_backward
@@ -533,12 +537,18 @@ impl<'a> CombinedPath<'a> {
         let vertex = self[vidx];
         // if the request for the backward pdf is for the path connection, return it
         // backward connection pdf is the backward connection of index vidx == s;
-        if vidx == self.connection_index {
-            self.connecting_backward_pdf
-        } else if vidx > self.connection_index {
+        let s = self.s;
+        if vidx + 1 == s {
+            // vidx == s - 1 is still a light vertex, but its probability is overridden
+            self.light_vertex_pdf_backward
+        } else if vidx == s {
+            // vidx == s is the last eye vertex, but its probability is overridden
+            self.eye_vertex_pdf_forward
+        } else if vidx + 1 > s {
             // has to be swapped.
             vertex.pdf_forward
         } else {
+            // vidx < s
             vertex.pdf_backward
         }
     }
@@ -547,18 +557,18 @@ impl<'a> CombinedPath<'a> {
 impl<'a> Index<usize> for CombinedPath<'a> {
     type Output = Vertex;
     fn index(&self, index: usize) -> &Self::Output {
-        if index < self.connection_index {
+        if index < self.s {
             debug_assert!(index < self.light_path.len());
             // println!("light: path index and subpath index {}", index);
             &self.light_path[index]
         } else {
             debug_assert!(
-                self.path_length >= 1 + index,
+                self.s + self.t >= 1 + index,
                 "index+1: {} >= path_length: {}",
                 index + 1,
-                self.path_length,
+                self.s + self.t,
             );
-            let index = self.path_length - index - 1;
+            let index = self.s + self.t - index - 1;
             debug_assert!(index < self.eye_path.len());
             &self.eye_path[index]
         }
@@ -617,76 +627,6 @@ where
 
     // need to compute the connecting pdfs.
 
-    /*
-    let fsl = if s == 1 {
-        // connected to surface of light
-        // consider resampling last_light_vertex to be in a more favorable position.
-
-        if last_light_vertex.vertex_type
-            == VertexType::LightSource(LightSourceType::Environment)
-        {
-            // connected to env vertex, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
-            // ignore the actual Point3 location of the env vertex and instead use its direction as the connection direction
-            let wo = -last_light_vertex.normal;
-            let uv = direction_to_uv(wo);
-            let emission = world.environment.emission(uv, last_eye_vertex.lambda);
-            ignore_distance_and_cos_o = true;
-            emission
-        } else {
-            let hit_light_material = world.get_material(last_light_vertex.material_id);
-            let emission = hit_light_material.emission(
-                &last_light_vertex.into(),
-                llv_local_light_to_eye,
-                None,
-            );
-            emission
-        }
-    } else {
-        let second_to_last_light_vertex = light_path[s - 2];
-        let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
-        let hit_material = world.get_material(last_light_vertex.material_id);
-        hit_material.f(
-            &last_light_vertex.into(),
-            llv_frame.to_local(&wi).normalized(),
-            llv_local_light_to_eye,
-        )
-    };
-
-    if fsl == SingleEnergy::ZERO {
-        return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
-    }
-
-    // lev means Last Eye Vertex
-    let lev_normal = last_eye_vertex.normal;
-    let lev_frame = TangentFrame::from_normal(lev_normal);
-    let lev_world_eye_to_light = -light_to_eye_direction;
-    let lev_local_eye_to_light = lev_frame.to_local(&lev_world_eye_to_light).normalized();
-    let fse = if t == 1 {
-        // connected to surface of camera
-        if let MaterialId::Camera(camera_id) = last_eye_vertex.material_id {
-            let camera = world.get_camera(camera_id as usize);
-            sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
-            SingleEnergy(
-                camera
-                    .eval_we(last_eye_vertex.point, last_light_vertex.point)
-                    .0,
-            )
-        } else {
-            SingleEnergy(0.0)
-        }
-    } else {
-        let second_to_last_eye_vertex = eye_path[t - 2];
-        let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
-        // let wo = -light_to_eye;
-        let hit_material = world.get_material(last_eye_vertex.material_id);
-        let reflectance = hit_material.f(
-            &last_eye_vertex.into(),
-            lev_frame.to_local(&wi).normalized(),
-            lev_local_eye_to_light,
-        );
-        reflectance
-    };*/
-
     let last_light_vertex = if s > 0 { Some(light_path[s - 1]) } else { None };
     let second_to_last_light_vertex = if s > 1 { Some(light_path[s - 2]) } else { None };
 
@@ -694,12 +634,12 @@ where
     let second_to_last_eye_vertex = if t > 1 { Some(eye_path[t - 2]) } else { None };
 
     // compute forward pdfs, which is lev to llv pdf and llv to lev pdf
-    let mut llv_forward_pdf = PDF::from(0.0);
-    let mut lev_forward_pdf = PDF::from(0.0);
+    let mut llv_forward_pdf = 1.0f32;
+    let mut lev_forward_pdf = 1.0f32;
 
     // recompute affected backward pdfs, that is, the backward pdfs of the vertices referred to as llv and lev, since their pdfs will have changed.
-    let mut llv_backward_pdf = PDF::from(0.0);
-    let mut lev_backward_pdf = PDF::from(0.0);
+    let mut llv_backward_pdf = 1.0f32;
+    let mut lev_backward_pdf = 1.0f32;
     // there are special cases need to be considered for t = 0 and s = 0. check the second arm of the following if branch
     if let (Some(llv), Some(lev)) = (last_light_vertex, last_eye_vertex) {
         let llv_normal = llv.normal;
@@ -732,16 +672,20 @@ where
             //     llv.point,
             //     llv_local_light_to_eye.z().abs(),
             // );
-            llv_forward_pdf = hit_material.value(
-                &llv.into(),
-                llv_frame.to_local(&wi).normalized(),
-                llv_local_light_to_eye,
-            );
-            llv_backward_pdf = hit_material.value(
-                &llv.into(),
-                llv_local_light_to_eye,
-                llv_frame.to_local(&wi).normalized(),
-            );
+            llv_forward_pdf = hit_material
+                .value(
+                    &llv.into(),
+                    llv_frame.to_local(&wi).normalized(),
+                    llv_local_light_to_eye,
+                )
+                .0;
+            llv_backward_pdf = hit_material
+                .value(
+                    &llv.into(),
+                    llv_local_light_to_eye,
+                    llv_frame.to_local(&wi).normalized(),
+                )
+                .0;
         } else {
             // s must be 1
             // which means the connection is to the surface of a light
@@ -756,7 +700,7 @@ where
                 // let uv = direction_to_uv(wo);
                 let g = (wo * lev.normal).abs();
 
-                llv_forward_pdf = PDF::from(llv.pdf_forward);
+                llv_forward_pdf = llv.pdf_forward;
             } else {
                 let hit_light_material = world.get_material(llv.material_id);
 
@@ -770,8 +714,10 @@ where
                 //     llv.point,
                 //     llv_local_light_to_eye.z().abs(),
                 // );
-                llv_forward_pdf =
-                    hit_light_material.emission_pdf(&llv.into(), llv_local_light_to_eye);
+                llv_forward_pdf = hit_light_material
+                    .emission_pdf(&llv.into(), llv_local_light_to_eye)
+                    .0;
+                llv_backward_pdf = 1.0; // put area sampling pdf here?
             }
         }
 
@@ -782,17 +728,19 @@ where
         if let Some(slev) = second_to_last_eye_vertex {
             let wi = (slev.point - lev.point).normalized();
             let hit_material = world.get_material(lev.material_id);
+            let llv_local_wi = llv_frame.to_local(&wi).normalized();
             // let g = veach_g(
             //     lev.point,
             //     lev_local_eye_to_light.z().abs(),
             //     llv.point,
             //     llv_local_light_to_eye.z().abs(),
             // );
-            lev_forward_pdf = hit_material.value(
-                &llv.into(),
-                llv_frame.to_local(&wi).normalized(),
-                llv_local_light_to_eye,
-            );
+            lev_forward_pdf = hit_material
+                .value(&llv.into(), llv_local_wi, llv_local_light_to_eye)
+                .0;
+            lev_backward_pdf = hit_material
+                .value(&llv.into(), llv_local_light_to_eye, llv_local_wi)
+                .0;
         } else {
             // t must be 1
             // which means the connection is to the surface of the camera
@@ -800,7 +748,8 @@ where
             if let MaterialId::Camera(camera_id) = lev.material_id {
                 let g = veach_g(lev.point, 1.0, llv.point, llv_local_light_to_eye.z().abs());
                 let camera = world.get_camera(camera_id as usize);
-                lev_forward_pdf = g * camera.eval_we(lev.point, llv.point).1;
+                lev_forward_pdf = (camera.eval_we(lev.point, llv.point).1).0;
+                lev_backward_pdf = 1.0; // do camera area sampling?
             }
         }
     } else {
@@ -820,7 +769,10 @@ where
                 // let uv = direction_to_uv(wo);
                 // let cos_o = (wo * second_to_last_eye_vertex.normal).abs();
 
-                llv_forward_pdf = PDF::from(last_eye_vertex.pdf_forward);
+                llv_forward_pdf = last_eye_vertex.pdf_forward;
+                llv_backward_pdf = 1.0; // env sampling pdf here maybe? maybe not since random sampling.
+                lev_forward_pdf = 0.0;
+                lev_backward_pdf = 0.0;
             } else {
                 let hit_light_material = world.get_material(last_eye_vertex.material_id);
 
@@ -838,8 +790,12 @@ where
                 //     second_to_last_eye_vertex.point,
                 //     cos_o,
                 // );
-                llv_forward_pdf = hit_light_material
-                    .emission_pdf(&last_eye_vertex.into(), frame.to_local(&wi).normalized());
+                llv_backward_pdf = hit_light_material
+                    .emission_pdf(&last_eye_vertex.into(), frame.to_local(&wi).normalized())
+                    .0;
+                llv_forward_pdf = 1.0; // do light area sampling pdf
+                lev_backward_pdf = 0.0;
+                lev_forward_pdf = 0.0;
             }
         } else {
             // t = 0, which means that the eye path randomly intersected a camera and that
@@ -857,10 +813,13 @@ where
                 //     second_to_last_light_vertex.point,
                 //     (normal * direction.normalized()).abs(),
                 // );
-                lev_forward_pdf = camera
+                llv_forward_pdf = (camera
                     .eval_we(last_light_vertex.point, second_to_last_light_vertex.point)
-                    .1;
-                llv_forward_pdf = lev_forward_pdf;
+                    .1)
+                    .0;
+                llv_backward_pdf = 1.0; // do camera area sampling pdf
+                lev_forward_pdf = 0.0;
+                lev_backward_pdf = 0.0;
             }
         }
     }
@@ -868,11 +827,13 @@ where
     let path = CombinedPath {
         light_path,
         eye_path,
-        connection_index: s,
+        s,
+        t,
         connecting_g,
-        connecting_forward_pdf: llv_forward_pdf.0,
-        connecting_backward_pdf: lev_forward_pdf.0,
-        path_length: k1,
+        light_vertex_pdf_forward: llv_forward_pdf,
+        light_vertex_pdf_backward: llv_backward_pdf,
+        eye_vertex_pdf_forward: lev_forward_pdf,
+        eye_vertex_pdf_backward: lev_backward_pdf,
     };
 
     let mut ps: Vec<f32> = vec![0.0; s + t + 2];
@@ -942,7 +903,7 @@ where
     }
 
     // then calculate down from index = s to index = 0
-    for j in 0..=s {
+    for j in 0..s {
         let i = s - j;
         let ip1 = i + 1;
         let im1 = i - 1;

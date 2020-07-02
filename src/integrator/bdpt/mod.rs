@@ -226,7 +226,7 @@ impl GenericIntegrator for BDPTIntegrator {
 
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
 
-        let mis_enabled = false;
+        static MIS_ENABLED: bool = true;
         if let Some((s, t)) = settings.selected_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
                 let res = eval_unweighted_contribution(
@@ -243,7 +243,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         if g == 0.0 || factor == SingleEnergy::ZERO {
                             return SingleWavelength::BLACK;
                         }
-                        let weight = if mis_enabled {
+                        let weight = if MIS_ENABLED {
                             eval_mis(
                                 &self.world,
                                 &light_path,
@@ -264,7 +264,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         if g == 0.0 || factor == SingleEnergy::ZERO {
                             return SingleWavelength::BLACK;
                         }
-                        let weight = if mis_enabled {
+                        let weight = if MIS_ENABLED {
                             eval_mis(
                                 &self.world,
                                 &light_path,
@@ -348,7 +348,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 if g == 0.0 {
                     continue;
                 }
-                let weight = if mis_enabled {
+                let weight = if MIS_ENABLED {
                     eval_mis(
                         &self.world,
                         &light_path,
