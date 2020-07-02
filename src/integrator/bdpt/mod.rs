@@ -101,13 +101,13 @@ impl GenericIntegrator for BDPTIntegrator {
                 pdf_forward.0.is_finite(),
                 "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                 pdf_forward,  // NaN
-                pdf_backward, // 1.989
+                pdf_backward, // 0.494
                 sampled.0,
                 material,
-                directional_pdf, // 0.0
+                directional_pdf, // NaN
                 light_surface_point,
                 light_surface_normal, // -Z
-                sampled.1.energy
+                sampled.1.energy      // 9.88
             );
             debug_assert!(
                 pdf_backward.0.is_finite(),

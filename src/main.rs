@@ -103,15 +103,15 @@ fn cornell_box(
     let mut world_materials = vec![lambertian_white, lambertian_green, lambertian_red];
 
     let mut world_instances = vec![
-        // Instance::from(Aggregate::from(AARect::new(
-        //     // ceiling
-        //     (2.0, 2.0),
-        //     Point3::new(0.0, 0.0, 1.0),
-        //     Axis::Z,
-        //     true,
-        //     0.into(),
-        //     0,
-        // ))),
+        Instance::from(Aggregate::from(AARect::new(
+            // ceiling
+            (2.0, 2.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Axis::Z,
+            true,
+            0.into(),
+            0,
+        ))),
         Instance::from(Aggregate::from(AARect::new(
             // floor
             (2.0, 2.0),
@@ -262,24 +262,24 @@ fn construct_scene(config: &Config) -> World {
     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.0003, iron_ior, 1.0, iron_kappa, 0.0));
 
     let additional_instances = vec![
-        // Instance::new(
-        //     Aggregate::from(Disk::new(
-        //         0.8,
-        //         Point3::new(0.0, 0.0, 0.0),
-        //         false,
-        //         MaterialId::Light(0),
-        //         0,
-        //     )),
-        //     Some(Transform3::from_stack(
-        //         Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
-        //         None,
-        //         Some(Transform3::from_translation(
-        //             Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
-        //         )),
-        //     )),
-        //     None,
-        //     None,
-        // ),
+        Instance::new(
+            Aggregate::from(Disk::new(
+                0.7,
+                Point3::new(0.0, 0.0, 0.0),
+                false,
+                MaterialId::Light(0),
+                0,
+            )),
+            Some(Transform3::from_stack(
+                Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
+                None,
+                Some(Transform3::from_translation(
+                    Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
+                )),
+            )),
+            None,
+            None,
+        ),
         Instance::from(Aggregate::from(Sphere::new(
             // ball in front left
             0.3,
@@ -327,7 +327,7 @@ fn construct_scene(config: &Config) -> World {
     // ));
     let light_material = MaterialEnum::from(SharpLight::new(
         blackbody_illuminant2,
-        4.0,
+        9.0,
         Sidedness::Forward,
     ));
 
@@ -350,17 +350,17 @@ fn construct_scene(config: &Config) -> World {
     // ];
     let world_illuminant = blackbody_illuminant1_dim;
 
-    // let env_map = EnvironmentMap::Constant {
+    let env_map = EnvironmentMap::Constant {
+        color: world_illuminant,
+        strength: config.env_strength.unwrap_or(1.0),
+    };
+
+    // let env_map = EnvironmentMap::Sun {
     //     color: world_illuminant,
     //     strength: config.env_strength.unwrap_or(1.0),
+    //     solid_angle: 0.14,
+    //     sun_direction: Vec3::Z,
     // };
-
-    let env_map = EnvironmentMap::Sun {
-        color: blackbody_illuminant1,
-        strength: config.env_strength.unwrap_or(1.0),
-        solid_angle: 0.04,
-        sun_direction: Vec3::Z,
-    };
 
     cornell_box(
         additional_instances,

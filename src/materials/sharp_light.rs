@@ -21,19 +21,32 @@ impl SharpLight {
 }
 
 fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
-    let cos_phi = vec.z();
+    let cos_phi = vec.z().clamp(0.0, 1.0);
+    // assert!(cos_phi <= 1.0 && cos_phi >= 0.0);
     let cos_phi2 = cos_phi * cos_phi;
     let sin_phi2 = 1.0 - cos_phi2;
     // let sin_phi = sin_phi2.sqrt();
     let sharpness2 = sharpness * sharpness;
 
-    let mut top_z = sharpness * cos_phi2;
-    let mut bottom_z = top_z;
-    let offset = cos_phi * (1.0 - sharpness2 * sin_phi2).sqrt();
-    top_z += offset;
-    bottom_z -= offset;
-    let dist_top = ((1.0 - (top_z - sharpness).powi(2)) + top_z.powi(2)).sqrt();
-    let dist_bottom = ((1.0 - (bottom_z - sharpness).powi(2)) + bottom_z.powi(2)).sqrt();
+    let common1 = sharpness2 * (2.0 * cos_phi2 - 1.0);
+    // assert!(
+    //     1.0 - sharpness2 * sin_phi2 >= 0.0,
+    //     "{}*{} = {}",
+    //     sharpness2,
+    //     sin_phi2,
+    //     sharpness2 * sin_phi2
+    // );
+    let common2 = 2.0 * sharpness * cos_phi * (1.0 - sharpness2 * sin_phi2).max(0.0).sqrt();
+    assert!(1.0 + common1 + common2 >= 0.0);
+    assert!(1.0 + common1 - common2 >= 0.0);
+    let dist_top = (1.0 + common1 + common2).sqrt();
+    let dist_bottom = (1.0 + common1 - common2).sqrt();
+    assert!(
+        dist_bottom.is_finite() && dist_top.is_finite(),
+        "{} {}",
+        dist_bottom,
+        dist_top
+    );
     (dist_top - dist_bottom) / (2.0 * PI)
 }
 
@@ -69,12 +82,13 @@ impl Material for SharpLight {
             random_on_unit_sphere(scatter_sample) + Vec3::Z * self.sharpness
         };
         // let mut local_wo = Vec3::Z;
+        let fac = evaluate(non_normalized_local_wo.normalized(), self.sharpness);
 
         if swap {
             non_normalized_local_wo = -non_normalized_local_wo;
         }
 
-        let fac = evaluate(non_normalized_local_wo.normalized(), self.sharpness);
+        assert!(fac.is_finite(), "{:?}, {:?}", self, non_normalized_local_wo);
         // needs to be converted to object space in a way that respects the surface normal
         let frame = TangentFrame::from_normal(normal);
         let object_wo = frame
@@ -85,6 +99,7 @@ impl Material for SharpLight {
         let (sw, _pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        let fac = 1.0;
         Some((
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy),
@@ -123,6 +138,7 @@ impl Material for SharpLight {
         let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
         if wo.z() > min_z {
             let pdf = evaluate(wo, self.sharpness);
+            let pdf = 1.0;
             pdf.into()
         } else {
             0.0.into()

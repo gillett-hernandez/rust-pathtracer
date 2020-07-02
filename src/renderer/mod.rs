@@ -104,7 +104,7 @@ impl NaiveRenderer {
                 //     pixels_to_increment -= 1;
                 //     local_index += 1;
                 // }
-                thread::sleep(Duration::from_millis(1));
+                thread::sleep(Duration::from_millis(250));
             }
         });
 
@@ -230,7 +230,7 @@ impl NaiveRenderer {
                 //     pixels_to_increment -= 1;
                 //     local_index += 1;
                 // }
-                thread::sleep(Duration::from_millis(1));
+                thread::sleep(Duration::from_millis(250));
             }
         });
 

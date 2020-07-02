@@ -29,9 +29,8 @@ vfov = 90
 [[render_settings]]
 threads = 22
 filename = "BDPT"
-# selected_pair = [0, 3]
 integrator = "BDPT"
-max_bounces = 8
+max_bounces = 6
 exposure = 1.0
 min_samples = 128
 camera_id = 1
