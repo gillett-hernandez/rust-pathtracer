@@ -623,7 +623,20 @@ impl Renderer for NaiveRenderer {
                     //         .cloned()
                     //         .zip(render_splatted_result),
                     // );
-                    for (render_settings, film) in render_splatted_result {
+                    for (mut render_settings, film) in render_splatted_result {
+                        // if selected pair, add the pair numbers to the filename automatically
+                        if let Some((s, t)) = render_settings.selected_pair {
+                            let new_filename = format!(
+                                "{}{}{}",
+                                render_settings
+                                    .filename
+                                    .expect("render didn't have filename, wtf"),
+                                s,
+                                t
+                            );
+                            println!("new filename is {}", new_filename);
+                            render_settings.filename = Some(new_filename);
+                        }
                         output_film(&render_settings, &film);
                     }
                 }

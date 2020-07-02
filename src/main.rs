@@ -358,7 +358,7 @@ fn construct_scene(config: &Config) -> World {
     let env_map = EnvironmentMap::Sun {
         color: blackbody_illuminant1,
         strength: config.env_strength.unwrap_or(1.0),
-        solid_angle: 0.1,
+        solid_angle: 0.04,
         sun_direction: Vec3::Z,
     };
 

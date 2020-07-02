@@ -57,7 +57,9 @@ impl EnvironmentMap {
                 sun_direction,
             } => {
                 let direction = uv_to_direction(uv);
-                if ((*sun_direction * direction) - 1.0).abs() * 2.0 < *solid_angle {
+                let cos = (*sun_direction * direction).abs();
+                let sin = (1.0 - cos * cos).sqrt();
+                if sin.abs() < *solid_angle {
                     // within solid angle
                     SingleEnergy::new(color.evaluate_power(lambda) * *strength)
                 } else {

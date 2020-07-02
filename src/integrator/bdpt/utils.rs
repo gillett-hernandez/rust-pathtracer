@@ -284,7 +284,7 @@ pub fn eval_unweighted_contribution(
         if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
             // second to last eye vertex is the one in the scene
             // last_eye_vertex is on env.
-            let wo = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
+            let wo = last_eye_vertex.normal; // the env vertex stores the direction the ray was going
             let uv = direction_to_uv(wo);
             let emission = world.environment.emission(uv, last_eye_vertex.lambda);
             cst = emission;
@@ -364,13 +364,21 @@ pub fn eval_unweighted_contribution(
             if last_light_vertex.vertex_type
                 == VertexType::LightSource(LightSourceType::Environment)
             {
-                // connected to env vertex, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
-                // ignore the actual Point3 location of the env vertex and instead use its direction as the connection direction
-                let wo = -last_light_vertex.normal;
-                let uv = direction_to_uv(wo);
-                let emission = world.environment.emission(uv, last_eye_vertex.lambda);
-                ignore_distance_and_cos_o = true;
-                emission
+                if last_eye_vertex.vertex_type
+                    == VertexType::LightSource(LightSourceType::Environment)
+                {
+                    // can't connect an environment vertex to another environment vertex.
+                    SingleEnergy::ZERO
+                } else {
+                    // connected to env vertex, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
+                    // ignore the actual Point3 location of the env vertex and instead use its direction as the connection direction
+                    // also ignore the veach G term and only include the cosine, since the veach g term doesn't work with infinitely far rays.
+                    let wo = -last_light_vertex.normal;
+                    let uv = direction_to_uv(wo);
+                    let emission = world.environment.emission(uv, last_eye_vertex.lambda);
+                    ignore_distance_and_cos_o = true;
+                    emission
+                }
             } else {
                 let hit_light_material = world.get_material(last_light_vertex.material_id);
                 let emission = hit_light_material.emission(
@@ -490,7 +498,9 @@ impl<'a> CombinedPath<'a> {
         // however our indices are switched, and x_i.veach_g needs to be between x_i-1 and x_i
         // on the light side, the indices don't need to be switched
         // however on the eye side, the indices need to be modified.
-        if vidx1 == self.s && vidx0 == self.s - 1 {
+        assert!(vidx0 + 1 == vidx1);
+        assert!(self.s + self.t >= vidx0 + 1 || vidx1 < self.s);
+        if vidx1 == self.s {
             // self.eye_path[t].veach_g
             // self.eye_path[self.path_length - vidx1].veach_g
             self.connecting_g
@@ -499,6 +509,14 @@ impl<'a> CombinedPath<'a> {
             self.light_path[vidx1].veach_g
         } else {
             // vidx1 must be > connection_index
+            assert!(
+                self.s + self.t >= vidx0 + 1,
+                "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
+                vidx0,
+                self.s + self.t,
+                self.s,
+                self
+            );
             let mapped_index = self.s + self.t - vidx0 - 1;
             assert!(
                 mapped_index <= self.t,
@@ -902,11 +920,11 @@ where
         }
     }
 
-    // then calculate down from index = s to index = 0
-    for j in 0..s {
-        let i = s - j;
-        let ip1 = i + 1;
-        let im1 = i - 1;
+    // then calculate down from index = s-1 to index = 0
+    for j in 1..s {
+        let i = s - j; // i ranges from s to 1
+        let ip1 = i + 1; // ip1 ranges from s+1 to 2
+        let im1 = i - 1; // im1 ranges from s-1 to 0
         if i == k {
             // reciprocal bottom case of equation 10.9
             debug_assert!(
