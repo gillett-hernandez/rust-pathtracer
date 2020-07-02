@@ -57,7 +57,7 @@ impl EnvironmentMap {
                 sun_direction,
             } => {
                 let direction = uv_to_direction(uv);
-                if ((*sun_direction * direction) - 1.0).abs() < *solid_angle {
+                if ((*sun_direction * direction) - 1.0).abs() * 2.0 < *solid_angle {
                     // within solid angle
                     SingleEnergy::new(color.evaluate_power(lambda) * *strength)
                 } else {
@@ -99,8 +99,8 @@ impl EnvironmentMap {
             EnvironmentMap::Sun {
                 color,
                 strength,
-                solid_angle,
-                sun_direction,
+                solid_angle: _,
+                sun_direction: _,
             } => {
                 let (mut sw, _pdf) =
                     color.sample_power_and_pdf(wavelength_range, wavelength_sample);
@@ -175,7 +175,7 @@ impl EnvironmentMap {
                 sun_direction,
             } => {
                 let local_wo = Vec3::Z + *solid_angle * random_in_unit_disk(sample);
-                let direction = *sun_direction;
+                let direction = -*sun_direction;
                 let frame = TangentFrame::from_normal(direction);
                 let direction = frame.to_world(&local_wo);
                 (
@@ -198,7 +198,7 @@ mod tests {
             strength: 1.0,
         };
         let (ray, sw, pdf) = env_map.sample_emission(
-            4.0,
+            1.0,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
             curves::EXTENDED_VISIBLE_RANGE,
@@ -215,5 +215,43 @@ mod tests {
         let dir_toward_world_origin = Point3::ORIGIN - origin;
         let dot = dir_toward_world_origin * direction;
         println!("{}", dot);
+    }
+
+    #[test]
+    fn test_sample_emission_sun() {
+        let env_map = EnvironmentMap::Sun {
+            color: curves::blackbody(5500.0, 40.0),
+            strength: 1.0,
+            solid_angle: 0.1,
+            sun_direction: Vec3::Z,
+        };
+        let (ray, sw, pdf) = env_map.sample_emission(
+            1.0,
+            Sample2D::new_random_sample(),
+            Sample2D::new_random_sample(),
+            curves::EXTENDED_VISIBLE_RANGE,
+            Sample1D::new_random_sample(),
+        );
+        println!("{:?} {:?} {:?}", ray, sw, pdf);
+        let Ray {
+            origin,
+            direction,
+            time: _,
+            tmax: _,
+        } = ray;
+
+        let dir_toward_world_origin = Point3::ORIGIN - origin;
+        let dot = dir_toward_world_origin * direction;
+        println!("{}", dot);
+    }
+
+    #[test]
+    fn test_uv_to_direction_and_back() {
+        let direction = Vec3::new(1.0, 1.0, 1.0).normalized();
+        println!("{:?}", direction);
+        let uv = direction_to_uv(direction);
+        println!("{:?}", uv);
+        let direction_again = uv_to_direction(uv);
+        println!("{:?}", direction_again);
     }
 }

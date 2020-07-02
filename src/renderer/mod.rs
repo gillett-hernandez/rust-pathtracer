@@ -220,6 +220,7 @@ impl NaiveRenderer {
                 let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
                 // if SHOW_PROGRESS_BAR {
                 pb.add(pixels_to_increment as u64);
+                // pb.tick();
                 // }
                 local_index += pixels_to_increment;
                 // pixels_to_increment = 0;

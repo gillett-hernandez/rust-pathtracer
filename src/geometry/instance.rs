@@ -4,6 +4,8 @@ use crate::math::*;
 
 use crate::geometry::*;
 
+use std::cmp::{Ordering, PartialOrd};
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instance {
     pub aggregate: Aggregate,
@@ -11,6 +13,27 @@ pub struct Instance {
     pub material_id: MaterialId,
     pub instance_id: usize,
 }
+
+impl Eq for Instance {}
+
+impl PartialOrd for Instance {
+    fn partial_cmp(&self, other: &Instance) -> Option<Ordering> {
+        if self.instance_id < other.instance_id {
+            Some(Ordering::Less)
+        } else if self.instance_id > other.instance_id {
+            Some(Ordering::Greater)
+        } else {
+            Some(Ordering::Equal)
+        }
+    }
+}
+
+impl Ord for Instance {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 impl Instance {
     pub fn new(
         aggregate: Aggregate,

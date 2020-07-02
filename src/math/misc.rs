@@ -27,14 +27,18 @@ pub fn max_blackbody_lambda(temp: f32) -> f32 {
 }
 
 pub fn uv_to_direction(uv: (f32, f32)) -> Vec3 {
-    let phi = PI * (2.0 * uv.0 - 1.0);
-    let (y, x) = phi.sin_cos();
-    let z = (PI * uv.1).cos();
+    let theta = uv.1 * PI;
+    let phi = (uv.0 - 0.5) * PI;
+    let (sin_theta, cos_theta) = theta.sin_cos();
+    let (sin_phi, cos_phi) = phi.sin_cos();
+    let (x, y, z) = (sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
     Vec3::new(x, y, z)
 }
 
 pub fn direction_to_uv(direction: Vec3) -> (f32, f32) {
-    let u = (PI + direction.y().atan2(direction.x())) / (2.0 * PI);
-    let v = direction.z().acos() / PI;
+    let phi = direction.y().atan2(direction.x());
+    let theta = direction.z().acos();
+    let u = phi / PI + 0.5;
+    let v = theta / PI;
     (u, v)
 }

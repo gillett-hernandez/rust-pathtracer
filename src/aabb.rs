@@ -20,14 +20,6 @@ impl AABB {
         AABB { min, max }
     }
     pub fn hit(&self, r: Ray, _t0: f32, _t1: f32) -> bool {
-        // let tmin: f32x4 = f32x4::splat(t0);
-        // let tmax: f32x4 = f32x4::splat(t1);
-        // assert that the absolute value of all the components of direction are greater than 0
-        // assert!(
-        //     r.direction.0.abs().gt(f32x4::splat(0.0)).all(),
-        //     "{:?}",
-        //     r.direction
-        // );
         let denom = r.direction.0;
         let min: f32x4 = ((self.min - r.origin).0 / denom) * Vec3::MASK;
 
@@ -37,6 +29,18 @@ impl AABB {
         if tmax.le(tmin).any() {
             return false;
         }
+
+        true
+
+        // let tmin: f32x4 = f32x4::splat(t0);
+        // let tmax: f32x4 = f32x4::splat(t1);
+        // assert that the absolute value of all the components of direction are greater than 0
+        // assert!(
+        //     r.direction.0.abs().gt(f32x4::splat(0.0)).all(),
+        //     "{:?}",
+        //     r.direction
+        // );
+
         // return whether all of tmax's elements were greater than tmins
         // this can be made safe by replacing NaNs with positive or negative 1 depending on the side
         // tmax.gt(tmin).all()
@@ -70,8 +74,6 @@ impl AABB {
         // }
         // tmin = tmin.max(t0);
         // tmax = tmax.min(t1);
-
-        true
     }
     pub fn expand(mut self, other: AABB) -> AABB {
         self.min = Point3::from_raw(self.min.0.min(other.min.0));

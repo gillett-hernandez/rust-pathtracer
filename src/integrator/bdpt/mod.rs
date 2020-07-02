@@ -2,7 +2,7 @@ mod utils;
 
 use utils::*;
 
-use crate::aabb::HasBoundingBox;
+// use crate::aabb::HasBoundingBox;
 use crate::config::RenderSettings;
 use crate::world::World;
 
@@ -226,7 +226,7 @@ impl GenericIntegrator for BDPTIntegrator {
 
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
 
-        let mis_enabled = true;
+        let mis_enabled = false;
         if let Some((s, t)) = settings.selected_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
                 let res = eval_unweighted_contribution(

@@ -133,7 +133,9 @@ impl World {
                 let instances = &mut self.accelerator.instances;
                 if let Some(camera_surface) = camera.get_surface() {
                     println!("removing camera surface {:?}", &camera_surface);
-                    instances.remove_item(&camera_surface);
+                    // instances.remove_item(&camera_surface);
+                    let id = instances.binary_search(&camera_surface).unwrap();
+                    instances.remove(id);
                 }
             }
         }
