@@ -18,24 +18,6 @@
 #     let (iron_ior, iron_kappa) =
 #         load_ior_and_kappa("data/curves/csv/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
 
-#     // create some curves
-#     let white = curves::cie_e(1.0);
-#     let flat_zero = curves::void();
-#     let flat_one = curves::cie_e(1.0);
-#     let cie_e_illuminant = curves::cie_e(15.0);
-#     let red = curves::red(1.0);
-#     let green = curves::green(1.0);
-#     let blue = curves::blue(1.0);
-#     let white = curves::cie_e(1.0);
-#     let moissanite = curves::cauchy(2.5415, 28665.0);
-#     let glass = curves::cauchy(1.45, 3540.0);
-
-#     // create materials
-#     let lambertian_white = MaterialEnum::from(Lambertian::new(white));
-#     let lambertian_red = MaterialEnum::from(Lambertian::new(red));
-#     let lambertian_green = MaterialEnum::from(Lambertian::new(green));
-#     let lambertian_blue = MaterialEnum::from(Lambertian::new(blue));
-
 #     let ggx_glass =
 #         MaterialEnum::from(GGX::new(0.0001, glass.clone(), 1.0, flat_zero.clone(), 1.0));
 #     let ggx_glass_rough =
@@ -49,36 +31,6 @@
 #         flat_zero.clone(),
 #         1.0,
 #     ));
-#     let ggx_silver_metal = MaterialEnum::from(GGX::new(
-#         0.003,
-#         silver_ior.clone(),
-#         1.0,
-#         silver_kappa.clone(),
-#         0.0,
-#     ));
-#     let ggx_copper_metal = MaterialEnum::from(GGX::new(
-#         0.003,
-#         copper_ior.clone(),
-#         1.0,
-#         copper_kappa.clone(),
-#         0.0,
-#     ));
-#     let ggx_silver_metal_rough = MaterialEnum::from(GGX::new(
-#         0.08,
-#         silver_ior.clone(),
-#         1.0,
-#         silver_kappa.clone(),
-#         0.0,
-#     ));
-#     let ggx_gold_metal = MaterialEnum::from(GGX::new(0.0003, gold_ior, 1.0, gold_kappa, 0.0));
-#     let ggx_lead_metal = MaterialEnum::from(GGX::new(0.0003, lead_ior, 1.0, lead_kappa, 0.0));
-#     let ggx_cold_lead_metal =
-#         MaterialEnum::from(GGX::new(0.0003, cold_lead_ior, 1.0, cold_lead_kappa, 0.0));
-#     let ggx_platinum_metal =
-#         MaterialEnum::from(GGX::new(0.0003, platinum_ior, 1.0, platinum_kappa, 0.0));
-#     let ggx_bismuth_metal =
-#         MaterialEnum::from(GGX::new(0.0008, bismuth_ior, 1.0, bismuth_kappa, 0.0));
-#     let ggx_iron_metal = MaterialEnum::from(GGX::new(0.0003, iron_ior, 1.0, iron_kappa, 0.0));
 
 #     let additional_instances = vec![
 #         Instance::new(
@@ -93,102 +45,9 @@
 #             MaterialId::Light(0),
 #             0,
 #         ),
-#         Instance::new(
-#             Aggregate::from(Sphere::new(
-#                 // ball in front
-#                 0.3,
-#                 Point3::new(-0.1, 0.0, -0.6),
-#             )),
-#             None,
-#             1.into(),
-#             1,
-#         ),
-#         Instance::new(
-#             Aggregate::from(Sphere::new(
-#                 // ball on back right
-#                 0.3,
-#                 Point3::new(0.5, -0.35, -0.7),
-#             )),
-#             None,
-#             2.into(),
-#             3,
-#         ), // ball at origin
-#         Instance::new(
-#             Aggregate::from(Sphere::new(
-#                 // ball on back left
-#                 0.3,
-#                 Point3::new(0.5, 0.35, -0.7),
-#             )),
-#             None,
-#             3.into(),
-#             4,
-#         ),
-#     ]; // ball at origin
-
-#     // create some illuminants and lights
-#     let blackbody_illuminant1_dim = curves::blackbody(2700.0, 1.0);
-#     let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
-#     let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
-#     let blackbody_illuminant2 = curves::blackbody(4500.0, 18.0);
-#     let xenon_lamp = parsing::curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
-#     let cie_e_illuminant_low_power = curves::cie_e(0.25);
-
-#     let light_material =
-#         MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
-#     // parallel light with low sharpness should approximate a diffuse light
-#     // let light_material = MaterialEnum::from(ParallelLight::new(
-#     //     blackbody_illuminant2,
-#     //     0.0,
-#     //     Sidedness::Forward,
-#     // ));
-#     // let light_material = MaterialEnum::from(SharpLight::new(
-#     //     blackbody_illuminant2,
-#     //     9.0,
-#     //     Sidedness::Forward,
-#     // ));
-
-#     let additional_materials = vec![
-#         light_material,
-#         // lambertian_red,
-#         // ggx_moissanite,
-#         ggx_unrealistic_dispersion,
-#         // ggx_glass,
-#         ggx_gold_metal,
-#         // lambertian_green,
-#         ggx_iron_metal,
-#         // lambertian_red,
-#     ];
-#     // let additional_materials = vec![
-#     //     light_material,
-#     //     lambertian_blue,
-#     //     lambertian_green,
-#     //     lambertian_red,
-#     // ];
-#     let world_illuminant = blackbody_illuminant1_dim;
-
-#     let env_map = EnvironmentMap::Constant {
-#         color: world_illuminant,
-#         strength: 1.0,
-#     };
-
-#     // let env_map = EnvironmentMap::Sun {
-#     //     color: world_illuminant,
-#     //     strength: config.env_strength.unwrap_or(1.0),
-#     //     solid_angle: 0.14,
-#     //     sun_direction: Vec3::Z,
-#     // };
-
-#     _cornell_box(
-#         additional_instances,
-#         additional_materials,
-#         env_map,
-#         config.env_sampling_probability.unwrap_or(0.5),
-#     )
-# }
-
 [environment]
 type="Constant"
-strength = 0.0
+strength = 0.00005
 [environment.color]
 type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"
@@ -261,6 +120,24 @@ type = "Flat"
 strength = 0.0
 
 [[materials]]
+name = "ggx_gold"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 0.0
+alpha = 0.004
+[materials.data.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 1
+interpolation_mode = "Cubic"
+[materials.data.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 2
+interpolation_mode = "Cubic"
+
+[[materials]]
 name = "ggx_copper"
 [materials.data]
 type = "GGX"
@@ -269,15 +146,18 @@ permeability = 0.0
 alpha = 0.004
 [materials.data.eta]
 type = "TabulatedCSV"
-filename = "data/curves/csv/copper.csv"
+filename = "data/curves/csv/copper-mcpeak.csv"
 column = 1
 interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
 [materials.data.kappa]
 type = "TabulatedCSV"
-filename = "data/curves/csv/copper.csv"
+filename = "data/curves/csv/copper-mcpeak.csv"
 column = 2
 interpolation_mode = "Cubic"
-
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
 
 [[materials]]
 name = "lambertian_red"
@@ -289,7 +169,6 @@ filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
 
-
 [[materials]]
 name = "diffuse_light"
 [materials.data]
@@ -300,21 +179,31 @@ type = "Linear"
 filename = "data/curves/spectra/xenon_lamp.spectra"
 interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
-x_offset = 0.0
-x_scale = 1.0
-y_offset = 0.0
+y_scale = 5.0
+
+[[materials]]
+name = "sharp_light"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
 y_scale = 5.0
 
 
+
 [[instances]]
-material_identifier = "diffuse_light"
+material_identifier = "sharp_light"
 [instances.aggregate]
 type = "Rect"
 size = [0.6, 0.6]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
-two_sided = true
-
+two_sided = false
 
 [[instances]]
 material_identifier = "lambertian_white"
@@ -369,7 +258,7 @@ radius = 0.5
 origin = [0.0, 0.0, 0.3]
 
 [[instances]]
-material_identifier = "ggx_glass_dispersive"
+material_identifier = "ggx_glass"
 [instances.aggregate]
 type = "Sphere"
 radius = 0.3

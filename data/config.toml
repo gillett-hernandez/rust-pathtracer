@@ -1,4 +1,4 @@
-env_sampling_probability = 0.0
+env_sampling_probability = 0.5
 scene_file = "data/scenes/cornell_box.toml"
 
 [[cameras]]
@@ -23,18 +23,19 @@ look_at = [0, 0, 0]
 aperture_size = 0.03
 vfov = 90
 
+
 [[render_settings]]
 threads = 22
 filename = "BDPT"
 integrator = "BDPT"
-max_bounces = 12
+max_bounces = 16
 exposure = 1.0
-min_samples = 128
+min_samples = 256
 camera_id = 1
 russian_roulette = true
 only_direct = false
 light_samples = 4
 camera_samples = 4
 [render_settings.resolution]
-width = 1024
-height = 1024
+width = 2160
+height = 2160

@@ -2,7 +2,7 @@ use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 use crate::math::color::XYZColor;
-use crate::math::misc::{gaussian, w};
+use crate::math::misc::gaussian;
 use crate::math::*;
 use serde::{Deserialize, Serialize};
 

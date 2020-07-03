@@ -15,18 +15,18 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DomainMapping {
-    pub x_offset: f32,
-    pub x_scale: f32,
-    pub y_offset: f32,
-    pub y_scale: f32,
+    pub x_offset: Option<f32>,
+    pub x_scale: Option<f32>,
+    pub y_offset: Option<f32>,
+    pub y_scale: Option<f32>,
 }
 impl Default for DomainMapping {
     fn default() -> Self {
         DomainMapping {
-            x_offset: 0.0,
-            x_scale: 1.0,
-            y_offset: 0.0,
-            y_scale: 1.0,
+            x_offset: Some(0.0),
+            x_scale: Some(1.0),
+            y_offset: Some(0.0),
+            y_scale: Some(1.0),
         }
     }
 }
@@ -243,8 +243,14 @@ pub fn parse_curve(curve: Curve) -> SPD {
             println!("attempting to parse and load linear file at {:?}", filename);
             let spd = load_linear(
                 &filename,
-                |x| (x - domain_mapping.x_offset) / domain_mapping.x_scale,
-                |y| (y - domain_mapping.y_offset) / domain_mapping.y_scale,
+                |x| {
+                    (x - domain_mapping.x_offset.unwrap_or(0.0))
+                        * domain_mapping.x_scale.unwrap_or(1.0)
+                },
+                |y| {
+                    (y - domain_mapping.y_offset.unwrap_or(0.0))
+                        * domain_mapping.y_scale.unwrap_or(1.0)
+                },
                 interpolation_mode,
             );
             let spd = spd.expect("loading linear data failed");
@@ -264,8 +270,14 @@ pub fn parse_curve(curve: Curve) -> SPD {
                 &filename,
                 column,
                 interpolation_mode,
-                |x| (x - domain_mapping.x_offset) / domain_mapping.x_scale,
-                |y| (y - domain_mapping.y_offset) / domain_mapping.y_scale,
+                |x| {
+                    (x - domain_mapping.x_offset.unwrap_or(0.0))
+                        * domain_mapping.x_scale.unwrap_or(1.0)
+                },
+                |y| {
+                    (y - domain_mapping.y_offset.unwrap_or(0.0))
+                        * domain_mapping.y_scale.unwrap_or(1.0)
+                },
             );
             let spd = spd.expect("loading tabulated data failed");
             println!("parsed tabulated curve");

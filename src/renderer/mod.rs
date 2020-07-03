@@ -466,6 +466,39 @@ impl NaiveRenderer {
         let mut i = 0;
         for light_film in light_films.lock().unwrap().iter() {
             let mut render_settings = films[i].0.clone();
+            let mut image_film = films[i].1.clone();
+            let new_filename = format!(
+                "{}{}",
+                render_settings
+                    .filename
+                    .expect("render didn't have filename, wtf"),
+                "_combined"
+            );
+            println!("new filename is {}", new_filename);
+            render_settings.filename = Some(new_filename);
+
+            image_film
+                .buffer
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(pixel_index, pixel_ref)| {
+                    let y: usize = pixel_index / render_settings.resolution.width;
+                    let x: usize = pixel_index - render_settings.resolution.width * y;
+                    let light_color = light_film.at(x, y);
+                    *pixel_ref = *pixel_ref + light_color / (10.0);
+                });
+
+            films.push((render_settings, image_film));
+            println!(
+                "added combination film to films vec, films vec length is now {}",
+                films.len()
+            );
+            i += 1;
+        }
+
+        let mut i = 0;
+        for light_film in light_films.lock().unwrap().iter() {
+            let mut render_settings = films[i].0.clone();
             let new_filename = format!(
                 "{}{}",
                 render_settings

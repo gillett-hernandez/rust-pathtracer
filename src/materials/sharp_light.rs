@@ -123,23 +123,38 @@ impl Material for SharpLight {
     fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
         // wi is in local space, and is normalized
         // lets check if it could have been constructed by sample_emission.
-
-        let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
-        if wi.z() > min_z {
-            // could have been generated
-            let fac = evaluate(wi, self.sharpness);
-            SingleEnergy::new(fac * self.color.evaluate_power(hit.lambda))
+        let cosine = wi.z();
+        if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
+            || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
+            || self.sidedness == Sidedness::Dual
+        {
+            let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
+            if cosine > min_z {
+                // could have been generated
+                let fac = evaluate(wi, self.sharpness);
+                SingleEnergy::new(fac * self.color.evaluate_power(hit.lambda))
+            } else {
+                SingleEnergy::ZERO
+            }
         } else {
             SingleEnergy::ZERO
         }
     }
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(&self, _hit: &HitRecord, wo: Vec3) -> PDF {
-        let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
-        if wo.z() > min_z {
-            let pdf = evaluate(wo, self.sharpness);
-            // let pdf = 1.0;
-            pdf.into()
+        let cosine = wo.z();
+        if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
+            || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
+            || self.sidedness == Sidedness::Dual
+        {
+            let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
+            if cosine > min_z {
+                // could have been generated
+                let pdf = evaluate(wo, self.sharpness);
+                pdf.into()
+            } else {
+                0.0.into()
+            }
         } else {
             0.0.into()
         }
