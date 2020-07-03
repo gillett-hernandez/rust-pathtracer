@@ -99,10 +99,10 @@ impl Material for SharpLight {
         let (sw, _pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
-        let fac = 1.0;
+        // fac both affects the power of the emitted light and the pdf.
         Some((
             Ray::new(point, object_wo),
-            sw.with_energy(sw.energy),
+            sw.with_energy(sw.energy * fac),
             PDF::from(fac),
             // PDF::from(local_wo.z().abs() * pdf.0 / PI),
         ))
@@ -138,7 +138,7 @@ impl Material for SharpLight {
         let min_z = (1.0 - self.sharpness.powi(2).recip()).sqrt();
         if wo.z() > min_z {
             let pdf = evaluate(wo, self.sharpness);
-            let pdf = 1.0;
+            // let pdf = 1.0;
             pdf.into()
         } else {
             0.0.into()

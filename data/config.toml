@@ -25,7 +25,6 @@ vfov = 90
 
 
 
-
 [[render_settings]]
 threads = 22
 filename = "BDPT"
