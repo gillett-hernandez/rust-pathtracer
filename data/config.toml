@@ -24,10 +24,12 @@ aperture_size = 0.03
 vfov = 90
 
 
+
 [[render_settings]]
 threads = 22
 filename = "BDPT"
 integrator = "BDPT"
+min_bounces = 6
 max_bounces = 16
 exposure = 1.0
 min_samples = 16
@@ -37,5 +39,5 @@ only_direct = false
 light_samples = 4
 camera_samples = 4
 [render_settings.resolution]
-width = 2160
-height = 2160
+width = 512
+height = 512

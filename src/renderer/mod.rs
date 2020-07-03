@@ -625,7 +625,7 @@ impl Renderer for NaiveRenderer {
                         // if selected pair, add the pair numbers to the filename automatically
                         if let Some((s, t)) = render_settings.selected_pair {
                             let new_filename = format!(
-                                "{}{}{}",
+                                "{}{}_{}",
                                 render_settings
                                     .filename
                                     .expect("render didn't have filename, wtf"),

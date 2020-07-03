@@ -199,7 +199,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampler,
             &self.world,
             &mut eye_path,
-            3,
+            settings.min_bounces.unwrap_or(3),
         );
         random_walk(
             light_ray,
@@ -210,7 +210,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampler,
             &self.world,
             &mut light_path,
-            3,
+            settings.min_bounces.unwrap_or(3),
         );
 
         for vertex in eye_path.iter() {

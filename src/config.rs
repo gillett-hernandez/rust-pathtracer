@@ -42,6 +42,7 @@ pub struct RenderSettings {
     pub resolution: Resolution,
     pub integrator: Option<String>,
     pub selected_pair: Option<(usize, usize)>,
+    pub min_bounces: Option<u16>,
     pub max_bounces: Option<u16>,
     pub threads: Option<u16>,
     pub min_samples: u16,
