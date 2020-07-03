@@ -1,14 +1,13 @@
-#![allow(unused_imports, unused_variables, unused)]
 extern crate num_cpus;
 extern crate serde;
 
-use std::env;
+// use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::io::{self, BufWriter, Write};
-use std::path::Path;
+// use std::io::{self, BufWriter, Write};
+// use std::path::Path;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use toml;
 
 #[derive(Deserialize, Copy, Clone)]
