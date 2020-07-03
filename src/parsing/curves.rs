@@ -276,7 +276,6 @@ pub fn parse_curve(curve: Curve) -> SPD {
             bounds: EXTENDED_VISIBLE_RANGE,
             mode: InterpolationMode::Linear,
         },
-        _ => mauve(1.0),
     }
 }
 

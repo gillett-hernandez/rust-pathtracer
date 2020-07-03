@@ -81,15 +81,19 @@ impl GenericIntegrator for BDPTIntegrator {
             let mat_id = light.get_material_id();
             let material = self.world.get_material(mat_id);
             // println!("sampled light emission in instance light branch");
-            sampled = material
-                .sample_emission(
-                    light_surface_point,
-                    light_surface_normal,
-                    VISIBLE_RANGE,
-                    sampler.draw_2d(),
-                    wavelength_sample,
-                )
-                .unwrap();
+            let maybe_sampled = material.sample_emission(
+                light_surface_point,
+                light_surface_normal,
+                VISIBLE_RANGE,
+                sampler.draw_2d(),
+                wavelength_sample,
+            );
+            sampled = if let Some(data) = maybe_sampled {
+                data
+            } else {
+                println!("light instance is {:?}, material is {:?}", light, material);
+                panic!();
+            };
 
             let directional_pdf = sampled.2;
             // if delta light, the pdf_forward is only directional_pdf

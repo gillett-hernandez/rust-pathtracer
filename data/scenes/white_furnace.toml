@@ -1,11 +1,31 @@
+
+
+# fn _white_furnace_test(material: MaterialEnum) -> World {
+#     let world = World::new(
+#         vec![Instance::new(
+#             Aggregate::from(Sphere::new(5.0, Point3::ORIGIN)),
+#             None,
+#             MaterialId::Material(0),
+#             0,
+#         )],
+#         vec![material],
+#         EnvironmentMap::Constant {
+#             color: curves::cie_e(1.0),
+#             strength: 1.0,
+#         },
+#         1.0,
+#         AcceleratorType::List,
+#     );
+#     world
+# }
+
 [environment]
 type="Constant"
-strength = 0.0
+strength = 1.0
 [environment.color]
-type = "TabulatedCSV"
-filename = "data/curves/csv/D65.csv"
-column = 1
-interpolation_mode = "Cubic"
+type = "Flat"
+strength = 1.0
+interpolation_mode = "Linear"
 
 [[materials]]
 name = "lambertian_white"
@@ -41,8 +61,6 @@ b = 50000.0
 [materials.data.kappa]
 type = "Flat"
 strength = 0.0
-
-
 
 [[materials]]
 name = "lambertian_red"

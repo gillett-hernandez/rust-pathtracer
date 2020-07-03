@@ -462,6 +462,7 @@ impl NaiveRenderer {
         // let now = Instant::now();
 
         // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
+
         let mut i = 0;
         for light_film in light_films.lock().unwrap().iter() {
             let mut render_settings = films[i].0.clone();

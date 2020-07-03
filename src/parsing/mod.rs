@@ -67,17 +67,16 @@ pub fn construct_world(config: &Config) -> World {
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
     let mut materials: Vec<MaterialEnum> = Vec::new();
     let mut instances: Vec<Instance> = Vec::new();
-    let mut light_count: usize = 0;
-    let mut generic_material_count: usize = 0;
+    let mut material_count: usize = 0;
     for material in scene.materials {
         let id = match material.data {
             MaterialData::DiffuseLight(_) | MaterialData::SharpLight(_) => {
-                light_count += 1;
-                MaterialId::Light((light_count - 1) as u16)
+                material_count += 1;
+                MaterialId::Light((material_count - 1) as u16)
             }
             MaterialData::Lambertian(_) | MaterialData::GGX(_) => {
-                generic_material_count += 1;
-                MaterialId::Material((generic_material_count - 1) as u16)
+                material_count += 1;
+                MaterialId::Material((material_count - 1) as u16)
             }
         };
         material_names_to_ids.insert(material.name, id);
