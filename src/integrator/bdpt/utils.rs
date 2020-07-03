@@ -111,12 +111,13 @@ pub fn random_walk(
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
+    russian_roulette_start_index: u16,
 ) -> Option<SingleEnergy> {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
     let mut additional_contribution = SingleEnergy::ZERO;
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
-    for _ in 0..bounce_limit {
+    for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.01, ray.tmax) {
             hit.lambda = lambda;
             hit.transport_mode = trace_type;
@@ -161,50 +162,60 @@ pub fn random_walk(
 
             if let Some(wo) = maybe_wo {
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
+                let f = material.f(&hit, wi, wo);
                 let cos_i = wo.z().abs();
                 let cos_o = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
                 // if emission.0 > 0.0 {
 
                 // }
-                let pdf = material.value(&hit, wi, wo);
+                let mut pdf = material.value(&hit, wi, wo);
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.0 < 0.00000001 || pdf.is_nan() {
                     break;
                 }
-
-                vertex.pdf_forward = pdf.0 / cos_i;
-
-                if false && cos_o < 0.00001 {
-                    // considered specular
-                    vertex.pdf_backward = vertex.pdf_forward;
+                let rr_continue_prob = if bounce >= russian_roulette_start_index {
+                    (f.0 / pdf.0).min(1.0)
                 } else {
-                    // eval pdf in reverse direction
-                    vertex.pdf_backward = material.value(&hit, wo, wi).0 / cos_o;
+                    1.0
+                };
+                let russian_roulette_sample = sampler.draw_1d();
+                if russian_roulette_sample.x > rr_continue_prob {
+                    break;
                 }
+                beta *= f * cos_i.abs() / (rr_continue_prob * pdf.0);
+                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_i;
+
+                // consider handling delta distributions differently here, if deltas are ever added.
+                // eval pdf in reverse direction
+                vertex.pdf_backward = rr_continue_prob * material.value(&hit, wo, wi).0 / cos_o;
+
                 debug_assert!(
                     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
-                    "pdf forward was 0 for material {:?} at vertex {:?}",
-                    material,
-                    vertex
-                );
-                debug_assert!(
-                    vertex.pdf_backward > 0.0 && vertex.pdf_backward.is_finite(),
-                    "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}",
+                    "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
                     material,
                     vertex,
                     wi,
                     wo,
                     cos_o,
-                    cos_i
+                    cos_i,
+                    rr_continue_prob,
+                );
+                debug_assert!(
+                    vertex.pdf_backward > 0.0 && vertex.pdf_backward.is_finite(),
+                    "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
+                    material,
+                    vertex,
+                    wi,
+                    wo,
+                    cos_o,
+                    cos_i,
+                    rr_continue_prob,
                 );
 
                 vertices.push(vertex);
 
-                let f = material.f(&hit, wi, wo);
-
                 // let beta_before_hit = beta;
-                beta *= f * cos_i.abs() / pdf.0;
                 // last_bsdf_pdf = pdf;
 
                 debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
@@ -274,6 +285,7 @@ pub fn eval_unweighted_contribution(
     eye_path: &Vec<Vertex>,
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
+    russian_roulette_threshold: f32,
 ) -> SampleKind {
     let last_light_vertex_throughput = if s == 0 {
         SingleEnergy::ONE
@@ -287,7 +299,7 @@ pub fn eval_unweighted_contribution(
         eye_path[t - 1].throughput
     };
 
-    let cst: SingleEnergy;
+    let mut cst: SingleEnergy;
     let mut sample = SampleKind::Sampled((SingleEnergy::ONE, 0.0));
     let g;
     if s == 0 {
@@ -466,11 +478,19 @@ pub fn eval_unweighted_contribution(
             return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
 
-        if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
-            // not visible
+        let sample = _sampler.draw_1d().x;
+        cst = fsl * g * fse;
+        let russian_roulette_probability = (cst.0 / russian_roulette_threshold).min(1.0);
+        if sample < russian_roulette_probability {
+            if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
+                // not visible
+                return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+            } else {
+                cst *= 1.0 / russian_roulette_probability;
+            }
+        } else {
             return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
         }
-        cst = fsl * g * fse;
     }
     match sample {
         SampleKind::Sampled(_) => SampleKind::Sampled((

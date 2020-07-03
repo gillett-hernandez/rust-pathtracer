@@ -199,6 +199,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampler,
             &self.world,
             &mut eye_path,
+            3,
         );
         random_walk(
             light_ray,
@@ -209,6 +210,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampler,
             &self.world,
             &mut light_path,
+            3,
         );
 
         for vertex in eye_path.iter() {
@@ -230,6 +232,7 @@ impl GenericIntegrator for BDPTIntegrator {
         let (eye_vertex_count, light_vertex_count) = (eye_path.len(), light_path.len());
 
         static MIS_ENABLED: bool = true;
+        let russian_roulette_threshold = 0.005;
         if let Some((s, t)) = settings.selected_pair {
             if s <= light_vertex_count && t <= eye_vertex_count {
                 let res = eval_unweighted_contribution(
@@ -239,6 +242,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     &eye_path,
                     t,
                     sampler,
+                    russian_roulette_threshold,
                 );
 
                 match res {
@@ -340,6 +344,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     &eye_path,
                     t,
                     sampler,
+                    russian_roulette_threshold,
                 );
                 let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),

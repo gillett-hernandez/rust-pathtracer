@@ -526,6 +526,8 @@ mod tests {
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
     }
+    // wi: Vec3(f32x4(-0.8824156, -0.21537678, 0.418277, 0.0)), wo: Vec3(f32x4(0.93439, 0.27564585, -0.22568727, 0.0))
+
     #[test]
     fn test_extremely_low_roughness() {
         let lambda = 762.2971;

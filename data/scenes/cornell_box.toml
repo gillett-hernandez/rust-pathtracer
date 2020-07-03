@@ -143,7 +143,7 @@ name = "ggx_copper"
 type = "GGX"
 eta_o = 1.0004
 permeability = 0.0
-alpha = 0.1
+alpha = 0.005
 [materials.data.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/copper-mcpeak.csv"
@@ -186,7 +186,7 @@ name = "sharp_light"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 4.0
+sharpness = 2.0
 [materials.data.color]
 type = "Linear"
 filename = "data/curves/spectra/xenon_lamp.spectra"

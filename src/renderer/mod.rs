@@ -236,8 +236,8 @@ impl NaiveRenderer {
 
         let clone2 = pixel_count.clone();
 
-        // let (tx, rx) = unbounded();
-        let (tx, rx) = bounded(100000);
+        let (tx, rx) = unbounded();
+        // let (tx, rx) = bounded(100000);
 
         let total_splats = Arc::new(Mutex::new(0usize));
 
