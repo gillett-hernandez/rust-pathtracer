@@ -20,7 +20,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crossbeam::channel::unbounded;
+use crossbeam::channel::{bounded, unbounded};
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
@@ -236,7 +236,8 @@ impl NaiveRenderer {
 
         let clone2 = pixel_count.clone();
 
-        let (tx, rx) = unbounded();
+        // let (tx, rx) = unbounded();
+        let (tx, rx) = bounded(100000);
 
         let total_splats = Arc::new(Mutex::new(0usize));
 
@@ -448,7 +449,7 @@ impl NaiveRenderer {
                     let y: usize = pixel_index / render_settings.resolution.width;
                     let x: usize = pixel_index - render_settings.resolution.width * y;
                     let light_color = light_film.at(x, y);
-                    *pixel_ref = *pixel_ref + light_color / (10.0);
+                    *pixel_ref = *pixel_ref + light_color / (render_settings.min_samples as f32);
                 });
 
             films.push((render_settings, image_film));

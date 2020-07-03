@@ -143,7 +143,7 @@ name = "ggx_copper"
 type = "GGX"
 eta_o = 1.0004
 permeability = 0.0
-alpha = 0.004
+alpha = 0.1
 [materials.data.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/copper-mcpeak.csv"
