@@ -4,18 +4,17 @@ use utils::*;
 
 // use crate::aabb::HasBoundingBox;
 use crate::config::RenderSettings;
-use crate::world::World;
-
 use crate::hittable::Hittable;
+use crate::integrator::{CameraId, GenericIntegrator, Sample};
 use crate::material::Material;
 use crate::materials::*;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::world::World;
+use crate::TransportMode;
 
 // use std::f32::INFINITY;
 use std::sync::Arc;
-
-use crate::integrator::{CameraId, GenericIntegrator, Sample};
 
 pub struct BDPTIntegrator {
     pub max_bounces: u16,
@@ -192,7 +191,7 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             self.max_bounces,
             SingleEnergy::ONE,
-            VertexType::Eye,
+            TransportMode::Importance,
             sampler,
             &self.world,
             &mut eye_path,
@@ -202,7 +201,7 @@ impl GenericIntegrator for BDPTIntegrator {
             lambda,
             self.max_bounces,
             radiance,
-            VertexType::Light,
+            TransportMode::Radiance,
             sampler,
             &self.world,
             &mut light_path,

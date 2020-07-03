@@ -2,15 +2,16 @@ use crate::world::World;
 // use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
 use crate::hittable::{HitRecord, Hittable};
+use crate::integrator::*;
 use crate::material::Material;
 use crate::materials::{MaterialEnum, MaterialId};
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::TransportMode;
 use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
+
 use std::f32::INFINITY;
 use std::sync::Arc;
-
-use crate::integrator::*;
 
 fn evaluate_direct_importance(
     world: &Arc<World>,
@@ -214,6 +215,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 // debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                 // println!("whatever1");
                 hit.lambda = lambda;
+                hit.transport_mode = TransportMode::Radiance;
 
                 debug_assert!(lambda > 0.0);
                 let frame = TangentFrame::from_normal(hit.normal);

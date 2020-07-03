@@ -56,6 +56,7 @@ impl Hittable for Sphere {
                     normal,
                     0.into(),
                     0,
+                    None,
                 ));
             }
             // time = r.time + (-b + discriminant_sqrt) / a;
@@ -73,6 +74,7 @@ impl Hittable for Sphere {
                     normal,
                     0.into(),
                     0,
+                    None,
                 ));
             }
         }

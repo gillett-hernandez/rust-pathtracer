@@ -6,6 +6,7 @@ use crate::material::Material;
 use crate::materials::MaterialEnum;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::TransportMode;
 // use crate::world::EnvironmentMap;
 use crate::NORMAL_OFFSET;
 
@@ -208,6 +209,8 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
                     // println!("whatever1");
                     hit.lambda = sum.lambda;
+                    // default transport mode is importance, but set it anyways
+                    hit.transport_mode = TransportMode::Importance;
                     let frame = TangentFrame::from_normal(hit.normal);
                     let wi = frame.to_local(&-ray.direction).normalized();
                     // debug_assert!(

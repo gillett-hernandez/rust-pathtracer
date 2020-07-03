@@ -97,6 +97,7 @@ impl Hittable for AARect {
             hit_normal,
             0.into(),
             0,
+            None,
         ))
     }
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
