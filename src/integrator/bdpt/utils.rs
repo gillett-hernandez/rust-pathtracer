@@ -693,6 +693,7 @@ where
     // recompute affected backward pdfs, that is, the backward pdfs of the vertices referred to as llv and lev, since their pdfs will have changed.
     let mut llv_backward_pdf = 1.0f32;
     let mut lev_backward_pdf = 1.0f32;
+
     // there are special cases need to be considered for t = 0 and s = 0. check the second arm of the following if branch
     if let (Some(llv), Some(lev)) = (last_light_vertex, last_eye_vertex) {
         let llv_normal = llv.normal;
@@ -754,6 +755,7 @@ where
                 let g = (wo * lev.normal).abs();
 
                 llv_forward_pdf = llv.pdf_forward;
+                llv_backward_pdf = 0.0; // what to do here? since env probability would be expressed in solid angle space.
             } else {
                 let hit_light_material = world.get_material(llv.material_id);
 
@@ -803,6 +805,9 @@ where
                 let camera = world.get_camera(camera_id as usize);
                 lev_forward_pdf = (camera.eval_we(lev.point, llv.point).1).0;
                 lev_backward_pdf = 1.0; // do camera area sampling?
+            } else {
+                lev_forward_pdf = 0.0;
+                lev_backward_pdf = 0.0;
             }
         }
     } else {
@@ -871,6 +876,11 @@ where
                     .1)
                     .0;
                 llv_backward_pdf = 1.0; // do camera area sampling pdf
+                lev_forward_pdf = 0.0;
+                lev_backward_pdf = 0.0;
+            } else {
+                llv_forward_pdf = 0.0;
+                llv_backward_pdf = 0.0;
                 lev_forward_pdf = 0.0;
                 lev_backward_pdf = 0.0;
             }
