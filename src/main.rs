@@ -33,6 +33,12 @@ use world::*;
 pub const NORMAL_OFFSET: f32 = 0.00001;
 pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 
+#[derive(Copy, Clone, PartialEq)]
+pub enum TransportMode {
+    Radiance,
+    Importance,
+}
+
 fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
     let mut cameras = Vec::<Camera>::new();
     for camera_config in &settings.cameras {

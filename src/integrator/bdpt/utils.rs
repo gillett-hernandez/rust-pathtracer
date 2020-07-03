@@ -6,7 +6,7 @@ use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;
 use crate::world::World;
-use crate::NORMAL_OFFSET;
+use crate::{TransportMode, NORMAL_OFFSET};
 
 use std::ops::Index;
 use std::sync::Arc;
@@ -22,6 +22,15 @@ pub enum VertexType {
     Light,
     Eye,
     Camera,
+}
+
+impl From<TransportMode> for VertexType {
+    fn from(value: TransportMode) -> Self {
+        match value {
+            TransportMode::Importance => VertexType::Eye,
+            TransportMode::Radiance => VertexType::Light,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -71,6 +80,10 @@ impl Vertex {
 
 impl From<Vertex> for HitRecord {
     fn from(data: Vertex) -> Self {
+        let transport_mode = match data.vertex_type {
+            VertexType::Light | VertexType::LightSource(_) => TransportMode::Radiance,
+            VertexType::Camera | VertexType::Eye => TransportMode::Importance,
+        };
         HitRecord::new(
             data.time,
             data.point,
@@ -79,6 +92,7 @@ impl From<Vertex> for HitRecord {
             data.normal,
             data.material_id,
             data.instance_id,
+            Some(transport_mode),
         )
     }
 }
@@ -93,7 +107,7 @@ pub fn random_walk(
     lambda: f32,
     bounce_limit: u16,
     start_throughput: SingleEnergy,
-    trace_type: VertexType,
+    trace_type: TransportMode,
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
@@ -105,8 +119,9 @@ pub fn random_walk(
     for _ in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.01, ray.tmax) {
             hit.lambda = lambda;
+            hit.transport_mode = trace_type;
             let mut vertex = Vertex::new(
-                trace_type,
+                trace_type.into(),
                 hit.time,
                 hit.lambda,
                 hit.point,
@@ -122,7 +137,7 @@ pub fn random_walk(
             let frame = TangentFrame::from_normal(hit.normal);
             let wi = frame.to_local(&-ray.direction).normalized();
 
-            if trace_type == VertexType::Light {
+            if trace_type == TransportMode::Radiance {
                 // if hit camera directly while tracing a light path
                 if let MaterialId::Camera(_camera_id) = hit.material {
                     vertex.vertex_type = VertexType::Camera;
@@ -215,7 +230,7 @@ pub fn random_walk(
             }
         } else {
             // add a vertex when a camera ray hits the environment
-            if trace_type == VertexType::Eye {
+            if trace_type == TransportMode::Importance {
                 let ray_direction = ray.direction;
                 let bounding_box = world.bounding_box();
                 let world_radius = (bounding_box.max - bounding_box.min).norm();

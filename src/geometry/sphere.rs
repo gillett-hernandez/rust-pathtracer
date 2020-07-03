@@ -64,6 +64,7 @@ impl Hittable for Sphere {
                     normal,
                     self.material_id,
                     self.instance_id,
+                    None,
                 ));
             }
             // time = r.time + (-b + discriminant_sqrt) / a;
@@ -81,6 +82,7 @@ impl Hittable for Sphere {
                     normal,
                     self.material_id,
                     self.instance_id,
+                    None,
                 ));
             }
         }

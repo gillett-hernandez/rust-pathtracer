@@ -3,6 +3,7 @@ use crate::math::*;
 use std::fmt::Debug;
 
 pub use crate::aabb::{HasBoundingBox, AABB};
+use crate::TransportMode;
 
 pub struct HitRecord {
     pub time: f32,
@@ -12,6 +13,7 @@ pub struct HitRecord {
     pub normal: Vec3,
     pub material: MaterialId,
     pub instance_id: usize,
+    pub transport_mode: TransportMode,
 }
 
 impl HitRecord {
@@ -23,6 +25,7 @@ impl HitRecord {
         normal: Vec3,
         material: MaterialId,
         instance_id: usize,
+        transport_mode: Option<TransportMode>,
     ) -> Self {
         HitRecord {
             time,
@@ -32,6 +35,7 @@ impl HitRecord {
             normal: normal.normalized(),
             material,
             instance_id,
+            transport_mode: transport_mode.unwrap_or(TransportMode::Importance),
         }
     }
 }

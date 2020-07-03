@@ -1,6 +1,7 @@
 use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
+use crate::TransportMode;
 
 pub fn reflect(wi: Vec3, normal: Vec3) -> Vec3 {
     let wi = -wi;
@@ -226,7 +227,13 @@ impl GGX {
 }
 
 impl GGX {
-    fn eval_pdf(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, PDF) {
+    fn eval_pdf(
+        &self,
+        lambda: f32,
+        wi: Vec3,
+        wo: Vec3,
+        transport_mode: TransportMode,
+    ) -> (SingleEnergy, PDF) {
         let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
@@ -283,7 +290,15 @@ impl GGX {
                 let ndotl = wo * wh;
 
                 let sqrt_denom = ndotv + eta_rel * ndotl;
-                let dwh_dwo = (eta_rel * eta_rel * ndotl) / (sqrt_denom * sqrt_denom);
+                let eta_rel2 = eta_rel * eta_rel;
+                let mut dwh_dwo1 = ndotl / (sqrt_denom * sqrt_denom); // dwh_dwo w/o etas
+                let dwh_dwo2 = eta_rel2 * dwh_dwo1; // dwh_dwo w/etas
+                match transport_mode {
+                    // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
+                    // in importance_mode, it is scaled by eta^2.
+                    TransportMode::Importance => dwh_dwo1 = dwh_dwo2,
+                    _ => {}
+                };
                 debug_assert!(
                     wh.0.is_finite().all(),
                     "{:?} {:?} {:?} {:?}",
@@ -293,8 +308,8 @@ impl GGX {
                     sqrt_denom
                 );
                 let ggxd = ggx_d(self.alpha, wh);
-                let weight = ggxd * ggxg * ndotv * dwh_dwo / g;
-                transmission_pdf = (ggxd * partial * dwh_dwo).abs();
+                let weight = ggxd * ggxg * ndotv * dwh_dwo1 / g;
+                transmission_pdf = (ggxd * partial * dwh_dwo2).abs();
 
                 let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
                 transmission.0 = self.permeability * inv_reflectance * weight.abs();
@@ -352,7 +367,7 @@ impl GGX {
 
 impl Material for GGX {
     fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
-        self.eval_pdf(hit.lambda, wi, wo).1
+        self.eval_pdf(hit.lambda, wi, wo, hit.transport_mode).1
     }
     fn generate(&self, hit: &HitRecord, mut sample: Sample2D, wi: Vec3) -> Option<Vec3> {
         let eta_inner = self.eta.evaluate_power(hit.lambda);
@@ -385,7 +400,7 @@ impl Material for GGX {
         }
     }
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
-        self.eval_pdf(hit.lambda, wi, wo).0
+        self.eval_pdf(hit.lambda, wi, wo, hit.transport_mode).0
     }
     fn emission(&self, _hit: &HitRecord, _wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
         SingleEnergy::ZERO
@@ -415,6 +430,7 @@ mod tests {
             Vec3::Z,
             MaterialId::Material(0),
             0,
+            None,
         );
 
         let test_many = true;
@@ -507,7 +523,7 @@ mod tests {
         let flat_zero = curves::void();
         let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
 
-        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo);
+        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
     }
     #[test]
@@ -520,7 +536,7 @@ mod tests {
         let flat_zero = curves::void();
         let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
 
-        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo);
+        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
     }
 }

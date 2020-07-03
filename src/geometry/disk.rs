@@ -67,6 +67,7 @@ impl Hittable for Disk {
             hit_normal,
             self.material_id,
             self.instance_id,
+            None,
         ))
     }
     fn sample_surface(&self, mut s: Sample2D) -> (Point3, Vec3, PDF) {
