@@ -318,18 +318,19 @@ fn construct_scene(config: &Config) -> World {
     let xenon_lamp = curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
-    // let light_material =MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
+    let light_material =
+        MaterialEnum::from(DiffuseLight::new(blackbody_illuminant2, Sidedness::Forward));
     // parallel light with low sharpness should approximate a diffuse light
     // let light_material = MaterialEnum::from(ParallelLight::new(
     //     blackbody_illuminant2,
     //     0.0,
     //     Sidedness::Forward,
     // ));
-    let light_material = MaterialEnum::from(SharpLight::new(
-        blackbody_illuminant2,
-        9.0,
-        Sidedness::Forward,
-    ));
+    // let light_material = MaterialEnum::from(SharpLight::new(
+    //     blackbody_illuminant2,
+    //     9.0,
+    //     Sidedness::Forward,
+    // ));
 
     let additional_materials = vec![
         light_material,
