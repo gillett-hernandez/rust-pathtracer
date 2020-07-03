@@ -397,7 +397,10 @@ pub fn eval_unweighted_contribution(
                     // can't connect an environment vertex to another environment vertex.
                     SingleEnergy::ZERO
                 } else {
-                    // connected to env vertex, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
+                    // connected to env vertex == llv, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
+                    // the direction would be off for a connection. so use the original direction that the env vertex would be coming in from in the calculations
+                    // also make sure that veach_v is properly accounted for?
+                    // maybe modify last_light_vertex's point to match the direction from last_eye_vertex
                     // ignore the actual Point3 location of the env vertex and instead use its direction as the connection direction
                     // also ignore the veach G term and only include the cosine, since the veach g term doesn't work with infinitely far rays.
                     let wo = -last_light_vertex.normal;
