@@ -27,18 +27,19 @@ impl World {
         materials: MaterialTable,
         environment: EnvironmentMap,
         env_sampling_probability: f32,
+        accelerator_type: AcceleratorType,
     ) -> Self {
         let mut lights = Vec::new();
         for instance in instances.iter() {
             if let MaterialId::Light(id) = instance.get_material_id() {
                 println!(
-                    "adding light with mat id {:?} and instance id {:?} to lights list",
+                    "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                     id, instance.instance_id
                 );
                 lights.push(instance.instance_id as usize);
             }
         }
-        let accelerator = Accelerator::new(instances, AcceleratorType::List);
+        let accelerator = Accelerator::new(instances, accelerator_type);
         World {
             accelerator,
             lights,
@@ -52,6 +53,7 @@ impl World {
         // currently just uniform sampling
         let length = self.lights.len();
         if length == 0 {
+            println!("light pick failed");
             None
         } else {
             let x = s.x;
@@ -64,6 +66,7 @@ impl World {
                 idx,
                 length as usize
             );
+            println!("light pick succeeded");
             Some((
                 self.accelerator.get_primitive(self.lights[idx]),
                 PDF::from(1.0 / length as f32),

@@ -2,7 +2,6 @@
 
 use crate::math::spectral::{InterpolationMode, Op};
 use crate::math::*;
-use crate::parsing::*;
 
 pub use crate::math::spectral::EXTENDED_VISIBLE_RANGE;
 
@@ -24,30 +23,34 @@ pub fn cauchy(a: f32, b: f32) -> SPD {
 
 pub fn red(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(640.0, 2400.0, 20.0 * 1.7 * power)],
+        signal: vec![(640.0, 240.0, 240.0, 20.0 * 1.7 * power)],
     }
 }
 
 pub fn green(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(540.0, 2400.0, 20.0 * 1.7 * power)],
+        signal: vec![(540.0, 240.0, 240.0, 20.0 * 1.7 * power)],
     }
 }
 
 pub fn blue(power: f32) -> SPD {
     SPD::Exponential {
-        signal: vec![(420.0, 2400.0, 20.0 * 1.7 * power)],
+        signal: vec![(420.0, 240.0, 240.0, 20.0 * 1.7 * power)],
     }
 }
 
-pub fn spectra(filename: &str, strength: f32) -> SPD {
-    load_linear(filename, |x| strength * x)
-        .expect(&format!("failed parsing spectra file {}", filename))
+pub fn mauve(power: f32) -> SPD {
+    SPD::Exponential {
+        signal: vec![
+            (650.0, 300.0, 300.0, power),
+            (460.0, 200.0, 400.0, 0.75 * power),
+        ],
+    }
 }
 
-pub fn add_pigment(spd: SPD, wavelength: f32, std_dev: f32, strength: f32) -> SPD {
+pub fn add_pigment(spd: SPD, wavelength: f32, std_dev1: f32, std_dev2: f32, strength: f32) -> SPD {
     let pigment = SPD::InverseExponential {
-        signal: vec![(wavelength, std_dev, strength)],
+        signal: vec![(wavelength, std_dev1, std_dev2, strength)],
     };
     match spd {
         SPD::Machine { seed, mut list } => {

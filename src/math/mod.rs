@@ -16,7 +16,9 @@ pub use misc::*;
 pub use point::Point3;
 pub use random::*;
 pub use sample::*;
-pub use spectral::{SingleEnergy, SingleWavelength, SpectralPowerDistributionFunction, SPD};
+pub use spectral::{
+    InterpolationMode, SingleEnergy, SingleWavelength, SpectralPowerDistributionFunction, SPD,
+};
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 pub use tangent_frame::TangentFrame;
@@ -26,7 +28,9 @@ pub use vec::{Axis, Vec3};
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum Sidedness {
     Forward,
     Reverse,

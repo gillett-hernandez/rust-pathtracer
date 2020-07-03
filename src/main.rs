@@ -23,7 +23,7 @@ pub mod tonemap;
 pub mod world;
 
 use camera::*;
-use config::{get_settings, Config};
+use config::*;
 use geometry::*;
 use math::*;
 use parsing::*;
@@ -37,30 +37,6 @@ pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 pub enum TransportMode {
     Radiance,
     Importance,
-}
-
-fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
-    let mut cameras = Vec::<Camera>::new();
-    for camera_config in &settings.cameras {
-        let camera: Camera = match camera_config {
-            config::CameraSettings::SimpleCamera(cam) => {
-                let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
-                Camera::ProjectiveCamera(ProjectiveCamera::new(
-                    Point3::from(cam.look_from),
-                    Point3::from(cam.look_at),
-                    Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
-                    cam.vfov,
-                    1.0,
-                    cam.focal_distance.unwrap_or(10.0),
-                    cam.aperture_size.unwrap_or(0.0),
-                    shutter_open_time,
-                    cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
-                ))
-            }
-        };
-        cameras.push(camera);
-    }
-    cameras
 }
 
 #[allow(dead_code)]
@@ -78,6 +54,7 @@ fn white_furnace_test(material: MaterialEnum) -> World {
             strength: 1.0,
         },
         1.0,
+        AcceleratorType::List,
     );
     world
 }
@@ -93,8 +70,14 @@ fn cornell_box(
     // let green = curves::green(1.0);
     let blue = curves::blue(1.0);
     // let white = curves::cie_e(1.0);
-    let cornell_colors = load_csv("data/curves/csv/cornell.csv", 3, |x| x)
-        .expect("data/curves/csv/cornell.csv was not formatted correctly");
+    let cornell_colors = load_multiple_csv_rows(
+        "data/curves/csv/cornell.csv",
+        3,
+        InterpolationMode::Cubic,
+        |x| x,
+        |y| y,
+    )
+    .expect("data/curves/csv/cornell.csv was not formatted correctly");
     let mut iter = cornell_colors.iter();
     let (cornell_white, cornell_green, cornell_red) = (
         iter.next().unwrap().clone(),
@@ -222,12 +205,18 @@ fn cornell_box(
         world_materials,
         env_map,
         env_sampling_probability,
+        AcceleratorType::List,
     );
     world
 }
 
 #[allow(unused_variables)]
 fn construct_scene(config: &Config) -> World {
+    construct_world(config)
+}
+
+#[allow(unused_variables)]
+fn construct_scene2(config: &Config) -> World {
     // load some curves
     let (silver_ior, silver_kappa) =
         load_ior_and_kappa("data/curves/csv/silver.csv", |x: f32| x * 1000.0).unwrap();
@@ -359,7 +348,7 @@ fn construct_scene(config: &Config) -> World {
     let blackbody_illuminant1 = curves::blackbody(2700.0, 100.0);
     let blackbody_illuminant1_bright = curves::blackbody(2700.0, 500.0);
     let blackbody_illuminant2 = curves::blackbody(4500.0, 18.0);
-    let xenon_lamp = curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
+    let xenon_lamp = parsing::curves::spectra("data/curves/spectra/xenon_lamp.spectra", 20.0);
     let cie_e_illuminant_low_power = curves::cie_e(0.25);
 
     let light_material =
@@ -397,7 +386,7 @@ fn construct_scene(config: &Config) -> World {
 
     let env_map = EnvironmentMap::Constant {
         color: world_illuminant,
-        strength: config.env_strength.unwrap_or(1.0),
+        strength: 1.0,
     };
 
     // let env_map = EnvironmentMap::Sun {

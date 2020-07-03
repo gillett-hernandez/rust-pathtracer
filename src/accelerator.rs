@@ -16,14 +16,14 @@ pub struct Accelerator {
 }
 
 impl Accelerator {
-    pub fn new(list: Vec<Instance>, accel_type: AcceleratorType) -> Self {
+    pub fn new(list: Vec<Instance>, accelerator_type: AcceleratorType) -> Self {
         // match accel_type {
         //     AcceleratorType::BVH => unimplemented!(),
         //     AcceleratorType::List =>
         // }
         Accelerator {
             instances: list,
-            accelerator_type: accel_type,
+            accelerator_type,
         }
     }
     pub fn rebuild(&mut self) {

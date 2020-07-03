@@ -1,5 +1,5 @@
 env_sampling_probability = 0.9
-env_strength = 1.0
+scene_file = "data/scene.toml"
 
 [[cameras]]
 type="SimpleCamera"

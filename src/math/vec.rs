@@ -1,8 +1,12 @@
 // use packed_simd::{f32x4, f32x8};
 use crate::math::Point3;
+
 use packed_simd::f32x4;
+use serde::{Deserialize, Serialize};
+
 use std::ops::{Add, Div, Mul, MulAssign, Neg, Sub};
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Axis {
     X,
     Y,

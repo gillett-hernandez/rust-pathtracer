@@ -4,6 +4,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 use crate::math::color::XYZColor;
 use crate::math::misc::{gaussian, w};
 use crate::math::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct SingleEnergy(pub f32);
@@ -188,7 +189,7 @@ pub enum Op {
     Mul,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum InterpolationMode {
     Linear,
     Nearest,
@@ -217,10 +218,10 @@ pub enum SPD {
         b: f32,
     },
     Exponential {
-        signal: Vec<(f32, f32, f32)>,
+        signal: Vec<(f32, f32, f32, f32)>,
     },
     InverseExponential {
-        signal: Vec<(f32, f32, f32)>,
+        signal: Vec<(f32, f32, f32, f32)>,
     },
     Blackbody {
         temperature: f32,
@@ -355,15 +356,15 @@ impl SpectralPowerDistributionFunction for SPD {
             SPD::Cauchy { a, b } => *a + *b / (lambda * lambda),
             SPD::Exponential { signal } => {
                 let mut val = 0.0f32;
-                for &(o, s, m) in signal {
-                    val += w(lambda, m, o, s);
+                for &(offset, sigma1, sigma2, multiplier) in signal {
+                    val += gaussianf32(lambda, multiplier, offset, sigma1, sigma2);
                 }
                 val
             }
             SPD::InverseExponential { signal } => {
                 let mut val = 1.0f32;
-                for &(o, s, m) in signal {
-                    val -= w(lambda, m, o, s);
+                for &(offset, sigma1, sigma2, multiplier) in signal {
+                    val -= gaussianf32(lambda, multiplier, offset, sigma1, sigma2);
                 }
                 val.max(0.0)
             }

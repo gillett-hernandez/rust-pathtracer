@@ -43,7 +43,7 @@ pub enum MaterialEnum {
     GGX(GGX),
     Lambertian(Lambertian),
     DiffuseLight(DiffuseLight),
-    ParallelLight(SharpLight),
+    SharpLight(SharpLight),
 }
 
 impl From<DiffuseLight> for MaterialEnum {
@@ -60,7 +60,7 @@ impl From<Lambertian> for MaterialEnum {
 
 impl From<SharpLight> for MaterialEnum {
     fn from(value: SharpLight) -> Self {
-        MaterialEnum::ParallelLight(value)
+        MaterialEnum::SharpLight(value)
     }
 }
 
@@ -77,7 +77,7 @@ impl Material for MaterialEnum {
         match self {
             MaterialEnum::GGX(inner) => inner.value(hit, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.value(hit, wi, wo),
-            MaterialEnum::ParallelLight(inner) => inner.value(hit, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.value(hit, wi, wo),
             MaterialEnum::DiffuseLight(inner) => inner.value(hit, wi, wo),
         }
     }
@@ -85,7 +85,7 @@ impl Material for MaterialEnum {
         match self {
             MaterialEnum::GGX(inner) => inner.generate(hit, s, wi),
             MaterialEnum::Lambertian(inner) => inner.generate(hit, s, wi),
-            MaterialEnum::ParallelLight(inner) => inner.generate(hit, s, wi),
+            MaterialEnum::SharpLight(inner) => inner.generate(hit, s, wi),
             MaterialEnum::DiffuseLight(inner) => inner.generate(hit, s, wi),
         }
     }
@@ -112,7 +112,7 @@ impl Material for MaterialEnum {
                 scatter_sample,
                 wavelength_sample,
             ),
-            MaterialEnum::ParallelLight(inner) => inner.sample_emission(
+            MaterialEnum::SharpLight(inner) => inner.sample_emission(
                 point,
                 normal,
                 wavelength_range,
@@ -134,7 +134,7 @@ impl Material for MaterialEnum {
         match self {
             MaterialEnum::GGX(inner) => inner.f(hit, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.f(hit, wi, wo),
-            MaterialEnum::ParallelLight(inner) => inner.f(hit, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.f(hit, wi, wo),
             MaterialEnum::DiffuseLight(inner) => inner.f(hit, wi, wo),
         }
     }
@@ -142,7 +142,7 @@ impl Material for MaterialEnum {
         match self {
             MaterialEnum::GGX(inner) => inner.emission(hit, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.emission(hit, wi, wo),
-            MaterialEnum::ParallelLight(inner) => inner.emission(hit, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.emission(hit, wi, wo),
             MaterialEnum::DiffuseLight(inner) => inner.emission(hit, wi, wo),
         }
     }
@@ -159,7 +159,7 @@ impl Material for MaterialEnum {
             MaterialEnum::Lambertian(inner) => {
                 inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
             }
-            MaterialEnum::ParallelLight(inner) => {
+            MaterialEnum::SharpLight(inner) => {
                 inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
             }
             MaterialEnum::DiffuseLight(inner) => {

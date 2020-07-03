@@ -1,6 +1,9 @@
 extern crate num_cpus;
 extern crate serde;
 
+use crate::camera::{Camera, ProjectiveCamera};
+use crate::math::{Point3, Vec3};
+
 // use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -54,9 +57,33 @@ pub struct RenderSettings {
 #[derive(Deserialize, Clone)]
 pub struct Config {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
-    pub env_strength: Option<f32>,             //defaults to 0.5
+    pub scene_file: String,
     pub cameras: Vec<CameraSettings>,
     pub render_settings: Vec<RenderSettings>,
+}
+
+pub fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
+    let mut cameras = Vec::<Camera>::new();
+    for camera_config in &settings.cameras {
+        let camera: Camera = match camera_config {
+            CameraSettings::SimpleCamera(cam) => {
+                let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
+                Camera::ProjectiveCamera(ProjectiveCamera::new(
+                    Point3::from(cam.look_from),
+                    Point3::from(cam.look_at),
+                    Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
+                    cam.vfov,
+                    1.0,
+                    cam.focal_distance.unwrap_or(10.0),
+                    cam.aperture_size.unwrap_or(0.0),
+                    shutter_open_time,
+                    cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
+                ))
+            }
+        };
+        cameras.push(camera);
+    }
+    cameras
 }
 
 pub fn get_settings(filepath: String) -> Result<Config, toml::de::Error> {

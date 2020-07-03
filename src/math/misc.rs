@@ -4,6 +4,11 @@ pub fn power_heuristic(a: f32, b: f32) -> f32 {
     (a * a) / (a * a + b * b)
 }
 
+pub fn gaussianf32(x: f32, alpha: f32, mu: f32, sigma1: f32, sigma2: f32) -> f32 {
+    let sqrt = (x - mu) / (if x < mu { sigma1 } else { sigma2 });
+    alpha * (-(sqrt * sqrt) / 2.0).exp()
+}
+
 pub fn gaussian(x: f64, alpha: f64, mu: f64, sigma1: f64, sigma2: f64) -> f64 {
     let sqrt = (x - mu) / (if x < mu { sigma1 } else { sigma2 });
     alpha * (-(sqrt * sqrt) / 2.0).exp()
