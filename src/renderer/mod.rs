@@ -236,7 +236,6 @@ impl NaiveRenderer {
 
         let clone2 = pixel_count.clone();
 
-        // let (tx, rx) = mpsc::sync_channel(1000000);
         let (tx, rx) = unbounded();
 
         let total_splats = Arc::new(Mutex::new(0usize));
@@ -288,9 +287,8 @@ impl NaiveRenderer {
                                 (pixel.0 * film.width as f32) as usize,
                                 film.height - (pixel.1 * film.height as f32) as usize - 1,
                             );
-                            // let existing_triplet = film.buffer[y * film.width + x];
+
                             film.buffer[y * film.width + x] += color;
-                            // thread::sleep(Duration::from_millis(10));
                             (*local_total_splats) += 1usize;
                         }
                         _ => {}
@@ -306,7 +304,6 @@ impl NaiveRenderer {
                                 (pixel.0 * film.width as f32) as usize,
                                 film.height - (pixel.1 * film.height as f32) as usize - 1,
                             );
-                            // let existing_triplet = film.buffer[y * film.width + x];
                             film.buffer[y * film.width + x] += color;
                             (*local_total_splats) += 1usize;
                         }
@@ -328,17 +325,15 @@ impl NaiveRenderer {
                 if let Some((s, t)) = settings.selected_pair {
                     println!("rendering specific pair {} {}", s, t);
                 }
-                // let output_divisor = (film.width * film.height / 100).max(1);
 
                 film.buffer
                     .par_iter_mut()
-                    // .iter_mut()
                     .enumerate()
                     .for_each(|(pixel_index, pixel_ref)| {
                         let tx1 = { tx_arc.lock().unwrap().clone() };
                         let y: usize = pixel_index / settings.resolution.width;
                         let x: usize = pixel_index - settings.resolution.width * y;
-                        // gen ray for pixel x, y
+                        // get ray for pixel x, y
                         // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
                         // let mut temp_color = RGBColor::BLACK;
                         let mut temp_color = XYZColor::BLACK;
@@ -362,20 +357,14 @@ impl NaiveRenderer {
                                 (r, camera_id as u8),
                                 &mut local_additional_splats,
                             ));
-                            // handle image samples that occur in local_additional_splats, as they correspond to the current pixel_index
-                            // if local_additional_splats.iter().filter()
+
                             debug_assert!(
                                 temp_color.0.is_finite().all(),
                                 "integrator returned {:?}",
                                 temp_color
                             );
                         }
-                        // if pixel_index % output_divisor == 0 {
-                        //     let stdout = std::io::stdout();
-                        //     let mut handle = stdout.lock();
-                        //     handle.write_all(b".").unwrap();
-                        //     std::io::stdout().flush().expect("some error message")
-                        // }
+
                         // unsafe {
                         *pixel_ref = temp_color / (settings.min_samples as f32);
                         clone2.fetch_add(1, Ordering::Relaxed);
@@ -398,7 +387,7 @@ impl NaiveRenderer {
 
         if let Err(panic) = thread.join() {
             println!(
-                "progress bar incrememnting thread threw an error {:?}",
+                "progress bar incrementing thread threw an error {:?}",
                 panic
             );
         }
@@ -412,32 +401,6 @@ impl NaiveRenderer {
         );
 
         let now = Instant::now();
-
-        // additional_splats.par_sort_unstable_by(|(_sample1, camera_id1), (_sample2, camera_id2)| {
-        //     camera_id1.cmp(&camera_id2)
-        // });
-        // for (sample, camera_id) in additional_splats {
-        //     match sample {
-        //         Sample::LightSample(radiance, (x, y)) => {
-        //             let light_film = &mut light_films[camera_id as usize];
-        //             // println!("splat index was {} x {}", x, y);
-        //             let (x, y) = (
-        //                 (x * light_film.width as f32) as usize,
-        //                 light_film.height - (y * light_film.height as f32) as usize - 1,
-        //             );
-        //             light_film.buffer[y * light_film.width + x] += XYZColor::from(radiance);
-        //         }
-        //         Sample::ImageSample(radiance, (x, y)) => {
-        //             let image_film = &mut films[camera_id as usize].1;
-        //             // println!("splat index was {} x {}", x, y);
-        //             let (x, y) = (
-        //                 (x * image_film.width as f32) as usize,
-        //                 image_film.height - (y * image_film.height as f32) as usize - 1,
-        //             );
-        //             image_film.buffer[y * image_film.width + x] += XYZColor::from(radiance);
-        //         }
-        //     }
-        // }
 
         // for i in 0..films.len() {
         //     let (settings, image_film) = &mut films[i];
