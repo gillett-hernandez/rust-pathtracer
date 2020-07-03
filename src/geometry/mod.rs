@@ -10,7 +10,6 @@ pub use rect::AARect;
 pub use sphere::Sphere;
 
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
-use crate::materials::MaterialId;
 use crate::math::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -103,19 +102,5 @@ impl Hittable for Aggregate {
         };
         debug_assert!(res.is_finite());
         res
-    }
-    fn get_instance_id(&self) -> usize {
-        match self {
-            Aggregate::Sphere(inner) => inner.get_instance_id(),
-            Aggregate::Disk(inner) => inner.get_instance_id(),
-            Aggregate::AARect(inner) => inner.get_instance_id(),
-        }
-    }
-    fn get_material_id(&self) -> MaterialId {
-        match self {
-            Aggregate::Sphere(inner) => inner.get_material_id(),
-            Aggregate::Disk(inner) => inner.get_material_id(),
-            Aggregate::AARect(inner) => inner.get_material_id(),
-        }
     }
 }

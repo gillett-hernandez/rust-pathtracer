@@ -38,20 +38,9 @@ impl Instance {
     pub fn new(
         aggregate: Aggregate,
         transform: Option<Transform3>,
-        material_id: Option<MaterialId>,
-        instance_id: Option<usize>,
+        material_id: MaterialId,
+        instance_id: usize,
     ) -> Self {
-        // steal instance id from Aggregate if not provided.
-        let instance_id = if let Some(id) = instance_id {
-            id
-        } else {
-            aggregate.get_instance_id()
-        };
-        let material_id = if let Some(id) = material_id {
-            id
-        } else {
-            aggregate.get_material_id()
-        };
         Instance {
             aggregate,
             transform,
@@ -138,38 +127,30 @@ impl Hittable for Instance {
             self.aggregate.surface_area(transform)
         }
     }
-    fn get_instance_id(&self) -> usize {
+}
+
+impl Instance {
+    pub fn get_instance_id(&self) -> usize {
         self.instance_id
     }
-    fn get_material_id(&self) -> MaterialId {
+    pub fn get_material_id(&self) -> MaterialId {
         self.material_id
     }
 }
 
-impl From<Aggregate> for Instance {
-    fn from(data: Aggregate) -> Self {
-        // a direct conversion directly copies the instance id and material id.
-        // take care when duplicating instances that are referred to by lights.
-        let instance_id = (&data).get_instance_id();
-        let material_id = (&data).get_material_id();
-        Instance::new(data, None, Some(material_id), Some(instance_id))
-    }
-}
+// impl From<Aggregate> for Instance {
+//     fn from(data: Aggregate) -> Self {
+//         Instance::new(data, None, Some(material_id), Some(instance_id))
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn test_aggregate() {
-        let sphere = Sphere::new(1.0, Point3::ORIGIN, MaterialId::Material(0), 0);
-        let aarect = AARect::new(
-            (1.0, 1.0),
-            Point3::ORIGIN,
-            Axis::X,
-            true,
-            MaterialId::Material(0),
-            0,
-        );
+        let sphere = Sphere::new(1.0, Point3::ORIGIN);
+        let aarect = AARect::new((1.0, 1.0), Point3::ORIGIN, Axis::X, true);
 
         let transform = Transform3::from_stack(
             Some(Transform3::from_scale(Vec3::new(3.0, 3.0, 3.0))),
@@ -180,8 +161,8 @@ mod tests {
         let aggregate1 = Aggregate::from(sphere);
         let aggregate2 = Aggregate::from(aarect);
 
-        let instance1 = Instance::new(aggregate1, Some(transform), None, None);
-        let instance2 = Instance::new(aggregate2, Some(transform), None, None);
+        let instance1 = Instance::new(aggregate1, Some(transform), 0.into(), 0);
+        let instance2 = Instance::new(aggregate2, Some(transform), 0.into(), 0);
 
         let test_ray = Ray::new(Point3::ORIGIN + 10.0 * Vec3::Z, -Vec3::Z);
 

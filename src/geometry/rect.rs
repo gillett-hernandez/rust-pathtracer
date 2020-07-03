@@ -1,6 +1,5 @@
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
-use crate::materials::MaterialId;
 use crate::math::*;
 
 fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
@@ -18,27 +17,16 @@ pub struct AARect {
     pub normal: Axis,
     pub two_sided: bool,
     pub origin: Point3,
-    pub material_id: MaterialId,
-    pub instance_id: usize,
 }
 
 impl AARect {
-    pub fn new(
-        size: (f32, f32),
-        origin: Point3,
-        normal: Axis,
-        two_sided: bool,
-        material_id: MaterialId,
-        instance_id: usize,
-    ) -> Self {
+    pub fn new(size: (f32, f32), origin: Point3, normal: Axis, two_sided: bool) -> Self {
         AARect {
             size,
             half_size: (size.0 / 2.0, size.1 / 2.0),
             origin,
             two_sided,
             normal,
-            material_id,
-            instance_id,
         }
     }
     pub fn from_quad(
@@ -49,8 +37,6 @@ impl AARect {
         x1: f32,
         y1: f32,
         two_sided: bool,
-        material_id: MaterialId,
-        instance_id: usize,
     ) -> Self {
         let size = (x1 - x0, y1 - y0);
         let midpoint = (x0 + size.0 / 2.0, y0 + size.1 / 2.0);
@@ -61,8 +47,6 @@ impl AARect {
             origin: origin + offset,
             two_sided,
             normal,
-            material_id,
-            instance_id,
         }
     }
 }
@@ -111,8 +95,8 @@ impl Hittable for AARect {
             ),
             0.0,
             hit_normal,
-            self.material_id,
-            self.instance_id,
+            0.into(),
+            0,
         ))
     }
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
@@ -170,11 +154,5 @@ impl Hittable for AARect {
             Axis::Z => transformed_axes.0.norm() * transformed_axes.1.norm(),
         };
         transform_multiplier * self.size.0 * self.size.1
-    }
-    fn get_instance_id(&self) -> usize {
-        self.instance_id
-    }
-    fn get_material_id(&self) -> MaterialId {
-        self.material_id
     }
 }

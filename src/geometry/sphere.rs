@@ -1,24 +1,16 @@
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
-use crate::materials::MaterialId;
 use crate::math::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Sphere {
     pub radius: f32,
     pub origin: Point3,
-    pub material_id: MaterialId,
-    pub instance_id: usize,
 }
 
 impl Sphere {
-    pub fn new(radius: f32, origin: Point3, material_id: MaterialId, instance_id: usize) -> Sphere {
-        Sphere {
-            radius,
-            origin,
-            material_id,
-            instance_id,
-        }
+    pub fn new(radius: f32, origin: Point3) -> Sphere {
+        Sphere { radius, origin }
     }
 
     // fn solid_angle(&self, point: Point3, wi: Vec3) -> f32 {
@@ -62,8 +54,8 @@ impl Hittable for Sphere {
                     (0.0, 0.0),
                     0.0,
                     normal,
-                    self.material_id,
-                    self.instance_id,
+                    0.into(),
+                    0,
                 ));
             }
             // time = r.time + (-b + discriminant_sqrt) / a;
@@ -79,8 +71,8 @@ impl Hittable for Sphere {
                     (0.0, 0.0),
                     0.0,
                     normal,
-                    self.material_id,
-                    self.instance_id,
+                    0.into(),
+                    0,
                 ));
             }
         }
@@ -130,11 +122,5 @@ impl Hittable for Sphere {
             * transformed_axes.0.norm()
             * transformed_axes.1.norm()
             * transformed_axes.2.norm()
-    }
-    fn get_instance_id(&self) -> usize {
-        self.instance_id
-    }
-    fn get_material_id(&self) -> MaterialId {
-        self.material_id
     }
 }

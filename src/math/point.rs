@@ -1,6 +1,7 @@
 use crate::math::Vec3;
 // use packed_simd::{f32x4, f32x8};
 use packed_simd::f32x4;
+
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Copy, Clone, Debug, PartialEq)]

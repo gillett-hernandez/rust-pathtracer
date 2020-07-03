@@ -1,6 +1,5 @@
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
-use crate::materials::MaterialId;
 use crate::math::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -8,24 +7,14 @@ pub struct Disk {
     pub radius: f32,
     pub two_sided: bool,
     pub origin: Point3,
-    pub material_id: MaterialId,
-    pub instance_id: usize,
 }
 
 impl Disk {
-    pub fn new(
-        radius: f32,
-        origin: Point3,
-        two_sided: bool,
-        material_id: MaterialId,
-        instance_id: usize,
-    ) -> Self {
+    pub fn new(radius: f32, origin: Point3, two_sided: bool) -> Self {
         Disk {
             radius,
             origin,
             two_sided,
-            material_id,
-            instance_id,
         }
     }
 }
@@ -65,8 +54,8 @@ impl Hittable for Disk {
             (0.0, 0.0),
             0.0,
             hit_normal,
-            self.material_id,
-            self.instance_id,
+            0.into(),
+            0,
         ))
     }
     fn sample_surface(&self, mut s: Sample2D) -> (Point3, Vec3, PDF) {
@@ -118,11 +107,5 @@ impl Hittable for Disk {
     fn surface_area(&self, transform: &Transform3) -> f32 {
         let transformed_axes = transform.axis_transform();
         transformed_axes.0.norm() * transformed_axes.1.norm() * PI * self.radius * self.radius
-    }
-    fn get_instance_id(&self) -> usize {
-        self.instance_id
-    }
-    fn get_material_id(&self) -> MaterialId {
-        self.material_id
     }
 }

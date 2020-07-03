@@ -60,12 +60,12 @@ fn parse_cameras_from(settings: &Config) -> Vec<Camera> {
 #[allow(dead_code)]
 fn white_furnace_test(material: MaterialEnum) -> World {
     let world = World::new(
-        vec![Instance::from(Aggregate::from(Sphere::new(
-            5.0,
-            Point3::new(0.0, 0.0, 0.0),
+        vec![Instance::new(
+            Aggregate::from(Sphere::new(5.0, Point3::ORIGIN)),
+            None,
             MaterialId::Material(0),
             0,
-        )))],
+        )],
         vec![material],
         EnvironmentMap::Constant {
             color: curves::cie_e(1.0),
@@ -102,52 +102,94 @@ fn cornell_box(
 
     let mut world_materials = vec![lambertian_white, lambertian_green, lambertian_red];
 
+    // let mut world_instances = vec![
+
+    //     Instance::from(Aggregate::from(AARect::new(
+    //         // left wall
+    //         (2.0, 2.0),
+    //         Point3::new(0.0, 1.0, 0.0),
+    //         Axis::Y,
+    //         true,
+    //         1.into(),
+    //         2,
+    //     ))),
+    //     Instance::from(Aggregate::from(AARect::new(
+    //         // right wall
+    //         (2.0, 2.0),
+    //         Point3::new(0.0, -1.0, 0.0),
+    //         Axis::Y,
+    //         true,
+    //         2.into(),
+    //         3,
+    //     ))),
+    //     Instance::from(Aggregate::from(AARect::new(
+    //         // back wall
+    //         (2.0, 2.0),
+    //         Point3::new(1.0, 0.0, 0.0),
+    //         Axis::X,
+    //         true,
+    //         0.into(),
+    //         4,
+    //     ))),
+    // ];
     let mut world_instances = vec![
-        Instance::from(Aggregate::from(AARect::new(
-            // ceiling
-            (2.0, 2.0),
-            Point3::new(0.0, 0.0, 1.0),
-            Axis::Z,
-            true,
+        Instance::new(
+            //ceiling
+            Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 0.0, 1.0),
+                Axis::Z,
+                true,
+            )),
+            None,
             0.into(),
             0,
-        ))),
-        Instance::from(Aggregate::from(AARect::new(
+        ),
+        Instance::new(
             // floor
-            (2.0, 2.0),
-            Point3::new(0.0, 0.0, -1.0),
-            Axis::Z,
-            true,
+            Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 0.0, -1.0),
+                Axis::Z,
+                true,
+            )),
+            None,
             0.into(),
             1,
-        ))),
-        Instance::from(Aggregate::from(AARect::new(
-            // left wall
-            (2.0, 2.0),
-            Point3::new(0.0, 1.0, 0.0),
-            Axis::Y,
-            true,
+        ),
+        Instance::new(
+            Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Axis::Y,
+                true,
+            )),
+            None,
             1.into(),
             2,
-        ))),
-        Instance::from(Aggregate::from(AARect::new(
-            // right wall
-            (2.0, 2.0),
-            Point3::new(0.0, -1.0, 0.0),
-            Axis::Y,
-            true,
+        ),
+        Instance::new(
+            Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(0.0, -1.0, 0.0),
+                Axis::Y,
+                true,
+            )),
+            None,
             2.into(),
             3,
-        ))),
-        Instance::from(Aggregate::from(AARect::new(
-            // back wall
-            (2.0, 2.0),
-            Point3::new(1.0, 0.0, 0.0),
-            Axis::X,
-            true,
+        ),
+        Instance::new(
+            Aggregate::from(AARect::new(
+                (2.0, 2.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Axis::X,
+                true,
+            )),
+            None,
             0.into(),
             4,
-        ))),
+        ),
     ];
 
     let base_length = world_materials.len();
@@ -263,13 +305,7 @@ fn construct_scene(config: &Config) -> World {
 
     let additional_instances = vec![
         Instance::new(
-            Aggregate::from(Disk::new(
-                0.7,
-                Point3::new(0.0, 0.0, 0.0),
-                false,
-                MaterialId::Light(0),
-                0,
-            )),
+            Aggregate::from(Disk::new(0.7, Point3::new(0.0, 0.0, 0.0), false)),
             Some(Transform3::from_stack(
                 Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
                 None,
@@ -277,37 +313,39 @@ fn construct_scene(config: &Config) -> World {
                     Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
                 )),
             )),
-            None,
-            None,
+            MaterialId::Light(0),
+            0,
         ),
-        Instance::from(Aggregate::from(Sphere::new(
-            // ball in front left
-            0.3,
-            Point3::new(-0.1, 0.0, -0.6),
+        Instance::new(
+            Aggregate::from(Sphere::new(
+                // ball in front
+                0.3,
+                Point3::new(-0.1, 0.0, -0.6),
+            )),
+            None,
             1.into(),
             1,
-        ))),
-        // Instance::from(Aggregate::from(Sphere::new(
-        //     // ball in front right
-        //     0.3,
-        //     Point3::new(-0.3, -0.4, -0.7),
-        //     4.into(),
-        //     2,
-        // ))),
-        Instance::from(Aggregate::from(Sphere::new(
-            // ball on back right
-            0.3,
-            Point3::new(0.5, -0.35, -0.7),
+        ),
+        Instance::new(
+            Aggregate::from(Sphere::new(
+                // ball on back right
+                0.3,
+                Point3::new(0.5, -0.35, -0.7),
+            )),
+            None,
             2.into(),
             3,
-        ))), // ball at origin
-        Instance::from(Aggregate::from(Sphere::new(
-            // ball on back left
-            0.3,
-            Point3::new(0.5, 0.35, -0.7),
+        ), // ball at origin
+        Instance::new(
+            Aggregate::from(Sphere::new(
+                // ball on back left
+                0.3,
+                Point3::new(0.5, 0.35, -0.7),
+            )),
+            None,
             3.into(),
             4,
-        ))),
+        ),
     ]; // ball at origin
 
     // create some illuminants and lights

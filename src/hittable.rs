@@ -50,8 +50,6 @@ use std::marker::{Send, Sync};
 pub trait Hittable: Send + Sync + HasBoundingBox {
     // unrelated to light sampling
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord>;
-    fn get_instance_id(&self) -> usize;
-    fn get_material_id(&self) -> MaterialId;
 
     // methods related to when the Hittable is an Emissive
     // method that should implement sampling a direction subtended by the solid angle of Self from point P
