@@ -27,6 +27,22 @@ filename = "data/curves/csv/cornell.csv"
 column = 2
 interpolation_mode = "Cubic"
 
+[[materials]]
+name = "ggx_glass"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 1.4
+b = 50000.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+
 
 [[materials]]
 name = "lambertian_red"
@@ -63,7 +79,6 @@ size = [0.6, 0.6]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = true
-
 
 
 [[instances]]

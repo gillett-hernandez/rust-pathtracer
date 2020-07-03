@@ -1,7 +1,7 @@
 // use crate::materials::*;
 use crate::math::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum EnvironmentMap {
     Constant {
         color: SPD,

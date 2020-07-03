@@ -9,7 +9,7 @@ pub enum AcceleratorType {
     List,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Accelerator {
     pub instances: Vec<Instance>,
     pub accelerator_type: AcceleratorType,

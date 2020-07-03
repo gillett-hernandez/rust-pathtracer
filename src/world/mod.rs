@@ -11,7 +11,7 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::Instance;
 pub use crate::materials::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
@@ -40,20 +40,26 @@ impl World {
             }
         }
         let accelerator = Accelerator::new(instances, accelerator_type);
-        World {
+        let world = World {
             accelerator,
             lights,
             cameras: Vec::new(),
             materials,
             environment,
             env_sampling_probability,
+        };
+        if env_sampling_probability == 1.0 || env_sampling_probability == 0.0 {
+            println!(
+                "warning! env sampling probability is at an extrema of {}",
+                env_sampling_probability
+            );
         }
+        world
     }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
         // currently just uniform sampling
         let length = self.lights.len();
         if length == 0 {
-            println!("light pick failed");
             None
         } else {
             let x = s.x;
@@ -66,7 +72,6 @@ impl World {
                 idx,
                 length as usize
             );
-            println!("light pick succeeded");
             Some((
                 self.accelerator.get_primitive(self.lights[idx]),
                 PDF::from(1.0 / length as f32),
