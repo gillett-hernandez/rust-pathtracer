@@ -786,7 +786,7 @@ where
         if let Some(slev) = second_to_last_eye_vertex {
             let wi = (slev.point - lev.point).normalized();
             let hit_material = world.get_material(lev.material_id);
-            let llv_local_wi = llv_frame.to_local(&wi).normalized();
+            let llv_local_wi = lev_frame.to_local(&wi).normalized();
             // let g = veach_g(
             //     lev.point,
             //     lev_local_eye_to_light.z().abs(),
@@ -794,10 +794,10 @@ where
             //     llv_local_light_to_eye.z().abs(),
             // );
             lev_forward_pdf = hit_material
-                .value(&llv.into(), llv_local_wi, llv_local_light_to_eye)
+                .value(&lev.into(), llv_local_wi, llv_local_light_to_eye)
                 .0;
             lev_backward_pdf = hit_material
-                .value(&llv.into(), llv_local_light_to_eye, llv_local_wi)
+                .value(&lev.into(), llv_local_light_to_eye, llv_local_wi)
                 .0;
         } else {
             // t must be 1
