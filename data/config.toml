@@ -1,5 +1,5 @@
-env_sampling_probability = 0.5
-scene_file = "data/scenes/cornell_box.toml"
+env_sampling_probability = 1.0
+scene_file = "data/scenes/white_furnace.toml"
 
 [[cameras]]
 type="SimpleCamera"
@@ -32,7 +32,7 @@ integrator = "BDPT"
 min_bounces = 6
 max_bounces = 16
 exposure = 1.0
-min_samples = 16
+min_samples = 32
 camera_id = 1
 russian_roulette = true
 only_direct = false

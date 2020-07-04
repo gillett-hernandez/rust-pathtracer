@@ -46,7 +46,10 @@ impl Camera {
 
     pub fn eval_we(&self, _from: Point3, _to: Point3) -> (f32, PDF) {
         // from is on surface of camera
+        // (0.01, 1.0.into())
+        // (1.0, 0.01.into())
         (1.0, 1.0.into())
+        // (0.001, 0.0001.into())
     }
 
     pub fn _sample_we(
