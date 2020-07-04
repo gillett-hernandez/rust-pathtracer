@@ -41,6 +41,7 @@ pub struct Scene {
     pub instances: Vec<InstanceData>,
     pub materials: Vec<NamedMaterial>,
     pub environment: EnvironmentData,
+    pub env_sampling_probability: Option<f32>,
 }
 
 fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
@@ -90,7 +91,7 @@ pub fn construct_world(config: &Config) -> World {
         instances,
         materials,
         parse_environment(scene.environment),
-        config.env_sampling_probability.unwrap_or(0.5),
+        scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::List,
     );
     world

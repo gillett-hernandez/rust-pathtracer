@@ -18,7 +18,7 @@
 #     );
 #     world
 # }
-
+env_sampling_probability = 1.0
 [environment]
 type="Constant"
 strength = 1.0

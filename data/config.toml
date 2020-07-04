@@ -1,5 +1,4 @@
-env_sampling_probability = 1.0
-scene_file = "data/scenes/white_furnace.toml"
+scene_file = "data/scenes/cornell_box.toml"
 
 [[cameras]]
 type="SimpleCamera"

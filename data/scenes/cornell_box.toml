@@ -45,6 +45,8 @@
 #             MaterialId::Light(0),
 #             0,
 #         ),
+
+env_sampling_probability = 0.01
 [environment]
 type="Constant"
 strength = 0.00005
