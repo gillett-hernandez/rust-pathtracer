@@ -178,7 +178,7 @@ type = "DiffuseLight"
 sidedness = "Reverse"
 [materials.data.color]
 type = "Linear"
-filename = "data/curves/spectra/xenon_lamp.spectra"
+filename = "data/curves/spectra/fluorescent.spectra"
 interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0
@@ -191,7 +191,7 @@ sidedness = "Reverse"
 sharpness = 2.0
 [materials.data.color]
 type = "Linear"
-filename = "data/curves/spectra/xenon_lamp.spectra"
+filename = "data/curves/spectra/fluorescent.spectra"
 interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0

@@ -269,12 +269,9 @@ impl SpectralPowerDistributionFunction for SPD {
                 bounds,
                 mode,
             } => {
-                debug_assert!(
-                    bounds.contains(&lambda),
-                    "lambda was {:?}, bounds were {:?}",
-                    lambda,
-                    bounds
-                );
+                if !bounds.contains(&lambda) {
+                    return 0.0;
+                }
                 let step_size = bounds.span() / (signal.len() as f32);
                 let index = ((lambda - bounds.lower) / step_size) as usize;
                 let left = signal[index];
