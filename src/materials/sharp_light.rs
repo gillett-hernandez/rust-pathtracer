@@ -5,13 +5,13 @@ use crate::math::*;
 #[derive(Clone, Debug)]
 pub struct SharpLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
-    pub color: SPD,
+    pub color: CDF,
     pub sharpness: f32,
     pub sidedness: Sidedness,
 }
 
 impl SharpLight {
-    pub fn new(color: SPD, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+    pub fn new(color: CDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
         SharpLight {
             color,
             sharpness: 1.0 + sharpness,
@@ -60,7 +60,7 @@ impl Material for SharpLight {
         wavelength_range: Bounds1D,
         mut scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF)> {
+    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
         // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
@@ -96,7 +96,7 @@ impl Material for SharpLight {
             .normalized();
         // let directional_pdf = local_wo.z().abs() / PI;
         // debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
-        let (sw, _pdf) = self
+        let (sw, pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         // fac both affects the power of the emitted light and the pdf.
@@ -104,7 +104,7 @@ impl Material for SharpLight {
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy * fac),
             PDF::from(fac),
-            // PDF::from(local_wo.z().abs() * pdf.0 / PI),
+            pdf,
         ))
     }
 

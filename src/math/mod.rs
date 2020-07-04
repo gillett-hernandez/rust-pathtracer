@@ -17,7 +17,7 @@ pub use point::Point3;
 pub use random::*;
 pub use sample::*;
 pub use spectral::{
-    InterpolationMode, SingleEnergy, SingleWavelength, SpectralPowerDistributionFunction, SPD,
+    InterpolationMode, SingleEnergy, SingleWavelength, SpectralPowerDistributionFunction, CDF, SPD,
 };
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;

@@ -1,10 +1,12 @@
-use packed_simd::f32x4;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
-
 use crate::math::color::XYZColor;
 use crate::math::misc::gaussian;
 use crate::math::*;
+
+use ordered_float::OrderedFloat;
+use packed_simd::f32x4;
 use serde::{Deserialize, Serialize};
+
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct SingleEnergy(pub f32);
@@ -233,6 +235,13 @@ pub enum SPD {
     },
 }
 
+#[derive(Debug, Clone)]
+pub struct CDF {
+    pub pdf: SPD,
+    pub cdf: SPD,
+    pub cdf_integral: f32,
+}
+
 pub trait SpectralPowerDistributionFunction {
     fn evaluate(&self, lambda: f32) -> f32;
     fn evaluate_power(&self, lambda: f32) -> f32;
@@ -242,6 +251,7 @@ pub trait SpectralPowerDistributionFunction {
         wavelength_range: Bounds1D,
         sample: Sample1D,
     ) -> (SingleWavelength, PDF);
+    fn evaluate_integral(&self, integration_bounds: Bounds1D, step_size: f32) -> f32;
     fn convert_to_xyz(&self, integration_bounds: Bounds1D, step_size: f32) -> XYZColor {
         let iterations = (integration_bounds.span() / step_size) as usize;
         let mut sum: XYZColor = XYZColor::ZERO;
@@ -262,7 +272,6 @@ pub trait SpectralPowerDistributionFunction {
 
 impl SpectralPowerDistributionFunction for SPD {
     fn evaluate_power(&self, lambda: f32) -> f32 {
-        use ordered_float::OrderedFloat;
         match &self {
             SPD::Linear {
                 signal,
@@ -283,7 +292,7 @@ impl SpectralPowerDistributionFunction for SPD {
                 } else {
                     return signal[index];
                 };
-                let t = lambda - (bounds.lower + index as f32 * step_size);
+                let t = (lambda - (bounds.lower + index as f32 * step_size)) / step_size;
                 // println!("t is {}", t);
                 match mode {
                     InterpolationMode::Linear => (1.0 - t) * left + t * right,
@@ -408,8 +417,172 @@ impl SpectralPowerDistributionFunction for SPD {
             }
         }
     }
+    fn evaluate_integral(&self, integration_bounds: Bounds1D, step_size: f32) -> f32 {
+        let iterations = (integration_bounds.span() / step_size) as usize;
+        let mut sum = 0.0;
+        for i in 0..iterations {
+            let lambda = integration_bounds.lower + (i as f32) * step_size;
+            let val = self.evaluate_power(lambda);
+            sum += val * step_size;
+        }
+        sum
+    }
 }
 
-pub trait RereflectanceFunction {
-    fn evaluate(&self, lambda: f32, energy: f32) -> (f32, f32);
+impl SpectralPowerDistributionFunction for CDF {
+    fn evaluate(&self, lambda: f32) -> f32 {
+        self.pdf.evaluate(lambda)
+    }
+    fn evaluate_power(&self, lambda: f32) -> f32 {
+        self.pdf.evaluate_power(lambda)
+    }
+    fn sample_power_and_pdf(
+        &self,
+        wavelength_range: Bounds1D,
+        sample: Sample1D,
+    ) -> (SingleWavelength, PDF) {
+        match &self.cdf {
+            SPD::Linear {
+                signal,
+                bounds,
+                mode,
+            } => {
+                // let restricted_bounds = bounds.intersection(wavelength_range);
+                let maybe_index = signal
+                    .binary_search_by_key(&OrderedFloat::<f32>(sample.x), |&a| {
+                        OrderedFloat::<f32>(a / self.cdf_integral)
+                    });
+                let lambda = match maybe_index {
+                    Ok(index) | Err(index) => {
+                        if index == 0 {
+                            // index is at end, so return lambda that corresponds to index
+                            bounds.lower
+                        } else {
+                            let left = bounds.lower
+                                + (index as f32 - 1.0) * (bounds.upper - bounds.lower)
+                                    / (signal.len() as f32);
+                            let right = bounds.lower
+                                + (index as f32) * (bounds.upper - bounds.lower)
+                                    / (signal.len() as f32);
+                            let v0 = signal[index - 1] / self.cdf_integral;
+                            let v1 = signal[index] / self.cdf_integral;
+                            let t = (sample.x - v0) / (v1 - v0);
+                            assert!(0.0 <= t && t <= 1.0, "{}, {}, {}, {}", t, sample.x, v0, v1);
+                            match mode {
+                                InterpolationMode::Linear => (1.0 - t) * left + t * right,
+                                InterpolationMode::Nearest => {
+                                    if t < 0.5 {
+                                        left
+                                    } else {
+                                        right
+                                    }
+                                }
+                                InterpolationMode::Cubic => {
+                                    let t2 = 2.0 * t;
+                                    let one_sub_t = 1.0 - t;
+                                    let h00 = (1.0 + t2) * one_sub_t * one_sub_t;
+                                    let h01 = t * t * (3.0 - t2);
+                                    h00 * left + h01 * right
+                                }
+                            }
+                            .clamp(bounds.lower, bounds.upper)
+                        }
+                    }
+                };
+                // println!("lambda was {}", lambda);
+                let power = self.pdf.evaluate_power(lambda);
+
+                // println!("power was {}", power);
+                (
+                    SingleWavelength::new(lambda, power.into()),
+                    PDF::from(power / self.cdf_integral),
+                )
+            }
+            _ => self.cdf.sample_power_and_pdf(wavelength_range, sample),
+        }
+    }
+    fn evaluate_integral(&self, integration_bounds: Bounds1D, step_size: f32) -> f32 {
+        self.pdf.evaluate_integral(integration_bounds, step_size)
+    }
+}
+
+impl From<SPD> for CDF {
+    fn from(curve: SPD) -> Self {
+        match &curve {
+            SPD::Linear {
+                signal,
+                bounds,
+                mode,
+            } => {
+                let mut cdf_signal = signal.clone();
+                let mut s = 0.0;
+                let step_size = bounds.span() / (signal.len() as f32);
+                for (i, v) in signal.iter().enumerate() {
+                    s += v * step_size;
+                    cdf_signal[i] = s;
+                }
+                // println!("integral is {}, step_size was {}", s, step_size);
+                CDF {
+                    pdf: curve.clone(),
+                    cdf: SPD::Linear {
+                        signal: cdf_signal,
+                        bounds: *bounds,
+                        mode: *mode,
+                    },
+                    cdf_integral: s,
+                }
+            }
+            _ => {
+                let mut cdf_signal = Vec::new();
+                let mut s = 0.0;
+                let num_samples = 400;
+                let step_size = BOUNDED_VISIBLE_RANGE.span() / (num_samples as f32);
+                for i in 0..num_samples {
+                    let lambda = BOUNDED_VISIBLE_RANGE.lower + (i as f32) * step_size;
+                    s += curve.evaluate_power(lambda);
+                    // println!("lambda: {}, s: {}", lambda, s);
+                    cdf_signal.push(s);
+                }
+                // println!("cdf integral was {}", s);
+                CDF {
+                    pdf: curve.clone(),
+                    cdf: SPD::Linear {
+                        signal: cdf_signal,
+                        bounds: BOUNDED_VISIBLE_RANGE,
+                        mode: InterpolationMode::Cubic,
+                    },
+                    cdf_integral: s,
+                }
+                // CDF {
+                // pdf: curve.clone(),
+                // cdf: curve.clone(),
+                // cdf_integral: curve.evaluate_integral(EXTENDED_VISIBLE_RANGE, 1.0),,
+            }
+        }
+    }
+}
+
+// pub trait RereflectanceFunction {
+//     fn evaluate(&self, lambda: f32, energy: f32) -> (f32, f32);
+// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_cdf() {
+        let cdf: CDF = SPD::Linear {
+            signal: vec![
+                0.1, 0.4, 0.9, 1.5, 0.9, 2.0, 1.0, 0.4, 0.6, 0.9, 0.4, 1.4, 1.9, 2.0, 5.0, 9.0,
+                6.0, 3.0, 1.0, 0.4,
+            ],
+            bounds: BOUNDED_VISIBLE_RANGE,
+            mode: InterpolationMode::Cubic,
+        }
+        .into();
+
+        let sampled =
+            cdf.sample_power_and_pdf(EXTENDED_VISIBLE_RANGE, Sample1D::new_random_sample());
+        println!("{:?}", sampled);
+    }
 }

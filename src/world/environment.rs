@@ -4,11 +4,11 @@ use crate::math::*;
 #[derive(Clone, Debug)]
 pub enum EnvironmentMap {
     Constant {
-        color: SPD,
+        color: CDF,
         strength: f32,
     },
     Sun {
-        color: SPD,
+        color: CDF,
         strength: f32,
         solid_angle: f32,
         sun_direction: Vec3,
@@ -78,12 +78,11 @@ impl EnvironmentMap {
         direction_sample: Sample2D,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> (Ray, SingleWavelength, PDF) {
+    ) -> (Ray, SingleWavelength, PDF, PDF) {
         // sample env map cdf to get light ray, based on env map strength
         match self {
             EnvironmentMap::Constant { color, strength } => {
-                let (mut sw, _pdf) =
-                    color.sample_power_and_pdf(wavelength_range, wavelength_sample);
+                let (mut sw, pdf) = color.sample_power_and_pdf(wavelength_range, wavelength_sample);
                 sw.energy *= *strength;
                 let random_direction = random_on_unit_sphere(direction_sample);
                 let frame = TangentFrame::from_normal(random_direction);
@@ -96,6 +95,7 @@ impl EnvironmentMap {
                     sw,
                     // pdf * 1.0 / (4.0 * PI), // solid angle pdf w/ wavelength sample incorporated
                     PDF::from(1.0 / (4.0 * PI)), // solid angle pdf
+                    pdf,                         // wavelength pdf
                 )
             }
             EnvironmentMap::Sun {
@@ -104,8 +104,7 @@ impl EnvironmentMap {
                 solid_angle: _,
                 sun_direction: _,
             } => {
-                let (mut sw, _pdf) =
-                    color.sample_power_and_pdf(wavelength_range, wavelength_sample);
+                let (mut sw, pdf) = color.sample_power_and_pdf(wavelength_range, wavelength_sample);
                 sw.energy *= *strength;
                 let (uv, directional_pdf) =
                     self.sample_env_uv_given_wavelength(direction_sample, sw.lambda);
@@ -116,7 +115,7 @@ impl EnvironmentMap {
                 let point = Point3::from(-direction * world_radius)
                     + frame.to_world(&random_on_normal_disk);
 
-                (Ray::new(point, direction), sw, directional_pdf)
+                (Ray::new(point, direction), sw, directional_pdf, pdf)
             }
         }
     }
@@ -196,10 +195,10 @@ mod tests {
     #[test]
     fn test_sample_emission() {
         let env_map = EnvironmentMap::Constant {
-            color: curves::blackbody(5500.0, 40.0),
+            color: curves::blackbody(5500.0, 40.0).into(),
             strength: 1.0,
         };
-        let (ray, sw, pdf) = env_map.sample_emission(
+        let (ray, sw, pdf, lambda_pdf) = env_map.sample_emission(
             1.0,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
@@ -222,12 +221,12 @@ mod tests {
     #[test]
     fn test_sample_emission_sun() {
         let env_map = EnvironmentMap::Sun {
-            color: curves::blackbody(5500.0, 40.0),
+            color: curves::blackbody(5500.0, 40.0).into(),
             strength: 1.0,
             solid_angle: 0.1,
             sun_direction: Vec3::Z,
         };
-        let (ray, sw, pdf) = env_map.sample_emission(
+        let (ray, sw, pdf, lambda_pdf) = env_map.sample_emission(
             1.0,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),

@@ -30,11 +30,11 @@ pub enum EnvironmentData {
 pub fn parse_environment(env_data: EnvironmentData) -> EnvironmentMap {
     match env_data {
         EnvironmentData::Constant(data) => EnvironmentMap::Constant {
-            color: parse_curve(data.color),
+            color: parse_curve(data.color).into(),
             strength: data.strength,
         },
         EnvironmentData::Sun(data) => EnvironmentMap::Sun {
-            color: parse_curve(data.color),
+            color: parse_curve(data.color).into(),
             strength: data.strength,
             solid_angle: data.solid_angle,
             sun_direction: Vec3::from(data.sun_direction),

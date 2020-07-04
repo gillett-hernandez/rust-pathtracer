@@ -63,12 +63,12 @@ impl From<MaterialData> for MaterialEnum {
             }
             MaterialData::SharpLight(data) => {
                 println!("parsing SharpLight");
-                let color = parse_curve(data.color);
+                let color = parse_curve(data.color).into();
                 MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
             }
             MaterialData::DiffuseLight(data) => {
                 println!("parsing DiffuseLight");
-                let color = parse_curve(data.color);
+                let color = parse_curve(data.color).into();
                 MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
             }
         }

@@ -29,7 +29,7 @@ pub trait Material: Send + Sync {
         wavelength_range: Bounds1D,
         scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF)> {
+    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
         None
     }
 
@@ -39,7 +39,7 @@ pub trait Material: Send + Sync {
     }
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(&self, hit: &HitRecord, wo: Vec3) -> PDF {
-        // hit is passed in to access the UV. 
+        // hit is passed in to access the UV.
         0.0.into()
     }
 

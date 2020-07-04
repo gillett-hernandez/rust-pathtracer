@@ -134,6 +134,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     tmp_sampled.0,
                     tmp_sampled.1,
                     tmp_sampled.2 * pick_pdf * area_pdf,
+                    tmp_sampled.3,
                 );
             } else {
                 let world_aabb = self.world.accelerator.bounding_box();
@@ -190,6 +191,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     tmp_sampled.0,
                     tmp_sampled.1,
                     tmp_sampled.2 * pick_pdf * area_pdf,
+                    tmp_sampled.3,
                 );
             }
         };
@@ -200,6 +202,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             return SingleWavelength::BLACK;
         }
         let light_pdf = sampled.2;
+        let lambda_pdf = sampled.3;
 
         // let mut beta = SingleEnergy::ONE;
         // let mut beta = radiance / (sampled.2).0;
@@ -224,7 +227,7 @@ impl GenericIntegrator for LightTracingIntegrator {
 
                 if bounce_count == 0 {
                     // include first P_A term correctly
-                    beta.0 *= light_pdf.0 * light_g_term * wi.z()
+                    beta.0 *= light_pdf.0 / lambda_pdf.0 * light_g_term * wi.z()
                         / (hit.point - ray.origin).norm_squared();
                 }
 

@@ -15,4 +15,11 @@ impl Bounds1D {
     pub fn contains(&self, value: &f32) -> bool {
         &self.lower <= value && value < &self.upper
     }
+    pub fn intersection(&self, other: Self) -> Self {
+        Bounds1D::new(self.lower.max(other.lower), self.upper.min(other.upper))
+    }
+
+    pub fn union(&self, other: Self) -> Self {
+        Bounds1D::new(self.lower.min(other.lower), self.upper.max(other.upper))
+    }
 }

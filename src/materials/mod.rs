@@ -96,7 +96,7 @@ impl Material for MaterialEnum {
         wavelength_range: Bounds1D,
         scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF)> {
+    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
         match self {
             MaterialEnum::GGX(inner) => inner.sample_emission(
                 point,

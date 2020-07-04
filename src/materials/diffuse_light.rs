@@ -5,12 +5,12 @@ use crate::math::*;
 #[derive(Clone, Debug)]
 pub struct DiffuseLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
-    pub color: SPD,
+    pub color: CDF,
     pub sidedness: Sidedness,
 }
 
 impl DiffuseLight {
-    pub fn new(color: SPD, sidedness: Sidedness) -> DiffuseLight {
+    pub fn new(color: CDF, sidedness: Sidedness) -> DiffuseLight {
         DiffuseLight { color, sidedness }
     }
 }
@@ -23,7 +23,7 @@ impl Material for DiffuseLight {
         wavelength_range: Bounds1D,
         mut scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF)> {
+    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
         // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
@@ -46,14 +46,14 @@ impl Material for DiffuseLight {
         let object_wo = frame.to_world(&local_wo).normalized();
         let directional_pdf = local_wo.z().abs() / PI;
         debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
-        let (sw, _pdf) = self
+        let (sw, pdf) = self
             .color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy / PI),
             PDF::from(directional_pdf),
-            // PDF::from(local_wo.z().abs() * pdf.0 / PI),
+            pdf,
         ))
     }
 
