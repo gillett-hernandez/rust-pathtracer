@@ -218,7 +218,7 @@ pub fn random_walk(
                 // let beta_before_hit = beta;
                 // last_bsdf_pdf = pdf;
 
-                debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
+                debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_i, pdf);
 
                 // add normal to avoid self intersection
                 // also convert wo back to world space when spawning the new ray

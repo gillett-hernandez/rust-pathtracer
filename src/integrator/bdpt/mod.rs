@@ -169,7 +169,15 @@ impl GenericIntegrator for BDPTIntegrator {
 
         let light_ray = sampled.0;
         let lambda = sampled.1.lambda;
-        let radiance = sampled.1.energy;
+        assert!(
+            (sampled.3).0 > 0.0,
+            "{:?} {:?} {:?} {:?}",
+            sampled.0,
+            sampled.1,
+            sampled.2,
+            sampled.3
+        );
+        let radiance = sampled.1.energy / (sampled.3).0;
 
         // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
         let mut light_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
