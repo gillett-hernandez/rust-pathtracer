@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
+pub const EXTENDED_VISIBLE_RANGE: Bounds1D = Bounds1D::new(370.0, 790.0);
+pub const BOUNDED_VISIBLE_RANGE: Bounds1D = Bounds1D::new(380.0, 780.0);
+
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct SingleEnergy(pub f32);
 
@@ -198,8 +201,6 @@ pub enum InterpolationMode {
     Cubic,
 }
 
-pub const EXTENDED_VISIBLE_RANGE: Bounds1D = Bounds1D::new(370.0, 790.0);
-pub const BOUNDED_VISIBLE_RANGE: Bounds1D = Bounds1D::new(380.0, 780.0);
 #[derive(Debug, Clone)]
 pub enum SPD {
     Linear {
