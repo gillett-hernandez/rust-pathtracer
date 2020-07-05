@@ -1,0 +1,352 @@
+# fn _construct_scene2(config: &Config) -> World {
+#     // load some curves
+#     let (silver_ior, silver_kappa) =
+#         load_ior_and_kappa("data/curves/csv/silver.csv", |x: f32| x * 1000.0).unwrap();
+#     let (gold_ior, gold_kappa) =
+#         load_ior_and_kappa("data/curves/csv/gold.csv", |x: f32| x * 1000.0).unwrap();
+
+#     let (bismuth_ior, bismuth_kappa) =
+#         load_ior_and_kappa("data/curves/csv/bismuth.csv", |x: f32| x * 1000.0).unwrap();
+#     let (copper_ior, copper_kappa) =
+#         load_ior_and_kappa("data/curves/csv/copper-mcpeak.csv", |x: f32| x * 1000.0).unwrap();
+#     let (lead_ior, lead_kappa) =
+#         load_ior_and_kappa("data/curves/csv/lead.csv", |x: f32| x * 1000.0).unwrap();
+#     let (cold_lead_ior, cold_lead_kappa) =
+#         load_ior_and_kappa("data/curves/csv/lead-140K.csv", |x: f32| x * 1000.0).unwrap();
+#     let (platinum_ior, platinum_kappa) =
+#         load_ior_and_kappa("data/curves/csv/platinum.csv", |x: f32| x * 1000.0).unwrap();
+#     let (iron_ior, iron_kappa) =
+#         load_ior_and_kappa("data/curves/csv/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
+
+#     let ggx_glass =
+#         MaterialEnum::from(GGX::new(0.0001, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+#     let ggx_glass_rough =
+#         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
+#     let ggx_moissanite =
+#         MaterialEnum::from(GGX::new(0.0001, moissanite, 1.0, flat_zero.clone(), 1.0));
+#     let ggx_unrealistic_dispersion = MaterialEnum::from(GGX::new(
+#         0.001,
+#         curves::cauchy(1.45, 50000.0),
+#         1.0,
+#         flat_zero.clone(),
+#         1.0,
+#     ));
+
+#     let additional_instances = vec![
+#         Instance::new(
+#             Aggregate::from(Disk::new(0.7, Point3::new(0.0, 0.0, 0.0), false)),
+#             Some(Transform3::from_stack(
+#                 Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
+#                 None,
+#                 Some(Transform3::from_translation(
+#                     Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
+#                 )),
+#             )),
+#             MaterialId::Light(0),
+#             0,
+#         ),
+
+env_sampling_probability = 0.01
+[environment]
+type="Constant"
+strength = 0.00005
+[environment.color]
+type = "TabulatedCSV"
+filename = "data/curves/csv/D65.csv"
+column = 1
+interpolation_mode = "Cubic"
+
+[[materials]]
+name = "lambertian_white"
+[materials.data]
+type = "Lambertian"
+[materials.data.color]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 1
+interpolation_mode = "Cubic"
+
+[[materials]]
+name = "lambertian_green"
+[materials.data]
+type = "Lambertian"
+[materials.data.color]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 2
+interpolation_mode = "Cubic"
+
+[[materials]]
+name = "ggx_glass"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 1.4
+b = 4500.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+[[materials]]
+name = "ggx_glass_dispersive"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 1.4
+b = 50000.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+[[materials]]
+name = "ggx_moissanite"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 2.4
+b = 34000.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+[[materials]]
+name = "ggx_gold"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 0.0
+alpha = 0.004
+[materials.data.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 1
+interpolation_mode = "Cubic"
+[materials.data.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 2
+interpolation_mode = "Cubic"
+
+[[materials]]
+name = "ggx_copper"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 0.0
+alpha = 0.002
+[materials.data.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/copper-mcpeak.csv"
+column = 1
+interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
+[materials.data.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/copper-mcpeak.csv"
+column = 2
+interpolation_mode = "Cubic"
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
+
+[[materials]]
+name = "lambertian_red"
+[materials.data]
+type = "Lambertian"
+[materials.data.color]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 3
+interpolation_mode = "Cubic"
+
+[[materials]]
+name = "diffuse_light_fluorescent"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
+name = "diffuse_light_xenon"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+
+[[materials]]
+name = "diffuse_light_warm"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "diffuse_light"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Blackbody"
+temperature = 5000.0
+strength = 5.0
+
+
+[[materials]]
+name = "sharp_light_fluorescent"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 2.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+
+
+[[instances]]
+material_identifier = "diffuse_light_xenon"
+[instances.aggregate]
+type = "Rect"
+size = [0.6, 0.6]
+origin = [0.0, 0.0, 0.9]
+normal = "Z"
+two_sided = false
+
+[[instances]]
+material_identifier = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [0.0, 0.0, 1.0]
+normal = "Z"
+two_sided = true
+
+[[instances]]
+material_identifier = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [0.0, 0.0, -1.0]
+normal = "Z"
+two_sided = true
+
+[[instances]]
+material_identifier = "lambertian_red"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [0.0, 1.0, 0.0]
+normal = "Y"
+two_sided = true
+
+[[instances]]
+material_identifier = "lambertian_green"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [0.0, -1.0, 0.0]
+normal = "Y"
+two_sided = true
+
+[[instances]]
+material_identifier = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [1.0, 0.0, 0.0]
+normal = "X"
+two_sided = true
+
+# sphere below light
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.4
+origin = [0.0, 0.0, 0.45]
+
+
+# sphere near floor
+[[instances]]
+material_identifier = "ggx_gold"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.0, 0.0, -0.75]
+
+
+# quad of spheres above
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.21, 0.21, -0.45]
+
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.21, -0.21, -0.45]
+
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [-0.21, 0.21, -0.45]
+
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [-0.21, -0.21, -0.45]
+
+
+# sphere on top
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.0, 0.0, -0.15]
+
+
+
+# [[instances]]
+# material_identifier = "ggx_copper"
+# [instances.aggregate]
+# type = "Sphere"
+# radius = 0.3
+# origin = [0.0, -0.6, -0.7]
