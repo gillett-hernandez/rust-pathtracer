@@ -172,7 +172,7 @@ column = 3
 interpolation_mode = "Cubic"
 
 [[materials]]
-name = "diffuse_light"
+name = "diffuse_light_fluorescent"
 [materials.data]
 type = "DiffuseLight"
 sidedness = "Reverse"
@@ -184,7 +184,17 @@ interpolation_mode = "Cubic"
 y_scale = 5.0
 
 [[materials]]
-name = "sharp_light"
+name = "diffuse_light_warm"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light_fluorescent"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
@@ -199,7 +209,7 @@ y_scale = 5.0
 
 
 [[instances]]
-material_identifier = "diffuse_light"
+material_identifier = "diffuse_light_warm"
 [instances.aggregate]
 type = "Rect"
 size = [0.6, 0.6]
