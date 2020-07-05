@@ -437,7 +437,7 @@ impl SpectralPowerDistributionFunction for CDF {
     fn sample_power_and_pdf(
         &self,
         wavelength_range: Bounds1D,
-        sample: Sample1D,
+        mut sample: Sample1D,
     ) -> (SingleWavelength, PDF) {
         match &self.cdf {
             SPD::Linear {
@@ -445,7 +445,17 @@ impl SpectralPowerDistributionFunction for CDF {
                 bounds,
                 mode,
             } => {
-                // let restricted_bounds = bounds.intersection(wavelength_range);
+                let restricted_bounds = bounds.intersection(wavelength_range);
+                // remap sample.x to lie between the values that correspond to restricted_bounds.lower and restricted_bounds.upper
+                let lower_cdf_value =
+                    self.cdf.evaluate_power(restricted_bounds.lower - 0.0001) / self.cdf_integral;
+                let upper_cdf_value =
+                    self.cdf.evaluate_power(restricted_bounds.upper - 0.0001) / self.cdf_integral;
+                sample.x = lower_cdf_value + sample.x * (upper_cdf_value - lower_cdf_value);
+                // println!(
+                //     "remapped sample value to be {} which is between {} and {}",
+                //     sample.x, lower_cdf_value, upper_cdf_value
+                // );
                 let maybe_index = signal
                     .binary_search_by_key(&OrderedFloat::<f32>(sample.x), |&a| {
                         OrderedFloat::<f32>(a / self.cdf_integral)
@@ -568,7 +578,7 @@ impl From<SPD> for CDF {
 mod tests {
     use super::*;
     #[test]
-    fn test_cdf() {
+    fn test_cdf1() {
         let cdf: CDF = SPD::Linear {
             signal: vec![
                 0.1, 0.4, 0.9, 1.5, 0.9, 2.0, 1.0, 0.4, 0.6, 0.9, 0.4, 1.4, 1.9, 2.0, 5.0, 9.0,
@@ -579,8 +589,71 @@ mod tests {
         }
         .into();
 
-        let sampled =
-            cdf.sample_power_and_pdf(EXTENDED_VISIBLE_RANGE, Sample1D::new_random_sample());
-        println!("{:?}", sampled);
+        let mut s = 0.0;
+        for _ in 0..100 {
+            let sampled =
+                cdf.sample_power_and_pdf(BOUNDED_VISIBLE_RANGE, Sample1D::new_random_sample());
+
+            s += sampled.0.energy.0 / (sampled.1).0;
+        }
+        println!("{}", s);
+    }
+
+    #[test]
+    fn test_cdf2() {
+        let cdf: CDF = SPD::Exponential {
+            signal: vec![(400.0, 200.0, 200.0, 0.9), (600.0, 200.0, 300.0, 1.0)],
+        }
+        .into();
+
+        let mut s = 0.0;
+        for _ in 0..100 {
+            let sampled =
+                cdf.sample_power_and_pdf(BOUNDED_VISIBLE_RANGE, Sample1D::new_random_sample());
+
+            s += sampled.0.energy.0 / (sampled.1).0;
+        }
+        println!("{}", s);
+    }
+
+    #[test]
+    fn test_cdf3() {
+        // test sampling according to the CDF with narrowed bounds wrt the original signal bounds
+        let cdf: CDF = SPD::Linear {
+            signal: vec![
+                0.1, 0.4, 0.9, 1.5, 0.9, 2.0, 1.0, 0.4, 0.6, 0.9, 0.4, 1.4, 1.9, 2.0, 5.0, 9.0,
+                6.0, 3.0, 1.0, 0.4,
+            ],
+            bounds: BOUNDED_VISIBLE_RANGE,
+            mode: InterpolationMode::Cubic,
+        }
+        .into();
+
+        let narrowed_bounds = Bounds1D::new(500.0, 600.0);
+        let mut s = 0.0;
+        for _ in 0..100 {
+            let sampled = cdf.sample_power_and_pdf(narrowed_bounds, Sample1D::new_random_sample());
+
+            s += sampled.0.energy.0 / (sampled.1).0;
+        }
+        println!("{}", s);
+    }
+
+    #[test]
+    fn test_cdf4() {
+        // test sampling according to the CDF with narrowed bounds in general
+        let cdf: CDF = SPD::Exponential {
+            signal: vec![(400.0, 200.0, 200.0, 0.9), (600.0, 200.0, 300.0, 1.0)],
+        }
+        .into();
+
+        let narrowed_bounds = Bounds1D::new(500.0, 600.0);
+        let mut s = 0.0;
+        for _ in 0..100 {
+            let sampled = cdf.sample_power_and_pdf(narrowed_bounds, Sample1D::new_random_sample());
+
+            s += sampled.0.energy.0 / (sampled.1).0;
+        }
+        println!("{}", s);
     }
 }

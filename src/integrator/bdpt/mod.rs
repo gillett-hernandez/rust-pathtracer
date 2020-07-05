@@ -177,7 +177,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled.2,
             sampled.3
         );
-        let radiance = sampled.1.energy / (sampled.3).0;
+        let radiance = sampled.1.energy;
 
         // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
         let mut light_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
@@ -271,7 +271,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         } else {
                             1.0 / ((s + t) as f32)
                         };
-                        return SingleWavelength::new(lambda, weight * factor);
+                        return SingleWavelength::new(lambda, weight * factor / (sampled.3).0);
                     }
 
                     SampleKind::Splatted((factor, g)) => {
@@ -292,7 +292,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         } else {
                             1.0 / ((s + t) as f32)
                         };
-                        let contribution = weight * factor;
+                        let contribution = weight * factor / (sampled.3).0;
                         let last_light_vertex = light_path[s - 1];
                         let (vert_on_lens, vert_in_scene) = if t == 1 {
                             // t = 1 case
@@ -378,7 +378,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     )
                 } else {
                     1.0 / ((s + t) as f32)
-                };
+                } / (sampled.3).0;
                 if weight == 0.0 {
                     continue;
                 }
