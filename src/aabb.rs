@@ -1,25 +1,41 @@
 use crate::math::*;
+
+use approx::relative_eq;
 use packed_simd::f32x4;
 
 pub trait HasBoundingBox {
-    fn bounding_box(&self) -> AABB;
+    fn aabb(&self) -> AABB;
 }
+
+#[derive(Copy, Clone, Debug)]
 pub struct AABB {
     pub min: Point3,
     pub max: Point3,
 }
 
 impl AABB {
-    pub fn new(min: Point3, max: Point3) -> AABB {
+    pub fn new(min: Point3, max: Point3) -> Self {
         AABB {
             min: Point3::from_raw(min.0.min(max.0)),
             max: Point3::from_raw(min.0.max(max.0)),
         }
     }
-    pub const fn new_raw(min: Point3, max: Point3) -> AABB {
+    // empty AABB contains nothing.
+    pub fn empty() -> Self {
+        AABB::new_raw(Point3::INFINITY, Point3::NEG_INFINITY)
+    }
+    pub const fn new_raw(min: Point3, max: Point3) -> Self {
         AABB { min, max }
     }
-    pub fn hit(&self, r: Ray, _t0: f32, _t1: f32) -> bool {
+
+    pub fn contains(&self, point: Point3) -> bool {
+        let min: f32x4 = self.min.0;
+        let max: f32x4 = self.max.0;
+        // point is only contained if its elements are all greater than or equal to the min and less than or equal to the max
+        point.0.ge(min).all() && point.0.le(max).all()
+    }
+
+    pub fn hit(&self, r: &Ray, _t0: f32, _t1: f32) -> bool {
         let denom = r.direction.0;
         let min: f32x4 = ((self.min - r.origin).0 / denom) * Vec3::MASK;
 
@@ -75,14 +91,57 @@ impl AABB {
         // tmin = tmin.max(t0);
         // tmax = tmax.min(t1);
     }
-    pub fn expand(mut self, other: AABB) -> AABB {
+    pub fn expand(mut self, other: &AABB) -> AABB {
         self.min = Point3::from_raw(self.min.0.min(other.min.0));
         self.max = Point3::from_raw(self.max.0.max(other.max.0));
         self
     }
-    pub fn expand_point(mut self, other: Point3) -> AABB {
+
+    pub fn expand_mut(&mut self, other: &AABB) {
+        self.min = Point3::from_raw(self.min.0.min(other.min.0));
+        self.max = Point3::from_raw(self.max.0.max(other.max.0));
+    }
+
+    pub fn grow(mut self, other: &Point3) -> AABB {
         self.min = Point3::from_raw(self.min.0.min(other.0));
         self.max = Point3::from_raw(self.max.0.max(other.0));
         self
+    }
+
+    pub fn grow_mut(&mut self, other: &Point3) {
+        self.min = Point3::from_raw(self.min.0.min(other.0));
+        self.max = Point3::from_raw(self.max.0.max(other.0));
+    }
+    pub fn size(&self) -> Vec3 {
+        self.max - self.min
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.min.0.gt(self.max.0).any()
+    }
+
+    pub fn center(&self) -> Point3 {
+        self.min + (self.size() / 2.0)
+    }
+
+    pub fn surface_area(&self) -> f32 {
+        let [sx, sy, sz, _]: [f32; 4] = self.size().0.into();
+        2.0 * (sx * sy + sx * sz + sy * sz)
+    }
+
+    pub fn volume(&self) -> f32 {
+        let [sx, sy, sz, _]: [f32; 4] = self.size().0.into();
+        sx * sy * sz
+    }
+
+    // pub fn relative_eq(&self, other: &AABB, epsilon: f32) -> bool {
+    //     relative_eq!(self.min, other.min, epsilon = epsilon)
+    //         && relative_eq!(self.max, other.max, epsilon = epsilon)
+    // }
+}
+
+impl Default for AABB {
+    fn default() -> AABB {
+        AABB::empty()
     }
 }

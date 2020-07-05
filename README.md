@@ -70,11 +70,11 @@ That should theoretically cause images to converge faster, though the feature is
 - [x] implement basic accelerator. Done, at [accelerator.rs](src/accelerator.rs)
 - [x] implement environment sampling. Somewhat done, still more to do. at [world.rs](src/world.rs)
 - [x] implement light emission sampling to generate rays from lights. Done, part of the material trait at [material.rs](src/material.rs)
-- [ ] implement BVH
-- [ ] implement spectral power distribution importance sampling. requires computing the CDF of curves.
-- [ ] implement scene parser to reduce compilations even more
-- [ ] implement light tracing
-- [ ] implement BDPT
+- [x] implement BVH
+- [x] implement spectral power distribution importance sampling. requires computing the CDF of curves.
+- [x] implement scene parser to reduce compilations even more
+- [x] implement light tracing
+- [x] implement BDPT
 - [ ] refactor bsdf trait methods to reduce duplication
 - [ ] implement real units for radiance and camera importance
 - [ ] research image reconstruction theory and implement proper pixel filtering
@@ -86,6 +86,8 @@ Thanks to Nova, for helping me figure out implementation details and generally h
 I am referencing [this](https://rendering-memo.blogspot.com/2016/03/bidirectional-path-tracing-8-combine.html) blog post and code while working on the BDPT integrator, so thanks to the author.
 
 Thanks to members of the Rendering & Lighting (offline) discord server for pointing me in the right direction in fixing some color output issues.
+
+I used [this](https://github.com/svenstaro/bvh) to implement the BVH. I modified it to use my AABB implementation and other math routines, but for the most part the algorithm is unchanged.
 
 ## Contribution
 

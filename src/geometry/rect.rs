@@ -52,7 +52,7 @@ impl AARect {
 }
 
 impl HasBoundingBox for AARect {
-    fn bounding_box(&self) -> AABB {
+    fn aabb(&self) -> AABB {
         let v = vec_shuffle(
             Vec3::new(self.size.0 / 2.0, self.size.1 / 2.0, 0.0001),
             &self.normal,

@@ -20,7 +20,7 @@ impl Disk {
 }
 
 impl HasBoundingBox for Disk {
-    fn bounding_box(&self) -> AABB {
+    fn aabb(&self) -> AABB {
         let v = Vec3::new(self.radius / 2.0, self.radius / 2.0, 0.001);
         AABB::new(self.origin - v, self.origin + v)
     }

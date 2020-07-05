@@ -92,7 +92,8 @@ pub fn construct_world(config: &Config) -> World {
         materials,
         parse_environment(scene.environment),
         scene.env_sampling_probability.unwrap_or(0.5),
-        AcceleratorType::List,
+        AcceleratorType::BVH,
+        // AcceleratorType::List,
     );
     world
 }

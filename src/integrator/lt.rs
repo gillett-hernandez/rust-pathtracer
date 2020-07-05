@@ -137,7 +137,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     tmp_sampled.3,
                 );
             } else {
-                let world_aabb = self.world.accelerator.bounding_box();
+                let world_aabb = self.world.accelerator.aabb();
                 let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
                 // println!("sampling world, world radius is {}", world_radius);
                 // println!("sampled light emission in world light branch");

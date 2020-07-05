@@ -198,7 +198,7 @@ mod tests {
             color: curves::blackbody(5500.0, 40.0).into(),
             strength: 1.0,
         };
-        let (ray, sw, pdf, lambda_pdf) = env_map.sample_emission(
+        let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
             1.0,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
@@ -226,7 +226,7 @@ mod tests {
             solid_angle: 0.1,
             sun_direction: Vec3::Z,
         };
-        let (ray, sw, pdf, lambda_pdf) = env_map.sample_emission(
+        let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
             1.0,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),

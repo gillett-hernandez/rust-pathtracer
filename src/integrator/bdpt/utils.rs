@@ -243,7 +243,7 @@ pub fn random_walk(
             // add a vertex when a camera ray hits the environment
             if trace_type == TransportMode::Importance {
                 let ray_direction = ray.direction;
-                let bounding_box = world.bounding_box();
+                let bounding_box = world.aabb();
                 let world_radius = (bounding_box.max - bounding_box.min).norm();
                 let at_env = ray_direction * world_radius;
                 let vertex = Vertex::new(

@@ -2,6 +2,7 @@ use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
 use crate::materials::MaterialId;
 use crate::math::*;
 
+use crate::accelerator::BHShape;
 use crate::geometry::*;
 
 use std::cmp::{Ordering, PartialOrd};
@@ -12,6 +13,7 @@ pub struct Instance {
     pub transform: Option<Transform3>,
     pub material_id: MaterialId,
     pub instance_id: usize,
+    node_id: usize,
 }
 
 impl Eq for Instance {}
@@ -46,6 +48,7 @@ impl Instance {
             transform,
             material_id,
             instance_id,
+            node_id: 0,
         }
     }
 
@@ -55,8 +58,8 @@ impl Instance {
     // }
 }
 impl HasBoundingBox for Instance {
-    fn bounding_box(&self) -> AABB {
-        let mut aabb = self.aggregate.bounding_box();
+    fn aabb(&self) -> AABB {
+        let mut aabb = self.aggregate.aabb();
         if let Some(transform) = self.transform {
             aabb = transform * aabb
         }
@@ -135,6 +138,15 @@ impl Instance {
     }
     pub fn get_material_id(&self) -> MaterialId {
         self.material_id
+    }
+}
+
+impl BHShape for Instance {
+    fn set_bh_node_index(&mut self, index: usize) {
+        self.node_id = index;
+    }
+    fn bh_node_index(&self) -> usize {
+        self.node_id
     }
 }
 

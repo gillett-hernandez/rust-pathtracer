@@ -38,11 +38,11 @@ impl From<AARect> for Aggregate {
 }
 
 impl HasBoundingBox for Aggregate {
-    fn bounding_box(&self) -> AABB {
+    fn aabb(&self) -> AABB {
         match self {
-            Aggregate::Sphere(inner) => inner.bounding_box(),
-            Aggregate::AARect(inner) => inner.bounding_box(),
-            Aggregate::Disk(inner) => inner.bounding_box(),
+            Aggregate::Sphere(inner) => inner.aabb(),
+            Aggregate::AARect(inner) => inner.aabb(),
+            Aggregate::Disk(inner) => inner.aabb(),
         }
     }
 }

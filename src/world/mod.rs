@@ -129,7 +129,7 @@ impl World {
     }
 
     pub fn get_world_radius(&self) -> f32 {
-        let world_aabb = self.accelerator.bounding_box();
+        let world_aabb = self.accelerator.aabb();
         let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
         world_radius
     }
@@ -137,13 +137,29 @@ impl World {
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
         // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
         if add_and_rebuild_scene {
-            for camera in self.cameras.iter() {
-                let instances = &mut self.accelerator.instances;
-                if let Some(camera_surface) = camera.get_surface() {
-                    println!("removing camera surface {:?}", &camera_surface);
-                    // instances.remove_item(&camera_surface);
-                    let id = instances.binary_search(&camera_surface).unwrap();
-                    instances.remove(id);
+            match &mut self.accelerator {
+                Accelerator::List { ref mut instances } => {
+                    for camera in self.cameras.iter() {
+                        if let Some(camera_surface) = camera.get_surface() {
+                            println!("removing camera surface {:?}", &camera_surface);
+                            // instances.remove_item(&camera_surface);
+                            let id = instances.binary_search(&camera_surface).unwrap();
+                            instances.remove(id);
+                        }
+                    }
+                }
+                Accelerator::BVH {
+                    ref mut instances,
+                    bvh: _,
+                } => {
+                    for camera in self.cameras.iter() {
+                        if let Some(camera_surface) = camera.get_surface() {
+                            println!("removing camera surface {:?}", &camera_surface);
+                            // instances.remove_item(&camera_surface);
+                            let id = instances.binary_search(&camera_surface).unwrap();
+                            instances.remove(id);
+                        }
+                    }
                 }
             }
         }
@@ -151,23 +167,41 @@ impl World {
         self.cameras = cameras;
 
         if add_and_rebuild_scene {
-            let instances = &mut self.accelerator.instances;
-            for (cam_id, cam) in self.cameras.iter().enumerate() {
-                if let Some(mut surface) = cam.get_surface() {
-                    let id = instances.len();
-                    surface.instance_id = id;
-                    surface.material_id = MaterialId::Camera(cam_id as u8);
-                    println!("adding camera {:?} with id {}", &surface, cam_id);
-                    instances.push(surface);
+            match &mut self.accelerator {
+                Accelerator::List { ref mut instances } => {
+                    for (cam_id, cam) in self.cameras.iter().enumerate() {
+                        if let Some(mut surface) = cam.get_surface() {
+                            let id = instances.len();
+                            surface.instance_id = id;
+                            surface.material_id = MaterialId::Camera(cam_id as u8);
+                            println!("adding camera {:?} with id {}", &surface, cam_id);
+                            instances.push(surface);
+                        }
+                    }
+                }
+                Accelerator::BVH {
+                    ref mut instances,
+                    bvh: _,
+                } => {
+                    for (cam_id, cam) in self.cameras.iter().enumerate() {
+                        if let Some(mut surface) = cam.get_surface() {
+                            let id = instances.len();
+                            surface.instance_id = id;
+                            surface.material_id = MaterialId::Camera(cam_id as u8);
+                            println!("adding camera {:?} with id {}", &surface, cam_id);
+                            instances.push(surface);
+                        }
+                    }
                 }
             }
+
             self.accelerator.rebuild();
         }
     }
 }
 
 impl HasBoundingBox for World {
-    fn bounding_box(&self) -> AABB {
-        self.accelerator.bounding_box()
+    fn aabb(&self) -> AABB {
+        self.accelerator.aabb()
     }
 }

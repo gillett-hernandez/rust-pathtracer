@@ -21,7 +21,7 @@ impl Sphere {
 }
 
 impl HasBoundingBox for Sphere {
-    fn bounding_box(&self) -> AABB {
+    fn aabb(&self) -> AABB {
         AABB::new(
             self.origin - Vec3::from(self.radius),
             self.origin + Vec3::from(self.radius),

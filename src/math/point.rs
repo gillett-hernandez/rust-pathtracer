@@ -2,6 +2,7 @@ use crate::math::Vec3;
 // use packed_simd::{f32x4, f32x8};
 use packed_simd::f32x4;
 
+use std::f32::INFINITY;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -16,6 +17,9 @@ impl Point3 {
     }
     pub const ZERO: Point3 = Point3::from_raw(f32x4::new(0.0, 0.0, 0.0, 1.0));
     pub const ORIGIN: Point3 = Point3::from_raw(f32x4::new(0.0, 0.0, 0.0, 1.0));
+    pub const INFINITY: Point3 = Point3::from_raw(f32x4::new(INFINITY, INFINITY, INFINITY, 1.0));
+    pub const NEG_INFINITY: Point3 =
+        Point3::from_raw(f32x4::new(-INFINITY, -INFINITY, -INFINITY, 1.0));
     pub fn is_normal(&self) -> bool {
         !(self.0.is_nan().any() || self.0.is_infinite().any())
     }
