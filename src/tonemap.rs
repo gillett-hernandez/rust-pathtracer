@@ -89,7 +89,7 @@ impl Tonemapper for sRGB {
             S323_25 * rgb_linear,
             (S211 * rgb_linear.powf(S5_12) - S11) / S200,
         );
-        (srgb, rgb_linear)
+        (srgb, rgb_linear / self.factor)
     }
     fn write_to_files(&self, film: &Film<XYZColor>, exr_filename: &str, png_filename: &str) {
         let now = Instant::now();

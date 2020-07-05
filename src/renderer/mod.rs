@@ -78,15 +78,8 @@ impl NaiveRenderer {
 
         let now = Instant::now();
 
-        // do stuff with film here
-
         let mut film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
 
-        // for _ in 0..100 {
-        //     print!("-");
-        // }
-        // println!("");
-        // let output_divisor = (film.width * film.height / 100).max(1);
         let mut pb = ProgressBar::new((width * height) as u64);
 
         let total_pixels = width * height;
@@ -99,12 +92,7 @@ impl NaiveRenderer {
                 let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
                 pb.add(pixels_to_increment as u64);
                 local_index += pixels_to_increment;
-                // pixels_to_increment = 0;
-                // while pixels_to_increment > 0 {
-                //     pb.inc();
-                //     pixels_to_increment -= 1;
-                //     local_index += 1;
-                // }
+
                 thread::sleep(Duration::from_millis(250));
             }
         });
@@ -176,15 +164,7 @@ impl NaiveRenderer {
         renders: Vec<RenderSettings>,
         cameras: Vec<Camera>,
     ) -> Vec<(RenderSettings, Film<XYZColor>)> {
-        // let (width, height) = (settings.resolution.width, settings.resolution.height);
-        // let min_camera_rays = width * height * settings.min_samples as usize;
-
         let now = Instant::now();
-
-        // let total_camera_rays =
-        //     width * height * (settings.max_samples.unwrap_or(settings.min_samples) as usize);
-
-        // do stuff with film here
 
         let mut total_camera_samples = 0;
         let mut total_pixels = 0;
@@ -211,9 +191,8 @@ impl NaiveRenderer {
             .unwrap();
 
         const SHOW_PROGRESS_BAR: bool = true;
-        // if SHOW_PROGRESS_BAR {
         let mut pb = ProgressBar::new(total_pixels as u64);
-        // }
+
         let pixel_count = Arc::new(AtomicUsize::new(0));
         let clone1 = pixel_count.clone();
         let thread = thread::spawn(move || {
@@ -222,15 +201,9 @@ impl NaiveRenderer {
                 let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
                 if SHOW_PROGRESS_BAR {
                     pb.add(pixels_to_increment as u64);
-                    // pb.tick();
                 }
                 local_index += pixels_to_increment;
-                // pixels_to_increment = 0;
-                // while pixels_to_increment > 0 {
-                //     pb.inc();
-                //     pixels_to_increment -= 1;
-                //     local_index += 1;
-                // }
+
                 thread::sleep(Duration::from_millis(250));
             }
         });
@@ -317,9 +290,9 @@ impl NaiveRenderer {
             }
         });
 
-        // let tx1 = mpsc::Sender::clone(&tx);
         let tx_arc = Arc::new(Mutex::new(tx));
-        // need to rate limit based on the speed at which splatting is occurring.
+        // might need to rate limit based on the speed at which splatting is occurring, but for now don't limit.
+        // Light tracing will use an unbounded amount of memory though.
         let per_splat_sleep_time = Duration::from_nanos(0);
 
         films.par_iter_mut().enumerate().for_each(
@@ -335,9 +308,7 @@ impl NaiveRenderer {
                         let tx1 = { tx_arc.lock().unwrap().clone() };
                         let y: usize = pixel_index / settings.resolution.width;
                         let x: usize = pixel_index - settings.resolution.width * y;
-                        // get ray for pixel x, y
-                        // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                        // let mut temp_color = RGBColor::BLACK;
+
                         let mut temp_color = XYZColor::BLACK;
                         let mut sampler: Box<dyn Sampler> =
                             Box::new(StratifiedSampler::new(20, 20, 10));
@@ -367,7 +338,6 @@ impl NaiveRenderer {
                             );
                         }
 
-                        // unsafe {
                         *pixel_ref = temp_color / (settings.min_samples as f32);
                         clone2.fetch_add(1, Ordering::Relaxed);
                         if per_splat_sleep_time.as_nanos() > 0 {
@@ -378,10 +348,7 @@ impl NaiveRenderer {
                         for splat in local_additional_splats {
                             tx1.send(splat).unwrap();
                         }
-                        // Vec::new()
-                        // }
                     });
-                // additional_samples
             },
         );
 
@@ -393,7 +360,6 @@ impl NaiveRenderer {
                 panic
             );
         }
-        // println!("");
 
         println!(
             "\ntook {}s at {} rays per second and {} rays per second per thread\n",
@@ -404,17 +370,6 @@ impl NaiveRenderer {
 
         let now = Instant::now();
 
-        // for i in 0..films.len() {
-        //     let (settings, image_film) = &mut films[i];
-        //     let light_film = &light_films[i];
-        // films.push((*settings, light_film));
-        // for (image_pixel, light_pixel) in
-        //     image_film.buffer.iter_mut().zip(light_film.buffer.iter())
-        // {
-        //     // use veach section 10.3.4.3 here
-        //     *image_pixel += *light_pixel / settings.min_samples.into();
-        // }
-        // }
         if let Err(panic) = splatting_thread.join() {
             println!("panic occurred within thread: {:?}", panic);
         }
@@ -424,7 +379,6 @@ impl NaiveRenderer {
             total_splats.lock().unwrap(),
             elapsed
         );
-        // let now = Instant::now();
 
         // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
 
@@ -505,7 +459,6 @@ impl Renderer for NaiveRenderer {
             IntegratorType,
             Vec<(RenderSettings, Camera)>,
         > = HashMap::new();
-        // splatting_renders_and_cameras.insert(IntegratorType::PathTracing, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
 
