@@ -3,10 +3,10 @@ mod instance;
 mod mesh;
 mod rect;
 mod sphere;
-mod triangle;
 
 pub use disk::Disk;
 pub use instance::Instance;
+pub use mesh::Mesh;
 pub use rect::AARect;
 pub use sphere::Sphere;
 

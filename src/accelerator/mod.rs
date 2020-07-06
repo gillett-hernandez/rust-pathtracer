@@ -2,7 +2,7 @@ mod bvh;
 mod lbvh;
 
 pub use bvh::{BHShape, BVHNode, BoundingHierarchy, BVH};
-use lbvh::FlatBVH;
+pub use lbvh::FlatBVH;
 
 use crate::aabb::*;
 use crate::geometry::Instance;
