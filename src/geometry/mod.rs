@@ -1,8 +1,9 @@
-mod cube;
 mod disk;
 mod instance;
+mod mesh;
 mod rect;
 mod sphere;
+mod triangle;
 
 pub use disk::Disk;
 pub use instance::Instance;
