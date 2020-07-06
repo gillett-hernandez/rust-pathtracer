@@ -19,6 +19,7 @@ exr = "0.8.0"
 pbr = "1.0.3"
 parking_lot = "0.11.0"
 crossbeam = "0.7.3"
+# tobj = "2.0.2"
 
 [build-dependencies]
 serde = { version = "1.0.114", features = ["derive"] }

@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box.toml"
+scene_file = "data/scenes/cornell_box_diamond_arrangement.toml"
 
 [[cameras]]
 type="SimpleCamera"
@@ -25,13 +25,13 @@ vfov = 90
 
 
 [[render_settings]]
-threads = 22
+threads = 23
 filename = "BDPT"
 integrator = "BDPT"
 min_bounces = 8
 max_bounces = 16
 exposure = 1.0
-min_samples = 16
+min_samples = 128
 camera_id = 1
 russian_roulette = true
 only_direct = false
