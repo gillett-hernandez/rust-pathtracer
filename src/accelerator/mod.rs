@@ -1,6 +1,8 @@
 mod bvh;
+mod lbvh;
 
 pub use bvh::{BHShape, BVHNode, BoundingHierarchy, BVH};
+use lbvh::FlatBVH;
 
 use crate::aabb::*;
 use crate::geometry::Instance;
@@ -15,8 +17,13 @@ pub enum AcceleratorType {
 
 #[derive(Clone, Debug)]
 pub enum Accelerator {
-    List { instances: Vec<Instance> },
-    BVH { instances: Vec<Instance>, bvh: BVH },
+    List {
+        instances: Vec<Instance>,
+    },
+    BVH {
+        instances: Vec<Instance>,
+        bvh: FlatBVH,
+    },
 }
 
 impl Accelerator {
@@ -24,7 +31,7 @@ impl Accelerator {
         match accelerator_type {
             AcceleratorType::List => Accelerator::List { instances: list },
             AcceleratorType::BVH => {
-                let root = BVH::build(list.as_mut_slice());
+                let root = FlatBVH::build(list.as_mut_slice());
                 Accelerator::BVH {
                     instances: list,
                     bvh: root,
@@ -39,7 +46,7 @@ impl Accelerator {
                 ref mut instances,
                 ref mut bvh,
             } => {
-                *bvh = BVH::build(instances.as_mut_slice());
+                *bvh = BVH::build(instances.as_mut_slice()).flatten();
             }
         }
     }
@@ -59,7 +66,7 @@ impl HasBoundingBox for Accelerator {
                 }
                 bounding_box.unwrap()
             }
-            Accelerator::BVH { instances, bvh } => bvh.nodes[0].get_node_aabb(instances),
+            Accelerator::BVH { instances: _, bvh } => bvh[0].aabb,
         }
     }
 }
