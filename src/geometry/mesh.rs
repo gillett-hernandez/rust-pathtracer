@@ -19,7 +19,7 @@ pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct MeshTriangleRef {
+pub struct MeshTriangleRef {
     pub idx: usize,
     pub node_index: usize,
     vertices: Arc<Vec<Point3>>,
@@ -177,7 +177,7 @@ pub struct Mesh {
     pub material_ids: Vec<MaterialId>,
     bounding_box: AABB,
     pub bvh: Option<FlatBVH>,
-    triangles: Option<Vec<MeshTriangleRef>>,
+    pub triangles: Option<Vec<MeshTriangleRef>>,
 }
 
 impl Mesh {

@@ -205,7 +205,7 @@ impl Transform3 {
         if let Some(translate) = translate {
             stack = translate * stack;
         }
-        stack
+        stack.inverse()
     }
 
     pub fn new_from_raw(forward: Matrix4x4, reverse: Matrix4x4) -> Self {

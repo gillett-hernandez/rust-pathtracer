@@ -85,7 +85,22 @@ pub fn construct_world(config: &Config) -> World {
     }
     for instance in scene.instances {
         let id = instances.len();
-        instances.push(parse_instance(instance, &material_names_to_ids, id));
+        let instance = parse_instance(instance, &material_names_to_ids, id);
+        match instance.aggregate {
+            Aggregate::Mesh(mesh) => {
+                for tri in mesh.triangles.unwrap() {
+                    instances.push(Instance::new(
+                        Aggregate::from(tri),
+                        instance.transform,
+                        instance.material_id,
+                        instance.instance_id,
+                    ));
+                }
+            }
+            _ => {
+                instances.push(instance);
+            }
+        }
     }
     let world = World::new(
         instances,
