@@ -7,6 +7,8 @@ use crate::math::*;
 
 use packed_simd::{f32x4, i32x4};
 
+use std::sync::Arc;
+
 pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {
     match m {
         0 => shuffle!(vec, [0, 1, 2, 3]),
@@ -16,19 +18,20 @@ pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {
     }
 }
 
-struct MeshTriangleRef<'a> {
+#[derive(Clone, Debug, PartialEq)]
+struct MeshTriangleRef {
     pub idx: usize,
     pub node_index: usize,
-    vertices: &'a Vec<Point3>,
-    v_indices: &'a Vec<usize>,
+    vertices: Arc<Vec<Point3>>,
+    v_indices: Arc<Vec<usize>>,
 }
 
-impl<'a> MeshTriangleRef<'a> {
+impl MeshTriangleRef {
     pub fn new(
         idx: usize,
-        vertices: &'a Vec<Point3>,
-        v_indices: &'a Vec<usize>,
-    ) -> MeshTriangleRef<'a> {
+        vertices: Arc<Vec<Point3>>,
+        v_indices: Arc<Vec<usize>>,
+    ) -> MeshTriangleRef {
         MeshTriangleRef {
             idx,
             node_index: 0,
@@ -38,7 +41,7 @@ impl<'a> MeshTriangleRef<'a> {
     }
 }
 
-impl<'a> HasBoundingBox for MeshTriangleRef<'a> {
+impl HasBoundingBox for MeshTriangleRef {
     fn aabb(&self) -> AABB {
         let p0 = self.vertices[self.v_indices[3 * self.idx + 0]];
         let p1 = self.vertices[self.v_indices[3 * self.idx + 1]];
@@ -47,7 +50,7 @@ impl<'a> HasBoundingBox for MeshTriangleRef<'a> {
     }
 }
 
-impl<'a> Hittable for MeshTriangleRef<'a> {
+impl Hittable for MeshTriangleRef {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let p0 = self.vertices[self.v_indices[3 * self.idx + 0]];
         let p1 = self.vertices[self.v_indices[3 * self.idx + 1]];
@@ -156,7 +159,7 @@ impl<'a> Hittable for MeshTriangleRef<'a> {
     }
 }
 
-impl<'a> BHShape for MeshTriangleRef<'a> {
+impl BHShape for MeshTriangleRef {
     fn set_bh_node_index(&mut self, index: usize) {
         self.node_index = index;
     }
@@ -165,21 +168,19 @@ impl<'a> BHShape for MeshTriangleRef<'a> {
     }
 }
 
-pub struct Mesh<'a> {
-    // pub triangles: Vec<Triangle>,
+#[derive(Clone, Debug)]
+pub struct Mesh {
     pub num_faces: usize,
     pub node_indices: Vec<usize>,
-    pub v_indices: Vec<usize>,
-    pub vertices: Vec<Point3>,
-    // pub n_indices: Vec<usize>,
-    // pub normals: Vec<Vec3>,
+    pub v_indices: Arc<Vec<usize>>,
+    pub vertices: Arc<Vec<Point3>>,
     pub material_ids: Vec<MaterialId>,
     bounding_box: AABB,
     pub bvh: Option<FlatBVH>,
-    triangles: Option<Vec<MeshTriangleRef<'a>>>,
+    triangles: Option<Vec<MeshTriangleRef>>,
 }
 
-impl<'a> Mesh<'a> {
+impl Mesh {
     pub fn new(
         num_faces: usize,
         v_indices: Vec<usize>,
@@ -191,13 +192,13 @@ impl<'a> Mesh<'a> {
             bounding_box.grow_mut(point);
         }
 
-        let mut node_indices = vec![0usize; num_faces];
+        let node_indices = vec![0usize; num_faces];
 
         Mesh {
             num_faces,
             node_indices,
-            v_indices,
-            vertices,
+            v_indices: Arc::new(v_indices),
+            vertices: Arc::new(vertices),
             material_ids,
             bounding_box,
             bvh: None,
@@ -209,8 +210,8 @@ impl<'a> Mesh<'a> {
         for tri_num in 0..self.num_faces {
             triangles.push(MeshTriangleRef::new(
                 tri_num,
-                &self.vertices,
-                &self.v_indices,
+                Arc::clone(&self.vertices),
+                Arc::clone(&self.v_indices),
             ));
         }
 
@@ -218,16 +219,17 @@ impl<'a> Mesh<'a> {
         for (tri_num, tri) in triangles.iter().enumerate() {
             self.node_indices[tri_num] = tri.node_index;
         }
+        self.triangles = Some(triangles);
     }
 }
 
-impl<'a> HasBoundingBox for Mesh<'a> {
+impl HasBoundingBox for Mesh {
     fn aabb(&self) -> AABB {
         self.bounding_box
     }
 }
 
-impl<'a> Hittable for Mesh<'a> {
+impl Hittable for Mesh {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let bvh = self.bvh.as_ref().unwrap();
         let possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());

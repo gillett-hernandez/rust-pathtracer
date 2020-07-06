@@ -7,13 +7,19 @@ use crate::geometry::*;
 
 use std::cmp::{Ordering, PartialOrd};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Instance {
     pub aggregate: Aggregate,
     pub transform: Option<Transform3>,
     pub material_id: MaterialId,
     pub instance_id: usize,
     node_id: usize,
+}
+
+impl PartialEq for Instance {
+    fn eq(&self, other: &Instance) -> bool {
+        self.instance_id == other.instance_id
+    }
 }
 
 impl Eq for Instance {}

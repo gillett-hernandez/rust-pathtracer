@@ -265,20 +265,6 @@ two_sided = true
 [[instances]]
 material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
-type = "Sphere"
-radius = 0.5
-origin = [0.0, 0.0, 0.3]
-
-[[instances]]
-material_identifier = "ggx_glass"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.3
-origin = [0.0, 0.2, -0.55]
-
-[[instances]]
-material_identifier = "ggx_copper"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.3
-origin = [0.0, -0.6, -0.7]
+type = "Mesh"
+filename = "data/meshes/monkey.obj"
+mesh_index = 0

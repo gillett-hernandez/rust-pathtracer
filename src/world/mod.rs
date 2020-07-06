@@ -170,7 +170,8 @@ impl World {
             match &mut self.accelerator {
                 Accelerator::List { ref mut instances } => {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
-                        if let Some(mut surface) = cam.get_surface() {
+                        if let Some(surface) = cam.get_surface() {
+                            let mut surface = surface.clone();
                             let id = instances.len();
                             surface.instance_id = id;
                             surface.material_id = MaterialId::Camera(cam_id as u8);
@@ -184,7 +185,8 @@ impl World {
                     bvh: _,
                 } => {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
-                        if let Some(mut surface) = cam.get_surface() {
+                        if let Some(surface) = cam.get_surface() {
+                            let mut surface = surface.clone();
                             let id = instances.len();
                             surface.instance_id = id;
                             surface.material_id = MaterialId::Camera(cam_id as u8);

@@ -1,7 +1,7 @@
 use crate::geometry::*;
 use crate::materials::MaterialId;
 use crate::math::*;
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct ProjectiveCamera {
     pub origin: Point3,
     pub direction: Vec3,
@@ -85,8 +85,8 @@ impl ProjectiveCamera {
             t1,
         }
     }
-    pub fn get_surface(&self) -> Option<Instance> {
-        Some(self.lens)
+    pub fn get_surface(&self) -> Option<&Instance> {
+        Some(&self.lens)
     }
 }
 

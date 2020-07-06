@@ -10,7 +10,7 @@ use std::marker::{Send, Sync};
 
 pub type CameraId = u8;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Camera {
     ProjectiveCamera(ProjectiveCamera),
 }
@@ -25,13 +25,13 @@ impl Camera {
     pub fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
         match self {
             Camera::ProjectiveCamera(inner) => {
-                Camera::ProjectiveCamera(inner.with_aspect_ratio(aspect_ratio))
+                Camera::ProjectiveCamera(inner.clone().with_aspect_ratio(aspect_ratio))
             } // }
               // Camera::SimpleCamera(inner) => {
               // Camera::SimpleCamera(inner.with_aspect_ratio(aspect_ratio))
         }
     }
-    pub fn get_surface(&self) -> Option<Instance> {
+    pub fn get_surface(&self) -> Option<&Instance> {
         match self {
             Camera::ProjectiveCamera(inner) => inner.get_surface(),
             // Camera::SimpleCamera(inner) => inner.get_surface(),

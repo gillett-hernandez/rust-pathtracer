@@ -313,7 +313,7 @@ impl NaiveRenderer {
                         let mut sampler: Box<dyn Sampler> =
                             Box::new(StratifiedSampler::new(20, 20, 10));
                         // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                        let camera = cameras[camera_id];
+                        let camera = &cameras[camera_id];
                         // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
                         let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
                         // use with capacity to preallocate

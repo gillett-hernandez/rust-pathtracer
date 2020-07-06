@@ -93,8 +93,8 @@ pub fn construct_world(config: &Config) -> World {
         parse_environment(scene.environment),
         scene.env_sampling_probability.unwrap_or(0.5),
         // TODO: switch this to bvh once triangles and meshes are implemented, since currently it causes a slowdown
-        // AcceleratorType::BVH,
-        AcceleratorType::List,
+        AcceleratorType::BVH,
+        // AcceleratorType::List,
     );
     world
 }
