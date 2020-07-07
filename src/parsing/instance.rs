@@ -48,12 +48,17 @@ pub fn parse_instance(
             .scale
             .map(|v| Transform3::from_scale(Vec3::from(v)));
         let maybe_rotate = if let Some(rotations) = transform_data.rotate {
-            let mut base = Transform3::new();
+            let mut base = None;
             for rotation in rotations {
-                base =
-                    Transform3::from_axis_angle(Vec3::from(rotation.axis), rotation.angle) * base;
+                let transform =
+                    Transform3::from_axis_angle(Vec3::from(rotation.axis), rotation.angle);
+                if base.is_none() {
+                    base = Some(transform);
+                } else {
+                    base = Some(transform * base.unwrap());
+                };
             }
-            Some(base)
+            base
         } else {
             None
         };

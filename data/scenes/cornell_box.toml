@@ -100,7 +100,7 @@ permeability = 1.0
 alpha = 0.0004
 [materials.data.eta]
 type = "Cauchy"
-a = 1.4
+a = 1.45
 b = 50000.0
 [materials.data.kappa]
 type = "Flat"
@@ -207,13 +207,52 @@ interpolation_mode = "Cubic"
 y_scale = 5.0
 
 
+[[materials]]
+name = "sharp_light_xenon"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+
+[[materials]]
+name = "sharp_light_warm"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Blackbody"
+temperature = 5500.0
+strength = 5.0
+
+
+
+
 
 [[instances]]
-material_identifier = "sharp_light_fluorescent"
+material_identifier = "sharp_light"
 [instances.aggregate]
 type = "Rect"
-size = [0.2, 0.2]
-origin = [0.0, 0.0, 0.9]
+size = [0.7, 0.01]
+origin = [0.0, 0.85, 0.9]
 normal = "Z"
 two_sided = false
 
@@ -263,10 +302,14 @@ normal = "X"
 two_sided = true
 
 [[instances]]
-material_identifier = "ggx_glass"
+material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Mesh"
 filename = "data/meshes/prism.obj"
 mesh_index = 0
-# [instances.transform]
-# scale = [0.2, 0.2, 0.2]
+[instances.transform]
+scale = [3.0, 3.0, 3.0]
+translate = [0.2, 0.0, 0.0]
+[[instances.transform.rotate]]
+axis = [0.0, 0.0, 1.0]
+angle = 1.57

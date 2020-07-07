@@ -26,12 +26,12 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "LT"
-integrator = "LT"
+filename = "BDPT"
+integrator = "BDPT"
 min_bounces = 6
 max_bounces = 16
 exposure = 1.0
-min_samples = 16
+min_samples = 32
 camera_id = 1
 russian_roulette = true
 only_direct = false

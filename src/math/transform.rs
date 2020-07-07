@@ -68,9 +68,16 @@ impl Mul<Ray> for Matrix4x4 {
     fn mul(self, rhs: Ray) -> Self::Output {
         Ray {
             origin: self * rhs.origin,
-            direction: self * rhs.direction,
+            direction: (self * rhs.direction).normalized(),
             ..rhs
         }
+    }
+}
+
+impl Mul<AABB> for Matrix4x4 {
+    type Output = AABB;
+    fn mul(self, rhs: AABB) -> Self::Output {
+        AABB::new(self * rhs.min, self * rhs.max)
     }
 }
 
@@ -205,7 +212,7 @@ impl Transform3 {
         if let Some(translate) = translate {
             stack = translate * stack;
         }
-        stack.inverse()
+        stack
     }
 
     pub fn new_from_raw(forward: Matrix4x4, reverse: Matrix4x4) -> Self {
@@ -243,13 +250,13 @@ impl Transform3 {
     where
         Matrix4x4: Mul<T>,
     {
-        self.forward * value
+        self.reverse * value
     }
     pub fn to_world<T>(&self, value: T) -> <Matrix4x4 as Mul<T>>::Output
     where
         Matrix4x4: Mul<T>,
     {
-        self.reverse * value
+        self.forward * value
     }
 }
 

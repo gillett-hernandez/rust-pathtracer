@@ -292,6 +292,7 @@ mod tests {
     use crate::parsing::primitives::parse_mesh;
     #[test]
     fn test_mesh() {
-        let mesh = parse_mesh("data/meshes/monkey.obj", 0);
+        let mut mesh = parse_mesh("data/meshes/monkey.obj", 0);
+        mesh.init();
     }
 }

@@ -67,7 +67,7 @@ impl HasBoundingBox for Instance {
     fn aabb(&self) -> AABB {
         let mut aabb = self.aggregate.aabb();
         if let Some(transform) = self.transform {
-            aabb = transform * aabb
+            aabb = transform.to_world(aabb)
         }
         aabb
     }
@@ -89,15 +89,15 @@ impl Hittable for Instance {
         );
         debug_assert!(!t1.is_nan());
         if let Some(transform) = self.transform {
-            if let Some(hit) = self.aggregate.hit(transform * r, t0, t1) {
+            if let Some(hit) = self.aggregate.hit(transform.to_local(r), t0, t1) {
                 debug_assert!(
                     hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
                     "{:?}",
                     hit
                 );
                 Some(HitRecord {
-                    normal: transform / hit.normal,
-                    point: transform / hit.point,
+                    normal: transform.to_world(hit.normal).normalized(),
+                    point: transform.to_world(hit.point),
                     instance_id: self.instance_id,
                     material: self.material_id,
                     ..hit
@@ -124,8 +124,8 @@ impl Hittable for Instance {
     }
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
         if let Some(transform) = self.transform {
-            let (vec, pdf) = self.aggregate.sample(s, transform * from);
-            (transform / vec, pdf)
+            let (vec, pdf) = self.aggregate.sample(s, transform.to_local(from));
+            (transform.to_world(vec).normalized(), pdf)
         } else {
             self.aggregate.sample(s, from)
         }
@@ -133,7 +133,11 @@ impl Hittable for Instance {
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         if let Some(transform) = self.transform {
             let (point, normal, pdf) = self.aggregate.sample_surface(s);
-            (transform / point, transform / normal, pdf)
+            (
+                transform.to_world(point),
+                transform.to_world(normal).normalized(),
+                pdf,
+            )
         } else {
             self.aggregate.sample_surface(s)
         }
@@ -141,9 +145,9 @@ impl Hittable for Instance {
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let (normal, from, to) = if let Some(transform) = self.transform {
             (
-                transform.reverse * normal,
-                transform.reverse * from,
-                transform.reverse * to,
+                transform.to_world(normal).normalized(),
+                transform.to_world(from),
+                transform.to_world(to),
             )
         } else {
             (normal, from, to)
@@ -189,9 +193,9 @@ impl BHShape for Instance {
 mod tests {
     use super::*;
     #[test]
-    fn test_aggregate() {
-        let sphere = Sphere::new(1.0, Point3::ORIGIN);
-        let aarect = AARect::new((1.0, 1.0), Point3::ORIGIN, Axis::X, true);
+    fn test_instance() {
+        let sphere = Sphere::new(2.0, Point3::ORIGIN);
+        let aarect = AARect::new((4.0, 4.0), Point3::ORIGIN, Axis::Z, true);
 
         let transform = Transform3::from_stack(
             Some(Transform3::from_scale(Vec3::new(3.0, 3.0, 3.0))),
@@ -207,9 +211,18 @@ mod tests {
 
         let test_ray = Ray::new(Point3::ORIGIN + 10.0 * Vec3::Z, -Vec3::Z);
 
-        let isect1 = instance1.hit(test_ray, 0.0, 1.0);
-        let isect2 = instance2.hit(test_ray, 0.0, 1.0);
+        let isect1 = instance1.hit(test_ray, 0.0, INFINITY);
+        let isect2 = instance2.hit(test_ray, 0.0, INFINITY);
 
+        println!("ray was {:?}", test_ray);
+        println!(
+            "in local space should be {:?}",
+            transform.to_local(test_ray)
+        );
+        println!(
+            "in world space should be {:?}",
+            transform.to_world(test_ray)
+        );
         if let Some(hit) = isect1 {
             println!("{:?}", hit);
         }
