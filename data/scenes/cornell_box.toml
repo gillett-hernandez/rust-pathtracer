@@ -269,4 +269,4 @@ type = "Mesh"
 filename = "data/meshes/monkey.obj"
 mesh_index = 0
 [instances.transform]
-scale = [0.2, 0.2, 0.2]
+scale = [0.5, 0.5, 0.5]

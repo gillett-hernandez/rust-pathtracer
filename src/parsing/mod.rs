@@ -87,16 +87,16 @@ pub fn construct_world(config: &Config) -> World {
         let id = instances.len();
         let instance = parse_instance(instance, &material_names_to_ids, id);
         match instance.aggregate {
-            Aggregate::Mesh(mesh) => {
-                for tri in mesh.triangles.unwrap() {
-                    instances.push(Instance::new(
-                        Aggregate::from(tri),
-                        instance.transform,
-                        instance.material_id,
-                        instance.instance_id,
-                    ));
-                }
-            }
+            // Aggregate::Mesh(mesh) => {
+            //     for tri in mesh.triangles.unwrap() {
+            //         instances.push(Instance::new(
+            //             Aggregate::from(tri),
+            //             instance.transform,
+            //             instance.material_id,
+            //             instance.instance_id,
+            //         ));
+            //     }
+            // }
             _ => {
                 instances.push(instance);
             }
@@ -107,9 +107,7 @@ pub fn construct_world(config: &Config) -> World {
         materials,
         parse_environment(scene.environment),
         scene.env_sampling_probability.unwrap_or(0.5),
-        // TODO: switch this to bvh once triangles and meshes are implemented, since currently it causes a slowdown
         AcceleratorType::BVH,
-        // AcceleratorType::List,
     );
     world
 }

@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {
     match m {
-        0 => shuffle!(vec, [0, 1, 2, 3]),
-        1 => shuffle!(vec, [1, 0, 2, 3]),
-        2 => shuffle!(vec, [2, 0, 1, 3]),
+        0 => shuffle!(vec, [1, 2, 0, 3]),
+        1 => shuffle!(vec, [2, 0, 1, 3]),
+        2 => shuffle!(vec, [0, 1, 2, 3]),
         _ => vec,
     }
 }
@@ -59,8 +59,8 @@ impl Hittable for MeshTriangleRef {
         let mut p1t = p1 - r.origin;
         let mut p2t = p2 - r.origin;
         let direction = r.direction.0;
-        let max_axis_value = direction.max_element();
-        let mask = direction.ge(f32x4::splat(max_axis_value));
+        let max_axis_value = direction.abs().max_element();
+        let mask = direction.abs().ge(f32x4::splat(max_axis_value));
         let max_axis = mask
             .select(i32x4::new(0, 1, 2, 3), i32x4::splat(0))
             .max_element() as u32;
@@ -76,6 +76,13 @@ impl Hittable for MeshTriangleRef {
         let sx = -dx / dz;
         let sy = -dy / dz;
         let sz = 1.0 / dz;
+        debug_assert!(
+            sx.is_finite() && sy.is_finite() && sz.is_finite(),
+            "{:?} {:?} {:?}",
+            dx,
+            dy,
+            dz
+        );
         p0t_x += sx * p0t_z;
         p1t_x += sx * p1t_z;
         p2t_x += sx * p2t_z;
@@ -112,6 +119,16 @@ impl Hittable for MeshTriangleRef {
         p2t_z *= sz;
 
         let t_scaled = e0 * p0t_z + e1 * p1t_z + e2 * p2t_z;
+        debug_assert!(
+            !t_scaled.is_nan(),
+            "{:?} {:?} {:?} {:?} {:?} {:?}",
+            e0,
+            p0t_z,
+            e1,
+            p1t_z,
+            e2,
+            p2t_z
+        );
 
         if (det < 0.0 && (t_scaled >= t0 * det || t_scaled < t1 * det))
             || (det > 0.0 && (t_scaled <= t0 * det || t_scaled > t1 * det))
@@ -120,13 +137,14 @@ impl Hittable for MeshTriangleRef {
         }
 
         let inv_det = det.recip();
+        debug_assert!(!inv_det.is_nan(), "{:?}", det);
         let b0 = e0 * inv_det;
         let b1 = e1 * inv_det;
         let b2 = e2 * inv_det;
 
         let dp02 = p0 - p2;
         let dp12 = p1 - p2;
-        Some(HitRecord::new(
+        let hit = HitRecord::new(
             t_scaled * inv_det,
             Point3::from(b0 * Vec3::from(p0) + b1 * Vec3::from(p1) + b2 * Vec3::from(p2)),
             (0.0, 0.0),
@@ -135,7 +153,15 @@ impl Hittable for MeshTriangleRef {
             0.into(),
             0,
             None,
-        ))
+        );
+        debug_assert!(
+            hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
+            "{:?}, {}, {}",
+            hit,
+            t_scaled,
+            inv_det
+        );
+        Some(hit)
     }
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
         (Vec3::ZERO, 0.0.into())
@@ -257,5 +283,15 @@ impl Hittable for Mesh {
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         0.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parsing::primitives::parse_mesh;
+    #[test]
+    fn test_mesh() {
+        let mesh = parse_mesh("data/meshes/monkey.obj", 0);
     }
 }

@@ -90,6 +90,11 @@ impl Hittable for Instance {
         debug_assert!(!t1.is_nan());
         if let Some(transform) = self.transform {
             if let Some(hit) = self.aggregate.hit(transform * r, t0, t1) {
+                debug_assert!(
+                    hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
+                    "{:?}",
+                    hit
+                );
                 Some(HitRecord {
                     normal: transform / hit.normal,
                     point: transform / hit.point,
@@ -102,6 +107,11 @@ impl Hittable for Instance {
             }
         } else {
             if let Some(hit) = self.aggregate.hit(r, t0, t1) {
+                debug_assert!(
+                    hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
+                    "{:?}",
+                    hit
+                );
                 Some(HitRecord {
                     instance_id: self.instance_id,
                     material: self.material_id,

@@ -25,9 +25,9 @@ vfov = 90
 
 
 [[render_settings]]
-threads = 5
-filename = "PT"
-integrator = "PT"
+threads = 22
+filename = "BDPT"
+integrator = "BDPT"
 min_bounces = 4
 max_bounces = 8
 exposure = 1.0

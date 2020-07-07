@@ -5,7 +5,7 @@ pub use bvh::{BHShape, BVHNode, BoundingHierarchy, BVH};
 pub use lbvh::FlatBVH;
 
 use crate::aabb::*;
-use crate::geometry::{Aggregate, Instance};
+use crate::geometry::Instance;
 use crate::hittable::{HitRecord, Hittable};
 use crate::math::*;
 
