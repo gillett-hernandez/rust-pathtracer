@@ -198,7 +198,7 @@ name = "sharp_light_fluorescent"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 2.0
+sharpness = 30.0
 [materials.data.color]
 type = "Linear"
 filename = "data/curves/spectra/fluorescent.spectra"
@@ -209,10 +209,10 @@ y_scale = 5.0
 
 
 [[instances]]
-material_identifier = "diffuse_light_warm"
+material_identifier = "sharp_light_fluorescent"
 [instances.aggregate]
 type = "Rect"
-size = [0.6, 0.6]
+size = [0.2, 0.2]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = false
@@ -263,17 +263,10 @@ normal = "X"
 two_sided = true
 
 [[instances]]
-material_identifier = "ggx_glass_dispersive"
+material_identifier = "ggx_glass"
 [instances.aggregate]
 type = "Mesh"
-filename = "data/meshes/monkey.obj"
+filename = "data/meshes/prism.obj"
 mesh_index = 0
-[instances.transform]
-scale = [0.5, 0.5, 0.5]
-translate = [0.0, 0.0, -1.0]
-# [[instances.transform.rotate]]
-# axis = [0.0, 1.0, 0.0]
-# angle = 1.9
-[[instances.transform.rotate]]
-axis = [0.0, 0.0, 1.0]
-angle = -1.57
+# [instances.transform]
+# scale = [0.2, 0.2, 0.2]
