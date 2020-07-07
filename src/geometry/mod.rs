@@ -63,7 +63,7 @@ impl Hittable for Aggregate {
         debug_assert!(r.origin.0.is_finite().all());
         debug_assert!(r.direction.0.is_finite().all());
         debug_assert!(t0.is_finite());
-        debug_assert!(!t1.is_nan());
+        debug_assert!(!t1.is_nan(), "{:?} {:?} {:?}", r, t0, t1);
 
         match self {
             Aggregate::Sphere(inner) => inner.hit(r, t0, t1),

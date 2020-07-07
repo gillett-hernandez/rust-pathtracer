@@ -102,8 +102,8 @@ impl ProjectiveCamera {
 
         // println!("point on focal plane {:?}", point_on_plane);
         let ray_direction = (point_on_plane - ray_origin).normalized();
-        debug_assert!(ray_origin.is_normal());
-        debug_assert!(ray_direction.is_normal());
+        debug_assert!(ray_origin.is_finite());
+        debug_assert!(ray_direction.is_finite());
         Ray::new_with_time(ray_origin, ray_direction, time)
     }
     // returns None if the point on the lens was not from a valid pixel

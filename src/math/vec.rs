@@ -36,7 +36,7 @@ impl Vec3 {
             Axis::Z => Vec3::Z,
         }
     }
-    pub fn is_normal(&self) -> bool {
+    pub fn is_finite(&self) -> bool {
         !(self.0.is_nan().any() || self.0.is_infinite().any())
     }
 }

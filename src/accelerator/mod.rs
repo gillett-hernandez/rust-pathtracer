@@ -95,11 +95,13 @@ impl Accelerator {
             Accelerator::BVH { instances, bvh } => {
                 let possible_hit_instances = bvh.traverse(&r, instances);
                 let mut closest_so_far: f32 = t1;
+                debug_assert!(!t1.is_nan());
                 let mut hit_record: Option<HitRecord> = None;
                 for instance in possible_hit_instances {
                     let tmp_hit_record = instance.hit(r, t0, closest_so_far);
                     if let Some(hit) = &tmp_hit_record {
                         closest_so_far = hit.time;
+                        debug_assert!(!closest_so_far.is_nan(), "{:?}", hit);
                         hit_record = tmp_hit_record;
                     } else {
                         continue;

@@ -75,6 +75,19 @@ impl HasBoundingBox for Instance {
 
 impl Hittable for Instance {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
+        debug_assert!(r.origin.is_finite());
+        debug_assert!(r.direction.is_finite());
+        debug_assert!(
+            t0.is_finite(),
+            "{:?} {:?} {:?} {:?} {:?} {:?}",
+            self.transform,
+            self.instance_id,
+            self.material_id,
+            r,
+            t0,
+            t1
+        );
+        debug_assert!(!t1.is_nan());
         if let Some(transform) = self.transform {
             if let Some(hit) = self.aggregate.hit(transform * r, t0, t1) {
                 Some(HitRecord {

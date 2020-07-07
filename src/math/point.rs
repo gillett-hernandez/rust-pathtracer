@@ -20,7 +20,7 @@ impl Point3 {
     pub const INFINITY: Point3 = Point3::from_raw(f32x4::new(INFINITY, INFINITY, INFINITY, 1.0));
     pub const NEG_INFINITY: Point3 =
         Point3::from_raw(f32x4::new(-INFINITY, -INFINITY, -INFINITY, 1.0));
-    pub fn is_normal(&self) -> bool {
+    pub fn is_finite(&self) -> bool {
         !(self.0.is_nan().any() || self.0.is_infinite().any())
     }
 }
