@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box.toml"
+scene_file = "data/scenes/cornell_box_diamond_arrangement.toml"
 
 [[cameras]]
 type="SimpleCamera"
