@@ -52,7 +52,8 @@ impl ProjectiveCamera {
             None,
             Some(TangentFrame::new(u, -v, w).into()), // rotate and stuff
             Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
-        );
+        )
+        .inverse();
 
         if lens_radius == 0.0 {
             println!("Warn: lens radius is 0");

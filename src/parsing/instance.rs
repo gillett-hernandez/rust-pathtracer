@@ -17,12 +17,17 @@ use std::collections::HashMap;
 // use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-
 #[derive(Serialize, Deserialize, Copy, Clone)]
+pub struct AxisAngleData {
+    pub axis: Vec3Data,
+    pub angle: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Transform3Data {
-    pub scale: Option<Vec3Data>,         // scale
-    pub rotate: Option<(Vec3Data, f32)>, // axis angle
-    pub translate: Option<Vec3Data>,     // translation
+    pub scale: Option<Vec3Data>,            // scale
+    pub rotate: Option<Vec<AxisAngleData>>, // axis angle
+    pub translate: Option<Vec3Data>,        // translation
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -42,9 +47,16 @@ pub fn parse_instance(
         let maybe_scale = transform_data
             .scale
             .map(|v| Transform3::from_scale(Vec3::from(v)));
-        let maybe_rotate = transform_data
-            .rotate
-            .map(|v| Transform3::from_axis_angle(Vec3::from(v.0), v.1));
+        let maybe_rotate = if let Some(rotations) = transform_data.rotate {
+            let mut base = Transform3::new();
+            for rotation in rotations {
+                base =
+                    Transform3::from_axis_angle(Vec3::from(rotation.axis), rotation.angle) * base;
+            }
+            Some(base)
+        } else {
+            None
+        };
         let maybe_translate = transform_data
             .translate
             .map(|v| Transform3::from_translation(Vec3::from(v)));
