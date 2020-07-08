@@ -392,10 +392,10 @@ impl Material for GGX {
 
             let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
 
-            let mut wo = refract(wi, wh, eta_rel);
-            if wo.is_none() {
-                wo = Some(reflect(wi, -wh));
-            }
+            let wo = refract(wi, wh, eta_rel);
+            // if wo.is_none() {
+            //     wo = Some(reflect(wi, -wh));
+            // }
             return wo;
         }
     }

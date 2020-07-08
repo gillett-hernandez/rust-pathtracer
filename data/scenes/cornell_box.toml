@@ -248,7 +248,7 @@ strength = 5.0
 
 
 [[instances]]
-material_identifier = "sharp_light"
+material_identifier = "sharp_light_xenon"
 [instances.aggregate]
 type = "Rect"
 size = [0.7, 0.01]
