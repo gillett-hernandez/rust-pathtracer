@@ -89,7 +89,15 @@ impl Hittable for Instance {
         );
         debug_assert!(!t1.is_nan());
         if let Some(transform) = self.transform {
-            if let Some(hit) = self.aggregate.hit(transform.to_local(r), t0, t1) {
+            if let Some(hit) = self.aggregate.hit(
+                Ray {
+                    origin: transform.to_local(r.origin),
+                    direction: transform.to_local(r.direction).normalized(),
+                    ..r
+                },
+                t0,
+                t1,
+            ) {
                 debug_assert!(
                     hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
                     "{:?}",

@@ -252,7 +252,7 @@ material_identifier = "sharp_light_xenon"
 [instances.aggregate]
 type = "Rect"
 size = [0.7, 0.01]
-origin = [0.0, 0.85, 0.9]
+origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = false
 
@@ -305,11 +305,11 @@ two_sided = true
 material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Mesh"
-filename = "data/meshes/prism.obj"
+filename = "data/meshes/monkey.obj"
 mesh_index = 0
 [instances.transform]
-scale = [3.0, 3.0, 3.0]
-translate = [0.2, 0.0, 0.0]
-[[instances.transform.rotate]]
-axis = [0.0, 0.0, 1.0]
-angle = 1.57
+# scale = [0.5, 0.5, 0.5]
+translate = [0.0, 0.0, 0.0]
+# [[instances.transform.rotate]]
+# axis = [0.0, 0.0, 1.0]
+# angle = 1.57

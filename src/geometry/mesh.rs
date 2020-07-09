@@ -23,38 +23,41 @@ pub struct MeshTriangleRef {
     pub idx: usize,
     pub node_index: usize,
     vertices: Arc<Vec<Point3>>,
-    v_indices: Arc<Vec<usize>>,
+    indices: Arc<Vec<usize>>,
+    normals: Arc<Vec<Vec3>>,
 }
 
 impl MeshTriangleRef {
     pub fn new(
         idx: usize,
         vertices: Arc<Vec<Point3>>,
-        v_indices: Arc<Vec<usize>>,
+        indices: Arc<Vec<usize>>,
+        normals: Arc<Vec<Vec3>>,
     ) -> MeshTriangleRef {
         MeshTriangleRef {
             idx,
             node_index: 0,
             vertices,
-            v_indices,
+            indices,
+            normals,
         }
     }
 }
 
 impl HasBoundingBox for MeshTriangleRef {
     fn aabb(&self) -> AABB {
-        let p0 = self.vertices[self.v_indices[3 * self.idx + 0]];
-        let p1 = self.vertices[self.v_indices[3 * self.idx + 1]];
-        let p2 = self.vertices[self.v_indices[3 * self.idx + 2]];
+        let p0 = self.vertices[self.indices[3 * self.idx + 0]];
+        let p1 = self.vertices[self.indices[3 * self.idx + 1]];
+        let p2 = self.vertices[self.indices[3 * self.idx + 2]];
         AABB::new(p0, p1).grow(&p2)
     }
 }
 
 impl Hittable for MeshTriangleRef {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let p0 = self.vertices[self.v_indices[3 * self.idx + 0]];
-        let p1 = self.vertices[self.v_indices[3 * self.idx + 1]];
-        let p2 = self.vertices[self.v_indices[3 * self.idx + 2]];
+        let p0 = self.vertices[self.indices[3 * self.idx + 0]];
+        let p1 = self.vertices[self.indices[3 * self.idx + 1]];
+        let p2 = self.vertices[self.indices[3 * self.idx + 2]];
         let mut p0t = p0 - r.origin;
         let mut p1t = p1 - r.origin;
         let mut p2t = p2 - r.origin;
@@ -144,12 +147,24 @@ impl Hittable for MeshTriangleRef {
 
         let dp02 = p0 - p2;
         let dp12 = p1 - p2;
+        let geometric_normal = dp02.cross(dp12).normalized();
+        let shading_normal = if self.normals.len() > 0 {
+            let (n0, n1, n2) = (
+                self.normals[self.indices[3 * self.idx + 0]],
+                self.normals[self.indices[3 * self.idx + 1]],
+                self.normals[self.indices[3 * self.idx + 2]],
+            );
+            // compute shading tangent and bitangent here too.
+            Some(b0 * n0 + b1 * n1 + b2 * n2)
+        } else {
+            None
+        };
         let hit = HitRecord::new(
             t_scaled * inv_det,
             Point3::from(b0 * Vec3::from(p0) + b1 * Vec3::from(p1) + b2 * Vec3::from(p2)),
             (0.0, 0.0),
             0.0,
-            dp02.cross(dp12).normalized(),
+            shading_normal.unwrap_or(geometric_normal),
             0.into(),
             0,
             None,
@@ -174,9 +189,9 @@ impl Hittable for MeshTriangleRef {
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
-        let p0 = *transform * self.vertices[self.v_indices[3 * self.idx + 0]];
-        let p1 = *transform * self.vertices[self.v_indices[3 * self.idx + 1]];
-        let p2 = *transform * self.vertices[self.v_indices[3 * self.idx + 2]];
+        let p0 = *transform * self.vertices[self.indices[3 * self.idx + 0]];
+        let p1 = *transform * self.vertices[self.indices[3 * self.idx + 1]];
+        let p2 = *transform * self.vertices[self.indices[3 * self.idx + 2]];
         let d02 = (p2 - p0).norm();
         let d01 = (p1 - p0).norm();
         let d12 = (p2 - p1).norm();
@@ -198,8 +213,9 @@ impl BHShape for MeshTriangleRef {
 pub struct Mesh {
     pub num_faces: usize,
     pub node_indices: Vec<usize>,
-    pub v_indices: Arc<Vec<usize>>,
+    pub indices: Arc<Vec<usize>>,
     pub vertices: Arc<Vec<Point3>>,
+    pub normals: Arc<Vec<Vec3>>,
     pub material_ids: Vec<MaterialId>,
     bounding_box: AABB,
     pub bvh: Option<FlatBVH>,
@@ -211,6 +227,7 @@ impl Mesh {
         num_faces: usize,
         v_indices: Vec<usize>,
         vertices: Vec<Point3>,
+        normals: Vec<Vec3>,
         material_ids: Vec<MaterialId>,
     ) -> Self {
         let mut bounding_box = AABB::empty();
@@ -223,8 +240,9 @@ impl Mesh {
         Mesh {
             num_faces,
             node_indices,
-            v_indices: Arc::new(v_indices),
+            indices: Arc::new(v_indices),
             vertices: Arc::new(vertices),
+            normals: Arc::new(normals),
             material_ids,
             bounding_box,
             bvh: None,
@@ -237,7 +255,8 @@ impl Mesh {
             triangles.push(MeshTriangleRef::new(
                 tri_num,
                 Arc::clone(&self.vertices),
-                Arc::clone(&self.v_indices),
+                Arc::clone(&self.indices),
+                Arc::clone(&self.normals),
             ));
         }
 

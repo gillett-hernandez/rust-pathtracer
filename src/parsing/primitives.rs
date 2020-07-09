@@ -17,7 +17,8 @@ pub fn parse_mesh(filename: &str, obj_num: usize) -> Mesh {
     println!("# of models: {}", models.len());
     println!("# of materials: {}", materials.len());
     let mut points = Vec::new();
-    let mut v_indices = Vec::new();
+    let mut normals = Vec::new();
+    let mut indices = Vec::new();
     let mut num_faces = 0;
     // for (i, m) in models.iter().enumerate() {
     let model = &models[obj_num];
@@ -37,10 +38,9 @@ pub fn parse_mesh(filename: &str, obj_num: usize) -> Mesh {
     for f in 0..mesh.num_face_indices.len() {
         let end = next_face + mesh.num_face_indices[f] as usize;
         let face_indices: Vec<_> = mesh.indices[next_face..end].iter().collect();
-        // v_indices.extend(face_indices.iter());
-        v_indices.push(*face_indices[0] as usize);
-        v_indices.push(*face_indices[1] as usize);
-        v_indices.push(*face_indices[2] as usize);
+        indices.push(*face_indices[0] as usize);
+        indices.push(*face_indices[1] as usize);
+        indices.push(*face_indices[2] as usize);
         // println!("    face[{}] = {:?}", f, face_indices);
         next_face = end;
         num_faces += 1;
@@ -56,18 +56,18 @@ pub fn parse_mesh(filename: &str, obj_num: usize) -> Mesh {
             mesh.positions[3 * v + 2],
         ))
     }
-    // }
-    // Mesh::new(
-    //     1,
-    //     vec![0, 1, 2],
-    //     vec![
-    //         Point3::ORIGIN,
-    //         Point3::ORIGIN + Vec3::X,
-    //         Point3::ORIGIN + Vec3::Z,
-    //     ],
-    //     vec![0.into()],
-    // )
-    Mesh::new(num_faces, v_indices, points, vec![0.into()])
+    if mesh.normals.len() > 0 {
+        println!("parsing normals");
+    }
+    for n in 0..mesh.normals.len() / 3 {
+        normals.push(Vec3::new(
+            mesh.normals[3 * n],
+            mesh.normals[3 * n + 1],
+            mesh.normals[3 * n + 2],
+        ))
+    }
+
+    Mesh::new(num_faces, indices, points, normals, vec![0.into()])
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
