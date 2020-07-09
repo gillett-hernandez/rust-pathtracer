@@ -50,8 +50,10 @@ pub fn parse_instance(
         let maybe_rotate = if let Some(rotations) = transform_data.rotate {
             let mut base = None;
             for rotation in rotations {
-                let transform =
-                    Transform3::from_axis_angle(Vec3::from(rotation.axis), rotation.angle);
+                let transform = Transform3::from_axis_angle(
+                    Vec3::from(rotation.axis),
+                    PI * rotation.angle / 180.0,
+                );
                 if base.is_none() {
                     base = Some(transform);
                 } else {

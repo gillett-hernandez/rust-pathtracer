@@ -1,51 +1,3 @@
-# fn _construct_scene2(config: &Config) -> World {
-#     // load some curves
-#     let (silver_ior, silver_kappa) =
-#         load_ior_and_kappa("data/curves/csv/silver.csv", |x: f32| x * 1000.0).unwrap();
-#     let (gold_ior, gold_kappa) =
-#         load_ior_and_kappa("data/curves/csv/gold.csv", |x: f32| x * 1000.0).unwrap();
-
-#     let (bismuth_ior, bismuth_kappa) =
-#         load_ior_and_kappa("data/curves/csv/bismuth.csv", |x: f32| x * 1000.0).unwrap();
-#     let (copper_ior, copper_kappa) =
-#         load_ior_and_kappa("data/curves/csv/copper-mcpeak.csv", |x: f32| x * 1000.0).unwrap();
-#     let (lead_ior, lead_kappa) =
-#         load_ior_and_kappa("data/curves/csv/lead.csv", |x: f32| x * 1000.0).unwrap();
-#     let (cold_lead_ior, cold_lead_kappa) =
-#         load_ior_and_kappa("data/curves/csv/lead-140K.csv", |x: f32| x * 1000.0).unwrap();
-#     let (platinum_ior, platinum_kappa) =
-#         load_ior_and_kappa("data/curves/csv/platinum.csv", |x: f32| x * 1000.0).unwrap();
-#     let (iron_ior, iron_kappa) =
-#         load_ior_and_kappa("data/curves/csv/iron-johnson.csv", |x: f32| x * 1000.0).unwrap();
-
-#     let ggx_glass =
-#         MaterialEnum::from(GGX::new(0.0001, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-#     let ggx_glass_rough =
-#         MaterialEnum::from(GGX::new(0.2, glass.clone(), 1.0, flat_zero.clone(), 1.0));
-#     let ggx_moissanite =
-#         MaterialEnum::from(GGX::new(0.0001, moissanite, 1.0, flat_zero.clone(), 1.0));
-#     let ggx_unrealistic_dispersion = MaterialEnum::from(GGX::new(
-#         0.001,
-#         curves::cauchy(1.45, 50000.0),
-#         1.0,
-#         flat_zero.clone(),
-#         1.0,
-#     ));
-
-#     let additional_instances = vec![
-#         Instance::new(
-#             Aggregate::from(Disk::new(0.7, Point3::new(0.0, 0.0, 0.0), false)),
-#             Some(Transform3::from_stack(
-#                 Some(Transform3::from_scale(Vec3::new(-1.0, -1.0, -1.0))),
-#                 None,
-#                 Some(Transform3::from_translation(
-#                     Point3::ORIGIN - Point3::new(0.0, 0.0, 0.95),
-#                 )),
-#             )),
-#             MaterialId::Light(0),
-#             0,
-#         ),
-
 env_sampling_probability = 0.1
 [environment]
 type="Constant"
@@ -251,8 +203,8 @@ strength = 5.0
 material_identifier = "sharp_light_xenon"
 [instances.aggregate]
 type = "Rect"
-size = [0.7, 0.7]
-origin = [0.0, 0.0, 0.9]
+size = [0.7, 0.01]
+origin = [0.0, 0.8, 0.9]
 normal = "Z"
 two_sided = false
 
@@ -305,11 +257,11 @@ two_sided = true
 material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Mesh"
-filename = "data/meshes/monkey.obj"
+filename = "data/meshes/prism.obj"
 mesh_index = 0
 [instances.transform]
-scale = [0.75, 0.75, 0.75]
-translate = [0.0, 0.0, -0.6]
+scale = [3.0, 3.0, 3.0]
+translate = [0.2, 0.0, -0.1]
 [[instances.transform.rotate]]
 axis = [0.0, 0.0, 1.0]
-angle = 3.14159265
+angle = 90
