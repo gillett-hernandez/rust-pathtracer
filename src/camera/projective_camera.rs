@@ -189,7 +189,7 @@ mod tests {
         println!("camera ray {:?}", r);
         println!(
             "camera ray in camera local space {:?}",
-            camera.lens.transform.unwrap() * r
+            camera.lens.transform.unwrap().to_local(r)
         );
         let pixel_uv = camera.get_pixel_for_ray(r);
         println!("s and t are actually {} and {}", s, t);
@@ -215,8 +215,8 @@ mod tests {
 
         let camera_surface = camera.get_surface().unwrap();
         let transform = camera_surface.transform.unwrap();
-        println!("transform * = {:?}", transform * sample_from);
-        println!("transform / ={:?}", transform / sample_from);
+        println!("transform * = {:?}", transform.to_local(sample_from));
+        println!("transform / ={:?}", transform.to_world(sample_from));
         let sample = Sample2D::new_random_sample();
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);

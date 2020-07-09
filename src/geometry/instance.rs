@@ -92,7 +92,7 @@ impl Hittable for Instance {
             if let Some(hit) = self.aggregate.hit(
                 Ray {
                     origin: transform.to_local(r.origin),
-                    direction: transform.to_local(r.direction).normalized(),
+                    direction: transform.to_local(r.direction),
                     ..r
                 },
                 t0,

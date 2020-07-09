@@ -3,7 +3,7 @@ use crate::math::*;
 
 use nalgebra;
 use packed_simd::{f32x16, f32x4};
-use std::ops::{Div, Mul};
+use std::ops::Mul;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Matrix4x4(f32x16);
@@ -59,7 +59,7 @@ impl Mul<Point3> for Matrix4x4 {
 
         let result = row1 * v0 + row2 * v1 + row3 * v2 + row4 * v3;
 
-        Point3::from_raw(result)
+        Point3::from_raw(result).normalize()
     }
 }
 
@@ -68,7 +68,7 @@ impl Mul<Ray> for Matrix4x4 {
     fn mul(self, rhs: Ray) -> Self::Output {
         Ray {
             origin: self * rhs.origin,
-            direction: (self * rhs.direction).normalized(),
+            direction: self * rhs.direction,
             ..rhs
         }
     }
@@ -154,22 +154,11 @@ impl Transform3 {
 
     pub fn inverse(self) -> Transform3 {
         // returns a transform3 that when multiplied with another Transform3, Vec3 or Point3,
-        // applies the reverse transform of self.enum
+        // applies the reverse transform of self
         Transform3::new_from_raw(self.reverse, self.forward)
     }
 
     pub fn from_translation(shift: Vec3) -> Self {
-        // let mut m = Matrix4x4::I;
-        // let v = shift.0;
-        // // m.0 = shuffle!(
-        // //     m.0,
-        // //     f32x16::splat(shift.0),
-        // //     [0, 1, 2, 16, 4, 5, 6, 17, 8, 9, 10, 18, 12, 13, 14, 19]
-        // // );
-        // m.0.replace(3, v.extract(0));
-        // m.0.replace(7, v.extract(1));
-        // m.0.replace(11, v.extract(2));
-        // m.0.replace(15, v.extract(3));
         Transform3::new_from_matrix(nalgebra::Matrix4::new_translation(&nalgebra::Vector3::new(
             shift.x(),
             shift.y(),
@@ -243,7 +232,11 @@ impl Transform3 {
     }
 
     pub fn axis_transform(&self) -> (Vec3, Vec3, Vec3) {
-        (*self * Vec3::X, *self * Vec3::Y, *self * Vec3::Z)
+        (
+            self.to_world(Vec3::X),
+            self.to_world(Vec3::Y),
+            self.to_world(Vec3::Z),
+        )
     }
 
     pub fn to_local<T>(&self, value: T) -> <Matrix4x4 as Mul<T>>::Output
@@ -287,38 +280,38 @@ impl From<nalgebra::Matrix4<f32>> for Matrix4x4 {
 //     }
 // }
 
-impl Mul<Vec3> for Transform3 {
-    type Output = Vec3;
-    fn mul(self, rhs: Vec3) -> Self::Output {
-        // only apply scale and rotation
-        self.forward * rhs
-    }
-}
+// impl Mul<Vec3> for Transform3 {
+//     type Output = Vec3;
+//     fn mul(self, rhs: Vec3) -> Self::Output {
+//         // only apply scale and rotation
+//         self.forward * rhs
+//     }
+// }
 
-impl Mul<Point3> for Transform3 {
-    type Output = Point3;
-    fn mul(self, rhs: Point3) -> Self::Output {
-        self.forward * rhs
-    }
-}
+// impl Mul<Point3> for Transform3 {
+//     type Output = Point3;
+//     fn mul(self, rhs: Point3) -> Self::Output {
+//         self.forward * rhs
+//     }
+// }
 
-impl Mul<Ray> for Transform3 {
-    type Output = Ray;
-    fn mul(self, rhs: Ray) -> Self::Output {
-        Ray {
-            origin: self * rhs.origin,
-            direction: self * rhs.direction,
-            ..rhs
-        }
-    }
-}
+// impl Mul<Ray> for Transform3 {
+//     type Output = Ray;
+//     fn mul(self, rhs: Ray) -> Self::Output {
+//         Ray {
+//             origin: self * rhs.origin,
+//             direction: self * rhs.direction,
+//             ..rhs
+//         }
+//     }
+// }
 
-impl Mul<AABB> for Transform3 {
-    type Output = AABB;
-    fn mul(self, rhs: AABB) -> Self::Output {
-        AABB::new(self * rhs.min, self * rhs.max)
-    }
-}
+// impl Mul<AABB> for Transform3 {
+//     type Output = AABB;
+//     fn mul(self, rhs: AABB) -> Self::Output {
+//         AABB::new(self * rhs.min, self * rhs.max)
+//     }
+// }
 
 impl Mul<Transform3> for Transform3 {
     type Output = Transform3;
@@ -327,38 +320,38 @@ impl Mul<Transform3> for Transform3 {
     }
 }
 
-impl Div<Vec3> for Transform3 {
-    type Output = Vec3;
-    fn div(self, rhs: Vec3) -> Self::Output {
-        // only apply scale and rotation
-        self.reverse * rhs
-    }
-}
+// impl Div<Vec3> for Transform3 {
+//     type Output = Vec3;
+//     fn div(self, rhs: Vec3) -> Self::Output {
+//         // only apply scale and rotation
+//         self.reverse * rhs
+//     }
+// }
 
-impl Div<Point3> for Transform3 {
-    type Output = Point3;
-    fn div(self, rhs: Point3) -> Self::Output {
-        self.reverse * rhs
-    }
-}
+// impl Div<Point3> for Transform3 {
+//     type Output = Point3;
+//     fn div(self, rhs: Point3) -> Self::Output {
+//         self.reverse * rhs
+//     }
+// }
 
-impl Div<Ray> for Transform3 {
-    type Output = Ray;
-    fn div(self, rhs: Ray) -> Self::Output {
-        Ray {
-            origin: self / rhs.origin,
-            direction: self / rhs.direction,
-            ..rhs
-        }
-    }
-}
+// impl Div<Ray> for Transform3 {
+//     type Output = Ray;
+//     fn div(self, rhs: Ray) -> Self::Output {
+//         Ray {
+//             origin: self / rhs.origin,
+//             direction: self / rhs.direction,
+//             ..rhs
+//         }
+//     }
+// }
 
-impl Div<AABB> for Transform3 {
-    type Output = AABB;
-    fn div(self, rhs: AABB) -> Self::Output {
-        AABB::new(self / rhs.min, self / rhs.max)
-    }
-}
+// impl Div<AABB> for Transform3 {
+//     type Output = AABB;
+//     fn div(self, rhs: AABB) -> Self::Output {
+//         AABB::new(self / rhs.min, self / rhs.max)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -372,16 +365,16 @@ mod tests {
         let test_vec = Vec3::new(1.0, 1.0, 1.0);
         println!("testing vec {:?}", test_vec);
 
-        println!("{:?}", transform_translate * test_vec);
-        println!("{:?}", transform_rotate * test_vec);
-        println!("{:?}", transform_scale * test_vec);
+        println!("{:?}", transform_translate.to_world(test_vec));
+        println!("{:?}", transform_rotate.to_world(test_vec));
+        println!("{:?}", transform_scale.to_world(test_vec));
 
         let test_point = Point3::ORIGIN + test_vec;
         println!("testing point {:?}", test_point);
 
-        println!("{:?}", transform_translate * test_point);
-        println!("{:?}", transform_rotate * test_point);
-        println!("{:?}", transform_scale * test_point);
+        println!("{:?}", transform_translate.to_world(test_point));
+        println!("{:?}", transform_rotate.to_world(test_point));
+        println!("{:?}", transform_scale.to_world(test_point));
     }
 
     #[test]
@@ -401,19 +394,19 @@ mod tests {
 
         println!(
             "vec trs, {:?}",
-            combination_trs.inverse() * (combination_trs * test_vec)
+            combination_trs.to_local(combination_trs.to_world(test_vec))
         );
         println!(
             "vec  rs, {:?}",
-            combination_rs.inverse() * (combination_rs * test_vec)
+            combination_rs.to_local(combination_rs.to_world(test_vec))
         );
         println!(
             "vec  tr, {:?}",
-            combination_tr.inverse() * (combination_tr * test_vec)
+            combination_tr.to_local(combination_tr.to_world(test_vec))
         );
         println!(
             "vec  ts, {:?}",
-            combination_ts.inverse() * (combination_ts * test_vec)
+            combination_ts.to_local(combination_ts.to_world(test_vec))
         );
 
         let test_point = Point3::ORIGIN + test_vec;
@@ -421,19 +414,19 @@ mod tests {
 
         println!(
             "point trs, {:?}",
-            combination_trs.inverse() * (combination_trs * test_point)
+            combination_trs.to_local(combination_trs.to_world(test_point))
         );
         println!(
             "point  rs, {:?}",
-            combination_rs.inverse() * (combination_rs * test_point)
+            combination_rs.to_local(combination_rs.to_world(test_point))
         );
         println!(
             "point  tr, {:?}",
-            combination_tr.inverse() * (combination_tr * test_point)
+            combination_tr.to_local(combination_tr.to_world(test_point))
         );
         println!(
             "point  ts, {:?}",
-            combination_ts.inverse() * (combination_ts * test_point)
+            combination_ts.to_local(combination_ts.to_world(test_point))
         );
     }
 
@@ -451,18 +444,18 @@ mod tests {
         let test_vec = Vec3::X;
         println!("testing vec {:?}", test_vec);
 
-        println!("vec trs, {:?}", combination_trs * test_vec);
-        println!("vec  rs, {:?}", combination_rs * test_vec);
-        println!("vec  tr, {:?}", combination_tr * test_vec);
-        println!("vec  ts, {:?}", combination_ts * test_vec);
+        println!("vec trs, {:?}", combination_trs.to_world(test_vec));
+        println!("vec  rs, {:?}", combination_rs.to_world(test_vec));
+        println!("vec  tr, {:?}", combination_tr.to_world(test_vec));
+        println!("vec  ts, {:?}", combination_ts.to_world(test_vec));
 
         let test_point = Point3::ORIGIN + test_vec;
         println!("testing point {:?}", test_point);
 
-        println!("point trs, {:?}", combination_trs * test_point);
-        println!("point  rs, {:?}", combination_rs * test_point);
-        println!("point  tr, {:?}", combination_tr * test_point);
-        println!("point  ts, {:?}", combination_ts * test_point);
+        println!("point trs, {:?}", combination_trs.to_world(test_point));
+        println!("point  rs, {:?}", combination_rs.to_world(test_point));
+        println!("point  tr, {:?}", combination_tr.to_world(test_point));
+        println!("point  ts, {:?}", combination_ts.to_world(test_point));
     }
 
     #[test]
@@ -479,10 +472,10 @@ mod tests {
         let result1 = n_translate * point;
         let result2 = matrix * simd_vec;
         let result3 = matrix * simd_point;
-        let result4 = transform * simd_vec;
-        let result5 = transform / simd_vec;
-        let result6 = transform * simd_point;
-        let result7 = transform / simd_point;
+        let result4 = transform.to_world(simd_vec);
+        let result5 = transform.to_local(simd_vec);
+        let result6 = transform.to_world(simd_point);
+        let result7 = transform.to_local(simd_point);
         println!(
             "{:?} {:?} {:?} {:?} {:?}",
             result1, result2, result3, result4, result5

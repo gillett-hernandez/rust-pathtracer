@@ -189,9 +189,9 @@ impl Hittable for MeshTriangleRef {
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
-        let p0 = *transform * self.vertices[self.indices[3 * self.idx + 0]];
-        let p1 = *transform * self.vertices[self.indices[3 * self.idx + 1]];
-        let p2 = *transform * self.vertices[self.indices[3 * self.idx + 2]];
+        let p0 = transform.to_world(self.vertices[self.indices[3 * self.idx + 0]]);
+        let p1 = transform.to_world(self.vertices[self.indices[3 * self.idx + 1]]);
+        let p2 = transform.to_world(self.vertices[self.indices[3 * self.idx + 2]]);
         let d02 = (p2 - p0).norm();
         let d01 = (p1 - p0).norm();
         let d12 = (p2 - p1).norm();
