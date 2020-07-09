@@ -746,7 +746,7 @@ where
         } else {
             // s must be 1
             // which means the connection is to the surface of a light
-            // if this case allows for resampling of the surface camera vertex, account for the changed probability density here
+            // if this case allows for resampling of the light surface vertex, account for the changed probability density here
             // llv is on surface of light
             // lev is in scene
             if llv.vertex_type == VertexType::LightSource(LightSourceType::Environment) {
@@ -804,7 +804,12 @@ where
             // which means the connection is to the surface of the camera
             // if this case allows for resampling of the surface camera vertex, account for the changed probability density here
             if let MaterialId::Camera(camera_id) = lev.material_id {
-                let g = veach_g(lev.point, 1.0, llv.point, llv_local_light_to_eye.z().abs());
+                let g = veach_g(
+                    lev.point,
+                    lev_local_eye_to_light.z().abs(),
+                    llv.point,
+                    llv_local_light_to_eye.z().abs(),
+                );
                 let camera = world.get_camera(camera_id as usize);
                 lev_forward_pdf = (camera.eval_we(lev.point, llv.point).1).0;
                 lev_backward_pdf = 1.0; // do camera area sampling?
