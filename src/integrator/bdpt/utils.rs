@@ -193,7 +193,7 @@ pub fn random_walk(
                 debug_assert!(
                     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
                     "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                    material,
+                    material.get_name(),
                     vertex,
                     wi,
                     wo,
@@ -204,7 +204,7 @@ pub fn random_walk(
                 debug_assert!(
                     vertex.pdf_backward > 0.0 && vertex.pdf_backward.is_finite(),
                     "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                    material,
+                    material.get_name(),
                     vertex,
                     wi,
                     wo,

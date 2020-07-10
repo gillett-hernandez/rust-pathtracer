@@ -363,6 +363,7 @@ impl GGX {
         );
         (f, pdf.into())
     }
+    pub const NAME: &'static str = "GGX";
 }
 
 impl Material for GGX {

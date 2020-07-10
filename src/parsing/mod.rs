@@ -5,11 +5,13 @@ pub mod environment;
 pub mod instance;
 pub mod material;
 pub mod primitives;
+pub mod texture;
 
 // use curves::*;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
+use texture::*;
 // use primitives::*;
 
 pub use curves::{
@@ -21,6 +23,7 @@ use crate::config::Config;
 // use crate::curves::*;
 use crate::geometry::*;
 use crate::materials::*;
+use crate::texture::*;
 // use crate::math::spectral::BOUNDED_VISIBLE_RANGE;
 // use crate::math::*;
 // use crate::world::EnvironmentMap;
@@ -38,8 +41,9 @@ pub type Point3Data = [f32; 3];
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Scene {
-    pub instances: Vec<InstanceData>,
+    pub textures: Vec<TextureStackData>,
     pub materials: Vec<NamedMaterial>,
+    pub instances: Vec<InstanceData>,
     pub environment: EnvironmentData,
     pub env_sampling_probability: Option<f32>,
 }
@@ -66,9 +70,19 @@ fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
 pub fn construct_world(config: &Config) -> World {
     let scene = get_scene(&config.scene_file).expect("scene file failed to parse");
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
+    let mut texture_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut materials: Vec<MaterialEnum> = Vec::new();
     let mut instances: Vec<Instance> = Vec::new();
+    let mut textures: Vec<TexStack> = Vec::new();
     let mut material_count: usize = 0;
+    let mut texture_count: usize = 0;
+    for tex in scene.textures {
+        texture_count += 1;
+        let tex_id = texture_count - 1;
+        texture_names_to_ids.insert(tex.name.clone(), tex_id);
+        textures.push(parse_texture_stack(tex.clone()));
+    }
+
     for material in scene.materials {
         let id = match material.data {
             MaterialData::DiffuseLight(_) | MaterialData::SharpLight(_) => {
@@ -81,7 +95,11 @@ pub fn construct_world(config: &Config) -> World {
             }
         };
         material_names_to_ids.insert(material.name, id);
-        materials.push(material.data.into());
+        materials.push(parse_material(
+            material.data,
+            &texture_names_to_ids,
+            &textures,
+        ));
     }
     for instance in scene.instances {
         let id = instances.len();

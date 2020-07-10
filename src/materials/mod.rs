@@ -38,7 +38,7 @@ impl From<MaterialId> for usize {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum MaterialEnum {
     GGX(GGX),
     Lambertian(Lambertian),
@@ -67,6 +67,17 @@ impl From<SharpLight> for MaterialEnum {
 impl From<GGX> for MaterialEnum {
     fn from(value: GGX) -> Self {
         MaterialEnum::GGX(value)
+    }
+}
+
+impl MaterialEnum {
+    pub fn get_name(&self) -> &str {
+        match self {
+            MaterialEnum::GGX(inner) => GGX::NAME,
+            MaterialEnum::Lambertian(inner) => Lambertian::NAME,
+            MaterialEnum::SharpLight(inner) => SharpLight::NAME,
+            MaterialEnum::DiffuseLight(inner) => DiffuseLight::NAME,
+        }
     }
 }
 

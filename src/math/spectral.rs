@@ -236,7 +236,17 @@ pub enum SPD {
     },
 }
 
-#[derive(Debug, Clone)]
+impl Default for SPD {
+    fn default() -> Self {
+        SPD::Linear {
+            signal: vec![0.0],
+            bounds: EXTENDED_VISIBLE_RANGE,
+            mode: InterpolationMode::Linear,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct CDF {
     pub pdf: SPD,
     pub cdf: SPD,

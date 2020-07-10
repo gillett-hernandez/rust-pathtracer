@@ -56,6 +56,12 @@ pub enum Curve {
         a: f32,
         b: f32,
     },
+    SimpleSpike {
+        lambda: f32,
+        left_taper: f32,
+        right_taper: f32,
+        strength: f32,
+    },
 }
 
 pub fn spectra(filename: &str, strength: f32) -> SPD {
@@ -287,6 +293,14 @@ pub fn parse_curve(curve: Curve) -> SPD {
             signal: vec![strength],
             bounds: EXTENDED_VISIBLE_RANGE,
             mode: InterpolationMode::Linear,
+        },
+        Curve::SimpleSpike {
+            lambda,
+            left_taper,
+            right_taper,
+            strength,
+        } => SPD::Exponential {
+            signal: vec![(lambda, left_taper, right_taper, strength)],
         },
     }
 }

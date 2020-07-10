@@ -1,12 +1,15 @@
 use crate::materials::*;
 use crate::parsing::curves::{parse_curve, Curve};
+use crate::texture::TexStack;
 use crate::Sidedness;
 
 use serde::{Deserialize, Serialize};
 
+use std::collections::HashMap;
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LambertianData {
-    pub color: Curve,
+    pub color: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -41,36 +44,42 @@ pub enum MaterialData {
     SharpLight(SharpLightData),
 }
 
-impl From<MaterialData> for MaterialEnum {
-    fn from(data: MaterialData) -> Self {
-        match data {
-            MaterialData::GGX(data) => {
-                println!("parsing GGX");
-                let eta = parse_curve(data.eta);
-                let kappa = parse_curve(data.kappa);
-                MaterialEnum::GGX(GGX::new(
-                    data.alpha,
-                    eta,
-                    data.eta_o,
-                    kappa,
-                    data.permeability,
-                ))
-            }
-            MaterialData::Lambertian(data) => {
-                println!("parsing Lambertian");
-                let color = parse_curve(data.color);
-                MaterialEnum::Lambertian(Lambertian::new(color))
-            }
-            MaterialData::SharpLight(data) => {
-                println!("parsing SharpLight");
-                let color = parse_curve(data.color).into();
-                MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
-            }
-            MaterialData::DiffuseLight(data) => {
-                println!("parsing DiffuseLight");
-                let color = parse_curve(data.color).into();
-                MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
-            }
+pub fn parse_material(
+    data: MaterialData,
+    mapping: &HashMap<String, usize>,
+    texture_stacks: &Vec<TexStack>,
+) -> MaterialEnum {
+    match data {
+        MaterialData::GGX(data) => {
+            println!("parsing GGX");
+            let eta = parse_curve(data.eta);
+            let kappa = parse_curve(data.kappa);
+            MaterialEnum::GGX(GGX::new(
+                data.alpha,
+                eta,
+                data.eta_o,
+                kappa,
+                data.permeability,
+            ))
+        }
+        MaterialData::Lambertian(data) => {
+            println!("parsing Lambertian");
+            let id = mapping
+                .get(&data.color)
+                .expect("didn't find texture stack id for texture name");
+            MaterialEnum::Lambertian(Lambertian::new(texture_stacks[*id].clone()))
+        }
+        MaterialData::SharpLight(data) => {
+            println!("parsing SharpLight");
+            // let color = parse_texture_stack(data.color);
+            let color = parse_curve(data.color).into();
+            MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
+        }
+        MaterialData::DiffuseLight(data) => {
+            println!("parsing DiffuseLight");
+            // let color = parse_texture_stack(data.color);
+            let color = parse_curve(data.color).into();
+            MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
         }
     }
 }

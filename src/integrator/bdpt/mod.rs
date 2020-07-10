@@ -91,7 +91,11 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled = if let Some(data) = maybe_sampled {
                 data
             } else {
-                println!("light instance is {:?}, material is {:?}", light, material);
+                println!(
+                    "light instance is {:?}, material is {:?}",
+                    light,
+                    material.get_name()
+                );
                 panic!();
             };
 
@@ -106,7 +110,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 pdf_forward,  // NaN
                 pdf_backward, // 0.494
                 sampled.0,
-                material,
+                material.get_name(),
                 directional_pdf, // NaN
                 light_surface_point,
                 light_surface_normal, // -Z
@@ -117,7 +121,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 "pdf_backward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                 pdf_backward,
                 pdf_forward,
-                material,
+                material.get_name(),
                 directional_pdf,
                 light_surface_point,
                 light_surface_normal,

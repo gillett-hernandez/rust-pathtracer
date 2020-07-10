@@ -18,6 +18,7 @@ impl SharpLight {
             sidedness,
         }
     }
+    pub const NAME: &'static str = "SharpLight";
 }
 
 fn evaluate(vec: Vec3, sharpness: f32) -> f32 {

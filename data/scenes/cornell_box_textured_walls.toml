@@ -8,36 +8,85 @@ filename = "data/curves/csv/D65.csv"
 column = 1
 interpolation_mode = "Cubic"
 
-[[materials]]
+[[textures]]
+name = "lambertian_texture"
+[[textures.texture_stack]]
+type = "Texture4"
+filename = "data/textures/simple.png"
+[[textures.texture_stack.curves]]
+type = "SimpleSpike"
+lambda = 420.0
+left_taper = 100.0
+right_taper = 100.0
+strength = 1.0
+[[textures.texture_stack.curves]]
+type = "SimpleSpike"
+lambda = 550.0
+left_taper = 100.0
+right_taper = 100.0
+strength = 1.0
+[[textures.texture_stack.curves]]
+type = "SimpleSpike"
+lambda = 650.0
+left_taper = 100.0
+right_taper = 100.0
+strength = 1.0
+[[textures.texture_stack.curves]]
+type = "Flat"
+strength = 0.0
+
+
+[[textures]]
 name = "lambertian_white"
-[materials.data]
-type = "Lambertian"
-[materials.data.color]
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
 type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 1
 interpolation_mode = "Cubic"
 
-[[materials]]
+[[textures]]
 name = "lambertian_green"
-[materials.data]
-type = "Lambertian"
-[materials.data.color]
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
 type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 2
 interpolation_mode = "Cubic"
 
-[[materials]]
+[[textures]]
 name = "lambertian_red"
-[materials.data]
-type = "Lambertian"
-[materials.data.color]
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
 type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
 
+
+[[materials]]
+name = "lambertian_white"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_white"
+
+[[materials]]
+name = "lambertian_green"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_green"
+
+[[materials]]
+name = "lambertian_red"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_texture"
 
 [[materials]]
 name = "ggx_glass"
@@ -159,7 +208,6 @@ interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0
 
-
 [[materials]]
 name = "sharp_light_xenon"
 [materials.data]
@@ -172,7 +220,6 @@ filename = "data/curves/spectra/xenon_lamp.spectra"
 interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0
-
 
 [[materials]]
 name = "sharp_light_warm"

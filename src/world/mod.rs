@@ -11,7 +11,7 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::Instance;
 pub use crate::materials::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,

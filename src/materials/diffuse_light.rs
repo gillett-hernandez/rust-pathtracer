@@ -13,6 +13,7 @@ impl DiffuseLight {
     pub fn new(color: CDF, sidedness: Sidedness) -> DiffuseLight {
         DiffuseLight { color, sidedness }
     }
+    pub const NAME: &'static str = "DiffuseLight";
 }
 
 impl Material for DiffuseLight {

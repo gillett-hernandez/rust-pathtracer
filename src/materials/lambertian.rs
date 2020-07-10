@@ -1,16 +1,18 @@
 use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::math::*;
+use crate::texture::TexStack;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Lambertian {
-    pub color: SPD,
+    pub color: TexStack,
 }
 
 impl Lambertian {
-    pub fn new(color: SPD) -> Lambertian {
+    pub fn new(color: TexStack) -> Lambertian {
         Lambertian { color }
     }
+    pub const NAME: &'static str = "Lambertian";
 }
 
 impl Material for Lambertian {
@@ -33,7 +35,7 @@ impl Material for Lambertian {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
         let cosine = wo.z();
         if cosine * wi.z() > 0.0 {
-            SingleEnergy::new(self.color.evaluate(hit.lambda) / PI)
+            SingleEnergy::new(self.color.eval_at(hit.lambda, hit.uv) / PI)
         } else {
             0.0.into()
         }
