@@ -5,6 +5,7 @@ use std::fmt::Debug;
 pub use crate::aabb::{HasBoundingBox, AABB};
 use crate::TransportMode;
 
+#[derive(Clone, Copy, Debug)]
 pub struct HitRecord {
     pub time: f32,
     pub point: Point3,
@@ -39,15 +40,15 @@ impl HitRecord {
         }
     }
 }
-impl Debug for HitRecord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "time: {}, point: {:?}, normal: {:?}, material: {:?}, instance_id: {}",
-            self.time, self.point, self.normal, self.material, self.instance_id
-        )
-    }
-}
+// impl Debug for HitRecord {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+//         write!(
+//             f,
+//             "time: {}, point: {:?}, normal: {:?}, material: {:?}, instance_id: {}",
+//             self.time, self.point, self.normal, self.material, self.instance_id
+//         )
+//     }
+// }
 
 use std::marker::{Send, Sync};
 

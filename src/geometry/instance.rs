@@ -103,6 +103,8 @@ impl Hittable for Instance {
                     "{:?}",
                     hit
                 );
+                debug_assert!(hit.uv.0 <= 1.0 && hit.uv.1 <= 1.0, "{:?}", hit);
+                debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
                 Some(HitRecord {
                     normal: transform.to_world(hit.normal).normalized(),
                     point: transform.to_world(hit.point),
@@ -120,6 +122,8 @@ impl Hittable for Instance {
                     "{:?}",
                     hit
                 );
+                debug_assert!(hit.uv.0 <= 1.0 && hit.uv.1 <= 1.0, "{:?}", hit);
+                debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
                 Some(HitRecord {
                     instance_id: self.instance_id,
                     material: self.material_id,

@@ -86,13 +86,16 @@ impl Hittable for AARect {
         if r.direction * hit_normal > 0.0 && self.two_sided {
             hit_normal = -hit_normal;
         }
+        let uv = (
+            (xh + self.half_size.0) / self.size.0,
+            (yh + self.half_size.1) / self.size.1,
+        );
+        // debug_assert!(uv.0 < 1.0 && uv.0 >= 0.0, "{:?} {:?}", xh, self.size.0);
+        // debug_assert!(uv.1 < 1.0 && uv.1 >= 0.0, "{:?} {:?}", yh, self.size.1);
         Some(HitRecord::new(
             t,
             r.point_at_parameter(t),
-            (
-                (xh - self.half_size.0) / self.size.0,
-                (yh - self.half_size.1) / self.size.1,
-            ),
+            uv,
             0.0,
             hit_normal,
             0.into(),

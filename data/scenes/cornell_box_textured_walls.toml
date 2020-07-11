@@ -8,6 +8,9 @@ filename = "data/curves/csv/D65.csv"
 column = 1
 interpolation_mode = "Cubic"
 
+
+
+
 [[textures]]
 name = "lambertian_texture"
 [[textures.texture_stack]]
@@ -34,7 +37,6 @@ strength = 1.0
 [[textures.texture_stack.curves]]
 type = "Flat"
 strength = 0.0
-
 
 [[textures]]
 name = "lambertian_white"
@@ -68,6 +70,8 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
+
+
 
 
 [[materials]]
