@@ -15,25 +15,25 @@ interpolation_mode = "Cubic"
 name = "lambertian_texture"
 [[textures.texture_stack]]
 type = "Texture4"
-filename = "data/textures/simple.png"
+filename = "data/textures/buff_Squidward.png"
 [[textures.texture_stack.curves]]
 type = "SimpleSpike"
-lambda = 420.0
-left_taper = 100.0
-right_taper = 100.0
-strength = 1.0
+lambda = 670.0
+left_taper = 50.0
+right_taper = 150.0
+strength = 0.7
 [[textures.texture_stack.curves]]
 type = "SimpleSpike"
 lambda = 550.0
-left_taper = 100.0
-right_taper = 100.0
-strength = 1.0
+left_taper = 20.0
+right_taper = 20.0
+strength = 0.7
 [[textures.texture_stack.curves]]
 type = "SimpleSpike"
-lambda = 650.0
-left_taper = 100.0
-right_taper = 100.0
-strength = 1.0
+lambda = 420.0
+left_taper = 150.0
+right_taper = 50.0
+strength = 0.7
 [[textures.texture_stack.curves]]
 type = "Flat"
 strength = 0.0
@@ -78,7 +78,7 @@ interpolation_mode = "Cubic"
 name = "lambertian_white"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_white"
+color = "lambertian_texture"
 
 [[materials]]
 name = "lambertian_green"
@@ -90,7 +90,7 @@ color = "lambertian_green"
 name = "lambertian_red"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_texture"
+color = "lambertian_red"
 
 [[materials]]
 name = "ggx_glass"
@@ -190,6 +190,18 @@ interpolation_mode = "Cubic"
 y_scale = 5.0
 
 [[materials]]
+name = "diffuse_light_xenon"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
 name = "diffuse_light_warm"
 [materials.data]
 type = "DiffuseLight"
@@ -255,8 +267,8 @@ strength = 5.0
 material_identifier = "sharp_light_xenon"
 [instances.aggregate]
 type = "Rect"
-size = [0.7, 0.01]
-origin = [0.0, 0.8, 0.9]
+size = [0.7, 0.7]
+origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = false
 
@@ -313,7 +325,7 @@ filename = "data/meshes/prism.obj"
 mesh_index = 0
 [instances.transform]
 scale = [3.0, 3.0, 3.0]
-translate = [0.2, 0.0, -0.1]
+translate = [0.0, 0.0, -0.1]
 [[instances.transform.rotate]]
 axis = [0.0, 0.0, 1.0]
 angle = 90

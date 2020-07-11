@@ -152,7 +152,7 @@ pub fn random_walk(
 
             let material = world.get_material(hit.material);
 
-            // consider accumulating emission in some other form for trace_type == Type::Eye situations, as mentioned in veach.
+            // consider accumulating emission in some other form for trace_type == TransportMode::Importance situations, as mentioned in veach.
             let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
 
             // what to do in this situation, where there is a wo and there's also emission?

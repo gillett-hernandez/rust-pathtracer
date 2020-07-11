@@ -35,7 +35,7 @@ impl Material for Lambertian {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
         let cosine = wo.z();
         if cosine * wi.z() > 0.0 {
-            SingleEnergy::new(self.color.eval_at(hit.lambda, hit.uv) / PI)
+            SingleEnergy::new(self.color.eval_at(hit.lambda, hit.uv).min(1.0) / PI)
         } else {
             0.0.into()
         }
