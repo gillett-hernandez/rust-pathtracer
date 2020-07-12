@@ -89,6 +89,8 @@ Thanks to members of the Rendering & Lighting (offline) discord server for point
 
 I used [this](https://github.com/svenstaro/bvh) to implement the BVH. I modified it to use my AABB implementation and other math routines, but for the most part the algorithm is unchanged.
 
+I grabbed some sRGB basis functions for upsampling textures from [this](https://github.com/imallett/simple-spectral) paper/repo
+
 ## Contribution
 
 Please view this as a hobby or reference implementation. If you find any issues, please feel free to log them on GitHub's issue tracker, or submit a pull request to fix them :)

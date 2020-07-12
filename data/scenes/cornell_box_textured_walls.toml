@@ -17,23 +17,20 @@ name = "lambertian_texture"
 type = "Texture4"
 filename = "data/textures/buff_Squidward.png"
 [[textures.texture_stack.curves]]
-type = "SimpleSpike"
-lambda = 670.0
-left_taper = 50.0
-right_taper = 150.0
-strength = 0.7
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 1
+interpolation_mode = "Cubic"
 [[textures.texture_stack.curves]]
-type = "SimpleSpike"
-lambda = 550.0
-left_taper = 20.0
-right_taper = 20.0
-strength = 0.7
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 2
+interpolation_mode = "Cubic"
 [[textures.texture_stack.curves]]
-type = "SimpleSpike"
-lambda = 420.0
-left_taper = 150.0
-right_taper = 50.0
-strength = 0.7
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 3
+interpolation_mode = "Cubic"
 [[textures.texture_stack.curves]]
 type = "Flat"
 strength = 0.0
