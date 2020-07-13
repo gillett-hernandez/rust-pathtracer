@@ -73,10 +73,10 @@ impl From<GGX> for MaterialEnum {
 impl MaterialEnum {
     pub fn get_name(&self) -> &str {
         match self {
-            MaterialEnum::GGX(inner) => GGX::NAME,
-            MaterialEnum::Lambertian(inner) => Lambertian::NAME,
-            MaterialEnum::SharpLight(inner) => SharpLight::NAME,
-            MaterialEnum::DiffuseLight(inner) => DiffuseLight::NAME,
+            MaterialEnum::GGX(_inner) => GGX::NAME,
+            MaterialEnum::Lambertian(_inner) => Lambertian::NAME,
+            MaterialEnum::SharpLight(_inner) => SharpLight::NAME,
+            MaterialEnum::DiffuseLight(_inner) => DiffuseLight::NAME,
         }
     }
 }

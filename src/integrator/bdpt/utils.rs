@@ -205,17 +205,17 @@ pub fn random_walk(
                     cos_i,
                     rr_continue_prob,
                 );
-                debug_assert!(
-                    vertex.pdf_backward > 0.0 && vertex.pdf_backward.is_finite(),
-                    "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                    material.get_name(),
-                    vertex,
-                    wi,
-                    wo,
-                    cos_o,
-                    cos_i,
-                    rr_continue_prob,
-                );
+                // debug_assert!(
+                //     vertex.pdf_backward >= 0.0 && vertex.pdf_backward.is_finite(),
+                //     "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
+                //     material.get_name(),
+                //     vertex,
+                //     wi,
+                //     wo,
+                //     cos_o,
+                //     cos_i,
+                //     rr_continue_prob,
+                // );
 
                 vertices.push(vertex);
 

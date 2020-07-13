@@ -193,17 +193,17 @@ impl GGX {
 
     fn reflectance(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
         if self.permeability > 0.0 {
-            if cos_theta_i >= 0.0 {
-                fresnel_dielectric(self.eta_o, eta_inner, cos_theta_i)
-            } else {
-                fresnel_dielectric(eta_inner, self.eta_o, cos_theta_i)
-            }
+            fresnel_dielectric(self.eta_o, eta_inner, cos_theta_i)
+        // if cos_theta_i >= 0.0 {
+        // fresnel_dielectric(eta_inner, self.eta_o, cos_theta_i)
+        // } else {
+        // }
         } else {
-            if cos_theta_i >= 0.0 {
-                fresnel_conductor(self.eta_o, eta_inner, kappa, cos_theta_i)
-            } else {
-                fresnel_conductor(eta_inner, self.eta_o, kappa, cos_theta_i)
-            }
+            fresnel_conductor(self.eta_o, eta_inner, kappa, cos_theta_i)
+            // fresnel_conductor(eta_inner, self.eta_o, kappa, cos_theta_i)
+            // if cos_theta_i >= 0.0 {
+            // } else {
+            // }
         }
     }
 
@@ -316,12 +316,12 @@ impl GGX {
                 // println!("{:?}, {:?}, {:?}", eta_inner, kappa, ndotv);
                 // println!(
                 //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
-                //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo, g
+                //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo1, g
                 // );
 
                 // println!(
                 //     "transmission_pdf = {:?} = {:?}*{:?}*{:?}",
-                //     transmission_pdf, ggxd, partial, dwh_dwo
+                //     transmission_pdf, ggxd, partial, dwh_dwo1
                 // );
 
                 debug_assert!(
@@ -372,6 +372,7 @@ impl Material for GGX {
     }
     fn generate(&self, hit: &HitRecord, mut sample: Sample2D, wi: Vec3) -> Option<Vec3> {
         let eta_inner = self.eta.evaluate_power(hit.lambda);
+        // let eta_rel = self.eta_rel(eta_inner, wi);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
@@ -394,9 +395,10 @@ impl Material for GGX {
             let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
 
             let wo = refract(wi, wh, eta_rel);
-            // if wo.is_none() {
-            //     wo = Some(reflect(wi, -wh));
-            // }
+            /* if wo.is_none() {
+                println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
+                //     wo = Some(reflect(wi, -wh));
+            } */
             return wo;
         }
     }
@@ -413,7 +415,24 @@ mod tests {
     use super::*;
     use crate::curves;
     use crate::materials::MaterialId;
-    use packed_simd::f32x4;
+
+    #[test]
+    fn test_fresnel() {
+        let eta_o = 1.004;
+        let eta_inner = 1.45;
+        // let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
+        // let wo = Vec3::new(-0.7469567, -0.66481555, 0.00871551);
+        let cos_theta_i = -0.76048267;
+        let fr_1 = fresnel_dielectric(eta_o, eta_inner, cos_theta_i);
+        let fr_2 = fresnel_dielectric(eta_o, eta_inner, -cos_theta_i);
+        println!("fr1 is {}, fr2 is {}", fr_1, fr_2);
+
+        let cos_theta_i = 0.00871551;
+        let fr_1 = fresnel_dielectric(eta_o, eta_inner, cos_theta_i);
+        let fr_2 = fresnel_dielectric(eta_o, eta_inner, -cos_theta_i);
+        println!("fr1 is {}, fr2 is {}", fr_1, fr_2);
+    }
+
     #[test]
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
@@ -435,90 +454,93 @@ mod tests {
         );
 
         let test_many = true;
-        if test_many {
-            let mut wi_s: Vec<Vec3> = Vec::new();
+        let mut wi_s: Vec<Vec3> = Vec::new();
 
-            wi_s.push(Vec3::new(0.01, -0.01, -0.99).normalized());
-            wi_s.push(Vec3::new(0.5, -0.1, -0.99).normalized());
-            wi_s.push(Vec3::new(0.8, -0.1, -0.49).normalized());
+        wi_s.push(Vec3::new(0.01, -0.01, -0.99).normalized());
+        wi_s.push(Vec3::new(0.5, -0.1, -0.99).normalized());
+        wi_s.push(Vec3::new(0.8, -0.1, -0.49).normalized());
+
+        if test_many {
             for _ in 0..100000 {
                 wi_s.push(random_on_unit_sphere(sampler.draw_2d()));
             }
-
-            for wi in wi_s {
-                let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), wi);
-                if let Some(wo) = maybe_wo {
-                    let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
-                    let orig_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
-
-                    // check swapping wi and wo
-                    let (wi, wo) = (wo, wi);
-                    let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
-                    let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
-                    assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                    assert!(sampled_pdf.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                    assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                    assert!(orig_pdf.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                } else {
-                    println!("failed to sample ggx");
-                }
-            }
-        } else {
-            let wi = Vec3(f32x4::new(0.9709351, 0.18724124, 0.14908342, -0.0));
-            let wo = Vec3(f32x4::new(-0.008856451, 0.6295874, -0.7768792, 0.0));
-            let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
-            let orig_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
-            let (wi, wo) = (wo, wi);
-            let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
-            let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
-            assert!(
-            sampled_f.0 > 0.0,
-            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
-            orig_f,
-            orig_pdf,
-            sampled_f,
-            sampled_pdf,
-            wi,
-            wo
-        );
-            assert!(
-            sampled_pdf.0 > 0.0,
-            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
-            orig_f,
-            orig_pdf,
-            sampled_f,
-            sampled_pdf,
-            wi,
-            wo
-        );
-            assert!(
-            orig_f.0 > 0.0,
-            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
-            orig_f,
-            orig_pdf,
-            sampled_f,
-            sampled_pdf,
-            wi,
-            wo
-        );
-            assert!(
-            orig_pdf.0 > 0.0,
-            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
-            orig_f,
-            orig_pdf,
-            sampled_f,
-            sampled_pdf,
-            wi,
-            wo
-        );
         }
+
+        let mut succeeded = 0;
+        for wi in wi_s.iter() {
+            let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), *wi);
+            if let Some(wo) = maybe_wo {
+                let orig_f = ggx_glass.f(&fake_hit_record, *wi, wo);
+                let orig_pdf = ggx_glass.value(&fake_hit_record, *wi, wo);
+
+                // check swapping wi and wo
+                let (wi, wo) = (wo, wi);
+                let sampled_f = ggx_glass.f(&fake_hit_record, wi, *wo);
+                let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, *wo);
+                assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(sampled_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(orig_pdf.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                succeeded += 1;
+            } /* else {
+                  print!("x");
+              } */
+        }
+        println!("{} succeeded, {} failed", succeeded, wi_s.len() - succeeded);
+        let wi = Vec3::new(0.9709351, 0.18724124, 0.14908342);
+        let wo = Vec3::new(-0.008856451, 0.6295874, -0.7768792);
+        let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
+        let orig_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+        let (wi, wo) = (wo, wi);
+        let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
+        let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+        assert!(
+            sampled_f.0 >= 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
+        assert!(
+            sampled_pdf.0 >= 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
+        assert!(
+            orig_f.0 >= 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
+        assert!(
+            orig_pdf.0 >= 0.0,
+            "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+            orig_f,
+            orig_pdf,
+            sampled_f,
+            sampled_pdf,
+            wi,
+            wo
+        );
     }
 
     #[test]
     fn test_failure_case() {
         let lambda = 762.2971;
-        let wi = Vec3(f32x4::new(0.073927574, -0.9872729, 0.14080834, 0.0));
-        let wo = Vec3(f32x4::new(0.048132252, 0.5836164, -0.81060183, -0.0));
+        let wi = Vec3::new(0.073927574, -0.9872729, 0.1408083);
+        let wo = Vec3::new(0.048132252, 0.5836164, -0.81060183);
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
@@ -527,13 +549,29 @@ mod tests {
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
     }
-    // wi: Vec3(f32x4(-0.8824156, -0.21537678, 0.418277, 0.0)), wo: Vec3(f32x4(0.93439, 0.27564585, -0.22568727, 0.0))
+    //wi: Vec3(f32x4(0.48507738, 0.4317013, -0.76048267, -0.0)), wo: Vec3(f32x4(-0.7469567, -0.66481555, 0.00871551, 0.0))
+    #[test]
+    fn test_failure_case2() {
+        let lambda = 500.0;
 
+        let glass = curves::cauchy(1.5, 10000.0);
+        let flat_zero = curves::void();
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+
+        // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+        let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
+        let wo = Vec3::new(-0.7469567, -0.66481555, 0.00871551);
+
+        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
+        println!("{:?} {:?}", f, pdf);
+        let (f, pdf) = ggx_glass.eval_pdf(lambda, wo, wi, TransportMode::Importance);
+        println!("{:?} {:?}", f, pdf);
+    }
     #[test]
     fn test_extremely_low_roughness() {
         let lambda = 762.2971;
-        let wi = Vec3(f32x4::new(0.073927574, -0.9872729, 0.14080834, 0.0));
-        let wo = Vec3(f32x4::new(0.048132252, 0.5836164, -0.81060183, -0.0));
+        let wi = Vec3::new(0.073927574, -0.9872729, 0.1408083);
+        let wo = Vec3::new(0.048132252, 0.5836164, -0.81060183);
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
