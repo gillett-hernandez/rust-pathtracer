@@ -51,7 +51,7 @@ impl PathTracingIntegrator {
             let local_light_direction = frame.to_local(&direction);
             let light_vertex_wi = TangentFrame::from_normal(normal).to_local(&(-direction));
 
-            let dropoff = light_vertex_wi.z().max(0.0);
+            let dropoff = light_vertex_wi.z().abs();
             if dropoff == 0.0 {
                 return SingleEnergy::ZERO;
             }
