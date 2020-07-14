@@ -232,11 +232,11 @@ strength = 5.0
 
 
 [[instances]]
-material_identifier = "diffuse_light"
+material_identifier = "sharp_light"
 [instances.aggregate]
 type = "Rect"
-size = [0.4, 0.4]
-origin = [0.0, 0.0, 0.9]
+size = [0.4, 0.1]
+origin = [0.0, 0.8, 0.9]
 normal = "Z"
 two_sided = false
 
@@ -284,3 +284,17 @@ size = [2, 2]
 origin = [1.0, 0.0, 0.0]
 normal = "X"
 two_sided = true
+
+
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Mesh"
+filename = "data/meshes/prism.obj"
+mesh_index = 0
+[instances.transform]
+scale = [3.0, 3.0, 3.0]
+translate = [0.2, 0.0, -0.1]
+[[instances.transform.rotate]]
+axis = [0.0, 0.0, 1.0]
+angle = 90

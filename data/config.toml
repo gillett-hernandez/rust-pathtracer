@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box.toml"
+scene_file = "data/scenes/cornell_box_parallel_prism.toml"
 
 [[cameras]]
 type="SimpleCamera"
@@ -26,8 +26,8 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "PT"
-integrator = "PT"
+filename = "BDPT"
+integrator = "BDPT"
 min_bounces = 8
 max_bounces = 22
 exposure = 1.0
