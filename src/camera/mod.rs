@@ -52,12 +52,20 @@ impl Camera {
         // (0.001, 0.0001.into())
     }
 
-    pub fn _sample_we(
+    pub fn sample_we(
         &self,
-        _film_sample: Sample2D,
-        _lens_sample: Sample2D,
-    ) -> (Point3, Vec3, PDF) {
-        (Point3::ZERO, Vec3::ZERO, 0.0.into())
+        film_sample: Sample2D,
+        aperture_sample: Sample2D,
+        lambda: f32,
+    ) -> (Ray, Vec3, PDF) {
+        // (Ray::new(Point3::ORIGIN, Vec3::Z), Vec3::Z, 0.0.into())
+        match self {
+            Camera::ProjectiveCamera(cam) => (
+                cam.get_ray(aperture_sample, film_sample.x, film_sample.y),
+                cam.direction,
+                1.0.into(),
+            ),
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 mod bdpt;
 mod lt;
 mod pt;
+mod sppm;
 pub mod utils;
 pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
@@ -69,7 +70,11 @@ impl Integrator {
 }
 
 pub trait SamplerIntegrator: Sync + Send {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength;
+    fn color(
+        &self,
+        sampler: &mut Box<dyn Sampler>,
+        camera_sample: ((f32, f32), CameraId),
+    ) -> SingleWavelength;
 }
 
 pub enum Sample {
@@ -78,12 +83,12 @@ pub enum Sample {
 }
 
 pub trait GenericIntegrator: Send + Sync {
-    fn preprocess(&self, _sampler: &mut Box<dyn Sampler>, _settings: &Vec<RenderSettings>) {}
+    fn preprocess(&mut self, _sampler: &mut Box<dyn Sampler>, _settings: &Vec<RenderSettings>) {}
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
-        camera_sample: (Ray, CameraId),
+        camera_sample: ((f32, f32), CameraId),
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength;
 }

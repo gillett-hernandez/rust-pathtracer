@@ -28,7 +28,7 @@ impl GenericIntegrator for BDPTIntegrator {
         &self,
         sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
-        camera_sample: (Ray, CameraId),
+        camera_sample: ((f32, f32), CameraId),
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
@@ -40,25 +40,8 @@ impl GenericIntegrator for BDPTIntegrator {
         //     .world
         //     .pick_random_camera(camera_pick)
         //     .expect("camera pick failed");
-        // let camera_ray;
-        // if let Some(camera_surface) = camera.get_surface() {
-        //     // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
-        //     // let direction = direction.normalized();
-        //     for _ in 0..self.max_lens_sample_attempts {
-        //         let film_sample = sampler.draw_2d();
-        //         let lens_sample = sampler.draw_2d(); // sometimes called aperture sample
-        //         let (point_on_lens, lens_normal, pdf) = camera.sample_we(film_sample, lens_sample);
-        //         let camera_pdf = pdf * camera_pick_pdf;
-        //         if camera_pdf.0 >= 0.0 {
-        //             camera_ray = Ray::new(point_on_lens, lens_normal);
-        //             break;
-        //         }
-        //     }
-        // } else {
-        //     return;
-        // }
-        let camera_ray = camera_sample.0;
-        let camera_id = camera_sample.1;
+
+        // let camera_uv = camera_sample.0;
 
         let env_sampling_probability = self.world.get_env_sampling_probability();
 
@@ -183,6 +166,17 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled.2,
             sampled.3
         );
+
+        let camera_ray;
+        let camera_id = camera_sample.1;
+        let camera = self.world.get_camera(camera_id as usize);
+        let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
+        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
+        let (sampled_camera_ray, lens_normal, camera_pdf) =
+            camera.sample_we(film_sample, aperture_sample, lambda);
+        // let camera_pdf = pdf;
+        camera_ray = sampled_camera_ray;
+
         let radiance = sampled.1.energy;
 
         // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
@@ -194,13 +188,13 @@ impl GenericIntegrator for BDPTIntegrator {
             camera_ray.time,
             lambda,
             camera_ray.origin,
-            camera_ray.direction,
+            lens_normal,
             (0.0, 0.0),
             MaterialId::Camera(camera_id),
             0,
             SingleEnergy::ONE,
-            1.0,
-            0.01,
+            camera_pdf.0,
+            0.0,
             1.0,
         ));
         light_path.push(start_light_vertex);

@@ -2,7 +2,7 @@ use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::{random_walk, veach_v, LightSourceType, Vertex, VertexType};
-use crate::integrator::SamplerIntegrator;
+use crate::integrator::*;
 use crate::material::Material;
 use crate::materials::{MaterialEnum, MaterialId};
 use crate::math::*;
@@ -196,10 +196,23 @@ impl PathTracingIntegrator {
 }
 
 impl SamplerIntegrator for PathTracingIntegrator {
-    fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
+    fn color(
+        &self,
+        sampler: &mut Box<dyn Sampler>,
+        camera_sample: ((f32, f32), CameraId),
+    ) -> SingleWavelength {
         // println!("{:?}", ray);
+
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, self.wavelength_bounds);
         let lambda = sum.lambda;
+
+        let camera_id = camera_sample.1;
+        let camera = self.world.get_camera(camera_id as usize);
+        let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
+        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
+        let (camera_ray, lens_normal, pdf) =
+            camera.sample_we(film_sample, aperture_sample, sum.lambda);
+        let camera_pdf = pdf;
 
         let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 

@@ -114,17 +114,17 @@ impl NaiveRenderer {
                 // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
                 for _s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
-                    let r = camera.get_ray(
-                        sampler.draw_2d(),
-                        (x as f32 + sample.x) / (width as f32),
-                        (y as f32 + sample.y) / (height as f32),
+
+                    let camera_uv = (
+                        (x as f32 + sample.x) / (settings.resolution.width as f32),
+                        (y as f32 + sample.y) / (settings.resolution.height as f32),
                     );
-                    temp_color += XYZColor::from(integrator.color(&mut sampler, r));
+                    temp_color += XYZColor::from(integrator.color(&mut sampler, (camera_uv, 0)));
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
                     debug_assert!(
                         temp_color.0.is_finite().all(),
                         "{:?} resulted in {:?}",
-                        r,
+                        camera_uv,
                         temp_color
                     );
                 }
@@ -160,7 +160,7 @@ impl NaiveRenderer {
         film
     }
     pub fn render_splatted<I: GenericIntegrator>(
-        integrator: I,
+        mut integrator: I,
         renders: Vec<RenderSettings>,
         cameras: Vec<Camera>,
     ) -> Vec<(RenderSettings, Film<XYZColor>)> {
@@ -316,21 +316,19 @@ impl NaiveRenderer {
                         let mut sampler: Box<dyn Sampler> =
                             Box::new(StratifiedSampler::new(20, 20, 10));
                         // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                        let camera = &cameras[camera_id];
                         // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
                         let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
                         // use with capacity to preallocate
                         for _s in 0..settings.min_samples {
                             let sample = sampler.draw_2d();
-                            let r = camera.get_ray(
-                                sampler.draw_2d(),
+                            let camera_uv = (
                                 (x as f32 + sample.x) / (settings.resolution.width as f32),
                                 (y as f32 + sample.y) / (settings.resolution.height as f32),
                             );
                             temp_color += XYZColor::from(integrator.color(
                                 &mut sampler,
                                 settings,
-                                (r, camera_id as u8),
+                                (camera_uv, camera_id as u8),
                                 &mut local_additional_splats,
                             ));
 
@@ -508,6 +506,10 @@ impl Renderer for NaiveRenderer {
         for (integrator_type, render_settings) in sampled_renders.iter() {
             match integrator_type {
                 IntegratorType::PathTracing => {
+                    world.assign_cameras(
+                        vec![bundled_cameras[render_settings.camera_id.unwrap() as usize].clone()],
+                        false,
+                    );
                     let arc_world = Arc::new(world.clone());
                     if let Some(Integrator::PathTracing(integrator)) =
                         Integrator::from_settings_and_world(

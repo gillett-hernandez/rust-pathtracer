@@ -76,6 +76,23 @@ impl Vertex {
             veach_g,
         }
     }
+
+    pub fn default() -> Self {
+        Vertex::new(
+            VertexType::Eye,
+            0.0,
+            0.0,
+            Point3::ORIGIN,
+            Vec3::ZERO,
+            (0.0, 0.0),
+            MaterialId::Material(0),
+            0,
+            SingleEnergy::ZERO,
+            0.0,
+            0.0,
+            0.0,
+        )
+    }
 }
 
 impl From<Vertex> for HitRecord {
