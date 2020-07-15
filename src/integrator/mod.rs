@@ -37,7 +37,6 @@ impl IntegratorType {
     }
 }
 
-
 pub enum Integrator {
     PathTracing(PathTracingIntegrator),
     LightTracing(LightTracingIntegrator),
@@ -79,6 +78,7 @@ pub enum Sample {
 }
 
 pub trait GenericIntegrator: Send + Sync {
+    fn preprocess(&self, _sampler: &mut Box<dyn Sampler>, _settings: &Vec<RenderSettings>) {}
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,

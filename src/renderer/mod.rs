@@ -191,6 +191,9 @@ impl NaiveRenderer {
             .unwrap();
 
         const SHOW_PROGRESS_BAR: bool = true;
+
+        let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+        integrator.preprocess(&mut sampler, &renders);
         let mut pb = ProgressBar::new(total_pixels as u64);
 
         let pixel_count = Arc::new(AtomicUsize::new(0));
