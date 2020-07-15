@@ -2,6 +2,7 @@ use crate::world::World;
 // use crate::config::Settings;
 use crate::aabb::HasBoundingBox;
 use crate::hittable::{HitRecord, Hittable};
+use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::material::Material;
 use crate::materials::{MaterialEnum, MaterialId};

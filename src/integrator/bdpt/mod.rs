@@ -1,10 +1,11 @@
-mod utils;
+pub mod utils;
 
 use utils::*;
 
 // use crate::aabb::HasBoundingBox;
 use crate::config::RenderSettings;
 use crate::hittable::Hittable;
+use crate::integrator::utils::*;
 use crate::integrator::{CameraId, GenericIntegrator, Sample};
 use crate::material::Material;
 use crate::materials::*;

@@ -110,7 +110,14 @@ impl Hittable for Aggregate {
             Aggregate::Mesh(inner) => inner.pdf(normal, from, to),
             Aggregate::Triangle(inner) => inner.pdf(normal, from, to),
         };
-        debug_assert!(pdf.0.is_finite(), "{:?}", self);
+        debug_assert!(
+            pdf.0.is_finite(),
+            "{:?}, {:?}, {:?}, {:?}",
+            self,
+            normal,
+            from,
+            to
+        );
         pdf
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
