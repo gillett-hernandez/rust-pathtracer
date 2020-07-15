@@ -198,7 +198,7 @@ impl PathTracingIntegrator {
 impl SamplerIntegrator for PathTracingIntegrator {
     fn color(&self, sampler: &mut Box<dyn Sampler>, camera_ray: Ray) -> SingleWavelength {
         // println!("{:?}", ray);
-        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, VISIBLE_RANGE);
+        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, self.wavelength_bounds);
         let lambda = sum.lambda;
 
         let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
