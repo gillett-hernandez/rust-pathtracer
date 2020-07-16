@@ -114,17 +114,21 @@ name = "ggx_gold"
 type = "GGX"
 eta_o = 1.0004
 permeability = 0.0
-alpha = 0.004
+alpha = 0.01
 [materials.data.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
 column = 1
 interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
 [materials.data.kappa]
 type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
 column = 2
 interpolation_mode = "Cubic"
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
 
 [[materials]]
 name = "ggx_copper"
