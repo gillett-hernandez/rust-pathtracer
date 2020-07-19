@@ -1,17 +1,14 @@
-use crate::world::World;
-// use crate::config::Settings;
-use crate::aabb::HasBoundingBox;
-use crate::hittable::{HitRecord, Hittable};
+use crate::hittable::Hittable;
 use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::material::Material;
-use crate::materials::{MaterialEnum, MaterialId};
+use crate::materials::MaterialId;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::world::World;
 use crate::TransportMode;
-use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
+// use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 
-use std::f32::INFINITY;
 use std::sync::Arc;
 
 use rayon::iter::ParallelIterator;

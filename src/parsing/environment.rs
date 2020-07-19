@@ -37,7 +37,7 @@ pub fn parse_environment(env_data: EnvironmentData) -> EnvironmentMap {
             color: parse_curve(data.color).into(),
             strength: data.strength,
             solid_angle: data.solid_angle,
-            sun_direction: Vec3::from(data.sun_direction),
+            sun_direction: Vec3::from(data.sun_direction).normalized(),
         },
     }
 }

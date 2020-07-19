@@ -11,8 +11,8 @@ pub mod texture;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
+use primitives::*;
 use texture::*;
-// use primitives::*;
 
 pub use curves::{
     load_csv, load_ior_and_kappa, load_linear, load_multiple_csv_rows,
@@ -102,20 +102,18 @@ pub fn construct_world(config: &Config) -> World {
         ));
     }
     for instance in scene.instances {
-        let id = instances.len();
-        let instance = parse_instance(instance, &material_names_to_ids, id);
         match instance.aggregate {
-            // Aggregate::Mesh(mesh) => {
-            //     for tri in mesh.triangles.unwrap() {
-            //         instances.push(Instance::new(
-            //             Aggregate::from(tri),
-            //             instance.transform,
-            //             instance.material_id,
-            //             instance.instance_id,
-            //         ));
-            //     }
-            // }
+            AggregateData::MeshBundle(data) => {
+                let meshes = load_obj_file(&data.filename, &material_names_to_ids);
+                for mut mesh in meshes {
+                    let id = instances.len();
+                    mesh.init();
+                    instances.push(Instance::new(Aggregate::Mesh(mesh), None, None, id));
+                }
+            }
             _ => {
+                let id = instances.len();
+                let instance = parse_instance(instance, &material_names_to_ids, id);
                 instances.push(instance);
             }
         }

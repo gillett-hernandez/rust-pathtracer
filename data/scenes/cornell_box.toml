@@ -1,7 +1,7 @@
-env_sampling_probability = 0.0
+env_sampling_probability = 0.5
 [environment]
 type="Constant"
-strength = 0.0000
+strength = 0.0001
 [environment.color]
 type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"
@@ -61,6 +61,7 @@ name = "lambertian_red"
 [materials.data]
 type = "Lambertian"
 color = "lambertian_red"
+
 
 
 [[materials]]
@@ -153,6 +154,29 @@ interpolation_mode = "Cubic"
 x_scale = 1000.0
 
 [[materials]]
+name = "ggx_iron"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 0.0
+alpha = 0.005
+[materials.data.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
+[materials.data.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+[[materials]]
 name = "diffuse_light_fluorescent"
 [materials.data]
 type = "DiffuseLight"
@@ -236,7 +260,7 @@ strength = 5.0
 
 
 [[instances]]
-material_identifier = "diffuse_light"
+material_identifier = "sharp_light"
 [instances.aggregate]
 type = "Rect"
 size = [0.4, 0.4]
@@ -293,12 +317,5 @@ two_sided = true
 # skip specifying material identifier and it defaults to the one from the .obj file itself
 # material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
-type = "Mesh"
+type = "MeshBundle"
 filename = "data/meshes/prism.obj"
-mesh_index = 0
-[instances.transform]
-scale = [3.0, 3.0, 3.0]
-translate = [0.2, 0.0, -0.1]
-[[instances.transform.rotate]]
-axis = [0.0, 0.0, 1.0]
-angle = 90

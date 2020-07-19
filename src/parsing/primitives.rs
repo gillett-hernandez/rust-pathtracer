@@ -11,16 +11,36 @@ use tobj;
 
 use std::collections::HashMap;
 
-pub fn parse_mesh_obj(
+pub fn load_obj_file(filename: &str, material_mapping: &HashMap<String, MaterialId>) -> Vec<Mesh> {
+    let data = tobj::load_obj(filename, true);
+    println!("opening file at {}", filename);
+    assert!(data.is_ok(), "{:?}", data);
+    let (models, materials) = data.unwrap();
+    let mut meshes = Vec::new();
+    for i in 0..models.len() {
+        meshes.push(parse_obj_mesh(&models, &materials, i, material_mapping));
+    }
+    meshes
+}
+
+pub fn parse_specific_obj_mesh(
     filename: &str,
-    obj_num: usize,
+    obj_id: usize,
     material_mapping: &HashMap<String, MaterialId>,
 ) -> Mesh {
     let data = tobj::load_obj(filename, true);
     println!("opening file at {}", filename);
     assert!(data.is_ok(), "{:?}", data);
     let (models, materials) = data.unwrap();
+    parse_obj_mesh(&models, &materials, obj_id, material_mapping)
+}
 
+pub fn parse_obj_mesh(
+    models: &Vec<tobj::Model>,
+    materials: &Vec<tobj::Material>,
+    obj_num: usize,
+    material_mapping: &HashMap<String, MaterialId>,
+) -> Mesh {
     println!("# of models: {}", models.len());
     println!("# of materials: {}", materials.len());
     let mut points = Vec::new();
@@ -124,12 +144,18 @@ pub struct MeshData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct MeshBundleData {
+    pub filename: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum AggregateData {
     Disk(DiskData),
     Rect(RectData),
     Sphere(SphereData),
     Mesh(MeshData),
+    MeshBundle(MeshBundleData),
 }
 
 impl AggregateData {
@@ -156,10 +182,13 @@ impl AggregateData {
             AggregateData::Mesh(data) => {
                 println!("parsed Mesh data");
                 let filename = data.filename;
-                let mut mesh = parse_mesh_obj(&filename, data.mesh_index, material_mapping);
+                let mut mesh =
+                    parse_specific_obj_mesh(&filename, data.mesh_index, material_mapping);
                 mesh.init();
                 Aggregate::Mesh(mesh)
             }
+            // parse_with does not handle MeshBundle
+            _ => panic!(),
         }
     }
 }

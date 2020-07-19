@@ -1,23 +1,3 @@
-
-
-# fn _white_furnace_test(material: MaterialEnum) -> World {
-#     let world = World::new(
-#         vec![Instance::new(
-#             Aggregate::from(Sphere::new(5.0, Point3::ORIGIN)),
-#             None,
-#             MaterialId::Material(0),
-#             0,
-#         )],
-#         vec![material],
-#         EnvironmentMap::Constant {
-#             color: curves::cie_e(1.0),
-#             strength: 1.0,
-#         },
-#         1.0,
-#         AcceleratorType::List,
-#     );
-#     world
-# }
 env_sampling_probability = 1.0
 [environment]
 type="Constant"
