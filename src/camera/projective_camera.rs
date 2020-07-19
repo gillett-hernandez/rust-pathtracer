@@ -73,7 +73,7 @@ impl ProjectiveCamera {
             lens: Instance::new(
                 Aggregate::from(Disk::new(lens_radius, Point3::ORIGIN, true)),
                 Some(transform),
-                MaterialId::Camera(0),
+                Some(MaterialId::Camera(0)),
                 0,
             ),
             horizontal: u * 2.0 * half_width * focal_distance,

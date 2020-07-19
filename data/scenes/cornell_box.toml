@@ -288,3 +288,17 @@ size = [2, 2]
 origin = [1.0, 0.0, 0.0]
 normal = "X"
 two_sided = true
+
+[[instances]]
+# skip specifying material identifier and it defaults to the one from the .obj file itself
+# material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Mesh"
+filename = "data/meshes/prism.obj"
+mesh_index = 0
+[instances.transform]
+scale = [3.0, 3.0, 3.0]
+translate = [0.2, 0.0, -0.1]
+[[instances.transform.rotate]]
+axis = [0.0, 0.0, 1.0]
+angle = 90

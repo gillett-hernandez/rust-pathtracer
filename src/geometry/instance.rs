@@ -11,7 +11,7 @@ use std::cmp::{Ordering, PartialOrd};
 pub struct Instance {
     pub aggregate: Aggregate,
     pub transform: Option<Transform3>,
-    pub material_id: MaterialId,
+    pub material_id: Option<MaterialId>,
     pub instance_id: usize,
     node_id: usize,
 }
@@ -46,7 +46,7 @@ impl Instance {
     pub fn new(
         aggregate: Aggregate,
         transform: Option<Transform3>,
-        material_id: MaterialId,
+        material_id: Option<MaterialId>,
         instance_id: usize,
     ) -> Self {
         Instance {
@@ -109,7 +109,7 @@ impl Hittable for Instance {
                     normal: transform.to_world(hit.normal).normalized(),
                     point: transform.to_world(hit.point),
                     instance_id: self.instance_id,
-                    material: self.material_id,
+                    material: self.material_id.unwrap_or(hit.material),
                     ..hit
                 })
             } else {
@@ -126,7 +126,7 @@ impl Hittable for Instance {
                 debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
                 Some(HitRecord {
                     instance_id: self.instance_id,
-                    material: self.material_id,
+                    material: self.material_id.unwrap_or(hit.material),
                     ..hit
                 })
             } else {
@@ -182,7 +182,7 @@ impl Instance {
         self.instance_id
     }
     pub fn get_material_id(&self) -> MaterialId {
-        self.material_id
+        self.material_id.unwrap_or(0u16.into())
     }
 }
 
@@ -218,8 +218,8 @@ mod tests {
         let aggregate1 = Aggregate::from(sphere);
         let aggregate2 = Aggregate::from(aarect);
 
-        let instance1 = Instance::new(aggregate1, Some(transform), 0.into(), 0);
-        let instance2 = Instance::new(aggregate2, Some(transform), 0.into(), 0);
+        let instance1 = Instance::new(aggregate1, Some(transform), Some(0.into()), 0);
+        let instance2 = Instance::new(aggregate2, Some(transform), Some(0.into()), 0);
 
         let test_ray = Ray::new(Point3::ORIGIN + 10.0 * Vec3::Z, -Vec3::Z);
 

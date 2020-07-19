@@ -6,7 +6,6 @@ use crate::integrator::*;
 use crate::material::Material;
 use crate::materials::{MaterialEnum, MaterialId};
 use crate::math::*;
-use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::TransportMode;
 // use crate::world::EnvironmentMap;
 
@@ -210,9 +209,9 @@ impl SamplerIntegrator for PathTracingIntegrator {
         let camera = self.world.get_camera(camera_id as usize);
         let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
         let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
-        let (camera_ray, lens_normal, pdf) =
+        let (camera_ray, _lens_normal, pdf) =
             camera.sample_we(film_sample, aperture_sample, sum.lambda);
-        let camera_pdf = pdf;
+        let _camera_pdf = pdf;
 
         let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 

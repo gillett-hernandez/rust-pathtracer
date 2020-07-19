@@ -1,7 +1,8 @@
 # Blender MTL File: 'None'
 # Material Count: 1
 
-newmtl None
+# parameters don't matter, only the material names matter
+newmtl ggx_gold
 Ns 500
 Ka 0.8 0.8 0.8
 Kd 0.8 0.8 0.8

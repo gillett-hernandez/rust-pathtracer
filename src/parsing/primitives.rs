@@ -2,13 +2,20 @@ extern crate num_cpus;
 extern crate serde;
 
 use crate::geometry::*;
+use crate::materials::MaterialId;
 use crate::math::*;
 use crate::parsing::Point3Data;
 
 use serde::{Deserialize, Serialize};
 use tobj;
 
-pub fn parse_mesh(filename: &str, obj_num: usize) -> Mesh {
+use std::collections::HashMap;
+
+pub fn parse_mesh_obj(
+    filename: &str,
+    obj_num: usize,
+    material_mapping: &HashMap<String, MaterialId>,
+) -> Mesh {
     let data = tobj::load_obj(filename, true);
     println!("opening file at {}", filename);
     assert!(data.is_ok(), "{:?}", data);
@@ -29,6 +36,25 @@ pub fn parse_mesh(filename: &str, obj_num: usize) -> Mesh {
         obj_num, mesh.material_id
     );
 
+    for mat in materials.iter() {
+        println!("{}", mat.name);
+    }
+
+    let mesh_materials: Vec<MaterialId> = materials
+        .iter()
+        .map(|v| {
+            if let Some(mat_ref) = material_mapping.get(&v.name) {
+                *mat_ref
+            } else {
+                0.into()
+            }
+        })
+        .collect();
+
+    let mat_ids = vec![mesh.material_id.unwrap_or(0); mesh.num_face_indices.len()]
+        .iter()
+        .map(|idx| mesh_materials[*idx])
+        .collect();
     println!(
         "Size of model[{}].num_face_indices: {}",
         obj_num,
@@ -67,7 +93,7 @@ pub fn parse_mesh(filename: &str, obj_num: usize) -> Mesh {
         ))
     }
 
-    Mesh::new(num_faces, indices, points, normals, vec![0.into()])
+    Mesh::new(num_faces, indices, points, normals, mat_ids)
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
@@ -106,10 +132,10 @@ pub enum AggregateData {
     Mesh(MeshData),
 }
 
-impl From<AggregateData> for Aggregate {
-    fn from(aggregate_data: AggregateData) -> Self {
+impl AggregateData {
+    pub fn parse_with(self, material_mapping: &HashMap<String, MaterialId>) -> Aggregate {
         // put mesh parsing here?
-        match aggregate_data {
+        match self {
             AggregateData::Disk(data) => {
                 println!("parsed disk data");
                 Aggregate::Disk(Disk::new(data.radius, data.origin.into(), data.two_sided))
@@ -130,7 +156,7 @@ impl From<AggregateData> for Aggregate {
             AggregateData::Mesh(data) => {
                 println!("parsed Mesh data");
                 let filename = data.filename;
-                let mut mesh = parse_mesh(&filename, data.mesh_index);
+                let mut mesh = parse_mesh_obj(&filename, data.mesh_index, material_mapping);
                 mesh.init();
                 Aggregate::Mesh(mesh)
             }

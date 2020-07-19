@@ -137,6 +137,7 @@ pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
 }
 
+#[allow(unused_mut)]
 pub fn random_walk(
     mut ray: Ray,
     lambda: f32,

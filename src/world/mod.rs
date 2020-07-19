@@ -8,7 +8,7 @@ use crate::materials::MaterialTable;
 use crate::math::*;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
-pub use crate::geometry::Instance;
+pub use crate::geometry::*;
 pub use crate::materials::*;
 
 #[derive(Clone)]
@@ -31,12 +31,27 @@ impl World {
     ) -> Self {
         let mut lights = Vec::new();
         for instance in instances.iter() {
-            if let MaterialId::Light(id) = instance.get_material_id() {
-                println!(
-                    "adding light with mat id Light({:?}) and instance id {:?} to lights list",
-                    id, instance.instance_id
-                );
-                lights.push(instance.instance_id as usize);
+            match &instance.aggregate {
+                Aggregate::Mesh(mesh) => {
+                    for tri in (&mesh).triangles.as_ref().unwrap() {
+                        if let MaterialId::Light(id) = tri.get_material_id() {
+                            println!(
+                            "adding light with mat id Light({:?}) and instance id {:?} to lights list",
+                            id, instance.instance_id
+                        );
+                            lights.push(instance.instance_id as usize);
+                        }
+                    }
+                }
+                _ => {
+                    if let MaterialId::Light(id) = instance.get_material_id() {
+                        println!(
+                        "adding light with mat id Light({:?}) and instance id {:?} to lights list",
+                        id, instance.instance_id
+                    );
+                        lights.push(instance.instance_id as usize);
+                    }
+                }
             }
         }
         let accelerator = Accelerator::new(instances, accelerator_type);
@@ -174,7 +189,7 @@ impl World {
                             let mut surface = surface.clone();
                             let id = instances.len();
                             surface.instance_id = id;
-                            surface.material_id = MaterialId::Camera(cam_id as u8);
+                            surface.material_id = Some(MaterialId::Camera(cam_id as u8));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
                             instances.push(surface);
                         }
@@ -189,7 +204,7 @@ impl World {
                             let mut surface = surface.clone();
                             let id = instances.len();
                             surface.instance_id = id;
-                            surface.material_id = MaterialId::Camera(cam_id as u8);
+                            surface.material_id = Some(MaterialId::Camera(cam_id as u8));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
                             instances.push(surface);
                         }

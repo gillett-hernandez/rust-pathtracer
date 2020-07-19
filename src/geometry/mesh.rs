@@ -7,6 +7,7 @@ use crate::math::*;
 
 use packed_simd::{f32x4, i32x4};
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {
@@ -25,6 +26,7 @@ pub struct MeshTriangleRef {
     vertices: Arc<Vec<Point3>>,
     indices: Arc<Vec<usize>>,
     normals: Arc<Vec<Vec3>>,
+    materials: Arc<Vec<MaterialId>>,
 }
 
 impl MeshTriangleRef {
@@ -33,6 +35,7 @@ impl MeshTriangleRef {
         vertices: Arc<Vec<Point3>>,
         indices: Arc<Vec<usize>>,
         normals: Arc<Vec<Vec3>>,
+        materials: Arc<Vec<MaterialId>>,
     ) -> MeshTriangleRef {
         MeshTriangleRef {
             idx,
@@ -40,6 +43,14 @@ impl MeshTriangleRef {
             vertices,
             indices,
             normals,
+            materials,
+        }
+    }
+    pub fn get_material_id(&self) -> MaterialId {
+        if self.materials.len() > 0 {
+            self.materials[self.idx]
+        } else {
+            0u16.into()
         }
     }
 }
@@ -58,6 +69,11 @@ impl Hittable for MeshTriangleRef {
         let p0 = self.vertices[self.indices[3 * self.idx + 0]];
         let p1 = self.vertices[self.indices[3 * self.idx + 1]];
         let p2 = self.vertices[self.indices[3 * self.idx + 2]];
+        let mat_id = if self.materials.len() > 0 {
+            self.materials[self.idx]
+        } else {
+            0u16.into()
+        };
         let mut p0t = p0 - r.origin;
         let mut p1t = p1 - r.origin;
         let mut p2t = p2 - r.origin;
@@ -165,7 +181,7 @@ impl Hittable for MeshTriangleRef {
             (0.0, 0.0),
             0.0,
             shading_normal.unwrap_or(geometric_normal),
-            0.into(),
+            mat_id,
             0,
             None,
         );
@@ -216,7 +232,7 @@ pub struct Mesh {
     pub indices: Arc<Vec<usize>>,
     pub vertices: Arc<Vec<Point3>>,
     pub normals: Arc<Vec<Vec3>>,
-    pub material_ids: Vec<MaterialId>,
+    pub material_ids: Arc<Vec<MaterialId>>,
     bounding_box: AABB,
     pub bvh: Option<FlatBVH>,
     pub triangles: Option<Vec<MeshTriangleRef>>,
@@ -243,7 +259,7 @@ impl Mesh {
             indices: Arc::new(v_indices),
             vertices: Arc::new(vertices),
             normals: Arc::new(normals),
-            material_ids,
+            material_ids: Arc::new(material_ids),
             bounding_box,
             bvh: None,
             triangles: None,
@@ -257,6 +273,7 @@ impl Mesh {
                 Arc::clone(&self.vertices),
                 Arc::clone(&self.indices),
                 Arc::clone(&self.normals),
+                Arc::clone(&self.material_ids),
             ));
         }
 

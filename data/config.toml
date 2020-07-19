@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_parallel_prism.toml"
+scene_file = "data/scenes/cornell_box.toml"
 
 [[cameras]]
 type="SimpleCamera"
@@ -21,7 +21,6 @@ look_from = [-1, 0, 0]
 look_at = [0, 0, 0]
 aperture_size = 0.03
 vfov = 90
-
 
 
 [[render_settings]]

@@ -4,11 +4,8 @@ extern crate serde;
 use crate::camera::{Camera, ProjectiveCamera};
 use crate::math::{Point3, Vec3};
 
-// use std::env;
 use std::fs::File;
 use std::io::Read;
-// use std::io::{self, BufWriter, Write};
-// use std::path::Path;
 
 use serde::Deserialize;
 use toml;

@@ -34,7 +34,7 @@ pub struct Transform3Data {
 pub struct InstanceData {
     pub aggregate: AggregateData,
     pub transform: Option<Transform3Data>,
-    pub material_identifier: String,
+    pub material_identifier: Option<String>,
 }
 
 pub fn parse_instance(
@@ -42,7 +42,7 @@ pub fn parse_instance(
     materials_mapping: &HashMap<String, MaterialId>,
     instance_id: usize,
 ) -> Instance {
-    let aggregate: Aggregate = instance_data.aggregate.into();
+    let aggregate: Aggregate = instance_data.aggregate.parse_with(materials_mapping);
     let transform = instance_data.transform.map(|transform_data| {
         let maybe_scale = transform_data
             .scale
@@ -69,9 +69,11 @@ pub fn parse_instance(
             .map(|v| Transform3::from_translation(Vec3::from(v)));
         Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
     });
-    let material_id = *materials_mapping
-        .get(&instance_data.material_identifier)
-        .expect("material mapping did not contain material name");
+    let material_id = instance_data.material_identifier.map(|v| {
+        *materials_mapping
+            .get(&v)
+            .expect("material mapping did not contain material name")
+    });
     println!(
         "parsed instance, assigned material id {:?} and instance id {}",
         material_id, instance_id
