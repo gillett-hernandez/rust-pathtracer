@@ -84,7 +84,11 @@ pub fn eval_unweighted_contribution(
             let direction = last_light_vertex.point - second_to_last_light_vertex.point;
             cst = SingleEnergy(
                 camera
-                    .eval_we(last_light_vertex.point, second_to_last_light_vertex.point)
+                    .eval_we(
+                        last_light_vertex.normal,
+                        last_light_vertex.point,
+                        second_to_last_light_vertex.point,
+                    )
                     .0,
             );
             sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
@@ -181,7 +185,7 @@ pub fn eval_unweighted_contribution(
                 sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
                 SingleEnergy(
                     camera
-                        .eval_we(last_eye_vertex.point, last_light_vertex.point)
+                        .eval_we(lev_normal, last_eye_vertex.point, last_light_vertex.point)
                         .0,
                 )
             } else {
@@ -547,7 +551,7 @@ where
                     llv_local_light_to_eye.z().abs(),
                 );
                 let camera = world.get_camera(camera_id as usize);
-                lev_forward_pdf = (camera.eval_we(lev.point, llv.point).1).0;
+                lev_forward_pdf = (camera.eval_we(lev_normal, lev.point, llv.point).1).0;
                 lev_backward_pdf = 1.0; // do camera area sampling?
             } else {
                 lev_forward_pdf = 0.0;
@@ -616,7 +620,11 @@ where
                 //     (normal * direction.normalized()).abs(),
                 // );
                 llv_forward_pdf = (camera
-                    .eval_we(last_light_vertex.point, second_to_last_light_vertex.point)
+                    .eval_we(
+                        last_light_vertex.normal,
+                        last_light_vertex.point,
+                        second_to_last_light_vertex.point,
+                    )
                     .1)
                     .0;
                 llv_backward_pdf = 1.0; // do camera area sampling pdf

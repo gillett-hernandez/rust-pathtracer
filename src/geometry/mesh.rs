@@ -7,7 +7,6 @@ use crate::math::*;
 
 use packed_simd::{f32x4, i32x4};
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {

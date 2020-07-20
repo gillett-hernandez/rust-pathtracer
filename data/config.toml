@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box.toml"
+scene_file = "data/scenes/sun_test.toml"
 
 # distant camera
 [[cameras]]
@@ -20,10 +20,19 @@ vfov = 27.2
 # tower camera
 [[cameras]]
 type="SimpleCamera"
-look_from = [-5, 0, 0]
-look_at = [0, 0, 20]
+look_from = [-3.5, -3.5, 0.0]
+look_at = [0, 0, 1]
 aperture_size = 0.01
-focal_distance = 20.0
+focal_distance = 5.0
+vfov = 27.2
+
+# sun test camera
+[[cameras]]
+type="SimpleCamera"
+look_from = [-5, 0, 0]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.03
+focal_distance = 5.0
 vfov = 27.2
 
 # closeup camera
@@ -35,6 +44,7 @@ aperture_size = 0.03
 vfov = 90
 
 
+
 [[render_settings]]
 threads = 22
 filename = "BDPT"
@@ -42,8 +52,8 @@ integrator = "BDPT"
 min_bounces = 8
 max_bounces = 22
 exposure = 1.0
-min_samples = 4
-camera_id = 1
+min_samples = 64
+camera_id = 3
 russian_roulette = true
 only_direct = false
 light_samples = 4

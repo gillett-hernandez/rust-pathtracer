@@ -258,7 +258,6 @@ strength = 5.0
 
 
 
-
 [[instances]]
 material_identifier = "diffuse_light"
 [instances.aggregate]

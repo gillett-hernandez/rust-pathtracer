@@ -44,12 +44,17 @@ impl Camera {
         }
     }
 
-    pub fn eval_we(&self, _from: Point3, _to: Point3) -> (f32, PDF) {
+    pub fn eval_we(&self, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
         // from is on surface of camera
         // (0.01, 1.0.into())
         // (1.0, 0.01.into())
-        (1.0, 1.0.into())
-        // (0.001, 0.0001.into())
+        let direction = to - from;
+        if direction * normal < 0.0 {
+            // connection from opposite side.
+            (0.0, 0.0.into())
+        } else {
+            (1.0, 1.0.into())
+        }
     }
 
     pub fn sample_we(
