@@ -254,7 +254,8 @@ impl GenericIntegrator for SPPMIntegrator {
         // camera random walk is now stored in path, with length limited to 1 (for now)
         let vertex_in_scene = path.last().unwrap();
         let radius_squared = 1.0 / vertex_in_scene.time / (1.0 + sample_id as f32);
-        // let radius_squared = 5.0;
+
+        // collect photons that are within a certain radius
         for vert in self.photon_map.as_ref().unwrap().photons.iter() {
             let point = vert.point;
 
