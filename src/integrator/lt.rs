@@ -94,6 +94,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         sampler: &mut Box<dyn Sampler>,
         _settings: &RenderSettings,
         _camera_sample: ((f32, f32), CameraId),
+        sample_id: usize,
         mut samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.

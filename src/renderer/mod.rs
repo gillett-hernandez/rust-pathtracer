@@ -112,14 +112,15 @@ impl NaiveRenderer {
                 // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                 let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
                 // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
-                for _s in 0..settings.min_samples {
+                for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
 
                     let camera_uv = (
                         (x as f32 + sample.x) / (settings.resolution.width as f32),
                         (y as f32 + sample.y) / (settings.resolution.height as f32),
                     );
-                    temp_color += XYZColor::from(integrator.color(&mut sampler, (camera_uv, 0)));
+                    temp_color +=
+                        XYZColor::from(integrator.color(&mut sampler, (camera_uv, 0), s as usize));
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
                     debug_assert!(
                         temp_color.0.is_finite().all(),
@@ -319,7 +320,7 @@ impl NaiveRenderer {
                         // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
                         let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
                         // use with capacity to preallocate
-                        for _s in 0..settings.min_samples {
+                        for s in 0..settings.min_samples {
                             let sample = sampler.draw_2d();
                             let camera_uv = (
                                 (x as f32 + sample.x) / (settings.resolution.width as f32),
@@ -329,6 +330,7 @@ impl NaiveRenderer {
                                 &mut sampler,
                                 settings,
                                 (camera_uv, camera_id as u8),
+                                s as usize,
                                 &mut local_additional_splats,
                             ));
 
@@ -462,6 +464,7 @@ impl Renderer for NaiveRenderer {
         > = HashMap::new();
         splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
+        splatting_renders_and_cameras.insert(IntegratorType::SPPM, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
         for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
@@ -622,6 +625,48 @@ impl Renderer for NaiveRenderer {
                     };
 
                     println!("rendering with light tracing integrator");
+                    let render_splatted_result = NaiveRenderer::render_splatted(
+                        integrator,
+                        bundled_settings.clone(),
+                        bundled_cameras.clone(),
+                    );
+                    assert!(render_splatted_result.len() > 0);
+                    // films.extend(
+                    //     (&bundled_settings)
+                    //         .iter()
+                    //         .cloned()
+                    //         .zip(render_splatted_result),
+                    // );
+                    for (render_settings, film) in render_splatted_result {
+                        output_film(&render_settings, &film);
+                    }
+                }
+                IntegratorType::SPPM => {
+                    let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
+                        splatting_renders_and_cameras
+                            .get(integrator_type)
+                            .unwrap()
+                            .iter()
+                            .cloned()
+                            .unzip();
+                    let mut max_bounces = 0;
+                    for settings in bundled_settings.iter() {
+                        max_bounces = max_bounces.max(settings.max_bounces.unwrap_or(2));
+                    }
+                    let wavelength_bounds =
+                        parse_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
+                    world.assign_cameras(bundled_cameras.clone(), true);
+                    let arc_world = Arc::new(world.clone());
+                    let integrator = SPPMIntegrator {
+                        max_bounces,
+                        world: arc_world.clone(),
+                        russian_roulette: true,
+                        camera_samples: 4,
+                        wavelength_bounds,
+                        photon_map: None,
+                    };
+
+                    println!("rendering with SPPM integrator");
                     let render_splatted_result = NaiveRenderer::render_splatted(
                         integrator,
                         bundled_settings.clone(),

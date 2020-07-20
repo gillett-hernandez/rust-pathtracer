@@ -199,6 +199,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
         &self,
         sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
+        sample_id: usize,
     ) -> SingleWavelength {
         // println!("{:?}", ray);
 
@@ -219,6 +220,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             VertexType::Camera,
             camera_ray.time,
             lambda,
+            Vec3::ZERO,
             camera_ray.origin,
             camera_ray.direction,
             (0.0, 0.0),

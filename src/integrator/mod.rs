@@ -12,6 +12,7 @@ use crate::world::World;
 pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
 pub use pt::PathTracingIntegrator;
+pub use sppm::SPPMIntegrator;
 
 use std::hash::Hash;
 use std::sync::Arc;
@@ -23,6 +24,7 @@ pub enum IntegratorType {
     PathTracing,
     LightTracing,
     BDPT,
+    SPPM,
     MLT,
 }
 
@@ -33,6 +35,7 @@ impl IntegratorType {
             "LT" => IntegratorType::LightTracing,
             "BDPT" => IntegratorType::BDPT,
             "MLT" => IntegratorType::MLT,
+            "SPPM" => IntegratorType::SPPM,
             _ => IntegratorType::PathTracing,
         }
     }
@@ -42,6 +45,7 @@ pub enum Integrator {
     PathTracing(PathTracingIntegrator),
     LightTracing(LightTracingIntegrator),
     BDPT(BDPTIntegrator),
+    SPPM(SPPMIntegrator),
 }
 
 impl Integrator {
@@ -74,6 +78,7 @@ pub trait SamplerIntegrator: Sync + Send {
         &self,
         sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
+        sample_id: usize,
     ) -> SingleWavelength;
 }
 
@@ -89,6 +94,7 @@ pub trait GenericIntegrator: Send + Sync {
         sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
+        sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength;
 }

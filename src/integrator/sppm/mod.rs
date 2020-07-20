@@ -1,4 +1,4 @@
-use crate::hittable::Hittable;
+use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::material::Material;
@@ -13,6 +13,11 @@ use std::sync::Arc;
 
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
+
+fn window_function(lambda1: f32, lambda2: f32) -> f32 {
+    let diff = (lambda1 - lambda2).abs();
+    1.0 / (1.0 + diff * diff)
+}
 
 pub struct PhotonMap {
     pub photons: Vec<Vertex>,
@@ -30,8 +35,8 @@ pub struct SPPMIntegrator {
 impl GenericIntegrator for SPPMIntegrator {
     fn preprocess(&mut self, _sampler: &mut Box<dyn Sampler>, settings: &Vec<RenderSettings>) {
         let num_beams = 10000;
-        // let num_photons = num_beams * self.max_bounces as usize;
-        let mut beams: Vec<Vec<Vertex>> = Vec::with_capacity(num_beams);
+        println!("preprocessing and mapping beams");
+        let mut beams: Vec<Vec<Vertex>> = vec![Vec::new(); num_beams];
         beams.par_iter_mut().for_each(|beam| {
             let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
             let wavelength_sample = sampler.draw_1d();
@@ -86,14 +91,14 @@ impl GenericIntegrator for SPPMIntegrator {
                     debug_assert!(
                         pdf_forward.0.is_finite(),
                         "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                        pdf_forward,  // NaN
-                        pdf_backward, // 0.494
+                        pdf_forward,
+                        pdf_backward,
                         sampled.0,
                         material.get_name(),
-                        directional_pdf, // NaN
+                        directional_pdf,
                         light_surface_point,
-                        light_surface_normal, // -Z
-                        sampled.1.energy      // 9.88
+                        light_surface_normal,
+                        sampled.1.energy
                     );
                     debug_assert!(
                         pdf_backward.0.is_finite(),
@@ -111,6 +116,7 @@ impl GenericIntegrator for SPPMIntegrator {
                         VertexType::LightSource(LightSourceType::Instance),
                         0.0,
                         sampled.1.lambda,
+                        Vec3::ZERO,
                         light_surface_point,
                         light_surface_normal,
                         (0.0, 0.0),
@@ -141,6 +147,7 @@ impl GenericIntegrator for SPPMIntegrator {
                         VertexType::LightSource(LightSourceType::Environment),
                         0.0,
                         sampled.1.lambda,
+                        Vec3::ZERO,
                         sampled.0.origin,
                         sampled.0.direction,
                         (0.0, 0.0),
@@ -154,6 +161,8 @@ impl GenericIntegrator for SPPMIntegrator {
                     break;
                 };
             }
+
+            // println!("{:?}", start_light_vertex);
 
             let light_ray = sampled.0;
             let lambda = sampled.1.lambda;
@@ -178,18 +187,26 @@ impl GenericIntegrator for SPPMIntegrator {
                 &mut sampler,
                 &self.world,
                 beam,
-                0,
+                4,
             );
         });
         self.photon_map = Some(Arc::new(PhotonMap {
             photons: beams.into_iter().flatten().collect(),
         }));
+        println!(
+            "stored {} photons in the photon map",
+            self.photon_map
+                .as_ref()
+                .map(|e| e.photons.len())
+                .unwrap_or(0)
+        );
     }
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
         _settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
+        sample_id: usize,
         mut samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // naive implementation of SPPM
@@ -197,23 +214,21 @@ impl GenericIntegrator for SPPMIntegrator {
 
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id as usize);
-        let bounds = _settings.wavelength_bounds.unwrap();
-        let sum = SingleWavelength::new_from_range(
-            sampler.draw_1d().x,
-            Bounds1D::new(bounds.0, bounds.1),
-        );
+        let bounds = self.wavelength_bounds;
+        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, bounds);
         // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
         // let direction = direction.normalized();
         let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
-        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
-        let (camera_ray, lens_normal, pdf) =
+        let aperture_sample = sampler.draw_2d();
+        let (camera_ray, _lens_normal, pdf) =
             camera.sample_we(film_sample, aperture_sample, sum.lambda);
-        let camera_pdf = pdf;
+        let _camera_pdf = pdf;
 
         let mut path: Vec<Vertex> = vec![Vertex::new(
             VertexType::Camera,
             camera_ray.time,
             sum.lambda,
+            Vec3::ZERO,
             camera_ray.origin,
             camera_ray.direction,
             (0.0, 0.0),
@@ -237,6 +252,39 @@ impl GenericIntegrator for SPPMIntegrator {
             0,
         );
         // camera random walk is now stored in path, with length limited to 1 (for now)
-        SingleWavelength::BLACK
+        let vertex_in_scene = path.last().unwrap();
+        let radius_squared = 1.0 / vertex_in_scene.time / (1.0 + sample_id as f32);
+        // let radius_squared = 5.0;
+        for vert in self.photon_map.as_ref().unwrap().photons.iter() {
+            let point = vert.point;
+            let vec_to_camera = point - vertex_in_scene.point;
+            let distance_squared = vec_to_camera.norm_squared();
+            if distance_squared < radius_squared {
+                let wo_global = vec_to_camera / distance_squared.sqrt();
+                let normal = vert.normal;
+                let frame = TangentFrame::from_normal(normal);
+                let wi_global = vert.local_wi;
+
+                let wi = frame.to_local(&wi_global);
+                let wo = frame.to_local(&wo_global);
+
+                let material = self.world.get_material(vertex_in_scene.material_id);
+
+                let hit: HitRecord = (*vertex_in_scene).into();
+                let f = material.f(&hit, wi, wo);
+                let pdf = material.value(&hit, wi, wo);
+                if pdf.0 == 0.0 {
+                    continue;
+                }
+
+                sum.energy += vert.throughput.0 * f / pdf.0
+                    * (1.1 - (-(sample_id as f32)).exp())
+                    * window_function(
+                        0.1 * sum.lambda * (1.0 + sample_id as f32),
+                        0.1 * vert.lambda * (1.0 + sample_id as f32),
+                    );
+            }
+        }
+        sum
     }
 }

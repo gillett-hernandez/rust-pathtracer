@@ -29,6 +29,7 @@ impl GenericIntegrator for BDPTIntegrator {
         sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
+        sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
@@ -116,6 +117,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 VertexType::LightSource(LightSourceType::Instance),
                 0.0,
                 sampled.1.lambda,
+                Vec3::ZERO,
                 light_surface_point,
                 light_surface_normal,
                 (0.0, 0.0),
@@ -144,6 +146,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 VertexType::LightSource(LightSourceType::Environment),
                 0.0,
                 sampled.1.lambda,
+                Vec3::ZERO,
                 sampled.0.origin,
                 sampled.0.direction,
                 (0.0, 0.0),
@@ -187,6 +190,7 @@ impl GenericIntegrator for BDPTIntegrator {
             VertexType::Camera,
             camera_ray.time,
             lambda,
+            Vec3::ZERO,
             camera_ray.origin,
             lens_normal,
             (0.0, 0.0),
