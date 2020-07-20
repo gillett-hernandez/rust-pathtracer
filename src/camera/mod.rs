@@ -61,7 +61,7 @@ impl Camera {
         &self,
         film_sample: Sample2D,
         aperture_sample: Sample2D,
-        lambda: f32,
+        _lambda: f32,
     ) -> (Ray, Vec3, PDF) {
         // (Ray::new(Point3::ORIGIN, Vec3::Z), Vec3::Z, 0.0.into())
         match self {

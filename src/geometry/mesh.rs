@@ -193,12 +193,18 @@ impl Hittable for MeshTriangleRef {
         );
         Some(hit)
     }
+
+    #[allow(unused)]
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
         (Vec3::ZERO, 0.0.into())
     }
+
+    #[allow(unused)]
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         (Point3::ORIGIN, Vec3::ZERO, 0.0.into())
     }
+
+    #[allow(unused)]
     fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         0.0.into()
     }
@@ -290,6 +296,7 @@ impl HasBoundingBox for Mesh {
     }
 }
 
+#[allow(unused)]
 impl Hittable for Mesh {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let bvh = self.bvh.as_ref().unwrap();

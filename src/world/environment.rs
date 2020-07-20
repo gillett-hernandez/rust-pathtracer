@@ -74,6 +74,7 @@ impl EnvironmentMap {
     pub fn sample_emission(
         &self,
         world_radius: f32,
+        world_center: Point3,
         position_sample: Sample2D,
         direction_sample: Sample2D,
         wavelength_range: Bounds1D,
@@ -87,7 +88,8 @@ impl EnvironmentMap {
                 let random_direction = random_on_unit_sphere(direction_sample);
                 let frame = TangentFrame::from_normal(random_direction);
                 let random_on_normal_disk = world_radius * random_in_unit_disk(position_sample);
-                let point = Point3::from(-random_direction * world_radius)
+                let point = world_center
+                    + -random_direction * world_radius
                     + frame.to_world(&random_on_normal_disk);
 
                 (
@@ -112,8 +114,9 @@ impl EnvironmentMap {
                 let direction = uv_to_direction(uv);
                 let frame = TangentFrame::from_normal(direction);
                 let random_on_normal_disk = world_radius * random_in_unit_disk(position_sample);
-                let point =
-                    Point3::from(direction * world_radius) + frame.to_world(&random_on_normal_disk);
+                let point = world_center
+                    + direction * world_radius
+                    + frame.to_world(&random_on_normal_disk);
 
                 (Ray::new(point, -direction), sw, directional_pdf, pdf)
             }
@@ -200,6 +203,7 @@ mod tests {
         };
         let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
             1.0,
+            Point3::ORIGIN,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
             curves::EXTENDED_VISIBLE_RANGE,
@@ -228,6 +232,7 @@ mod tests {
         };
         let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
             1.0,
+            Point3::ORIGIN,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
             curves::EXTENDED_VISIBLE_RANGE,

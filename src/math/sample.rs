@@ -1,6 +1,8 @@
-use crate::math::*;
+use crate::math::random;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, RngCore};
+
+use std::f32::EPSILON;
 
 #[derive(Debug)]
 pub struct Sample1D {
@@ -8,14 +10,16 @@ pub struct Sample1D {
 }
 
 impl Sample1D {
-    pub const fn new(x: f32) -> Self {
+    pub fn new(x: f32) -> Self {
+        debug_assert!(x < 1.0 && x >= 0.0);
         Sample1D { x }
     }
     pub fn new_random_sample() -> Self {
-        Sample1D { x: random() }
+        Sample1D::new(random())
     }
     pub fn choose<T>(mut self, split: f32, a: T, b: T) -> (Self, T) {
         debug_assert!(0.0 <= split && split <= 1.0);
+        debug_assert!(self.x >= 0.0 && self.x < 1.0);
         if self.x < split {
             assert!(split > 0.0);
             self.x /= split;
@@ -23,7 +27,7 @@ impl Sample1D {
         } else {
             // if split was 1.0, there's no way for self.x to be greather than or equal to it
             // since self.x in [0, 1)
-            assert!(split < 1.0);
+            debug_assert!(split < 1.0);
             self.x = (self.x - split) / (1.0 - split);
             (self, b)
         }
@@ -37,14 +41,14 @@ pub struct Sample2D {
 }
 
 impl Sample2D {
-    pub const fn new(x: f32, y: f32) -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
+        debug_assert!(x < 1.0 && x >= 0.0);
+        debug_assert!(y < 1.0 && y >= 0.0);
+
         Sample2D { x, y }
     }
     pub fn new_random_sample() -> Self {
-        Sample2D {
-            x: random(),
-            y: random(),
-        }
+        Sample2D::new(random(), random())
     }
 }
 #[derive(Debug)]
@@ -59,11 +63,7 @@ impl Sample3D {
         Sample3D { x, y, z }
     }
     pub fn new_random_sample() -> Self {
-        Sample3D {
-            x: random(),
-            y: random(),
-            z: random(),
-        }
+        Sample3D::new(random(), random(), random())
     }
 }
 
@@ -130,7 +130,19 @@ impl Sampler for StratifiedSampler {
         // convert idx to the "pixel" based on dims
         let mut sample = Sample1D::new_random_sample();
         let x = idx;
-        sample.x = sample.x / (width as f32) + (x as f32) / (width as f32);
+        let old_x = sample.x;
+        sample.x = (sample.x + x as f32) / (width as f32);
+        if sample.x == 1.0 {
+            sample.x -= EPSILON;
+        }
+        debug_assert!(
+            sample.x < 1.0 && sample.x >= 0.0,
+            "{:?} = ({:?} + {:?})/{:?}",
+            sample.x,
+            old_x,
+            x,
+            width,
+        );
         sample
     }
     fn draw_2d(&mut self) -> Sample2D {
@@ -148,8 +160,32 @@ impl Sampler for StratifiedSampler {
         // convert idx to the "pixel" based on dims
         let (x, y) = (idx % width, idx / width);
         let mut sample = Sample2D::new_random_sample();
-        sample.x = sample.x / (width as f32) + (x as f32) / (width as f32);
-        sample.y = sample.y / (depth as f32) + (y as f32) / (depth as f32);
+        let old_x = sample.x;
+        sample.x = (sample.x + x as f32) / (width as f32);
+        let old_y = sample.y;
+        sample.y = (sample.y + y as f32) / (depth as f32);
+        if sample.x == 1.0 {
+            sample.x -= EPSILON;
+        }
+        if sample.y == 1.0 {
+            sample.y -= EPSILON;
+        }
+        debug_assert!(
+            sample.x < 1.0 && sample.x >= 0.0,
+            "{:?} = ({:?} + {:?})/{:?}",
+            sample.x,
+            old_x,
+            x,
+            width,
+        );
+        debug_assert!(
+            sample.y < 1.0 && sample.y >= 0.0,
+            "{:?} = ({:?} + {:?})/{:?}",
+            sample.y,
+            old_y,
+            y,
+            depth,
+        );
         sample
     }
     fn draw_3d(&mut self) -> Sample3D {
@@ -173,9 +209,22 @@ impl Sampler for StratifiedSampler {
         // x coordinate is how far along width a given pixel is
         let x = idx % width;
         let mut sample = Sample3D::new_random_sample();
-        sample.x = sample.x / (width as f32) + (x as f32) / (width as f32);
-        sample.y = sample.y / (depth as f32) + (y as f32) / (depth as f32);
-        sample.z = sample.z / (height as f32) + (z as f32) / (height as f32);
+        sample.x = (sample.x + x as f32) / (width as f32);
+        sample.y = (sample.y + y as f32) / (depth as f32);
+        sample.z = (sample.z + z as f32) / (height as f32);
+        if sample.x == 1.0 {
+            sample.x -= EPSILON;
+        }
+
+        if sample.y == 1.0 {
+            sample.y -= EPSILON;
+        }
+        if sample.z == 1.0 {
+            sample.z -= EPSILON;
+        }
+        debug_assert!(sample.x < 1.0 && sample.x >= 0.0);
+        debug_assert!(sample.y < 1.0 && sample.y >= 0.0);
+        debug_assert!(sample.z < 1.0 && sample.z >= 0.0);
         sample
     }
 }
@@ -190,29 +239,31 @@ mod test {
     fn test_random_sampler_1d() {
         let mut sampler = Box::new(RandomSampler::new());
         let mut s = 0.0;
-        for _i in 0..1000000 {
+        for _i in 0..10000000 {
             let sample = sampler.draw_1d();
-            debug_assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
+            assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             s += function(sample.x);
         }
-        println!("{}", s / 1000000.0);
+        println!("{}", s / 10000000.0);
     }
     #[test]
     fn test_stratified_sampler_1d() {
-        let mut sampler = Box::new(StratifiedSampler::new(100, 100, 10));
+        let mut sampler = Box::new(StratifiedSampler::new(20, 20, 10));
         let mut s = 0.0;
-        for _i in 0..1000000 {
+        for _i in 0..10000000 {
             let sample = sampler.draw_1d();
-            debug_assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
+            assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             s += function(sample.x);
         }
-        println!("{}", s / 1000000.0);
+        println!("{}", s / 10000000.0);
     }
     #[test]
     fn test_stratified_sampler_2d() {
-        let mut sampler = Box::new(StratifiedSampler::new(100, 100, 10));
-
-        for _i in 0..1000000 {
+        let mut sampler = Box::new(StratifiedSampler::new(20, 20, 10));
+        for _ in 0..10000 {
+            sampler.draw_1d();
+        }
+        for _i in 0..10000000 {
             let sample = sampler.draw_2d();
             assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             assert!(0.0 <= sample.y && sample.y < 1.0, "{}", sample.y);
@@ -220,9 +271,9 @@ mod test {
     }
     #[test]
     fn test_stratified_sampler_3d() {
-        let mut sampler = Box::new(StratifiedSampler::new(100, 100, 10));
+        let mut sampler = Box::new(StratifiedSampler::new(20, 20, 10));
 
-        for _i in 0..1000000 {
+        for _i in 0..10000000 {
             let sample = sampler.draw_3d();
             assert!(0.0 <= sample.x && sample.x < 1.0, "{}", sample.x);
             assert!(0.0 <= sample.y && sample.y < 1.0, "{}", sample.y);

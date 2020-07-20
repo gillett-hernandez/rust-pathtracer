@@ -1,4 +1,4 @@
-env_sampling_probability = 0.1
+env_sampling_probability = 1.0
 [environment]
 type="Sun"
 strength = 0.001

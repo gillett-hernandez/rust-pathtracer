@@ -63,7 +63,7 @@ impl Hittable for Disk {
         let mut normal = Vec3::Z;
         // if dual sided, randomly pick the opposite side when sampling
         if self.two_sided {
-            let choice = Sample1D { x: s.x }.choose(0.5, -1.0f32, 1.0f32);
+            let choice = Sample1D::new(s.x).choose(0.5, -1.0f32, 1.0f32);
             s.x = choice.0.x;
             normal = normal * choice.1;
         }

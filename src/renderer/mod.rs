@@ -69,7 +69,7 @@ impl NaiveRenderer {
     pub fn render_sampled<I: SamplerIntegrator>(
         integrator: I,
         settings: &RenderSettings,
-        camera: &Camera,
+        _camera: &Camera,
     ) -> Film<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
         println!("starting render with film resolution {}x{}", width, height);
@@ -163,7 +163,7 @@ impl NaiveRenderer {
     pub fn render_splatted<I: GenericIntegrator>(
         mut integrator: I,
         renders: Vec<RenderSettings>,
-        cameras: Vec<Camera>,
+        _cameras: Vec<Camera>,
     ) -> Vec<(RenderSettings, Film<XYZColor>)> {
         let now = Instant::now();
 

@@ -1,6 +1,5 @@
 use crate::world::World;
 // use crate::config::Settings;
-use crate::aabb::HasBoundingBox;
 use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::*;
 use crate::integrator::*;
@@ -30,8 +29,6 @@ fn evaluate_direct_importance(
         .pick_random_camera(camera_pick)
         .expect("camera pick failed");
     if let Some(camera_surface) = camera.get_surface() {
-        // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
-        // let direction = direction.normalized();
         let (point_on_lens, _lens_normal, pdf) = camera_surface.sample_surface(lens_sample);
         let camera_pdf = pdf * camera_pick_pdf;
         if camera_pdf.0 == 0.0 {
@@ -94,7 +91,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         sampler: &mut Box<dyn Sampler>,
         _settings: &RenderSettings,
         _camera_sample: ((f32, f32), CameraId),
-        sample_id: usize,
+        _sample_id: usize,
         mut samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
@@ -140,10 +137,12 @@ impl GenericIntegrator for LightTracingIntegrator {
                 );
             } else {
                 let world_radius = self.world.get_world_radius();
+                let world_center = self.world.get_center();
                 // println!("sampling world, world radius is {}", world_radius);
                 // println!("sampled light emission in world light branch");
                 sampled = self.world.environment.sample_emission(
                     world_radius,
+                    world_center,
                     sampler.draw_2d(),
                     sampler.draw_2d(),
                     VISIBLE_RANGE,
@@ -156,8 +155,10 @@ impl GenericIntegrator for LightTracingIntegrator {
                 // println!("sampled light emission in world light branch");
                 // println!("sampling world, world radius is {}", world_radius);
                 let world_radius = self.world.get_world_radius();
+                let world_center = self.world.get_center();
                 sampled = self.world.environment.sample_emission(
                     world_radius,
+                    world_center,
                     sampler.draw_2d(),
                     sampler.draw_2d(),
                     VISIBLE_RANGE,

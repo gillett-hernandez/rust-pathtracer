@@ -199,7 +199,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
         &self,
         sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
-        sample_id: usize,
+        _sample_id: usize,
     ) -> SingleWavelength {
         // println!("{:?}", ray);
 
@@ -208,7 +208,10 @@ impl SamplerIntegrator for PathTracingIntegrator {
 
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id as usize);
-        let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
+        let film_sample = Sample2D::new(
+            (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
+            (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
+        );
         let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
         let (camera_ray, _lens_normal, pdf) =
             camera.sample_we(film_sample, aperture_sample, sum.lambda);

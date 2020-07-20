@@ -19,6 +19,8 @@ pub struct World {
     pub materials: MaterialTable,
     pub environment: EnvironmentMap,
     env_sampling_probability: f32,
+    radius: f32,
+    center: Point3,
 }
 
 impl World {
@@ -55,6 +57,15 @@ impl World {
             }
         }
         let accelerator = Accelerator::new(instances, accelerator_type);
+
+        let world_aabb = accelerator.aabb();
+        let span = world_aabb.max - world_aabb.min;
+        let center: Point3 = world_aabb.min + span / 2.0;
+        let radius = span.norm() / 2.0;
+        println!(
+            "world radius is {:?} meters, world center is at {:?}",
+            radius, center
+        );
         let world = World {
             accelerator,
             lights,
@@ -62,6 +73,8 @@ impl World {
             materials,
             environment,
             env_sampling_probability,
+            radius,
+            center,
         };
         if env_sampling_probability == 1.0 || env_sampling_probability == 0.0 {
             println!(
@@ -144,9 +157,11 @@ impl World {
     }
 
     pub fn get_world_radius(&self) -> f32 {
-        let world_aabb = self.accelerator.aabb();
-        let world_radius = (world_aabb.max - world_aabb.min).norm() / 2.0;
-        world_radius
+        self.radius
+    }
+
+    pub fn get_center(&self) -> Point3 {
+        self.center
     }
 
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
@@ -158,8 +173,10 @@ impl World {
                         if let Some(camera_surface) = camera.get_surface() {
                             println!("removing camera surface {:?}", &camera_surface);
                             // instances.remove_item(&camera_surface);
-                            let id = instances.binary_search(&camera_surface).unwrap();
-                            instances.remove(id);
+                            let maybe_id = instances.binary_search(&camera_surface);
+                            if let Ok(id) = maybe_id {
+                                instances.remove(id);
+                            }
                         }
                     }
                 }
@@ -171,8 +188,10 @@ impl World {
                         if let Some(camera_surface) = camera.get_surface() {
                             println!("removing camera surface {:?}", &camera_surface);
                             // instances.remove_item(&camera_surface);
-                            let id = instances.binary_search(&camera_surface).unwrap();
-                            instances.remove(id);
+                            let maybe_id = instances.binary_search(&camera_surface);
+                            if let Ok(id) = maybe_id {
+                                instances.remove(id);
+                            }
                         }
                     }
                 }

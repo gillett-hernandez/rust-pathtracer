@@ -33,7 +33,7 @@ pub struct SPPMIntegrator {
 }
 
 impl GenericIntegrator for SPPMIntegrator {
-    fn preprocess(&mut self, _sampler: &mut Box<dyn Sampler>, settings: &Vec<RenderSettings>) {
+    fn preprocess(&mut self, _sampler: &mut Box<dyn Sampler>, _settings: &Vec<RenderSettings>) {
         let num_beams = 10000;
         println!("preprocessing and mapping beams");
         let mut beams: Vec<Vec<Vertex>> = vec![Vec::new(); num_beams];
@@ -134,8 +134,10 @@ impl GenericIntegrator for SPPMIntegrator {
                         (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
                     // sample world env
                     let world_radius = self.world.get_world_radius();
+                    let world_center = self.world.get_center();
                     sampled = self.world.environment.sample_emission(
                         world_radius,
+                        world_center,
                         sampler.draw_2d(),
                         sampler.draw_2d(),
                         VISIBLE_RANGE,
@@ -207,7 +209,7 @@ impl GenericIntegrator for SPPMIntegrator {
         _settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
         sample_id: usize,
-        mut samples: &mut Vec<(Sample, CameraId)>,
+        mut _samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // naive implementation of SPPM
         // iterate through all deposited photons and add contributions based on if they are close to the eye vertex in question

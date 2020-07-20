@@ -29,7 +29,7 @@ impl GenericIntegrator for BDPTIntegrator {
         sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
-        sample_id: usize,
+        _sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
     ) -> SingleWavelength {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
@@ -133,8 +133,10 @@ impl GenericIntegrator for BDPTIntegrator {
             light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
             // sample world env
             let world_radius = self.world.get_world_radius();
+            let world_center = self.world.get_center();
             sampled = self.world.environment.sample_emission(
                 world_radius,
+                world_center,
                 sampler.draw_2d(),
                 sampler.draw_2d(),
                 VISIBLE_RANGE,
@@ -173,7 +175,10 @@ impl GenericIntegrator for BDPTIntegrator {
         let camera_ray;
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id as usize);
-        let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
+        let film_sample = Sample2D::new(
+            (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
+            (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
+        );
         let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
         let (sampled_camera_ray, lens_normal, camera_pdf) =
             camera.sample_we(film_sample, aperture_sample, lambda);
