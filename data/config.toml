@@ -37,8 +37,8 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "SPPM"
-integrator = "SPPM"
+filename = "BDPT"
+integrator = "BDPT"
 min_bounces = 8
 max_bounces = 22
 exposure = 1.0
