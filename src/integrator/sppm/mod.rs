@@ -257,13 +257,15 @@ impl GenericIntegrator for SPPMIntegrator {
         // let radius_squared = 5.0;
         for vert in self.photon_map.as_ref().unwrap().photons.iter() {
             let point = vert.point;
-            let vec_to_camera = point - vertex_in_scene.point;
-            let distance_squared = vec_to_camera.norm_squared();
+
+            let vec_to_camera = camera_ray.origin - vertex_in_scene.point;
+            let distance_squared = (point - vertex_in_scene.point).norm_squared();
             if distance_squared < radius_squared {
+                let wi_global = vert.local_wi;
                 let wo_global = vec_to_camera / distance_squared.sqrt();
+
                 let normal = vert.normal;
                 let frame = TangentFrame::from_normal(normal);
-                let wi_global = vert.local_wi;
 
                 let wi = frame.to_local(&wi_global);
                 let wo = frame.to_local(&wo_global);

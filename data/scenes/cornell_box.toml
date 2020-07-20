@@ -260,7 +260,7 @@ strength = 5.0
 
 
 [[instances]]
-material_identifier = "sharp_light"
+material_identifier = "diffuse_light"
 [instances.aggregate]
 type = "Rect"
 size = [0.4, 0.4]
