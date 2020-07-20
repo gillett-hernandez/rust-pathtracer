@@ -145,7 +145,7 @@ impl World {
 
     pub fn get_world_radius(&self) -> f32 {
         let world_aabb = self.accelerator.aabb();
-        let world_radius = (world_aabb.max - world_aabb.min).0.abs().max_element() / 2.0;
+        let world_radius = (world_aabb.max - world_aabb.min).norm() / 2.0;
         world_radius
     }
 

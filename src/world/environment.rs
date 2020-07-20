@@ -57,9 +57,9 @@ impl EnvironmentMap {
                 sun_direction,
             } => {
                 let direction = uv_to_direction(uv);
-                let cos = (*sun_direction * direction).abs();
+                let cos = *sun_direction * direction;
                 let sin = (1.0 - cos * cos).sqrt();
-                if sin.abs() < *solid_angle {
+                if sin.abs() < *solid_angle && cos > 0.0 {
                     // within solid angle
                     SingleEnergy::new(color.evaluate_power(lambda) * *strength)
                 } else {
@@ -112,10 +112,10 @@ impl EnvironmentMap {
                 let direction = uv_to_direction(uv);
                 let frame = TangentFrame::from_normal(direction);
                 let random_on_normal_disk = world_radius * random_in_unit_disk(position_sample);
-                let point = Point3::from(-direction * world_radius)
-                    + frame.to_world(&random_on_normal_disk);
+                let point =
+                    Point3::from(direction * world_radius) + frame.to_world(&random_on_normal_disk);
 
-                (Ray::new(point, direction), sw, directional_pdf, pdf)
+                (Ray::new(point, -direction), sw, directional_pdf, pdf)
             }
         }
     }
@@ -176,11 +176,11 @@ impl EnvironmentMap {
                 sun_direction,
             } => {
                 let local_wo = Vec3::Z + *solid_angle * random_in_unit_disk(sample);
-                let direction = -*sun_direction;
-                let frame = TangentFrame::from_normal(direction);
+                let sun_direction = *sun_direction;
+                let frame = TangentFrame::from_normal(sun_direction);
                 let direction = frame.to_world(&local_wo);
                 (
-                    direction_to_uv(direction),
+                    direction_to_uv(direction.normalized()),
                     PDF::from(1.0 / (2.0 * PI * (1.0 - *solid_angle))),
                 )
             }
