@@ -24,6 +24,7 @@ fn evaluate_direct_importance(
     hit: &HitRecord,
     frame: &TangentFrame,
     samples: &mut Vec<(Sample, CameraId)>,
+    profile: &mut Profile,
 ) {
     let (camera, camera_id, camera_pick_pdf) = world
         .pick_random_camera(camera_pick)
@@ -48,6 +49,7 @@ fn evaluate_direct_importance(
         // println!("picked valid camera, {:?}, {:?}", direction, pdf);
         // generate point on camera, then see if it can be connected to.
         // println!("hit {:?}", &hit);
+        profile.shadow_rays += 1;
         if veach_v(&world, point_on_lens, hit.point) {
             let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
             let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
@@ -93,6 +95,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         _camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         mut samples: &mut Vec<(Sample, CameraId)>,
+        mut profile: &mut Profile,
     ) -> SingleWavelength {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
         let wavelength_sample = sampler.draw_1d();
@@ -197,6 +200,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 );
             }
         };
+        profile.light_rays += 1;
         let mut ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
@@ -215,6 +219,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
         for bounce_count in 0..self.max_bounces {
+            profile.bounce_rays += 1;
             if let Some(mut hit) = self.world.hit(ray, INTERSECTION_TIME_OFFSET, INFINITY) {
                 // hit some bsdf surface
                 // debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
@@ -296,6 +301,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                         &hit,
                         &frame,
                         &mut samples,
+                        &mut profile,
                     );
                 }
 

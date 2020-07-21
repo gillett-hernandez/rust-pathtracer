@@ -2,6 +2,7 @@ use crate::hittable::{HasBoundingBox, HitRecord};
 use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;
+use crate::profile::Profile;
 use crate::world::World;
 use crate::INTERSECTION_TIME_OFFSET;
 use crate::{TransportMode, NORMAL_OFFSET};
@@ -152,6 +153,7 @@ pub fn random_walk(
     world: &Arc<World>,
     vertices: &mut Vec<Vertex>,
     russian_roulette_start_index: u16,
+    profile: &mut Profile,
 ) -> Option<SingleEnergy> {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
@@ -310,6 +312,8 @@ pub fn random_walk(
             break;
         }
     }
+    profile.bounce_rays += vertices.len();
+
     if additional_contribution.0 > 0.0 {
         Some(additional_contribution)
     } else {

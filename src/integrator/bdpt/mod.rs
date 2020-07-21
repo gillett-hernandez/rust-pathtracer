@@ -6,7 +6,7 @@ use utils::*;
 use crate::config::RenderSettings;
 use crate::hittable::Hittable;
 use crate::integrator::utils::*;
-use crate::integrator::{CameraId, GenericIntegrator, Sample};
+use crate::integrator::*;
 use crate::material::Material;
 use crate::materials::*;
 use crate::math::*;
@@ -31,6 +31,7 @@ impl GenericIntegrator for BDPTIntegrator {
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
+        mut profile: &mut Profile,
     ) -> SingleWavelength {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
 
@@ -218,6 +219,7 @@ impl GenericIntegrator for BDPTIntegrator {
             &self.world,
             &mut eye_path,
             settings.min_bounces.unwrap_or(3),
+            &mut profile,
         );
         random_walk(
             light_ray,
@@ -229,7 +231,11 @@ impl GenericIntegrator for BDPTIntegrator {
             &self.world,
             &mut light_path,
             settings.min_bounces.unwrap_or(3),
+            &mut profile,
         );
+
+        profile.camera_rays += 1;
+        profile.light_rays += 1;
 
         for vertex in eye_path.iter() {
             debug_assert!(vertex.pdf_forward.is_finite(), "{:?}", eye_path);
@@ -261,6 +267,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
+                    &mut profile
                 );
 
                 match res {
@@ -363,6 +370,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
+                    &mut profile
                 );
                 let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),

@@ -66,7 +66,7 @@ impl HasBoundingBox for Accelerator {
                 }
                 bounding_box.unwrap()
             }
-            Accelerator::BVH { instances, bvh } => {
+            Accelerator::BVH { instances, bvh: _ } => {
                 let mut bounding_box: Option<AABB> = None;
                 for instance in instances {
                     if (&bounding_box).is_none() {

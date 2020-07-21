@@ -18,6 +18,7 @@ pub mod material;
 pub mod materials;
 pub mod math;
 pub mod parsing;
+pub mod profile;
 pub mod renderer;
 pub mod texture;
 pub mod tonemap;

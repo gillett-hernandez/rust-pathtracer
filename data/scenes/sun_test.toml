@@ -1,4 +1,4 @@
-env_sampling_probability = 1.0
+env_sampling_probability = 0.7
 [environment]
 type="Sun"
 strength = 0.001
@@ -246,7 +246,17 @@ interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0
 
+# light above
+[[instances]]
+material_identifier = "diffuse_light"
+[instances.aggregate]
+type = "Rect"
+size = [3, 3]
+origin = [0.0, 0.0, 2.0]
+normal = "Z"
+two_sided = true
 
+# floor on side
 [[instances]]
 material_identifier = "lambertian_white"
 [instances.aggregate]
@@ -255,7 +265,6 @@ size = [20, 20]
 origin = [0.0, 10.0, -1.0]
 normal = "Z"
 two_sided = true
-
 
 # spheres on floor, on left
 [[instances]]

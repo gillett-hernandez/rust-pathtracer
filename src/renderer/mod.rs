@@ -9,6 +9,7 @@ use crate::config::Config;
 use crate::config::RenderSettings;
 use crate::integrator::*;
 use crate::math::*;
+use crate::profile::Profile;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
@@ -98,10 +99,12 @@ impl NaiveRenderer {
         });
 
         let clone2 = pixel_count.clone();
-        film.buffer
+        let stats: Profile = film
+            .buffer
             .par_iter_mut()
             .enumerate()
-            .for_each(|(pixel_index, pixel_ref)| {
+            .map(|(pixel_index, pixel_ref)| {
+                let mut profile = Profile::default();
                 // let clone = pixel_count.clone();
                 let y: usize = pixel_index / width;
                 let x: usize = pixel_index - width * y;
@@ -119,8 +122,12 @@ impl NaiveRenderer {
                         (x as f32 + sample.x) / (settings.resolution.width as f32),
                         (y as f32 + sample.y) / (settings.resolution.height as f32),
                     );
-                    temp_color +=
-                        XYZColor::from(integrator.color(&mut sampler, (camera_uv, 0), s as usize));
+                    temp_color += XYZColor::from(integrator.color(
+                        &mut sampler,
+                        (camera_uv, 0),
+                        s as usize,
+                        &mut profile,
+                    ));
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
                     debug_assert!(
                         temp_color.0.is_finite().all(),
@@ -141,7 +148,9 @@ impl NaiveRenderer {
                 // unsafe {
                 *pixel_ref = temp_color / (settings.min_samples as f32);
                 // }
-            });
+                profile
+            })
+            .reduce(|| Profile::default(), |a, b| a.combine(b));
 
         if let Err(panic) = thread.join() {
             println!(
@@ -152,12 +161,7 @@ impl NaiveRenderer {
         println!("");
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
-        println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread\n",
-            elapsed,
-            (min_camera_rays as f32) / elapsed,
-            (min_camera_rays as f32) / elapsed / (settings.threads.unwrap() as f32)
-        );
+        stats.pretty_print(elapsed, settings.threads.unwrap() as usize);
         film
     }
     pub fn render_splatted<I: GenericIntegrator>(
@@ -194,7 +198,8 @@ impl NaiveRenderer {
         const SHOW_PROGRESS_BAR: bool = true;
 
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
-        integrator.preprocess(&mut sampler, &renders);
+        let mut preprocess_profile = Profile::default();
+        integrator.preprocess(&mut sampler, &renders, &mut preprocess_profile);
         let mut pb = ProgressBar::new(total_pixels as u64);
 
         let pixel_count = Arc::new(AtomicUsize::new(0));
@@ -299,61 +304,71 @@ impl NaiveRenderer {
         // Light tracing will use an unbounded amount of memory though.
         let per_splat_sleep_time = Duration::from_nanos(0);
 
-        films.par_iter_mut().enumerate().for_each(
-            |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
-                if let Some((s, t)) = settings.selected_pair {
-                    println!("rendering specific pair {} {}", s, t);
-                }
+        let stats: Vec<Profile> = films
+            .par_iter_mut()
+            .enumerate()
+            .map(
+                |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
+                    if let Some((s, t)) = settings.selected_pair {
+                        println!("rendering specific pair {} {}", s, t);
+                    }
 
-                film.buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_index, pixel_ref)| {
-                        let tx1 = { tx_arc.lock().unwrap().clone() };
-                        let y: usize = pixel_index / settings.resolution.width;
-                        let x: usize = pixel_index - settings.resolution.width * y;
+                    let profile: Profile = film
+                        .buffer
+                        .par_iter_mut()
+                        .enumerate()
+                        .map(|(pixel_index, pixel_ref)| {
+                            let mut profile = Profile::default();
+                            let tx1 = { tx_arc.lock().unwrap().clone() };
+                            let y: usize = pixel_index / settings.resolution.width;
+                            let x: usize = pixel_index - settings.resolution.width * y;
 
-                        let mut temp_color = XYZColor::BLACK;
-                        let mut sampler: Box<dyn Sampler> =
-                            Box::new(StratifiedSampler::new(20, 20, 10));
-                        // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                        // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
-                        let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
-                        // use with capacity to preallocate
-                        for s in 0..settings.min_samples {
-                            let sample = sampler.draw_2d();
-                            let camera_uv = (
-                                (x as f32 + sample.x) / (settings.resolution.width as f32),
-                                (y as f32 + sample.y) / (settings.resolution.height as f32),
-                            );
-                            temp_color += XYZColor::from(integrator.color(
-                                &mut sampler,
-                                settings,
-                                (camera_uv, camera_id as u8),
-                                s as usize,
-                                &mut local_additional_splats,
-                            ));
+                            let mut temp_color = XYZColor::BLACK;
+                            let mut sampler: Box<dyn Sampler> =
+                                Box::new(StratifiedSampler::new(20, 20, 10));
+                            // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                            // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                            let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
+                            // use with capacity to preallocate
+                            for s in 0..settings.min_samples {
+                                let sample = sampler.draw_2d();
+                                let camera_uv = (
+                                    (x as f32 + sample.x) / (settings.resolution.width as f32),
+                                    (y as f32 + sample.y) / (settings.resolution.height as f32),
+                                );
+                                temp_color += XYZColor::from(integrator.color(
+                                    &mut sampler,
+                                    settings,
+                                    (camera_uv, camera_id as u8),
+                                    s as usize,
+                                    &mut local_additional_splats,
+                                    &mut profile,
+                                ));
 
-                            debug_assert!(
-                                temp_color.0.is_finite().all(),
-                                "integrator returned {:?}",
-                                temp_color
-                            );
-                        }
+                                debug_assert!(
+                                    temp_color.0.is_finite().all(),
+                                    "integrator returned {:?}",
+                                    temp_color
+                                );
+                            }
 
-                        *pixel_ref = temp_color / (settings.min_samples as f32);
-                        clone2.fetch_add(1, Ordering::Relaxed);
-                        if per_splat_sleep_time.as_nanos() > 0 {
-                            thread::sleep(
-                                per_splat_sleep_time * local_additional_splats.len() as u32,
-                            );
-                        }
-                        for splat in local_additional_splats {
-                            tx1.send(splat).unwrap();
-                        }
-                    });
-            },
-        );
+                            *pixel_ref = temp_color / (settings.min_samples as f32);
+                            clone2.fetch_add(1, Ordering::Relaxed);
+                            if per_splat_sleep_time.as_nanos() > 0 {
+                                thread::sleep(
+                                    per_splat_sleep_time * local_additional_splats.len() as u32,
+                                );
+                            }
+                            for splat in local_additional_splats {
+                                tx1.send(splat).unwrap();
+                            }
+                            profile
+                        })
+                        .reduce(|| Profile::default(), |a, b| a.combine(b));
+                    profile
+                },
+            )
+            .collect();
 
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
 
@@ -364,12 +379,10 @@ impl NaiveRenderer {
             );
         }
 
-        println!(
-            "\ntook {}s at {} rays per second and {} rays per second per thread\n",
-            elapsed,
-            (total_camera_samples as f32) / elapsed,
-            (total_camera_samples as f32) / elapsed / (maximum_threads as f32)
-        );
+        preprocess_profile.pretty_print(elapsed, maximum_threads as usize);
+        for profile in stats {
+            profile.pretty_print(elapsed, maximum_threads as usize);
+        }
 
         let now = Instant::now();
 

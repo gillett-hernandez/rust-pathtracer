@@ -32,6 +32,7 @@ impl PathTracingIntegrator {
         throughput: SingleEnergy,
         light_pick_sample: Sample1D,
         additional_light_sample: Sample2D,
+        profile: &mut Profile,
     ) -> SingleEnergy {
         if let Some((light, light_pick_pdf)) = self.world.pick_random_light(light_pick_sample) {
             // determine pick pdf
@@ -74,6 +75,7 @@ impl PathTracingIntegrator {
             let emission = light_material.emission(&hit, light_vertex_wi, None);
             // this should be the same as the other method, but maybe not.
 
+            profile.shadow_rays += 1;
             if veach_v(&self.world, point_on_light, hit.point) {
                 let scatter_pdf_for_light_ray = material.value(&hit, wi, local_light_direction);
                 let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
@@ -106,6 +108,7 @@ impl PathTracingIntegrator {
         material: &MaterialEnum,
         throughput: SingleEnergy,
         sample: Sample2D,
+        profile: &mut Profile,
     ) -> SingleEnergy {
         let (uv, light_pdf) = self
             .world
@@ -113,6 +116,7 @@ impl PathTracingIntegrator {
             .sample_env_uv_given_wavelength(sample, lambda);
         let direction = uv_to_direction(uv);
         let local_light_direction = frame.to_local(&direction);
+        profile.shadow_rays += 1;
         if self
             .world
             .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
@@ -139,6 +143,7 @@ impl PathTracingIntegrator {
         material: &MaterialEnum,
         throughput: SingleEnergy,
         sampler: &mut Box<dyn Sampler>,
+        mut profile: &mut Profile,
     ) -> SingleEnergy {
         let mut light_contribution = SingleEnergy::ZERO;
         let env_sampling_probability = self.world.get_env_sampling_probability();
@@ -162,6 +167,7 @@ impl PathTracingIntegrator {
                         material,
                         throughput,
                         sampler.draw_2d(),
+                        &mut profile,
                     );
                 } else {
                     light_contribution += self.estimate_direct_illumination(
@@ -172,6 +178,7 @@ impl PathTracingIntegrator {
                         throughput,
                         light_pick_sample,
                         sampler.draw_2d(),
+                        &mut profile,
                     );
                 }
             } else {
@@ -186,6 +193,7 @@ impl PathTracingIntegrator {
                         material,
                         throughput,
                         sampler.draw_2d(),
+                        &mut profile,
                     );
                 }
             }
@@ -200,8 +208,9 @@ impl SamplerIntegrator for PathTracingIntegrator {
         sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
+        mut profile: &mut Profile,
     ) -> SingleWavelength {
-        // println!("{:?}", ray);
+        profile.camera_rays += 1;
 
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, self.wavelength_bounds);
         let lambda = sum.lambda;
@@ -244,6 +253,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             &self.world,
             &mut path,
             self.min_bounces,
+            &mut profile,
         );
 
         for (index, vertex) in path.iter().enumerate() {
@@ -332,6 +342,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         material,
                         vertex.throughput,
                         sampler,
+                        &mut profile,
                     );
                     // println!("light contribution: {:?}", light_contribution);
                     sum.energy += light_contribution / (self.light_samples as f32);

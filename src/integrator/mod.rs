@@ -6,6 +6,7 @@ pub mod utils;
 pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
 use crate::math::*;
+use crate::profile::Profile;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::world::World;
 
@@ -79,6 +80,7 @@ pub trait SamplerIntegrator: Sync + Send {
         sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         sample_id: usize,
+        profile: &mut Profile,
     ) -> SingleWavelength;
 }
 
@@ -88,7 +90,13 @@ pub enum Sample {
 }
 
 pub trait GenericIntegrator: Send + Sync {
-    fn preprocess(&mut self, _sampler: &mut Box<dyn Sampler>, _settings: &Vec<RenderSettings>) {}
+    fn preprocess(
+        &mut self,
+        _sampler: &mut Box<dyn Sampler>,
+        _settings: &Vec<RenderSettings>,
+        profile: &mut Profile,
+    ) {
+    }
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
@@ -96,5 +104,6 @@ pub trait GenericIntegrator: Send + Sync {
         camera_sample: ((f32, f32), CameraId),
         sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
+        profile: &mut Profile,
     ) -> SingleWavelength;
 }

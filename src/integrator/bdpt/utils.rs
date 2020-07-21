@@ -4,6 +4,7 @@ use crate::integrator::utils::*;
 use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;
+use crate::profile::Profile;
 use crate::world::World;
 
 use std::ops::Index;
@@ -22,6 +23,7 @@ pub fn eval_unweighted_contribution(
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
     russian_roulette_threshold: f32,
+    profile: &mut Profile,
 ) -> SampleKind {
     let last_light_vertex_throughput = if s == 0 {
         SingleEnergy::ONE
@@ -225,6 +227,7 @@ pub fn eval_unweighted_contribution(
         cst = fsl * g * fse;
         let russian_roulette_probability = (cst.0 / russian_roulette_threshold).min(1.0);
         if sample < russian_roulette_probability {
+            profile.shadow_rays += 1;
             if !veach_v(world, last_eye_vertex.point, last_light_vertex.point) {
                 // not visible
                 return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
