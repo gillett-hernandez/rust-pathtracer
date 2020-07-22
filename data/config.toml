@@ -49,6 +49,7 @@ vfov = 90
 threads = 22
 filename = "BDPT"
 integrator = "BDPT"
+selected_pair = [1, 2]
 min_bounces = 8
 max_bounces = 22
 exposure = 1.0

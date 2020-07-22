@@ -507,8 +507,8 @@ where
 
                 // let normal = llv.normal;
                 // let frame = TangentFrame::from_normal(normal);
-                let wi = (lev.point - llv.point).normalized();
-                debug_assert!(wi.0.is_finite().all(), "{:?}", eye_path);
+                let wi: Vec3 = (lev.point - llv.point).normalized();
+                debug_assert!(wi.is_finite(), "{:?}", eye_path);
                 // let g = veach_g(
                 //     lev.point,
                 //     lev_local_eye_to_light.z().abs(),
@@ -588,7 +588,7 @@ where
                 let normal = last_eye_vertex.normal;
                 let frame = TangentFrame::from_normal(normal);
                 let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
-                debug_assert!(wi.0.is_finite().all(), "{:?}", eye_path);
+                debug_assert!(wi.is_finite(), "{:?}", eye_path);
                 let (cos_i, cos_o) = (
                     (wi * normal).abs(), // these are cosines relative to their surface normals btw.
                     (wi * second_to_last_eye_vertex.normal).abs(), // i.e. eye_to_light.dot(eye_vertex_normal) and light_to_eye.dot(light_vertex_normal)

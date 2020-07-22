@@ -36,15 +36,7 @@ impl GenericIntegrator for BDPTIntegrator {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
 
         let wavelength_sample = sampler.draw_1d();
-        let mut light_pick_sample = sampler.draw_1d();
-        // let camera_pick = sampler.draw_1d();
-        // let (camera, camera_id, camera_pick_pdf) = self
-        //     .world
-        //     .pick_random_camera(camera_pick)
-        //     .expect("camera pick failed");
-
-        // let camera_uv = camera_sample.0;
-
+        let light_pick_sample = sampler.draw_1d();
         let env_sampling_probability = self.world.get_env_sampling_probability();
 
         let sampled;
@@ -53,9 +45,6 @@ impl GenericIntegrator for BDPTIntegrator {
         let (light_pick_sample, sample_env) =
             light_pick_sample.choose(env_sampling_probability, true, false);
         if sample_env {
-            if self.world.lights.len() == 0 {
-                return SingleWavelength::BLACK;
-            }
             let (light, light_pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light
@@ -91,14 +80,14 @@ impl GenericIntegrator for BDPTIntegrator {
             debug_assert!(
                 pdf_forward.0.is_finite(),
                 "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                pdf_forward,  // NaN
-                pdf_backward, // 0.494
+                pdf_forward, 
+                pdf_backward,
                 sampled.0,
                 material.get_name(),
-                directional_pdf, // NaN
+                directional_pdf,
                 light_surface_point,
-                light_surface_normal, // -Z
-                sampled.1.energy      // 9.88
+                light_surface_normal,
+                sampled.1.energy
             );
             debug_assert!(
                 pdf_backward.0.is_finite(),

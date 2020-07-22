@@ -16,7 +16,7 @@ use crate::world::World;
 
 use std::collections::HashMap;
 // use std::io::Write;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -223,12 +223,16 @@ impl NaiveRenderer {
         // let (tx, rx) = bounded(100000);
 
         let total_splats = Arc::new(Mutex::new(0usize));
+        let stop_splatting = Arc::new(AtomicBool::new(false));
 
         let light_films_ref = Arc::clone(&light_films);
         let total_splats_ref = Arc::clone(&total_splats);
+        let stop_splatting_ref = Arc::clone(&stop_splatting);
         let splatting_thread = thread::spawn(move || {
             let films = &mut light_films_ref.lock().unwrap();
             let mut local_total_splats = total_splats_ref.lock().unwrap();
+            let mut local_stop_splatting = false;
+            let mut remaining_iterations = 10;
             loop {
                 // let mut samples: Vec<(Sample, u8)> = rx.try_iter().collect();
                 // samples.par_sort_unstable_by(|(a0, b0), (a1, b1)| {
@@ -278,22 +282,14 @@ impl NaiveRenderer {
                         _ => {}
                     }
                 }
-                if let Ok(v) = rx.recv_timeout(Duration::from_millis(200)) {
-                    let (sample, film_id): (Sample, u8) = v;
-                    match sample {
-                        Sample::LightSample(sw, pixel) => {
-                            let film = &mut films[film_id as usize];
-                            let color = XYZColor::from(sw);
-                            let (x, y) = (
-                                (pixel.0 * film.width as f32) as usize,
-                                film.height - (pixel.1 * film.height as f32) as usize - 1,
-                            );
-                            film.buffer[y * film.width + x] += color;
-                            (*local_total_splats) += 1usize;
-                        }
-                        _ => {}
-                    }
-                } else {
+                if !local_stop_splatting && stop_splatting_ref.load(Ordering::Relaxed) {
+                    local_stop_splatting = true;
+                }
+                if local_stop_splatting {
+                    remaining_iterations -= 1;
+                }
+                thread::sleep(Duration::from_millis(100));
+                if remaining_iterations <= 0 {
                     break;
                 }
             }
@@ -370,8 +366,6 @@ impl NaiveRenderer {
             )
             .collect();
 
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-
         if let Err(panic) = thread.join() {
             println!(
                 "progress bar incrementing thread threw an error {:?}",
@@ -380,6 +374,7 @@ impl NaiveRenderer {
         }
 
         let now2 = Instant::now();
+        stop_splatting.store(true, Ordering::Relaxed);
 
         if let Err(panic) = splatting_thread.join() {
             println!("panic occurred within thread: {:?}", panic);
