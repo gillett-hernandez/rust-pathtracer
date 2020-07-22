@@ -112,11 +112,12 @@ impl Hittable for Aggregate {
         };
         debug_assert!(
             pdf.0.is_finite(),
-            "{:?}, {:?}, {:?}, {:?}",
+            "{:?}, {:?}, {:?}, {:?}, {}",
             self,
             normal,
             from,
-            to
+            to,
+            pdf.0
         );
         pdf
     }

@@ -1,4 +1,4 @@
-scene_file = "data/scenes/tower.toml"
+scene_file = "data/scenes/sun_test.toml"
 
 # distant camera
 [[cameras]]
@@ -33,7 +33,7 @@ look_from = [-5, 0, 0]
 look_at = [0.0, 0.0, -0.4]
 aperture_size = 0.03
 focal_distance = 5.0
-vfov = 27.2
+vfov = 35.2
 
 # closeup camera
 [[cameras]]
@@ -53,7 +53,7 @@ min_bounces = 8
 max_bounces = 22
 exposure = 1.0
 min_samples = 64
-camera_id = 2
+camera_id = 3
 russian_roulette = true
 only_direct = false
 light_samples = 4

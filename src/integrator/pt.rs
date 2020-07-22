@@ -74,6 +74,9 @@ impl PathTracingIntegrator {
             let light_material = self.world.get_material(light.get_material_id());
             let emission = light_material.emission(&hit, light_vertex_wi, None);
             // this should be the same as the other method, but maybe not.
+            if emission.0 == 0.0 {
+                return SingleEnergy::ZERO;
+            }
 
             profile.shadow_rays += 1;
             if veach_v(&self.world, point_on_light, hit.point) {
@@ -114,23 +117,51 @@ impl PathTracingIntegrator {
             .world
             .environment
             .sample_env_uv_given_wavelength(sample, lambda);
+        // direction is the direction to the sampled point on the environment
         let direction = uv_to_direction(uv);
-        let local_light_direction = frame.to_local(&direction);
+        let local_wo = frame.to_local(&direction);
+
+        let reflectance = material.f(&hit, wi, local_wo);
+        let scatter_pdf_for_light_ray = material.value(&hit, wi, local_wo);
+
         profile.shadow_rays += 1;
-        if self
+        if let Some(light_hit) = self
             .world
             .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
-            .is_none()
         {
+            // handle case where we intended to hit the world but instead hit a light
+            let material = self.world.get_material(light_hit.material);
+
+            let point_on_light = light_hit.point;
+            let light_frame = TangentFrame::from_normal(light_hit.normal);
+            let light_wi = light_frame.to_local(&-direction);
+            let dropoff = light_wi.z().abs();
+            if dropoff == 0.0 {
+                return SingleEnergy::ZERO;
+            }
+            // if reflectance.0 < 0.00001 {
+            //     // if reflectance is 0 for all components, skip this light sample
+            //     continue;
+            // }
+            let emission = material.emission(&light_hit, light_wi, None);
+            if emission.0 > 0.0 {
+                let light = self.world.get_primitive(light_hit.instance_id);
+                let pdf = light.pdf(hit.normal, hit.point, point_on_light);
+
+                if pdf.0 == 0.0 {
+                    return SingleEnergy::ZERO;
+                }
+                let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+                reflectance * throughput * dropoff * emission * weight / light_pdf.0
+            } else {
+                SingleEnergy::ZERO
+            }
+        } else {
             // successfully hit nothing, which is to say, hit the world
             let emission = self.world.environment.emission(uv, lambda);
-            let reflectance = material.f(&hit, wi, local_light_direction);
 
-            let scatter_pdf_for_light_ray = material.value(&hit, wi, local_light_direction);
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
             reflectance * throughput * emission * weight / light_pdf.0
-        } else {
-            SingleEnergy::ZERO
         }
     }
 
@@ -151,51 +182,34 @@ impl PathTracingIntegrator {
             return SingleEnergy::ZERO;
         }
         for _i in 0..self.light_samples {
-            if self.world.lights.len() > 0 {
-                // decide whether to sample the lights or the world
-                let (light_pick_sample, sample_world) =
-                    sampler
-                        .draw_1d()
-                        .choose(env_sampling_probability, true, false);
-                if sample_world {
-                    // light_contribution += self.world.environment.sample
-                    light_contribution += self.estimate_direct_illumination_from_world(
-                        lambda,
-                        hit,
-                        frame,
-                        wi,
-                        material,
-                        throughput,
-                        sampler.draw_2d(),
-                        &mut profile,
-                    );
-                } else {
-                    light_contribution += self.estimate_direct_illumination(
-                        &hit,
-                        &frame,
-                        wi,
-                        material,
-                        throughput,
-                        light_pick_sample,
-                        sampler.draw_2d(),
-                        &mut profile,
-                    );
-                }
+            let (light_pick_sample, sample_world) =
+                sampler
+                    .draw_1d()
+                    .choose(env_sampling_probability, true, false);
+            // decide whether to sample the lights or the world
+            if sample_world {
+                // light_contribution += self.world.environment.sample
+                light_contribution += self.estimate_direct_illumination_from_world(
+                    lambda,
+                    hit,
+                    frame,
+                    wi,
+                    material,
+                    throughput,
+                    sampler.draw_2d(),
+                    &mut profile,
+                );
             } else {
-                // do world sample, unless world sampling probability is 0
-                if env_sampling_probability > 0.0 {
-                    // do world sample
-                    light_contribution += self.estimate_direct_illumination_from_world(
-                        lambda,
-                        hit,
-                        frame,
-                        wi,
-                        material,
-                        throughput,
-                        sampler.draw_2d(),
-                        &mut profile,
-                    );
-                }
+                light_contribution += self.estimate_direct_illumination(
+                    &hit,
+                    &frame,
+                    wi,
+                    material,
+                    throughput,
+                    light_pick_sample,
+                    sampler.draw_2d(),
+                    &mut profile,
+                );
             }
         }
         light_contribution
@@ -264,7 +278,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
             if let VertexType::LightSource(light_source) = vertex.vertex_type {
                 if light_source == LightSourceType::Environment {
-                    let wo = -vertex.normal;
+                    let wo = -vertex.local_wi;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
                     sum.energy += emission * vertex.throughput;

@@ -50,11 +50,9 @@ impl GenericIntegrator for BDPTIntegrator {
         let sampled;
 
         let start_light_vertex;
-        if light_pick_sample.x >= env_sampling_probability {
-            light_pick_sample.x = ((light_pick_sample.x - env_sampling_probability)
-                / (1.0 - env_sampling_probability))
-                .clamp(0.0, 1.0);
-
+        let (light_pick_sample, sample_env) =
+            light_pick_sample.choose(env_sampling_probability, true, false);
+        if sample_env {
             if self.world.lights.len() == 0 {
                 return SingleWavelength::BLACK;
             }
@@ -130,8 +128,6 @@ impl GenericIntegrator for BDPTIntegrator {
                 1.0,
             );
         } else {
-            // world
-            light_pick_sample.x = (light_pick_sample.x / env_sampling_probability).clamp(0.0, 1.0);
             // sample world env
             let world_radius = self.world.get_world_radius();
             let world_center = self.world.get_center();
@@ -151,7 +147,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampled.1.lambda,
                 Vec3::ZERO,
                 sampled.0.origin,
-                sampled.0.direction,
+                -sampled.0.direction,
                 (0.0, 0.0),
                 MaterialId::Light(0),
                 0,
@@ -267,7 +263,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
-                    &mut profile
+                    &mut profile,
                 );
 
                 match res {
@@ -370,7 +366,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
-                    &mut profile
+                    &mut profile,
                 );
                 let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),

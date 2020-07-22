@@ -147,7 +147,13 @@ impl Hittable for AARect {
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
         // TODO: affirm that it's fine to return 0.0 when not two sided.
-        PDF::from(distance_squared / (cos_i.abs() * area))
+        
+        let denominator = cos_i.abs() * area;
+        if denominator == 0.0 {
+            0.0.into()
+        } else {
+            PDF::from(distance_squared / denominator)
+        }
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {

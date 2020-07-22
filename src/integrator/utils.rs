@@ -288,7 +288,7 @@ pub fn random_walk(
             if trace_type == TransportMode::Importance {
                 let ray_direction = ray.direction;
                 let bounding_box = world.aabb();
-                let world_radius = (bounding_box.max - bounding_box.min).norm();
+                let world_radius = world.get_world_radius();
                 let at_env = ray_direction * world_radius;
                 let vertex = Vertex::new(
                     VertexType::LightSource(LightSourceType::Environment),
