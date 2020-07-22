@@ -379,22 +379,24 @@ impl NaiveRenderer {
             );
         }
 
-        preprocess_profile.pretty_print(elapsed, maximum_threads as usize);
-        for profile in stats {
-            profile.pretty_print(elapsed, maximum_threads as usize);
-        }
-
-        let now = Instant::now();
+        let now2 = Instant::now();
 
         if let Err(panic) = splatting_thread.join() {
             println!("panic occurred within thread: {:?}", panic);
         }
-        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
+        let elapsed2 = (now2.elapsed().as_millis() as f32) / 1000.0;
         println!(
             "found {} splats, and took {}s to finish splatting them to film",
             total_splats.lock().unwrap(),
-            elapsed
+            elapsed2
         );
+
+        let elapsed = now.elapsed().as_millis() as f32 / 1000.0;
+
+        preprocess_profile.pretty_print(elapsed, maximum_threads as usize);
+        for profile in stats {
+            profile.pretty_print(elapsed, maximum_threads as usize);
+        }
 
         // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
 

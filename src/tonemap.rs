@@ -30,7 +30,7 @@ impl sRGB {
             for x in 0..film.width {
                 let color = film.at(x, y);
                 let lum = color.y();
-                assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
+                debug_assert!(!lum.is_nan(), "nan {:?} at ({},{})", color, x, y);
                 if lum.is_nan() {
                     continue;
                 }

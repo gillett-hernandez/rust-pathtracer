@@ -109,96 +109,50 @@ impl GenericIntegrator for LightTracingIntegrator {
         let (light_pick_sample, sample_world) =
             light_pick_sample.choose(env_sampling_probability, true, false);
         if !sample_world {
-            if self.world.lights.len() > 0 {
-                let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
+            let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
-                // if we picked a light
-                let (light_surface_point, light_surface_normal, area_pdf) =
-                    light.sample_surface(sampler.draw_2d());
+            // if we picked a light
+            let (light_surface_point, light_surface_normal, area_pdf) =
+                light.sample_surface(sampler.draw_2d());
 
-                let mat_id = light.get_material_id();
-                let material = self.world.get_material(mat_id);
-                // println!("sampled light emission in instance light branch");
-                let tmp_sampled = material
-                    .sample_emission(
-                        light_surface_point,
-                        light_surface_normal,
-                        VISIBLE_RANGE,
-                        sampler.draw_2d(),
-                        wavelength_sample,
-                    )
-                    .expect(&format!(
-                        "emission sample failed, light is {:?} material is {:?}",
-                        light, mat_id
-                    ));
-                light_g_term = (light_surface_normal * (&tmp_sampled.0).direction).abs();
-                sampled = (
-                    tmp_sampled.0,
-                    tmp_sampled.1,
-                    tmp_sampled.2 * pick_pdf * area_pdf,
-                    tmp_sampled.3,
-                );
-            } else {
-                let world_radius = self.world.get_world_radius();
-                let world_center = self.world.get_center();
-                // println!("sampling world, world radius is {}", world_radius);
-                // println!("sampled light emission in world light branch");
-                sampled = self.world.environment.sample_emission(
-                    world_radius,
-                    world_center,
-                    sampler.draw_2d(),
-                    sampler.draw_2d(),
+            let mat_id = light.get_material_id();
+            let material = self.world.get_material(mat_id);
+            // println!("sampled light emission in instance light branch");
+            let tmp_sampled = material
+                .sample_emission(
+                    light_surface_point,
+                    light_surface_normal,
                     VISIBLE_RANGE,
+                    sampler.draw_2d(),
                     wavelength_sample,
-                );
-            }
+                )
+                .expect(&format!(
+                    "emission sample failed, light is {:?} material is {:?}",
+                    light, mat_id
+                ));
+            light_g_term = (light_surface_normal * (&tmp_sampled.0).direction).abs();
+            sampled = (
+                tmp_sampled.0,
+                tmp_sampled.1,
+                tmp_sampled.2 * pick_pdf * area_pdf,
+                tmp_sampled.3,
+            );
         } else {
-            if env_sampling_probability > 0.0 {
-                // sample world env
-                // println!("sampled light emission in world light branch");
-                // println!("sampling world, world radius is {}", world_radius);
-                let world_radius = self.world.get_world_radius();
-                let world_center = self.world.get_center();
-                sampled = self.world.environment.sample_emission(
-                    world_radius,
-                    world_center,
-                    sampler.draw_2d(),
-                    sampler.draw_2d(),
-                    VISIBLE_RANGE,
-                    wavelength_sample,
-                );
-                light_g_term = 1.0;
+            // sample world env
+            // println!("sampled light emission in world light branch");
+            // println!("sampling world, world radius is {}", world_radius);
+            let world_radius = self.world.get_world_radius();
+            let world_center = self.world.get_center();
+            sampled = self.world.environment.sample_emission(
+                world_radius,
+                world_center,
+                sampler.draw_2d(),
+                sampler.draw_2d(),
+                VISIBLE_RANGE,
+                wavelength_sample,
+            );
+            light_g_term = 1.0;
             // sampled = (tmp_sampled.0, tmp_sampled.1, tmp_sampled.2);
-            } else {
-                let (light, pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
-
-                // if we picked a light
-                let (light_surface_point, light_surface_normal, area_pdf) =
-                    light.sample_surface(sampler.draw_2d());
-
-                let mat_id = light.get_material_id();
-                let material = self.world.get_material(mat_id);
-                // println!("sampled light emission in instance light branch");
-                let tmp_sampled = material
-                    .sample_emission(
-                        light_surface_point,
-                        light_surface_normal,
-                        VISIBLE_RANGE,
-                        sampler.draw_2d(),
-                        wavelength_sample,
-                    )
-                    .expect(&format!(
-                        "emission sample failed, light is {:?} material is {:?}",
-                        light, mat_id
-                    ));
-                light_g_term = (light_surface_normal * (&tmp_sampled.0).direction).abs();
-                sampled = (
-                    tmp_sampled.0,
-                    tmp_sampled.1,
-                    tmp_sampled.2 * pick_pdf * area_pdf,
-                    tmp_sampled.3,
-                );
-            }
         };
         profile.light_rays += 1;
         let mut ray = sampled.0;

@@ -28,7 +28,7 @@ impl World {
         instances: Vec<Instance>,
         materials: MaterialTable,
         environment: EnvironmentMap,
-        env_sampling_probability: f32,
+        mut env_sampling_probability: f32,
         accelerator_type: AcceleratorType,
     ) -> Self {
         let mut lights = Vec::new();
@@ -66,6 +66,10 @@ impl World {
             "world radius is {:?} meters, world center is at {:?}",
             radius, center
         );
+        if lights.len() == 0 {
+            println!("the world had no lights, so force-setting env_sampling_probability to 1.0");
+            env_sampling_probability = 1.0;
+        }
         let world = World {
             accelerator,
             lights,

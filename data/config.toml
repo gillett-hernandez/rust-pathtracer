@@ -1,4 +1,4 @@
-scene_file = "data/scenes/sun_test.toml"
+scene_file = "data/scenes/tower.toml"
 
 # distant camera
 [[cameras]]
@@ -21,10 +21,10 @@ vfov = 27.2
 [[cameras]]
 type="SimpleCamera"
 look_from = [-3.5, -3.5, 0.0]
-look_at = [0, 0, 1]
+look_at = [0, 0, 100]
 aperture_size = 0.01
-focal_distance = 5.0
-vfov = 27.2
+focal_distance = 50.0
+vfov = 45.2
 
 # sun test camera
 [[cameras]]
@@ -47,13 +47,13 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "LT"
-integrator = "LT"
+filename = "BDPT"
+integrator = "BDPT"
 min_bounces = 8
 max_bounces = 22
 exposure = 1.0
-min_samples = 128
-camera_id = 3
+min_samples = 64
+camera_id = 2
 russian_roulette = true
 only_direct = false
 light_samples = 4
