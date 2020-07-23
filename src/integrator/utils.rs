@@ -1,4 +1,4 @@
-use crate::hittable::{HasBoundingBox, HitRecord};
+use crate::hittable::HitRecord;
 use crate::material::Material;
 use crate::materials::MaterialId;
 use crate::math::*;

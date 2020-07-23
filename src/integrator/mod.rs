@@ -89,11 +89,12 @@ pub enum Sample {
     LightSample(SingleWavelength, (f32, f32)),
 }
 
+#[allow(unused)]
 pub trait GenericIntegrator: Send + Sync {
     fn preprocess(
         &mut self,
-        _sampler: &mut Box<dyn Sampler>,
-        _settings: &Vec<RenderSettings>,
+        sampler: &mut Box<dyn Sampler>,
+        settings: &Vec<RenderSettings>,
         profile: &mut Profile,
     ) {
     }

@@ -80,7 +80,7 @@ impl GenericIntegrator for BDPTIntegrator {
             debug_assert!(
                 pdf_forward.0.is_finite(),
                 "pdf_forward was not finite {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                pdf_forward, 
+                pdf_forward,
                 pdf_backward,
                 sampled.0,
                 material.get_name(),

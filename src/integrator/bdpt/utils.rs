@@ -152,23 +152,36 @@ pub fn eval_unweighted_contribution(
                     emission
                 }
             } else {
-                let hit_light_material = world.get_material(last_light_vertex.material_id);
-                let emission = hit_light_material.emission(
-                    &last_light_vertex.into(),
-                    llv_local_light_to_eye,
-                    None,
-                );
-                emission
+                if last_eye_vertex.vertex_type
+                    == VertexType::LightSource(LightSourceType::Environment)
+                {
+                    // can't connect env vertex to vertex in scene this way.
+                    SingleEnergy::ZERO
+                } else {
+                    let hit_light_material = world.get_material(last_light_vertex.material_id);
+                    let emission = hit_light_material.emission(
+                        &last_light_vertex.into(),
+                        llv_local_light_to_eye,
+                        None,
+                    );
+                    emission
+                }
             }
         } else {
-            let second_to_last_light_vertex = light_path[s - 2];
-            let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
-            let hit_material = world.get_material(last_light_vertex.material_id);
-            hit_material.f(
-                &last_light_vertex.into(),
-                llv_frame.to_local(&wi).normalized(),
-                llv_local_light_to_eye,
-            )
+            if last_light_vertex.vertex_type
+                == VertexType::LightSource(LightSourceType::Environment)
+            {
+                SingleEnergy::ZERO
+            } else {
+                let second_to_last_light_vertex = light_path[s - 2];
+                let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
+                let hit_material = world.get_material(last_light_vertex.material_id);
+                hit_material.f(
+                    &last_light_vertex.into(),
+                    llv_frame.to_local(&wi).normalized(),
+                    llv_local_light_to_eye,
+                )
+            }
         };
 
         if fsl == SingleEnergy::ZERO {
@@ -194,16 +207,21 @@ pub fn eval_unweighted_contribution(
                 SingleEnergy(0.0)
             }
         } else {
-            let second_to_last_eye_vertex = eye_path[t - 2];
-            let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
-            // let wo = -light_to_eye;
-            let hit_material = world.get_material(last_eye_vertex.material_id);
-            let reflectance = hit_material.f(
-                &last_eye_vertex.into(),
-                lev_frame.to_local(&wi).normalized(),
-                lev_local_eye_to_light,
-            );
-            reflectance
+            if last_eye_vertex.vertex_type == VertexType::LightSource(LightSourceType::Environment)
+            {
+                SingleEnergy::ZERO
+            } else {
+                let second_to_last_eye_vertex = eye_path[t - 2];
+                let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
+                // let wo = -light_to_eye;
+                let hit_material = world.get_material(last_eye_vertex.material_id);
+                let reflectance = hit_material.f(
+                    &last_eye_vertex.into(),
+                    lev_frame.to_local(&wi).normalized(),
+                    lev_local_eye_to_light,
+                );
+                reflectance
+            }
         };
 
         if fse == SingleEnergy::ZERO {
