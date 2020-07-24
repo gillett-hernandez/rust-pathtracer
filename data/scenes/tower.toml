@@ -1,8 +1,8 @@
-env_sampling_probability = 0.1
+env_sampling_probability = 0.7
 [environment]
 type="Sun"
-strength = 0.001
-solid_angle = 0.01
+strength = 0.1
+solid_angle = 0.1
 sun_direction = [0.0, 1.0, 1.0]
 [environment.color]
 type = "TabulatedCSV"
@@ -244,7 +244,7 @@ type = "Rect"
 size = [0.4, 0.4]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
-two_sided = false
+two_sided = true
 
 
 [[instances]]
