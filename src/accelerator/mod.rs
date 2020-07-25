@@ -103,21 +103,32 @@ impl Accelerator {
                 hit_record
             }
             Accelerator::BVH { instances, bvh } => {
-                let possible_hit_instances = bvh.traverse(&r, instances);
+                let mut possible_hit_instances = bvh.traverse(&r, instances);
+                possible_hit_instances.sort_unstable_by(|a, b| {
+                    // let hit0_t1 = a.2;
+                    // let hit1_t1 = b.2;
+                    // let sign = (hit1_t1-hit0_t1).signum();
+                    (a.2).partial_cmp(&b.2).unwrap()
+                });
                 let mut closest_so_far: f32 = t1;
                 debug_assert!(!t1.is_nan());
                 let mut hit_record: Option<HitRecord> = None;
-                for (instance, t0_hit, t1_hit) in possible_hit_instances {
-                    if t1_hit < t0 || t0_hit > t1 {
+                for (instance, t0_aabb_hit, t1_aabb_hit) in possible_hit_instances {
+                    if t1_aabb_hit < t0 || t0_aabb_hit > t1 {
                         // if bounding box hit was outside of hit time bounds
                         continue;
                     }
-                    let t0 = t0.max(t0_hit);
-                    closest_so_far = closest_so_far.min(t1_hit);
+                    if t0_aabb_hit > closest_so_far {
+                        // ignore aabb hit that happened after closest so far
+                        continue;
+                    }
+                    // let t0 = t0.max(t0_aabb_hit);
+
+                    // let t1 = closest_so_far.min(t1_aabb_hit);
+                    // let tmp_hit_record = instance.hit(r, t0, t1);
                     let tmp_hit_record = instance.hit(r, t0, closest_so_far);
                     if let Some(hit) = &tmp_hit_record {
                         closest_so_far = hit.time;
-                        debug_assert!(!closest_so_far.is_nan(), "{:?}", hit);
                         hit_record = tmp_hit_record;
                     } else {
                         continue;

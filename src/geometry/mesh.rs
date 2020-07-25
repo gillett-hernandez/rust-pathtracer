@@ -300,16 +300,29 @@ impl HasBoundingBox for Mesh {
 impl Hittable for Mesh {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let bvh = self.bvh.as_ref().unwrap();
-        let possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
+        let mut possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
+        // sort AABB intersections so that the earliest aabb hit end is first.
+        possible_hit_triangles.sort_unstable_by(|a, b| {
+            // let hit0_t1 = a.2;
+            // let hit1_t1 = b.2;
+            // let sign = (hit1_t1-hit0_t1).signum();
+            (a.2).partial_cmp(&b.2).unwrap()
+        });
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
-        for (tri, t0_hit, t1_hit) in possible_hit_triangles {
-            if t1_hit < t0 || t0_hit > t1 {
+        for (tri, t0_aabb_hit, t1_aabb_hit) in possible_hit_triangles {
+            if t1_aabb_hit < t0 || t0_aabb_hit > t1 {
                 // if bounding box hit was outside of hit time bounds
                 continue;
             }
-            let t0 = t0.max(t0_hit);
-            closest_so_far = closest_so_far.min(t1_hit);
+            if t0_aabb_hit > closest_so_far {
+                // ignore aabb hit that happened after closest so far
+                continue;
+            }
+            // let t0 = t0.max(t0_aabb_hit);
+
+            // let t1 = closest_so_far.min(t1_aabb_hit);
+            // let tmp_hit_record = tri.hit(r, t0, t1);
             let tmp_hit_record = tri.hit(r, t0, closest_so_far);
             if let Some(hit) = &tmp_hit_record {
                 closest_so_far = hit.time;

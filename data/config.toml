@@ -1,4 +1,4 @@
-scene_file = "data/scenes/sun_test.toml"
+scene_file = "data/scenes/tower.toml"
 
 # distant camera
 [[cameras]]
@@ -53,7 +53,7 @@ min_bounces = 8
 max_bounces = 22
 exposure = 1.0
 min_samples = 16
-camera_id = 3
+camera_id = 2
 russian_roulette = true
 only_direct = false
 light_samples = 4
