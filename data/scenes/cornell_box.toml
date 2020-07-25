@@ -1,7 +1,19 @@
-env_sampling_probability = 0.0
+# env_sampling_probability = 0.0
+# [environment]
+# type="Constant"
+# strength = 0.0
+# [environment.color]
+# type = "TabulatedCSV"
+# filename = "data/curves/csv/D65.csv"
+# column = 1
+# interpolation_mode = "Cubic"
+
+env_sampling_probability = 0.7
 [environment]
-type="Constant"
-strength = 0.0
+type="Sun"
+strength = 0.4
+solid_angle = 0.04
+sun_direction = [-1.0, 0.0, 1.0]
 [environment.color]
 type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"
@@ -258,14 +270,14 @@ strength = 5.0
 
 
 
-[[instances]]
-material_identifier = "diffuse_light"
-[instances.aggregate]
-type = "Rect"
-size = [0.4, 0.4]
-origin = [0.0, 0.0, 0.9]
-normal = "Z"
-two_sided = false
+# [[instances]]
+# material_identifier = "diffuse_light"
+# [instances.aggregate]
+# type = "Rect"
+# size = [0.4, 0.4]
+# origin = [0.0, 0.0, 0.9]
+# normal = "Z"
+# two_sided = false
 
 [[instances]]
 material_identifier = "lambertian_white"

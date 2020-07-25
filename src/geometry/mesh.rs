@@ -302,12 +302,12 @@ impl Hittable for Mesh {
         let bvh = self.bvh.as_ref().unwrap();
         let mut possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
         // sort AABB intersections so that the earliest aabb hit end is first.
-        possible_hit_triangles.sort_unstable_by(|a, b| {
-            // let hit0_t1 = a.2;
-            // let hit1_t1 = b.2;
-            // let sign = (hit1_t1-hit0_t1).signum();
-            (a.2).partial_cmp(&b.2).unwrap()
-        });
+        // possible_hit_triangles.sort_unstable_by(|a, b| {
+        //     // let hit0_t1 = a.2;
+        //     // let hit1_t1 = b.2;
+        //     // let sign = (hit1_t1-hit0_t1).signum();
+        //     (a.2).partial_cmp(&b.2).unwrap()
+        // });
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for (tri, t0_aabb_hit, t1_aabb_hit) in possible_hit_triangles {

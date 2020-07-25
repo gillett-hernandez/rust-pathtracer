@@ -44,7 +44,7 @@ impl GenericIntegrator for BDPTIntegrator {
         let start_light_vertex;
         let (light_pick_sample, sample_env) =
             light_pick_sample.choose(env_sampling_probability, true, false);
-        if sample_env {
+        if !sample_env {
             let (light, light_pick_pdf) = self.world.pick_random_light(light_pick_sample).unwrap();
 
             // if we picked a light

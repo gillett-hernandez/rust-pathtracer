@@ -4,5 +4,8 @@ Cargo.lock
 *.exr
 output/*
 .vscode/*
+data/meshes/*
+*.obj
+*.mtl
 
 *.zip
