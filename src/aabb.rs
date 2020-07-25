@@ -35,7 +35,7 @@ impl AABB {
         point.0.ge(min).all() && point.0.le(max).all()
     }
 
-    pub fn hit(&self, r: &Ray, _t0: f32, _t1: f32) -> bool {
+    pub fn hit(&self, r: &Ray, _t0: f32, _t1: f32) -> Option<(f32, f32)> {
         let denom = r.direction.0;
         const ZERO: f32x4 = f32x4::splat(0.0);
 
@@ -47,7 +47,7 @@ impl AABB {
         let tmax = min.max(max);
         // println!("{:?} {:?}", tmin, tmax);
         if tmin.max_element() > tmax.min_element() {
-            return false;
+            return None;
         }
 
         let scaled_t0 = (denom.eq(ZERO)).select(ZERO, f32x4::splat(_t0) / denom.abs());
@@ -56,10 +56,13 @@ impl AABB {
         if tmin.gt(scaled_t1).any() || tmax.lt(scaled_t0).any() {
             // if any of the "earliest" hit times (tmin) exceed the max allowable hit time for that dimension (scaled_t1), a hit cannot have occurred
             // if any of the "latest" hit times (tmax) are smaller than the minimum allowable hit time for that dimension (scaled_t0), a hit cannot have occurred.
-            return false;
+            return None;
         }
 
-        true
+        Some((
+            scaled_t0.replace(3, f32::INFINITY).min_element(),
+            scaled_t1.replace(3, f32::NEG_INFINITY).max_element(),
+        ))
 
         // let tmin: f32x4 = f32x4::splat(t0);
         // let tmax: f32x4 = f32x4::splat(t1);

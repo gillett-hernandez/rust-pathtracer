@@ -303,7 +303,13 @@ impl Hittable for Mesh {
         let possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
-        for tri in possible_hit_triangles {
+        for (tri, t0_hit, t1_hit) in possible_hit_triangles {
+            if t1_hit < t0 || t0_hit > t1 {
+                // if bounding box hit was outside of hit time bounds
+                continue;
+            }
+            let t0 = t0.max(t0_hit);
+            closest_so_far = closest_so_far.min(t1_hit);
             let tmp_hit_record = tri.hit(r, t0, closest_so_far);
             if let Some(hit) = &tmp_hit_record {
                 closest_so_far = hit.time;

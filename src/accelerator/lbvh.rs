@@ -380,12 +380,17 @@ impl BoundingHierarchy for FlatBVH {
     /// let flat_bvh = FlatBVH::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, T: HasBoundingBox>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+    fn traverse<'a, T: HasBoundingBox>(
+        &'a self,
+        ray: &Ray,
+        shapes: &'a [T],
+    ) -> Vec<(&T, f32, f32)> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 
         // The traversal loop should terminate when `max_length` is set as the next node index.
         let max_length = self.len();
+        let (mut t0, mut t1) = (0.0, f32::INFINITY);
 
         // Iterate while the node index is valid.
         while index < max_length {
@@ -394,16 +399,20 @@ impl BoundingHierarchy for FlatBVH {
             if node.entry_index == u32::max_value() {
                 // If the entry_index is MAX_UINT32, then it's a leaf node.
                 let shape = &shapes[node.shape_index as usize];
-                if shape.aabb().hit(ray, 0.0, f32::INFINITY) {
-                    hit_shapes.push(shape);
+                if let Some((t0_hit, t1_hit)) = shape.aabb().hit(ray, t0, t1) {
+                    t0 = t0_hit;
+                    t1 = t1_hit;
+                    hit_shapes.push((shape, t0, t1));
                 }
 
                 // Exit the current node.
                 index = node.exit_index as usize;
-            } else if node.aabb.hit(ray, 0.0, f32::INFINITY) {
+            } else if let Some((t0_hit, t1_hit)) = node.aabb.hit(ray, 0.0, f32::INFINITY) {
                 // If entry_index is not MAX_UINT32 and the AABB test passes, then
                 // proceed to the node in entry_index (which goes down the bvh branch).
                 index = node.entry_index as usize;
+                t0 = t0_hit;
+                t1 = t1_hit;
             } else {
                 // If entry_index is not MAX_UINT32 and the AABB test fails, then
                 // proceed to the node in exit_index (which defines the next untested partition).

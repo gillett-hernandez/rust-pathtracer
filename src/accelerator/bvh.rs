@@ -24,7 +24,11 @@ pub trait BHShape: HasBoundingBox {
 pub trait BoundingHierarchy {
     fn build<Shape: BHShape>(shapes: &mut [Shape]) -> Self;
 
-    fn traverse<'a, Shape: BHShape>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape>;
+    fn traverse<'a, Shape: BHShape>(
+        &'a self,
+        ray: &Ray,
+        shapes: &'a [Shape],
+    ) -> Vec<(&Shape, f32, f32)>;
 
     fn pretty_print(&self) {}
 }
@@ -453,7 +457,9 @@ impl BVHNode {
         nodes: &[BVHNode],
         node_index: usize,
         ray: &Ray,
-        indices: &mut Vec<usize>,
+        t0: f32,
+        t1: f32,
+        indices: &mut Vec<(usize, f32, f32)>,
     ) {
         match nodes[node_index] {
             BVHNode::Node {
@@ -463,15 +469,15 @@ impl BVHNode {
                 child_r_index,
                 ..
             } => {
-                if child_l_aabb.hit(ray, 0.0, f32::INFINITY) {
-                    BVHNode::traverse_recursive(nodes, child_l_index, ray, indices);
+                if let Some((t0, t1)) = child_l_aabb.hit(ray, t0, t1) {
+                    BVHNode::traverse_recursive(nodes, child_l_index, ray, t0, t1, indices);
                 }
-                if child_r_aabb.hit(ray, 0.0, f32::INFINITY) {
-                    BVHNode::traverse_recursive(nodes, child_r_index, ray, indices);
+                if let Some((t0, t1)) = child_r_aabb.hit(ray, t0, t1) {
+                    BVHNode::traverse_recursive(nodes, child_r_index, ray, t0, t1, indices);
                 }
             }
             BVHNode::Leaf { shape_index, .. } => {
-                indices.push(shape_index);
+                indices.push((shape_index, t0, t1));
             }
         }
     }
@@ -514,12 +520,12 @@ impl BVH {
         &'a self,
         ray: &Ray,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<(&Shape, f32, f32)> {
         let mut indices = Vec::new();
-        BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
+        BVHNode::traverse_recursive(&self.nodes, 0, ray, 0.0, f32::INFINITY, &mut indices);
         indices
             .iter()
-            .map(|index| &shapes[*index])
+            .map(|(index, t0, t1)| (&shapes[*index], *t0, *t1))
             .collect::<Vec<_>>()
     }
 
@@ -784,7 +790,7 @@ impl BoundingHierarchy for BVH {
         &'a self,
         ray: &Ray,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<(&Shape, f32, f32)> {
         self.traverse(ray, shapes)
     }
 
