@@ -160,7 +160,7 @@ impl NaiveRenderer {
         }
         println!("");
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-
+        println!("took {}s", elapsed);
         stats.pretty_print(elapsed, settings.threads.unwrap() as usize);
         film
     }
@@ -388,6 +388,7 @@ impl NaiveRenderer {
 
         let elapsed = now.elapsed().as_millis() as f32 / 1000.0;
 
+        println!("took {}s", elapsed);
         preprocess_profile.pretty_print(elapsed, maximum_threads as usize);
         for profile in stats {
             profile.pretty_print(elapsed, maximum_threads as usize);

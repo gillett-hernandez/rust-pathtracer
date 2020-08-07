@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box.toml"
+scene_file = "data/scenes/sun_test.toml"
 
 # distant camera
 [[cameras]]
@@ -53,11 +53,11 @@ min_bounces = 8
 max_bounces = 16
 exposure = 1.0
 min_samples = 32
-camera_id = 1
+camera_id = 3
 russian_roulette = true
 only_direct = false
 light_samples = 4
 camera_samples = 4
 [render_settings.resolution]
-width = 1080
+width = 1920
 height = 1080
