@@ -197,6 +197,48 @@ mod tests {
     }
 
     #[test]
+    fn test_camera_wide_aspect() {
+        let (width, height) = (1920.0, 1080.0);
+        let camera: ProjectiveCamera = ProjectiveCamera::new(
+            Point3::new(-5.0, 0.0, 0.0),
+            Point3::ZERO,
+            Vec3::Z,
+            27.0,
+            width as f32 / height as f32,
+            5.0,
+            0.08,
+            0.0,
+            1.0,
+        );
+        let px = (0.5 * width) as usize;
+        let py = (0.7 * height) as usize;
+        let s = (px as f32) / width + random() / width;
+        let t = (py as f32) / height + random() / height;
+        let r: Ray = camera.get_ray(
+            Sample2D {
+                x: random(),
+                y: random(),
+            },
+            s,
+            t,
+        );
+        println!("camera ray {:?}", r);
+        println!(
+            "camera ray in camera local space {:?}",
+            camera.lens.transform.unwrap().to_local(r)
+        );
+        let maybe_pixel_uv = camera.get_pixel_for_ray(r);
+        println!("s and t are actually {} and {}", s, t);
+        println!("px and py are actually {} and {}", px, py);
+        println!("{:?}", maybe_pixel_uv);
+        if let Some(pixel_uv) = maybe_pixel_uv {
+            let px_c = pixel_uv.0 * width;
+            let py_c = height - pixel_uv.1 * height;
+            println!("{} {}", px_c, py_c);
+        }
+    }
+
+    #[test]
     fn check_camera_position_and_orientation() {
         use crate::hittable::Hittable;
         let camera: ProjectiveCamera = ProjectiveCamera::new(

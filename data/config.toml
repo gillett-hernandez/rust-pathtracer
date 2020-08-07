@@ -47,8 +47,8 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
-integrator = "BDPT"
+filename = "LT"
+integrator = "LT"
 min_bounces = 8
 max_bounces = 16
 exposure = 1.0
