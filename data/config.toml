@@ -31,7 +31,7 @@ vfov = 45.2
 type="SimpleCamera"
 look_from = [-5, 0, 0]
 look_at = [0.0, 0.0, -0.4]
-aperture_size = 0.03
+aperture_size = 0.07
 focal_distance = 5.0
 vfov = 35.2
 

@@ -104,7 +104,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let env_sampling_probability = self.world.get_env_sampling_probability();
 
         let sampled;
-        let mut light_g_term: f32 = 1.0;
+        let light_g_term: f32;
 
         let (light_pick_sample, sample_world) =
             light_pick_sample.choose(env_sampling_probability, true, false);

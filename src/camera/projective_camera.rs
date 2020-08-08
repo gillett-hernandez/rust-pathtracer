@@ -36,10 +36,14 @@ impl ProjectiveCamera {
         let direction = (look_at - look_from).normalized();
         let lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
-        let theta: f32 = vertical_fov * PI / 180.0;
+        let theta: f32 = vertical_fov.to_radians();
         let half_height = (theta / 2.0).tan();
         let half_width = aspect_ratio * half_height;
-        // aspect ratio = half_width / half_height
+        #[cfg(test)]
+        {
+            let aspect_ratio = half_width / half_height;
+            println!("{}", aspect_ratio);
+        }
         let w = -direction;
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
@@ -125,15 +129,24 @@ impl ProjectiveCamera {
 
         let point_on_focal_plane = ray_in_local_space.point_at_parameter(t);
 
-        let (plane_width, plane_height) = (
-            self.focal_distance * self.half_width * 2.0,
-            self.focal_distance * self.half_height * 2.0,
+        let (plane_width, plane_height) = (self.horizontal.norm(), self.vertical.norm());
+
+        #[cfg(test)]
+        println!(
+            "{:?} {} {} {}",
+            point_on_focal_plane,
+            plane_width / 2.0,
+            plane_height / 2.0,
+            plane_width / plane_height
         );
 
         let (u, v) = (
-            (point_on_focal_plane.x() + plane_width / 2.0) / plane_width,
-            (point_on_focal_plane.y() + plane_height / 2.0) / plane_height,
+            point_on_focal_plane.x() / plane_width + 0.5,
+            point_on_focal_plane.y() / plane_height + 0.5,
         );
+
+        #[cfg(test)]
+        println!("{} {}", u, v);
 
         if u < 0.0 || u >= 1.0 || v < 0.0 || v >= 1.0 {
             None
@@ -143,7 +156,7 @@ impl ProjectiveCamera {
     }
     pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
         assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
-        let theta: f32 = self.vfov * PI / 180.0;
+        let theta: f32 = self.vfov.to_radians();
         let half_height = (theta / 2.0).tan();
         let half_width = aspect_ratio * half_height;
         self.lower_left_corner = self.origin
@@ -169,7 +182,7 @@ mod tests {
             Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
             Vec3::Z,
-            27.0,
+            35.2,
             0.6,
             5.0,
             0.08,
@@ -203,15 +216,15 @@ mod tests {
             Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
             Vec3::Z,
-            27.0,
+            35.2,
             width as f32 / height as f32,
             5.0,
             0.08,
             0.0,
             1.0,
         );
-        let px = (0.5 * width) as usize;
-        let py = (0.7 * height) as usize;
+        let px = (0.99 * width) as usize;
+        let py = (0.99 * height) as usize;
         let s = (px as f32) / width + random() / width;
         let t = (py as f32) / height + random() / height;
         let r: Ray = camera.get_ray(
@@ -227,14 +240,14 @@ mod tests {
             "camera ray in camera local space {:?}",
             camera.lens.transform.unwrap().to_local(r)
         );
-        let maybe_pixel_uv = camera.get_pixel_for_ray(r);
         println!("s and t are actually {} and {}", s, t);
         println!("px and py are actually {} and {}", px, py);
-        println!("{:?}", maybe_pixel_uv);
+        let maybe_pixel_uv = camera.get_pixel_for_ray(r);
+        println!("calculated pixel uv is {:?}", maybe_pixel_uv);
         if let Some(pixel_uv) = maybe_pixel_uv {
             let px_c = pixel_uv.0 * width;
             let py_c = height - pixel_uv.1 * height;
-            println!("{} {}", px_c, py_c);
+            println!("calculated pixel is ({}, {})", px_c, py_c);
         }
     }
 
