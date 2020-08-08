@@ -33,7 +33,7 @@ look_from = [-5, 0, 0]
 look_at = [0.0, 0.0, -0.4]
 aperture_size = 0.07
 focal_distance = 5.0
-vfov = 35.2
+vfov = 27.2
 
 # closeup camera
 [[cameras]]
@@ -47,8 +47,8 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "LT"
-integrator = "LT"
+filename = "BDPT"
+integrator = "BDPT"
 min_bounces = 8
 max_bounces = 16
 exposure = 1.0
