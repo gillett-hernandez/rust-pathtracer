@@ -1,5 +1,4 @@
-use crate::aabb::AABB;
-use crate::math::*;
+use crate::*;
 
 use nalgebra;
 use packed_simd::{f32x16, f32x4};
@@ -73,14 +72,6 @@ impl Mul<Ray> for Matrix4x4 {
         }
     }
 }
-
-impl Mul<AABB> for Matrix4x4 {
-    type Output = AABB;
-    fn mul(self, rhs: AABB) -> Self::Output {
-        AABB::new(self * rhs.min, self * rhs.max)
-    }
-}
-
 impl Mul for Matrix4x4 {
     type Output = Matrix4x4;
     fn mul(self, rhs: Matrix4x4) -> Self::Output {
@@ -306,13 +297,6 @@ impl From<nalgebra::Matrix4<f32>> for Matrix4x4 {
 //     }
 // }
 
-// impl Mul<AABB> for Transform3 {
-//     type Output = AABB;
-//     fn mul(self, rhs: AABB) -> Self::Output {
-//         AABB::new(self * rhs.min, self * rhs.max)
-//     }
-// }
-
 impl Mul<Transform3> for Transform3 {
     type Output = Transform3;
     fn mul(self, rhs: Transform3) -> Self::Output {
@@ -343,13 +327,6 @@ impl Mul<Transform3> for Transform3 {
 //             direction: self / rhs.direction,
 //             ..rhs
 //         }
-//     }
-// }
-
-// impl Div<AABB> for Transform3 {
-//     type Output = AABB;
-//     fn div(self, rhs: AABB) -> Self::Output {
-//         AABB::new(self / rhs.min, self / rhs.max)
 //     }
 // }
 

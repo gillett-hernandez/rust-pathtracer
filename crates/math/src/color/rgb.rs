@@ -1,4 +1,4 @@
-use crate::math::Vec3;
+use crate::Vec3;
 use packed_simd::f32x4;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 #[derive(Copy, Clone, Debug)]

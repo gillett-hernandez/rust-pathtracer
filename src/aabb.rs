@@ -1,7 +1,7 @@
 use crate::math::*;
-
-// use approx::relative_eq;
 use packed_simd::f32x4;
+
+use std::ops::Mul;
 
 pub trait HasBoundingBox {
     fn aabb(&self) -> AABB;
@@ -159,6 +159,13 @@ impl AABB {
 impl Default for AABB {
     fn default() -> AABB {
         AABB::empty()
+    }
+}
+
+impl Mul<AABB> for Matrix4x4 {
+    type Output = AABB;
+    fn mul(self, rhs: AABB) -> Self::Output {
+        AABB::new(self * rhs.min, self * rhs.max)
     }
 }
 

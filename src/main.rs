@@ -6,6 +6,8 @@ extern crate image;
 #[macro_use]
 extern crate packed_simd;
 
+pub use math;
+
 pub mod aabb;
 pub mod accelerator;
 pub mod camera;
@@ -16,7 +18,6 @@ pub mod hittable;
 pub mod integrator;
 pub mod material;
 pub mod materials;
-pub mod math;
 pub mod parsing;
 pub mod profile;
 pub mod renderer;

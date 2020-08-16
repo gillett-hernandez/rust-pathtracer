@@ -1,4 +1,4 @@
-use crate::math::random;
+use super::random;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, RngCore};
 

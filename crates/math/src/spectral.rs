@@ -1,6 +1,6 @@
-use crate::math::color::XYZColor;
-use crate::math::misc::gaussian;
-use crate::math::*;
+use crate::color::XYZColor;
+use crate::misc::gaussian;
+use crate::*;
 
 use ordered_float::OrderedFloat;
 use packed_simd::f32x4;

@@ -1,4 +1,4 @@
-use crate::math::{Vec3, PI};
+use super::{Vec3, PI};
 
 pub fn power_heuristic(a: f32, b: f32) -> f32 {
     (a * a) / (a * a + b * b)

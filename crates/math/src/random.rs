@@ -1,4 +1,5 @@
-use crate::math::*;
+use super::sample::{Sample2D, Sample3D};
+use super::{Vec3, PI};
 
 pub fn random() -> f32 {
     rand::random()

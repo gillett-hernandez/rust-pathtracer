@@ -1,4 +1,4 @@
-use crate::math::*;
+use crate::*;
 
 // also known as an orthonormal basis.
 #[derive(Copy, Clone, Debug)]
