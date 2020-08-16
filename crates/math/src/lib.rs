@@ -27,6 +27,8 @@ pub use tangent_frame::TangentFrame;
 pub use transform::*;
 pub use vec::{Axis, Vec3};
 
+pub use packed_simd::f32x4;
+
 pub use std::f32::consts::PI;
 pub use std::f32::INFINITY;
 
@@ -148,9 +150,10 @@ impl Ray {
         self.tmax = tmax;
         self
     }
-    // pub fn at_time(mut self, time: f32) -> Self {
-    //     // self.origin =
-    // }
+    pub fn at_time(mut self, time: f32) -> Self {
+        self.origin = self.point_at_parameter(time);
+        self
+    }
     pub fn point_at_parameter(self, time: f32) -> Point3 {
         self.origin + self.direction * time
     }
