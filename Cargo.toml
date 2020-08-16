@@ -21,6 +21,7 @@ parking_lot = "0.11.0"
 crossbeam = "0.7.3"
 tobj = "2.0.2"
 math = {path = "crates/math"}
+optics = {path = "crates/optics"}
 
 [build-dependencies]
 serde = { version = "1.0.114", features = ["derive"] }
