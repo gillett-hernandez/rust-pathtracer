@@ -1,4 +1,4 @@
-# Rust Pathtracer
+# Kagayaki
 
 ![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/pt.png?raw=true)
 
@@ -75,6 +75,7 @@ That should theoretically cause images to converge faster, though the feature is
 - [x] implement scene parser to reduce compilations even more
 - [x] implement light tracing
 - [x] implement BDPT
+- [ ] basic mediums
 - [ ] refactor bsdf trait methods to reduce duplication
 - [ ] implement real units for radiance and camera importance
 - [ ] research image reconstruction theory and implement proper pixel filtering
