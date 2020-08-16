@@ -326,7 +326,7 @@ pub fn camera_space_to_sphere(ray_in: Ray, sphere_center: f32, sphere_radius: f3
 }
 
 // traces rays from the sensor to the outer pupil
-pub fn evaluate<F>(
+pub fn trace_forward<F>(
     assembly: &LensAssembly,
     zoom: f32,
     input: &Input<Ray>,
@@ -354,13 +354,14 @@ where
         if lens.lens_type == LensType::Aperture {
             match aperture_hook(ray) {
                 (false, true) => {
+                    // not blocked by aperture, but still should return early
                     return Some(Output {
                         ray,
                         tau: intensity,
                     });
                 }
                 (_, _) => {
-                    // blocked by aperture and should return
+                    // blocked by aperture (and so no need to trace more) or should return early
                     return None;
                 }
             }
@@ -409,7 +410,7 @@ where
 }
 
 // evaluate scene to sensor. input ray must be facing away from the camera.
-pub fn evaluate_reverse<F>(
+pub fn trace_reverse<F>(
     assembly: &LensAssembly,
     zoom: f32,
     input: &Input<Ray>,
