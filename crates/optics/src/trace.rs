@@ -442,24 +442,24 @@ where
                 }
             }
         }
-        let r = lens.radius;
+        let r = -lens.radius;
 
         let dist = lens.thickness_at(zoom);
         let res: (Ray, Vec3);
         if lens.anamorphic {
-            res = trace_cylindrical(ray, r, distsum - r, lens.housing_radius).unwrap();
+            res = trace_cylindrical(ray, r, distsum + r, lens.housing_radius).unwrap();
         } else if lens.aspheric > 0 {
             res = trace_aspherical(
                 ray,
                 r,
-                distsum - r,
+                distsum + r,
                 lens.aspheric,
                 lens.correction,
                 lens.housing_radius,
             )
             .unwrap();
         } else {
-            res = trace_spherical(ray, r, distsum - r, lens.housing_radius).unwrap();
+            res = trace_spherical(ray, r, distsum + r, lens.housing_radius).unwrap();
         }
         ray = res.0;
         let normal = res.1;
