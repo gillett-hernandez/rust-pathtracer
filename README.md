@@ -1,26 +1,26 @@
 # Kagayaki
 
-![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/pt.png?raw=true)
-
-The above image was rendered at 1024 spp, with a disk light at 5500K and an environment map emitting light at 2700K.
-
-The colors of the left and right walls are set to have relatively narrow peaks at 420nm(blue) and 640nm(red) respectively. the curves used are at [curves.rs](src/curves.rs). The left sphere is Gold, and the right sphere is Iron. refractive indices and data obtained from https://refractiveindex.info/
-
-
 This is a wavelength aware physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
 
+The following is an image rendered with the BDPT integrator. It was rendered at 128 spp, 2160px by 2160px, supersampled and resized to 1080px by 1080px, with a rectangle light using a provided xenon lamp curve, and an environment map using D65. The colors of the walls use the SPD data from the cornell box website. the spheres are (left to right) lead, copper, gold, iron, platinum, with a dispersive glass sphere in front. data from https://refractiveindex.info/
+
+![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/bdpt.png?raw=true)
+
 Most, if not all of the integrators use importance sampling and MIS, and they trace using single wavelength sampling
 
-It supports the following integrators:
+Supported integrators:
+
 * [Path Tracing](src/integrator/pt.rs), described on wikipedia [here](https://en.wikipedia.org/wiki/Path_tracing)
 
-Work is in progress on other branches for the following integrators:
-* [Light tracing](src/integrator/lt.rs), also known as particle tracing, where light is emitted from light sources in the scene and traced until it hits the camera
+Experimental integrators:
+
+* [Light tracing](src/integrator/lt.rs), also known as particle tracing, where light is emitted from light sources in the scene and traced until it hits the camera.
 * [Bidirectional Path Tracing](src/integrator/bdpt/mod.rs), described in PBRT [here](http://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing.html)
 
 In addition, much of the code emphasizes matching reality as closely as possible, including the following features:
+
 * Output format:
   * The renderer outputs an .exr file in Linear RGB space, and a .png file in sRGB space.
     * custom exposure values for the sRGB tonemapper are supported. the default behavior is to set the brightest pixel on the screen to white.
@@ -37,6 +37,7 @@ In addition, much of the code emphasizes matching reality as closely as possible
 
 
 However, there are some concepts that I'm still unfamiliar with or that I'm working on that aren't properly implemented yet. that includes the following:
+
 * Image reconstruction theory and pixel filtering. this seems to be very important for Light tracing, but less important for normal Path tracing.
 * Real physical units for Radiance and for Camera importance.
 
@@ -51,38 +52,37 @@ to change render settings, modify the provided file at data/config.toml
 
 it comes preloaded with many options and most are commented out.
 
-
 ## Experimental implementations:
 
 The World generally is able to represent the camera's lens in the scene, and allow for light to intersect the camera lens. While typically this is done with one camera at a time, for the LT and BDPT integrators I've taken the liberty of trying to implement it so that multiple cameras can be in the scene at once and each can potentially be sampled randomly, and if light happens to intersect *any* camera, the contribution will be recorded to that camera's film. This is batched so that all the films that use the Light Tracing integrator will all have their cameras in the scene at once, and the same for Bidirectional Path Tracing.
 
 That should theoretically cause images to converge faster, though the feature is still a WIP and may be changed or deprecated in the future. Renders using the Path tracing integrator will be unaffected, and their cameras will not physically exist in the World.
 
-
 ## To Do: an incomplete list
-- [x] implement basic config file to reduce unnecessary recompilations. Done, at [config.rs](src/config.rs), data files at [data/config.toml](data/config.toml)
-- [x] add simple random walk abstraction. Done, at [integrator/bdpt/helpers.rs](src/integrator/bdpt/helpers.rs)
-- [x] implement glossy and transmissive bsdfs. Done, implemented GGX, at [materials/ggx.rs](src/materials/ggx.rs)
-- [x] add common color spectral reflectance functions. Done, implemented at [curves.rs](src/curves.rs)
-- [x] implement correct XYZ to sRGB tonemapping. Done, at [tonemap.rs](src/tonemap.rs)
-- [x] implement parsing CSV files as curves and using them as ior and kappa values. Done, at [parsing.rs](src/parsing.rs)
-- [x] implement instances. Somewhat done, still more to do. at [geometry/mod.rs] and [math/transform.rs](src/math/transform.rs)
-- [x] implement basic accelerator. Done, at [accelerator.rs](src/accelerator.rs)
-- [x] implement environment sampling. Somewhat done, still more to do. at [world.rs](src/world.rs)
-- [x] implement light emission sampling to generate rays from lights. Done, part of the material trait at [material.rs](src/material.rs)
-- [x] implement BVH
-- [x] implement spectral power distribution importance sampling. requires computing the CDF of curves.
-- [x] implement scene parser to reduce compilations even more
-- [x] implement light tracing
-- [x] implement BDPT
-- [ ] basic mediums
-- [ ] refactor bsdf trait methods to reduce duplication
-- [ ] implement real units for radiance and camera importance
-- [ ] research image reconstruction theory and implement proper pixel filtering
 
-## Credits:
+* [x] implement basic config file to reduce unnecessary recompilations. Done, at [config.rs](src/config.rs), data files at [data/config.toml](data/config.toml)
+* [x] add simple random walk abstraction. Done, at [integrator/bdpt/helpers.rs](src/integrator/bdpt/helpers.rs)
+* [x] implement glossy and transmissive bsdfs. Done, implemented GGX, at [materials/ggx.rs](src/materials/ggx.rs)
+* [x] add common color spectral reflectance functions. Done, implemented at [curves.rs](src/curves.rs)
+* [x] implement correct XYZ to sRGB tonemapping. Done, at [tonemap.rs](src/tonemap.rs)
+* [x] implement parsing CSV files as curves and using them as ior and kappa values. Done, at [parsing.rs](src/parsing.rs)
+* [x] implement instances. Somewhat done, still more to do. at [geometry/mod.rs] and [math/transform.rs](src/math/transform.rs)
+* [x] implement basic accelerator. Done, at [accelerator.rs](src/accelerator.rs)
+* [x] implement environment sampling. Somewhat done, still more to do. at [world.rs](src/world.rs)
+* [x] implement light emission sampling to generate rays from lights. Done, part of the material trait at [material.rs](src/material.rs)
+* [x] implement BVH
+* [x] implement spectral power distribution importance sampling. requires computing the CDF of curves.
+* [x] implement scene parser to reduce compilations even more
+* [x] implement light tracing
+* [x] implement BDPT
+* [ ] basic mediums
+* [ ] refactor bsdf trait methods to reduce duplication
+* [ ] implement real units for radiance and camera importance
+* [ ] research image reconstruction theory and implement proper pixel filtering
 
-Thanks to Nova, for helping me figure out implementation details and generally helping me learn rust.
+## Credits
+
+Thanks to Nova, for helping me figure out some implementation details and generally helping me learn rust.
 
 I am referencing [this](https://rendering-memo.blogspot.com/2016/03/bidirectional-path-tracing-8-combine.html) blog post and code while working on the BDPT integrator, so thanks to the author.
 
