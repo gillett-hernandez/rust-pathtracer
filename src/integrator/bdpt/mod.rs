@@ -7,7 +7,6 @@ use crate::config::RenderSettings;
 use crate::hittable::Hittable;
 use crate::integrator::utils::*;
 use crate::integrator::*;
-use crate::material::Material;
 use crate::materials::*;
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;

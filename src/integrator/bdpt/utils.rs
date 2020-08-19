@@ -1,8 +1,7 @@
 // use crate::config::Settings;
 // use crate::camera::*;
 use crate::integrator::utils::*;
-use crate::material::Material;
-use crate::materials::MaterialId;
+use crate::materials::{Material, MaterialId};
 use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;

@@ -1,5 +1,5 @@
 use crate::hittable::HitRecord;
-use crate::material::Material;
+use crate::materials::Material;
 use crate::math::*;
 use crate::texture::TexStack;
 

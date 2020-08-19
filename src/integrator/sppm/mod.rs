@@ -1,8 +1,7 @@
 use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::*;
 use crate::integrator::*;
-use crate::material::Material;
-use crate::materials::MaterialId;
+use crate::materials::{Material, MaterialId};
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::world::World;
