@@ -2,7 +2,7 @@ use crate::lens_assembly::*;
 use crate::lens_interface::*;
 
 use math::*;
-use rand::prelude::*;
+// use rand::prelude::*;
 
 pub fn spectrum_cauchy_from_abbe_num(nd: f32, vd: f32) -> (f32, f32) {
     if vd == 0.0 {

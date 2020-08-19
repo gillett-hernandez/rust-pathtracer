@@ -59,7 +59,7 @@ impl LensInterface {
             .next()
             .ok_or("ran out of tokens at radius")?
             .parse::<f32>()
-            .map_err(|e| "err parsing float at radius")?;
+            .map_err(|_e| "err parsing float at radius")?;
         let thickness_token: &str = tokens
             .next()
             .ok_or("ran out of tokens at thickness token")?;
@@ -68,17 +68,17 @@ impl LensInterface {
             .next()
             .unwrap()
             .parse::<f32>()
-            .map_err(|e| "err parsing float at thickness short")?;
+            .map_err(|_e| "err parsing float at thickness short")?;
         let thickness_mid = match thickness_iterator.next() {
             Some(token) => token
                 .parse::<f32>()
-                .map_err(|e| "err parsing float at thickness mid")?,
+                .map_err(|_e| "err parsing float at thickness mid")?,
             None => thickness_short,
         };
         let thickness_long = match thickness_iterator.next() {
             Some(token) => token
                 .parse::<f32>()
-                .map_err(|e| "err parsing float at thickness long")?,
+                .map_err(|_e| "err parsing float at thickness long")?,
             None => thickness_short,
         };
         let maybe_anamorphic_or_lens = tokens.next().ok_or("ran out of tokens at anamorphic")?;
@@ -99,15 +99,15 @@ impl LensInterface {
             (Some(token1), Some(token2)) => {
                 ior = token1
                     .parse::<f32>()
-                    .map_err(|e| "err parsing float at ior")?;
+                    .map_err(|_e| "err parsing float at ior")?;
                 vno = token2
                     .parse::<f32>()
-                    .map_err(|e| "err parsing float at vno")?;
+                    .map_err(|_e| "err parsing float at vno")?;
                 housing_radius = tokens
                     .next()
                     .ok_or("ran out of tokens at housing radius branch 1")?
                     .parse::<f32>()
-                    .map_err(|e| "err parsing float at housing radius branch 1")?;
+                    .map_err(|_e| "err parsing float at housing radius branch 1")?;
                 let _aspheric = tokens.next();
             }
             (Some(token1), None) => {
@@ -122,12 +122,12 @@ impl LensInterface {
                 };
                 housing_radius = token1
                     .parse::<f32>()
-                    .map_err(|e| "error parsing float at housing radius branch 2")?;
+                    .map_err(|_e| "error parsing float at housing radius branch 2")?;
             }
             (None, None) => {
                 return Err("ran_out_of_tokens");
             }
-            (None, Some(token1)) => {
+            (None, Some(_)) => {
                 return Err("what the fuck");
             }
         }
