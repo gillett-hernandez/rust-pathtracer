@@ -13,7 +13,7 @@ pub trait Material: Send + Sync {
     fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
         SingleEnergy::new(0.0)
     }
-    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+    fn scatter_pdf(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         0.0.into()
     }
     fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Option<Vec3> {
@@ -53,7 +53,6 @@ pub trait Material: Send + Sync {
         None
     }
 }
-
 
 mod diffuse_light;
 mod ggx;
@@ -134,14 +133,14 @@ impl MaterialEnum {
 }
 
 impl Material for MaterialEnum {
-    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+    fn scatter_pdf(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         debug_assert!(wi.0.is_finite().all());
         debug_assert!(wo.0.is_finite().all());
         match self {
-            MaterialEnum::GGX(inner) => inner.value(hit, wi, wo),
-            MaterialEnum::Lambertian(inner) => inner.value(hit, wi, wo),
-            MaterialEnum::SharpLight(inner) => inner.value(hit, wi, wo),
-            MaterialEnum::DiffuseLight(inner) => inner.value(hit, wi, wo),
+            MaterialEnum::GGX(inner) => inner.scatter_pdf(hit, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.scatter_pdf(hit, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.scatter_pdf(hit, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.scatter_pdf(hit, wi, wo),
         }
     }
     fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Option<Vec3> {

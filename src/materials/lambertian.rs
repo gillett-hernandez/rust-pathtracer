@@ -16,7 +16,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn value(&self, _hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+    fn scatter_pdf(&self, _hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         let cosine = wo.z();
         if cosine * wi.z() > 0.0 {
             (cosine / PI).into()

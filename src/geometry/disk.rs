@@ -92,7 +92,7 @@ impl Hittable for Disk {
             (direction.normalized(), pdf)
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let cos_i = normal * direction.normalized();
         if !self.two_sided {

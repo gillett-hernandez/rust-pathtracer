@@ -293,7 +293,7 @@ impl GenericIntegrator for SPPMIntegrator {
 
                 let hit: HitRecord = (*vertex_in_scene).into();
                 let f = material.f(&hit, wi, wo);
-                let pdf = material.value(&hit, wi, wo);
+                let pdf = material.scatter_pdf(&hit, wi, wo);
                 if pdf.0 == 0.0 {
                     continue;
                 }

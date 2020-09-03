@@ -99,16 +99,16 @@ impl Hittable for Aggregate {
         debug_assert!((triplet.2).0.is_finite());
         triplet
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         debug_assert!(normal.0.is_finite().all());
         debug_assert!(from.0.is_finite().all());
         debug_assert!(to.0.is_finite().all());
         let pdf = match self {
-            Aggregate::Sphere(inner) => inner.pdf(normal, from, to),
-            Aggregate::Disk(inner) => inner.pdf(normal, from, to),
-            Aggregate::AARect(inner) => inner.pdf(normal, from, to),
-            Aggregate::Mesh(inner) => inner.pdf(normal, from, to),
-            Aggregate::Triangle(inner) => inner.pdf(normal, from, to),
+            Aggregate::Sphere(inner) => inner.psa_pdf(normal, from, to),
+            Aggregate::Disk(inner) => inner.psa_pdf(normal, from, to),
+            Aggregate::AARect(inner) => inner.psa_pdf(normal, from, to),
+            Aggregate::Mesh(inner) => inner.psa_pdf(normal, from, to),
+            Aggregate::Triangle(inner) => inner.psa_pdf(normal, from, to),
         };
         debug_assert!(
             pdf.0.is_finite(),

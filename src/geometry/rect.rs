@@ -136,7 +136,7 @@ impl Hittable for AARect {
             (direction.normalized(), pdf)
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let cos_i = normal * direction.normalized();
         if !self.two_sided {
@@ -147,7 +147,7 @@ impl Hittable for AARect {
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
         // TODO: affirm that it's fine to return 0.0 when not two sided.
-        
+
         let denominator = cos_i.abs() * area;
         if denominator == 0.0 {
             0.0.into()

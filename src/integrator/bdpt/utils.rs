@@ -490,14 +490,14 @@ where
             //     llv_local_light_to_eye.z().abs(),
             // );
             llv_forward_pdf = hit_material
-                .value(
+                .scatter_pdf(
                     &llv.into(),
                     llv_frame.to_local(&wi).normalized(),
                     llv_local_light_to_eye,
                 )
                 .0;
             llv_backward_pdf = hit_material
-                .value(
+                .scatter_pdf(
                     &llv.into(),
                     llv_local_light_to_eye,
                     llv_frame.to_local(&wi).normalized(),
@@ -554,10 +554,10 @@ where
             //     llv_local_light_to_eye.z().abs(),
             // );
             lev_forward_pdf = hit_material
-                .value(&lev.into(), llv_local_wi, llv_local_light_to_eye)
+                .scatter_pdf(&lev.into(), llv_local_wi, llv_local_light_to_eye)
                 .0;
             lev_backward_pdf = hit_material
-                .value(&lev.into(), llv_local_light_to_eye, llv_local_wi)
+                .scatter_pdf(&lev.into(), llv_local_light_to_eye, llv_local_wi)
                 .0;
         } else {
             // t must be 1

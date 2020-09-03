@@ -212,7 +212,7 @@ pub fn random_walk(
                 // if emission.0 > 0.0 {
 
                 // }
-                let pdf = material.value(&hit, wi, wo);
+                let pdf = material.scatter_pdf(&hit, wi, wo);
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.0 < 0.00000001 || pdf.is_nan() {
                     break;
@@ -231,7 +231,7 @@ pub fn random_walk(
 
                 // consider handling delta distributions differently here, if deltas are ever added.
                 // eval pdf in reverse direction
-                vertex.pdf_backward = rr_continue_prob * material.value(&hit, wo, wi).0 / cos_o;
+                vertex.pdf_backward = rr_continue_prob * material.scatter_pdf(&hit, wo, wi).0 / cos_o;
 
                 debug_assert!(
                     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),

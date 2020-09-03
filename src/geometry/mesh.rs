@@ -205,7 +205,7 @@ impl Hittable for MeshTriangleRef {
     }
 
     #[allow(unused)]
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         0.0.into()
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
@@ -339,7 +339,7 @@ impl Hittable for Mesh {
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         (Point3::ORIGIN, Vec3::ZERO, 0.0.into())
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         0.0.into()
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {

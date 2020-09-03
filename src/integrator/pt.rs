@@ -62,7 +62,7 @@ impl PathTracingIntegrator {
             //     continue;
             // }
 
-            let pdf = light.pdf(hit.normal, hit.point, point_on_light);
+            let pdf = light.psa_pdf(hit.normal, hit.point, point_on_light);
             let light_pdf = pdf * light_pick_pdf; // / light_vertex_wi.z().abs();
             if light_pdf.0 == 0.0 {
                 // println!("light pdf was 0");
@@ -79,7 +79,8 @@ impl PathTracingIntegrator {
 
             profile.shadow_rays += 1;
             if veach_v(&self.world, point_on_light, hit.point) {
-                let scatter_pdf_for_light_ray = material.value(&hit, wi, local_light_direction);
+                let scatter_pdf_for_light_ray =
+                    material.scatter_pdf(&hit, wi, local_light_direction);
                 let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
 
                 debug_assert!(emission.0 >= 0.0);
@@ -121,7 +122,7 @@ impl PathTracingIntegrator {
         let local_wo = frame.to_local(&direction);
 
         let reflectance = material.f(&hit, wi, local_wo);
-        let scatter_pdf_for_light_ray = material.value(&hit, wi, local_wo);
+        let scatter_pdf_for_light_ray = material.scatter_pdf(&hit, wi, local_wo);
 
         profile.shadow_rays += 1;
         if let Some(light_hit) = self
@@ -145,7 +146,7 @@ impl PathTracingIntegrator {
             let emission = material.emission(&light_hit, light_wi, None);
             if emission.0 > 0.0 {
                 let light = self.world.get_primitive(light_hit.instance_id);
-                let pdf = light.pdf(hit.normal, hit.point, point_on_light);
+                let pdf = light.psa_pdf(hit.normal, hit.point, point_on_light);
 
                 if pdf.0 == 0.0 {
                     return SingleEnergy::ZERO;
@@ -302,8 +303,11 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         } else {
                             let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // // println!("{:?}", hit);
-                            let pdf =
-                                hit_primitive.pdf(prev_vertex.normal, prev_vertex.point, hit.point);
+                            let pdf = hit_primitive.psa_pdf(
+                                prev_vertex.normal,
+                                prev_vertex.point,
+                                hit.point,
+                            );
                             let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
                             debug_assert!(
                                 !pdf.is_nan() && !weight.is_nan(),
@@ -338,7 +342,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         let hit_primitive = self.world.get_primitive(hit.instance_id);
                         // // println!("{:?}", hit);
                         let pdf =
-                            hit_primitive.pdf(prev_vertex.normal, prev_vertex.point, hit.point);
+                            hit_primitive.psa_pdf(prev_vertex.normal, prev_vertex.point, hit.point);
                         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
                         debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
                         sum.energy += vertex.throughput * emission * weight;

@@ -50,7 +50,7 @@ fn evaluate_direct_importance(
         // println!("hit {:?}", &hit);
         profile.shadow_rays += 1;
         if veach_v(&world, point_on_lens, hit.point) {
-            let scatter_pdf_into_camera = material.value(&hit, wi, camera_wo);
+            let scatter_pdf_into_camera = material.scatter_pdf(&hit, wi, camera_wo);
             let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
 
             // correctly connected.
@@ -216,7 +216,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                             // let hit_primitive = self.world.get_primitive(hit.instance_id);
                             // println!("{:?}", ray.origin - hit.point);
 
-                            let pdf = camera_surface.pdf(hit.normal, ray.origin, hit.point);
+                            let pdf = camera_surface.psa_pdf(hit.normal, ray.origin, hit.point);
                             let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
                             debug_assert!(
                                 !pdf.is_nan() && !weight.is_nan(),
@@ -259,7 +259,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 }
 
                 if let Some(wo) = maybe_wo {
-                    let pdf = material.value(&hit, wi, wo);
+                    let pdf = material.scatter_pdf(&hit, wi, wo);
                     debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                     if pdf.0 < 0.00000001 || pdf.is_nan() {
                         break;

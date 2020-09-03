@@ -154,7 +154,7 @@ impl Hittable for Instance {
             self.aggregate.sample_surface(s)
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let (normal, from, to) = if let Some(transform) = self.transform {
             (
                 transform.to_world(normal).normalized(),
@@ -164,7 +164,7 @@ impl Hittable for Instance {
         } else {
             (normal, from, to)
         };
-        self.aggregate.pdf(normal, from, to)
+        self.aggregate.psa_pdf(normal, from, to)
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {

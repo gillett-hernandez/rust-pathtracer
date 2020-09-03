@@ -367,7 +367,7 @@ impl GGX {
 }
 
 impl Material for GGX {
-    fn value(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+    fn scatter_pdf(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
         self.eval_pdf(hit.lambda, wi, wo, hit.transport_mode).1
     }
     fn generate(&self, hit: &HitRecord, mut sample: Sample2D, wi: Vec3) -> Option<Vec3> {
@@ -471,12 +471,12 @@ mod tests {
             let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), *wi);
             if let Some(wo) = maybe_wo {
                 let orig_f = ggx_glass.f(&fake_hit_record, *wi, wo);
-                let orig_pdf = ggx_glass.value(&fake_hit_record, *wi, wo);
+                let orig_pdf = ggx_glass.scatter_pdf(&fake_hit_record, *wi, wo);
 
                 // check swapping wi and wo
                 let (wi, wo) = (wo, wi);
                 let sampled_f = ggx_glass.f(&fake_hit_record, wi, *wo);
-                let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, *wo);
+                let sampled_pdf = ggx_glass.scatter_pdf(&fake_hit_record, wi, *wo);
                 assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 assert!(sampled_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
@@ -490,10 +490,10 @@ mod tests {
         let wi = Vec3::new(0.9709351, 0.18724124, 0.14908342);
         let wo = Vec3::new(-0.008856451, 0.6295874, -0.7768792);
         let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
-        let orig_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+        let orig_pdf = ggx_glass.scatter_pdf(&fake_hit_record, wi, wo);
         let (wi, wo) = (wo, wi);
         let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
-        let sampled_pdf = ggx_glass.value(&fake_hit_record, wi, wo);
+        let sampled_pdf = ggx_glass.scatter_pdf(&fake_hit_record, wi, wo);
         assert!(
             sampled_f.0 >= 0.0,
             "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",

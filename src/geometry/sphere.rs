@@ -107,7 +107,7 @@ impl Hittable for Sphere {
             (direction.normalized(), pdf)
         }
     }
-    fn pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
         let pdf = distance_squared
