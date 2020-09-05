@@ -154,7 +154,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             // sampled = (tmp_sampled.0, tmp_sampled.1, tmp_sampled.2);
         };
         profile.light_rays += 1;
-        let mut ray = sampled.0;
+        let light_ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
         if radiance.0 == 0.0 {
@@ -163,139 +163,142 @@ impl GenericIntegrator for LightTracingIntegrator {
         let light_pdf = sampled.2;
         let lambda_pdf = sampled.3;
 
-        // let mut beta = SingleEnergy::ONE;
-        // let mut beta = radiance / (sampled.2).0;
-        let mut beta = radiance;
-        let mut beta_pdf = PDF::from(1.0);
-        // camera_vertex.lambda = lambda;
-
-        let mut last_bsdf_pdf = PDF::from(0.0);
         // light loop here
-        for bounce_count in 0..self.max_bounces {
-            profile.bounce_rays += 1;
-            if let Some(mut hit) = self.world.hit(ray, INTERSECTION_TIME_OFFSET, INFINITY) {
-                // hit some bsdf surface
-                // debug_assert!(hit.point.0.is_finite().all(), "ray {:?}, {:?}", ray, hit);
-                // println!("whatever1");
-                hit.lambda = lambda;
-                hit.transport_mode = TransportMode::Radiance;
+        let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
-                debug_assert!(lambda > 0.0);
-                let frame = TangentFrame::from_normal(hit.normal);
-                let wi = frame.to_local(&-ray.direction).normalized();
-                // println!("{:?}. wi {:?} ", hit, wi);
+        path.push(Vertex::new(
+            VertexType::Camera,
+            light_ray.time,
+            lambda,
+            Vec3::ZERO,
+            light_ray.origin,
+            light_ray.direction,
+            (0.0, 0.0),
+            MaterialId::Camera(0),
+            0,
+            SingleEnergy::ONE,
+            light_pdf.0,
+            0.0,
+            light_g_term,
+        ));
+        let _ = random_walk(
+            light_ray,
+            lambda,
+            self.max_bounces,
+            radiance * light_pdf.0 / lambda_pdf.0,
+            TransportMode::Radiance,
+            sampler,
+            &self.world,
+            &mut path,
+            0,
+            &mut profile,
+        );
 
-                if bounce_count == 0 {
-                    // include first P_A term correctly
-                    beta.0 *= light_pdf.0 / lambda_pdf.0 * light_g_term * wi.z()
-                        / (hit.point - ray.origin).norm_squared();
-                }
+        // let mut sum = ;
+        let mut multiplier = 1.0;
 
-                let material = self.world.get_material(hit.material);
+        for (index, vertex) in path.iter().enumerate() {
+            if index == 0 {
+                continue;
+            }
+            let prev_vertex = path[index - 1];
+            if index == 1 {
+                multiplier =
+                    vertex.local_wi.z() / (vertex.point - prev_vertex.point).norm_squared();
+            }
+            let beta = vertex.throughput * multiplier;
 
-                if let MaterialId::Camera(camera_id) = hit.material {
-                    // consider the case when the camera is hit directly
-                    // print!("checking camera id {} due to hit {:?} ", camera_id, hit);
-                    let camera = self.world.get_camera(camera_id as usize);
-                    // if we hit it, then it has to have a surface
-                    let camera_surface = camera.get_surface().unwrap();
-
-                    let backwards_ray = Ray::new(hit.point, -ray.direction);
-                    let pixel_uv = camera.get_pixel_for_ray(backwards_ray);
-                    // println!("pixel uv for ray {:?} was {:?}", ray, pixel_uv);
-                    if let Some(uv) = pixel_uv {
-                        if last_bsdf_pdf.0 <= 0.0 || self.camera_samples == 0 {
-                            // not dividing by pdf because it was already handled in the prior iteration loop.
-                            let energy = beta;
-                            debug_assert!(energy.0.is_finite());
-                            let sw = SingleWavelength::new(lambda, energy);
-                            let ret = (Sample::LightSample(sw, uv), camera_id);
-                            // println!("adding camera sample to splatting list");
-                            samples.push(ret);
-                        } else {
-                            // let hit_primitive = self.world.get_primitive(hit.instance_id);
-                            // println!("{:?}", ray.origin - hit.point);
-
-                            let pdf = camera_surface.psa_pdf(hit.normal, ray.origin, hit.point);
-                            let weight = power_heuristic(last_bsdf_pdf.0, pdf.0);
-                            debug_assert!(
-                                !pdf.is_nan() && !weight.is_nan(),
-                                "{:?}, {:?}, {}",
-                                last_bsdf_pdf,
-                                pdf,
-                                weight
-                            );
-                            // not dividing by pdf because it was already handled in the prior iteration loop.
-                            let energy = beta * weight;
-                            debug_assert!(energy.0.is_finite());
-                            let sw = SingleWavelength::new(lambda, energy);
-                            let ret = (Sample::LightSample(sw, uv), camera_id);
-                            // println!("adding camera sample to splatting list");
-                            samples.push(ret);
-                        }
-                    }
-                }
-
-                // // wo is generated in tangent space.
-                let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
-
-                // attempt to connect to camera
-                for _ in 0..self.camera_samples {
-                    let camera_pick = sampler.draw_1d();
-                    // evaluate_direct_importance(&self.world, camera_pick, &mut samples);
-                    evaluate_direct_importance(
-                        &self.world,
-                        camera_pick,
-                        sampler.draw_2d(),
-                        lambda,
-                        beta,
-                        material,
-                        wi,
-                        &hit,
-                        &frame,
-                        &mut samples,
-                        &mut profile,
-                    );
-                }
-
-                if let Some(wo) = maybe_wo {
-                    let pdf = material.scatter_pdf(&hit, wi, wo);
-                    debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
-                    if pdf.0 < 0.00000001 || pdf.is_nan() {
-                        break;
-                    }
-                    if self.russian_roulette {
-                        // let attenuation = Vec3::from(beta).norm();
-                        let attenuation = beta.0;
-                        if attenuation < 1.0 && 0.001 < attenuation {
-                            if sampler.draw_1d().x > attenuation {
-                                break;
-                            }
-
-                            beta = beta / attenuation;
-                            debug_assert!(!beta.0.is_nan(), "{}", attenuation);
-                        }
-                    }
-                    let cos_i = wo.z();
-
-                    let f = material.f(&hit, wi, wo);
-                    beta *= f * cos_i.abs() / pdf.0;
-                    // beta *= f * wi.z() * cos_i.abs() / pdf;
-                    // beta *= f / pdf;
-                    beta_pdf = PDF::from(beta_pdf.0 * pdf.0 * wi.z() * cos_i.abs());
-                    debug_assert!(!beta.0.is_nan(), "{:?} {} {:?}", f, cos_i, pdf);
-                    last_bsdf_pdf = pdf;
-
-                    // add normal to avoid self intersection
-                    // also convert wo back to world space when spawning the new ray
-                    // println!("whatever!!");
-                    ray = Ray::new(
-                        hit.point
-                            + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
-                        frame.to_world(&wo).normalized(),
-                    );
+            // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
+            if let VertexType::LightSource(light_source) = vertex.vertex_type {
+                if light_source == LightSourceType::Environment {
+                    // let wo = -vertex.local_wi;
+                    // let uv = direction_to_uv(wo);
+                    // let emission = self.world.environment.emission(uv, lambda);
+                    // sum.energy += emission * beta;
                 } else {
-                    break;
+                    // let hit = HitRecord::from(*vertex);
+                    // let frame = TangentFrame::from_normal(hit.normal);
+                    // let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
+                    // let maybe_dir_to_next = path
+                    //     .get(index + 1)
+                    //     .map(|v| (v.point - vertex.point).normalized());
+                    // let wi = frame.to_local(&dir_to_prev);
+                    // let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
+                    // let material = self.world.get_material(vertex.material_id);
+
+                    // let emission = material.emission(&hit, wi, wo);
+
+                    // if emission.0 > 0.0 {
+                    //     // this will likely never get triggered, since hitting a light source is handled in the above branch
+                    //     if prev_vertex.pdf_forward <= 0.0 || self.camera_samples == 0 {
+                    //         sum.energy += beta * emission;
+                    //         debug_assert!(!sum.energy.is_nan());
+                    //     } else {
+                    //         let hit_primitive = self.world.get_primitive(hit.instance_id);
+                    //         // // println!("{:?}", hit);
+                    //         let pdf = hit_primitive.psa_pdf(
+                    //             prev_vertex.normal,
+                    //             prev_vertex.point,
+                    //             hit.point,
+                    //         );
+                    //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                    //         debug_assert!(
+                    //             !pdf.is_nan() && !weight.is_nan(),
+                    //             "{:?}, {}",
+                    //             pdf,
+                    //             weight
+                    //         );
+                    //         sum.energy += beta * emission * weight;
+                    //         debug_assert!(!sum.energy.is_nan());
+                    //     }
+                    // }
+                }
+            } else {
+                let hit = HitRecord::from(*vertex);
+                let frame = TangentFrame::from_normal(hit.normal);
+                let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
+                let maybe_dir_to_next = path
+                    .get(index + 1)
+                    .map(|v| (v.point - vertex.point).normalized());
+                let wi = frame.to_local(&dir_to_prev);
+                let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
+                let material = self.world.get_material(vertex.material_id);
+
+                // let emission = material.emission(&hit, wi, wo);
+
+                // if emission.0 > 0.0 {
+                //     // this will likely never get triggered, since hitting a light source is handled in the above branch
+                //     if prev_vertex.pdf_forward <= 0.0 || self.camera_samples == 0 {
+                //         sum.energy += vertex.throughput * emission;
+                //         debug_assert!(!sum.energy.is_nan());
+                //     } else {
+                //         let hit_primitive = self.world.get_primitive(hit.instance_id);
+                //         // // println!("{:?}", hit);
+                //         let pdf =
+                //             hit_primitive.psa_pdf(prev_vertex.normal, prev_vertex.point, hit.point);
+                //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                //         debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                //         sum.energy += vertex.throughput * emission * weight;
+                //         debug_assert!(!sum.energy.is_nan());
+                //     }
+                // }
+
+                if self.camera_samples > 0 {
+                    for _ in 0..self.camera_samples {
+                        evaluate_direct_importance(
+                            &self.world,
+                            sampler.draw_1d(),
+                            sampler.draw_2d(),
+                            vertex.lambda,
+                            beta,
+                            material,
+                            wi,
+                            &hit,
+                            &frame,
+                            &mut samples,
+                            &mut profile,
+                        );
+                    }
                 }
             }
         }
