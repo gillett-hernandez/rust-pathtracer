@@ -46,6 +46,12 @@ impl Point3 {
     }
 }
 
+impl Default for Point3 {
+    fn default() -> Self {
+        Point3::ORIGIN
+    }
+}
+
 impl Add<Vec3> for Point3 {
     type Output = Point3;
     fn add(self, other: Vec3) -> Point3 {

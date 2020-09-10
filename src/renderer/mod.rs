@@ -1,8 +1,10 @@
 extern crate pbr;
 
 mod film;
+mod gpu_style;
 
 pub use film::Film;
+pub use gpu_style::GPUStyleRenderer;
 
 use crate::camera::{Camera, CameraId};
 use crate::config::Config;

@@ -13,7 +13,7 @@ pub enum Axis {
     Z,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Vec3(pub f32x4);
 
 impl Vec3 {

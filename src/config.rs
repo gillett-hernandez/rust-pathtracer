@@ -57,6 +57,7 @@ pub struct Config {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub scene_file: String,
     pub cameras: Vec<CameraSettings>,
+    pub renderer: String,
     pub render_settings: Vec<RenderSettings>,
 }
 

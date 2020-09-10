@@ -28,7 +28,7 @@ use camera::*;
 use config::*;
 use math::*;
 use parsing::*;
-use renderer::{NaiveRenderer, Renderer};
+use renderer::{GPUStyleRenderer, NaiveRenderer, Renderer};
 use world::*;
 
 pub const NORMAL_OFFSET: f32 = 0.00001;
@@ -42,6 +42,14 @@ pub enum TransportMode {
 
 fn construct_scene(config: &Config) -> World {
     construct_world(config)
+}
+
+fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
+    match &*config.renderer {
+        "Naive" => Box::new(NaiveRenderer::new()),
+        "GPUStyle" => Box::new(GPUStyleRenderer::new()),
+        _ => panic!(),
+    }
 }
 
 fn main() -> () {
@@ -67,6 +75,6 @@ fn main() -> () {
 
     let cameras: Vec<Camera> = parse_cameras_from(&config);
 
-    let renderer = NaiveRenderer::new();
+    let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);
 }

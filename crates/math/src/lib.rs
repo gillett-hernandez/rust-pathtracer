@@ -14,7 +14,7 @@ mod tangent_frame;
 mod transform;
 mod vec;
 
-pub use bounds::Bounds1D;
+pub use bounds::*;
 pub use color::*;
 pub use misc::*;
 pub use point::Point3;
@@ -156,5 +156,11 @@ impl Ray {
     }
     pub fn point_at_parameter(self, time: f32) -> Point3 {
         self.origin + self.direction * time
+    }
+}
+
+impl Default for Ray {
+    fn default() -> Self {
+        Ray::new(Point3::default(), Vec3::default())
     }
 }
