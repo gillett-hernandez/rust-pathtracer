@@ -212,7 +212,7 @@ impl World {
                             let mut surface = surface.clone();
                             let id = instances.len();
                             surface.instance_id = id;
-                            surface.material_id = Some(MaterialId::Camera(cam_id as u8));
+                            surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
                             instances.push(surface);
                         }
@@ -227,7 +227,7 @@ impl World {
                             let mut surface = surface.clone();
                             let id = instances.len();
                             surface.instance_id = id;
-                            surface.material_id = Some(MaterialId::Camera(cam_id as u8));
+                            surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
                             instances.push(surface);
                         }

@@ -70,7 +70,7 @@ fn evaluate_direct_importance(
                 let energy = reflectance * beta * dropoff * weight / camera_pdf.0;
                 debug_assert!(energy.0.is_finite());
                 let sw = SingleWavelength::new(lambda, energy);
-                let ret = (Sample::LightSample(sw, uv), camera_id as u8);
+                let ret = (Sample::LightSample(sw, uv), camera_id as CameraId);
                 // println!("adding camera sample to splatting list");
                 samples.push(ret);
             }

@@ -70,7 +70,13 @@ pub use sharp_light::SharpLight;
 pub enum MaterialId {
     Material(u16),
     Light(u16),
-    Camera(u8),
+    Camera(u16),
+}
+
+impl Default for MaterialId {
+    fn default() -> Self {
+        MaterialId::Material(0)
+    }
 }
 
 impl From<u16> for MaterialId {

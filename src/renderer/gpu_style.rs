@@ -21,6 +21,10 @@ use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
+const KERNEL_WIDTH: usize = 256;
+const KERNEL_HEIGHT: usize = 256;
+const KERNEL_SIZE: usize = KERNEL_HEIGHT * KERNEL_WIDTH;
+
 #[derive(Copy, Clone, Default, Debug)]
 struct PrimaryRay {
     pub ray: Ray,
@@ -29,35 +33,76 @@ struct PrimaryRay {
     pub cam_and_pixel_id: Option<(CameraId, f32, f32)>,
 }
 
-struct PrimaryRayQueue {
-    pub rays: Vec<PrimaryRay>,
+struct PrimaryRayBuffer {
+    pub rays: [PrimaryRay; KERNEL_SIZE],
 }
 
-impl PrimaryRayQueue {
-    pub fn new(count: usize) -> Self {
-        let mut vec = Vec::new();
-        vec.resize(count, PrimaryRay::default());
-        PrimaryRayQueue { rays: vec }
+impl PrimaryRayBuffer {
+    pub fn new() -> Self {
+        PrimaryRayBuffer {
+            rays: [PrimaryRay::default(); KERNEL_SIZE],
+        }
     }
 }
 
-struct BounceRayQueue {
-    pub rays: Vec<PrimaryRay>,
+#[derive(Default, Copy, Clone)]
+struct IntersectionData {
+    pub point: Point3,
+    pub normal: Vec3,
+    pub local_wi: Vec3,
+    pub local_wo: Option<Vec3>,
+    pub uv: (f32, f32),
+    pub pdf: f32,
+    pub material: MaterialId,
 }
 
-struct ShadowRayQueue {
+struct IntersectionBuffer {
+    pub intersections: [IntersectionData; KERNEL_SIZE],
+}
+
+impl IntersectionBuffer {
+    pub fn new() -> Self {
+        IntersectionBuffer {
+            intersections: [IntersectionData::default(); KERNEL_SIZE],
+        }
+    }
+}
+
+struct ShadowRayBuffer {
     // Ray, and whether it intersected anything. defaults to true, set to false upon tracing and testing.
-    pub rays: Vec<(Ray, bool)>,
+    pub rays: [(Ray, bool); KERNEL_SIZE],
 }
 
-struct ShadingRequestQueue {
-    // each entry in the shading request queue contains all the data needed to actually shade a hit point
-    pub shading_requests: Vec<(f32, f32, Vec3, Option<Vec3>, MaterialId)>,
-    pub shading_results: Vec<(SingleEnergy, Vec3)>,
+impl ShadowRayBuffer {
+    pub fn new() -> Self {
+        ShadowRayBuffer {
+            rays: [(Ray::default(), true); KERNEL_SIZE],
+        }
+    }
+}
+
+struct ShadingResultBuffer {
+    pub data: [(SingleEnergy, Vec3); KERNEL_SIZE],
+}
+
+impl ShadingResultBuffer {
+    pub fn new() -> Self {
+        ShadingResultBuffer {
+            data: [(SingleEnergy::ZERO, Vec3::ZERO); KERNEL_SIZE],
+        }
+    }
 }
 
 struct SampleCountBuffer {
-    pub sample_count: Vec<usize>,
+    pub sample_count: [usize; KERNEL_SIZE],
+}
+
+impl SampleCountBuffer {
+    pub fn new(samples: usize) -> Self {
+        SampleCountBuffer {
+            sample_count: [samples; KERNEL_SIZE],
+        }
+    }
 }
 
 struct GPUStylePTIntegrator {
@@ -92,7 +137,7 @@ impl GPUStylePTIntegrator {
     }
     pub fn primary_ray_pass(
         &self,
-        buffer: &mut PrimaryRayQueue,
+        buffer: &mut PrimaryRayBuffer,
         width: usize,
         bounds: Bounds2D,
         cam_id: CameraId,
@@ -114,8 +159,15 @@ impl GPUStylePTIntegrator {
             }
         });
     }
-    pub fn bounce_ray_pass(&self, buffer: &mut BounceRayQueue) {}
-    pub fn shadow_ray_pass(&self, buffer: &mut ShadowRayQueue) {}
+    pub fn bounce_ray_pass(&self, buffer: &mut PrimaryRayBuffer) {}
+    pub fn shadow_ray_pass(&self, buffer: &mut ShadowRayBuffer) {}
+    pub fn intersection_pass(&self, rays: &PrimaryRayBuffer, buffer: &mut IntersectionBuffer) {}
+    pub fn shading_pass(
+        &self,
+        intersection_buffer: &IntersectionBuffer,
+        buffer: &mut ShadingResultBuffer,
+    ) {
+    }
 }
 
 pub struct GPUStyleRenderer {}
@@ -149,18 +201,25 @@ impl Renderer for GPUStyleRenderer {
                         .map_or(Bounds1D::new(400.0, 780.0), |v| Bounds1D::new(v.0, v.1)),
                 );
                 let Resolution { width, height } = render_settings.resolution;
-                let camera_id = render_settings.camera_id.unwrap_or(0) as u8;
-                let mut buffer = PrimaryRayQueue::new(width * height);
-                integrator.primary_ray_pass(
-                    &mut buffer,
-                    width,
-                    Bounds2D {
-                        x: Bounds1D::new(0.0, 1.0),
-                        y: Bounds1D::new(0.0, 1.0),
-                    },
-                    camera_id,
-                    &cameras[camera_id as usize],
-                );
+                let camera_id = render_settings.camera_id.unwrap_or(0) as CameraId;
+                let mut primary_ray_buffer = PrimaryRayBuffer::new();
+                let mut intersection_buffer = IntersectionBuffer::new();
+                let mut shadow_ray_buffer = ShadowRayBuffer::new();
+                let mut shading_result_buffer = ShadingResultBuffer::new();
+                for _ in 0..render_settings.min_samples {
+                    integrator.primary_ray_pass(
+                        &mut primary_ray_buffer,
+                        width,
+                        Bounds2D {
+                            x: Bounds1D::new(0.0, 1.0),
+                            y: Bounds1D::new(0.0, 1.0),
+                        },
+                        camera_id,
+                        &cameras[camera_id as usize],
+                    );
+                    integrator.intersection_pass(&primary_ray_buffer, &mut intersection_buffer);
+                    integrator.shading_pass(&intersection_buffer, &mut shading_result_buffer);
+                }
             });
         for (render_settings, film) in config.render_settings.iter().zip(films.iter()) {
             output_film(render_settings, film);

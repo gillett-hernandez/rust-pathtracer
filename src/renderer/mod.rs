@@ -268,7 +268,7 @@ impl NaiveRenderer {
                 //     }
                 // });
                 for v in rx.try_iter() {
-                    let (sample, film_id): (Sample, u8) = v;
+                    let (sample, film_id): (Sample, CameraId) = v;
                     match sample {
                         Sample::LightSample(sw, pixel) => {
                             let film = &mut films[film_id as usize];
@@ -337,7 +337,7 @@ impl NaiveRenderer {
                                 temp_color += XYZColor::from(integrator.color(
                                     &mut sampler,
                                     settings,
-                                    (camera_uv, camera_id as u8),
+                                    (camera_uv, camera_id as CameraId),
                                     s as usize,
                                     &mut local_additional_splats,
                                     &mut profile,
