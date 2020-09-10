@@ -225,6 +225,7 @@ impl GPUStylePTIntegrator {
     pub fn primary_ray_pass(
         &self,
         buffer: &mut PrimaryRayBuffer,
+        sample_buffer: &mut SampleCountBuffer,
         width: usize,
         bounds: Bounds2D,
         cam_id: CameraId,
@@ -298,11 +299,20 @@ impl GPUStylePTIntegrator {
                 }
             });
     }
+    pub fn nee_pass(
+        &self,
+        intersection_buffer: &IntersectionBuffer,
+        shadow_buffer: &mut ShadowRayBuffer,
+    ) {
+        // queues up NEE shadow rays
+    }
     pub fn shading_pass(
         &self,
         intersection_buffer: &IntersectionBuffer,
+        shadow_buffer: &ShadowRayBuffer,
         buffer: &mut ShadingResultBuffer,
         rays: &mut PrimaryRayBuffer,
+        film: &mut Film<XYZColor>,
     ) {
         // performs the scatter, pdf, and shading calculations, putting the results in the shading result buffer and back into the primary ray buffer (for bounces)
 
@@ -416,8 +426,10 @@ impl Renderer for GPUStyleRenderer {
                         println!("{} {}", x, y);
                         let x_bounds = Bounds1D::new(x as f32 / 5.0, (x as f32 + 1.0) / 5.0);
                         let y_bounds = Bounds1D::new(y as f32 / 5.0, (y as f32 + 1.0) / 5.0);
+                        // generate primary rays to fill empty spots
                         integrator.primary_ray_pass(
                             &mut primary_ray_buffer,
+                            &mut sample_buffer,
                             width,
                             Bounds2D {
                                 x: x_bounds,
@@ -427,16 +439,19 @@ impl Renderer for GPUStyleRenderer {
                             &cameras[camera_id as usize],
                         );
                         integrator.intersection_pass(&primary_ray_buffer, &mut intersection_buffer);
+
+                        integrator.nee_pass(&intersection_buffer, &mut shadow_ray_buffer);
                         integrator.shadow_ray_pass(&intersection_buffer, &mut shadow_ray_buffer);
                         intersection_buffer
                             .intersections
                             .sort_unstable_by(|a, b| intersection_cmp(&a, &b));
                         integrator.shading_pass(
                             &intersection_buffer,
+                            &shadow_ray_buffer,
                             &mut shading_result_buffer,
                             &mut primary_ray_buffer,
+                            &mut film,
                         );
-                        // integrator.nee_pass(&intersection_buffer, &shadow_ray_buffer, &mut film);
                     }
                 }
             });
