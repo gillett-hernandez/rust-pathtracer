@@ -196,23 +196,29 @@ pub fn random_walk(
             let material = world.get_material(hit.material);
 
             // consider accumulating emission in some other form for trace_type == TransportMode::Importance situations, as mentioned in veach.
-            let maybe_wo: Option<Vec3> = material.generate(&hit, sampler.draw_2d(), wi);
+            let maybe_wo: Option<Vec3> = material.generate(
+                hit.lambda,
+                hit.uv,
+                hit.transport_mode,
+                sampler.draw_2d(),
+                wi,
+            );
 
             // what to do in this situation, where there is a wo and there's also emission?
-            let emission = material.emission(&hit, wi, maybe_wo);
+            let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, maybe_wo);
 
             // wo is generated in tangent space.
 
             if let Some(wo) = maybe_wo {
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
-                let f = material.f(&hit, wi, wo);
+                let f = material.f(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
                 let cos_i = wo.z().abs();
                 let cos_o = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
                 // if emission.0 > 0.0 {
 
                 // }
-                let pdf = material.scatter_pdf(&hit, wi, wo);
+                let pdf = material.scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.0 < 0.00000001 || pdf.is_nan() {
                     break;
@@ -231,7 +237,11 @@ pub fn random_walk(
 
                 // consider handling delta distributions differently here, if deltas are ever added.
                 // eval pdf in reverse direction
-                vertex.pdf_backward = rr_continue_prob * material.scatter_pdf(&hit, wo, wi).0 / cos_o;
+                vertex.pdf_backward = rr_continue_prob
+                    * material
+                        .scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
+                        .0
+                    / cos_o;
 
                 debug_assert!(
                     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),

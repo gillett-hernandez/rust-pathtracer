@@ -1,4 +1,3 @@
-use crate::hittable::HitRecord;
 use crate::materials::Material;
 use crate::math::*;
 use crate::TransportMode;
@@ -367,16 +366,30 @@ impl GGX {
 }
 
 impl Material for GGX {
-    fn scatter_pdf(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
-        self.eval_pdf(hit.lambda, wi, wo, hit.transport_mode).1
+    fn scatter_pdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> PDF {
+        self.eval_pdf(lambda, wi, wo, transport_mode).1
     }
-    fn generate(&self, hit: &HitRecord, mut sample: Sample2D, wi: Vec3) -> Option<Vec3> {
-        let eta_inner = self.eta.evaluate_power(hit.lambda);
+    fn generate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        mut sample: Sample2D,
+        wi: Vec3,
+    ) -> Option<Vec3> {
+        let eta_inner = self.eta.evaluate_power(lambda);
         // let eta_rel = self.eta_rel(eta_inner, wi);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
-            self.kappa.evaluate_power(hit.lambda)
+            self.kappa.evaluate_power(lambda)
         };
         let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
         if refl_prob == 1.0 || sample.x < refl_prob {
@@ -402,10 +415,24 @@ impl Material for GGX {
             return wo;
         }
     }
-    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
-        self.eval_pdf(hit.lambda, wi, wo, hit.transport_mode).0
+    fn f(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> SingleEnergy {
+        self.eval_pdf(lambda, wi, wo, transport_mode).0
     }
-    fn emission(&self, _hit: &HitRecord, _wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        _wi: Vec3,
+        _wo: Option<Vec3>,
+    ) -> SingleEnergy {
         SingleEnergy::ZERO
     }
 }
@@ -414,6 +441,7 @@ impl Material for GGX {
 mod tests {
     use super::*;
     use crate::curves;
+    use crate::hittable::*;
     use crate::materials::MaterialId;
 
     #[test]
@@ -468,15 +496,45 @@ mod tests {
 
         let mut succeeded = 0;
         for wi in wi_s.iter() {
-            let maybe_wo = ggx_glass.generate(&fake_hit_record, sampler.draw_2d(), *wi);
+            let maybe_wo = ggx_glass.generate(
+                fake_hit_record.lambda,
+                fake_hit_record.uv,
+                fake_hit_record.transport_mode,
+                sampler.draw_2d(),
+                *wi,
+            );
             if let Some(wo) = maybe_wo {
-                let orig_f = ggx_glass.f(&fake_hit_record, *wi, wo);
-                let orig_pdf = ggx_glass.scatter_pdf(&fake_hit_record, *wi, wo);
+                let orig_f = ggx_glass.f(
+                    fake_hit_record.lambda,
+                    fake_hit_record.uv,
+                    fake_hit_record.transport_mode,
+                    *wi,
+                    wo,
+                );
+                let orig_pdf = ggx_glass.scatter_pdf(
+                    fake_hit_record.lambda,
+                    fake_hit_record.uv,
+                    fake_hit_record.transport_mode,
+                    *wi,
+                    wo,
+                );
 
                 // check swapping wi and wo
                 let (wi, wo) = (wo, wi);
-                let sampled_f = ggx_glass.f(&fake_hit_record, wi, *wo);
-                let sampled_pdf = ggx_glass.scatter_pdf(&fake_hit_record, wi, *wo);
+                let sampled_f = ggx_glass.f(
+                    fake_hit_record.lambda,
+                    fake_hit_record.uv,
+                    fake_hit_record.transport_mode,
+                    wi,
+                    *wo,
+                );
+                let sampled_pdf = ggx_glass.scatter_pdf(
+                    fake_hit_record.lambda,
+                    fake_hit_record.uv,
+                    fake_hit_record.transport_mode,
+                    wi,
+                    *wo,
+                );
                 assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 assert!(sampled_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
@@ -489,11 +547,35 @@ mod tests {
         println!("{} succeeded, {} failed", succeeded, wi_s.len() - succeeded);
         let wi = Vec3::new(0.9709351, 0.18724124, 0.14908342);
         let wo = Vec3::new(-0.008856451, 0.6295874, -0.7768792);
-        let orig_f = ggx_glass.f(&fake_hit_record, wi, wo);
-        let orig_pdf = ggx_glass.scatter_pdf(&fake_hit_record, wi, wo);
+        let orig_f = ggx_glass.f(
+            fake_hit_record.lambda,
+            fake_hit_record.uv,
+            fake_hit_record.transport_mode,
+            wi,
+            wo,
+        );
+        let orig_pdf = ggx_glass.scatter_pdf(
+            fake_hit_record.lambda,
+            fake_hit_record.uv,
+            fake_hit_record.transport_mode,
+            wi,
+            wo,
+        );
         let (wi, wo) = (wo, wi);
-        let sampled_f = ggx_glass.f(&fake_hit_record, wi, wo);
-        let sampled_pdf = ggx_glass.scatter_pdf(&fake_hit_record, wi, wo);
+        let sampled_f = ggx_glass.f(
+            fake_hit_record.lambda,
+            fake_hit_record.uv,
+            fake_hit_record.transport_mode,
+            wi,
+            wo,
+        );
+        let sampled_pdf = ggx_glass.scatter_pdf(
+            fake_hit_record.lambda,
+            fake_hit_record.uv,
+            fake_hit_record.transport_mode,
+            wi,
+            wo,
+        );
         assert!(
             sampled_f.0 >= 0.0,
             "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",

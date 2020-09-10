@@ -1,6 +1,6 @@
-use crate::hittable::HitRecord;
 use crate::materials::Material;
 use crate::math::*;
+use crate::TransportMode;
 
 #[derive(Clone, Debug)]
 pub struct DiffuseLight {
@@ -70,21 +70,34 @@ impl Material for DiffuseLight {
         Some((sw.lambda, pdf))
     }
 
-    fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        _wo: Option<Vec3>,
+    ) -> SingleEnergy {
         let cosine = wi.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
             // if wi.z() > 0.0 {
-            SingleEnergy::new(self.color.evaluate_power(hit.lambda) / PI)
+            SingleEnergy::new(self.color.evaluate_power(lambda) / PI)
         } else {
             SingleEnergy::ZERO
         }
     }
 
     // evaluate the directional pdf if the spectral power distribution
-    fn emission_pdf(&self, _hit: &HitRecord, wo: Vec3) -> PDF {
+    fn emission_pdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wo: Vec3,
+    ) -> PDF {
         let cosine = wo.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)

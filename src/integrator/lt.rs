@@ -40,7 +40,7 @@ fn evaluate_direct_importance(
         // this should be the same as the other method, but maybe not.
         // camera_surface.material_id
         let camera_wo = frame.to_local(&direction);
-        let reflectance = material.f(&hit, wi, camera_wo);
+        let reflectance = material.f(hit.lambda, hit.uv, hit.transport_mode, wi, camera_wo);
         let dropoff = camera_wo.z().max(0.0);
         if dropoff == 0.0 {
             return;
@@ -50,7 +50,8 @@ fn evaluate_direct_importance(
         // println!("hit {:?}", &hit);
         profile.shadow_rays += 1;
         if veach_v(&world, point_on_lens, hit.point) {
-            let scatter_pdf_into_camera = material.scatter_pdf(&hit, wi, camera_wo);
+            let scatter_pdf_into_camera =
+                material.scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wi, camera_wo);
             let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
 
             // correctly connected.

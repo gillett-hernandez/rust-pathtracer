@@ -1,5 +1,5 @@
-use crate::hittable::*;
 use crate::math::*;
+use crate::TransportMode;
 
 use std::marker::{Send, Sync};
 
@@ -10,13 +10,34 @@ pub trait Material: Send + Sync {
     // methods for sampling the bsdf, not related to the light itself
 
     // evaluate bsdf
-    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+    fn f(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> SingleEnergy {
         SingleEnergy::new(0.0)
     }
-    fn scatter_pdf(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+    fn scatter_pdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> PDF {
         0.0.into()
     }
-    fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Option<Vec3> {
+    fn generate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> Option<Vec3> {
         None
     }
 
@@ -34,11 +55,24 @@ pub trait Material: Send + Sync {
     }
 
     // evaluate the spectral power distribution for the given light and angle
-    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Option<Vec3>,
+    ) -> SingleEnergy {
         SingleEnergy::ZERO
     }
     // evaluate the directional pdf if the spectral power distribution
-    fn emission_pdf(&self, hit: &HitRecord, wo: Vec3) -> PDF {
+    fn emission_pdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wo: Vec3,
+    ) -> PDF {
         // hit is passed in to access the UV.
         0.0.into()
     }
@@ -139,22 +173,42 @@ impl MaterialEnum {
 }
 
 impl Material for MaterialEnum {
-    fn scatter_pdf(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> PDF {
+    fn scatter_pdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> PDF {
         debug_assert!(wi.0.is_finite().all());
         debug_assert!(wo.0.is_finite().all());
         match self {
-            MaterialEnum::GGX(inner) => inner.scatter_pdf(hit, wi, wo),
-            MaterialEnum::Lambertian(inner) => inner.scatter_pdf(hit, wi, wo),
-            MaterialEnum::SharpLight(inner) => inner.scatter_pdf(hit, wi, wo),
-            MaterialEnum::DiffuseLight(inner) => inner.scatter_pdf(hit, wi, wo),
+            MaterialEnum::GGX(inner) => inner.scatter_pdf(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::Lambertian(inner) => {
+                inner.scatter_pdf(lambda, uv, transport_mode, wi, wo)
+            }
+            MaterialEnum::SharpLight(inner) => {
+                inner.scatter_pdf(lambda, uv, transport_mode, wi, wo)
+            }
+            MaterialEnum::DiffuseLight(inner) => {
+                inner.scatter_pdf(lambda, uv, transport_mode, wi, wo)
+            }
         }
     }
-    fn generate(&self, hit: &HitRecord, s: Sample2D, wi: Vec3) -> Option<Vec3> {
+    fn generate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> Option<Vec3> {
         match self {
-            MaterialEnum::GGX(inner) => inner.generate(hit, s, wi),
-            MaterialEnum::Lambertian(inner) => inner.generate(hit, s, wi),
-            MaterialEnum::SharpLight(inner) => inner.generate(hit, s, wi),
-            MaterialEnum::DiffuseLight(inner) => inner.generate(hit, s, wi),
+            MaterialEnum::GGX(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
+            MaterialEnum::Lambertian(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
+            MaterialEnum::SharpLight(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
+            MaterialEnum::DiffuseLight(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
         }
     }
     fn sample_emission(
@@ -196,22 +250,36 @@ impl Material for MaterialEnum {
             ),
         }
     }
-    fn f(&self, hit: &HitRecord, wi: Vec3, wo: Vec3) -> SingleEnergy {
+    fn f(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> SingleEnergy {
         debug_assert!(wi.0.is_finite().all());
         debug_assert!(wo.0.is_finite().all());
         match self {
-            MaterialEnum::GGX(inner) => inner.f(hit, wi, wo),
-            MaterialEnum::Lambertian(inner) => inner.f(hit, wi, wo),
-            MaterialEnum::SharpLight(inner) => inner.f(hit, wi, wo),
-            MaterialEnum::DiffuseLight(inner) => inner.f(hit, wi, wo),
+            MaterialEnum::GGX(inner) => inner.f(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.f(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.f(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.f(lambda, uv, transport_mode, wi, wo),
         }
     }
-    fn emission(&self, hit: &HitRecord, wi: Vec3, wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Option<Vec3>,
+    ) -> SingleEnergy {
         match self {
-            MaterialEnum::GGX(inner) => inner.emission(hit, wi, wo),
-            MaterialEnum::Lambertian(inner) => inner.emission(hit, wi, wo),
-            MaterialEnum::SharpLight(inner) => inner.emission(hit, wi, wo),
-            MaterialEnum::DiffuseLight(inner) => inner.emission(hit, wi, wo),
+            MaterialEnum::GGX(inner) => inner.emission(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.emission(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.emission(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.emission(lambda, uv, transport_mode, wi, wo),
         }
     }
     fn sample_emission_spectra(

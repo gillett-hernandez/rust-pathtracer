@@ -1,6 +1,6 @@
-use crate::hittable::HitRecord;
 use crate::materials::Material;
 use crate::math::*;
+use crate::TransportMode;
 
 #[derive(Clone, Debug)]
 pub struct SharpLight {
@@ -121,7 +121,14 @@ impl Material for SharpLight {
         Some((sw.lambda, pdf))
     }
 
-    fn emission(&self, hit: &HitRecord, wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
+    fn emission(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        _wo: Option<Vec3>,
+    ) -> SingleEnergy {
         // wi is in local space, and is normalized
         // lets check if it could have been constructed by sample_emission.
         let cosine = wi.z();
@@ -133,7 +140,7 @@ impl Material for SharpLight {
             if cosine > min_z {
                 // could have been generated
                 let fac = evaluate(wi, self.sharpness);
-                SingleEnergy::new(fac * self.color.evaluate_power(hit.lambda))
+                SingleEnergy::new(fac * self.color.evaluate_power(lambda))
             } else {
                 SingleEnergy::ZERO
             }
@@ -142,7 +149,13 @@ impl Material for SharpLight {
         }
     }
     // evaluate the directional pdf if the spectral power distribution
-    fn emission_pdf(&self, _hit: &HitRecord, wo: Vec3) -> PDF {
+    fn emission_pdf(
+        &self,
+        lambda: f32,
+        _uv: (f32, f32),
+        transport_mode: TransportMode,
+        wo: Vec3,
+    ) -> PDF {
         let cosine = wo.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)

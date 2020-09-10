@@ -47,8 +47,8 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "LT"
-integrator = "LT"
+filename = "PT"
+integrator = "PT"
 min_bounces = 8
 max_bounces = 16
 exposure = 1.0

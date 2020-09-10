@@ -1,5 +1,6 @@
 // use crate::config::Settings;
 // use crate::camera::*;
+use crate::hittable::HitRecord;
 use crate::integrator::utils::*;
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
@@ -71,8 +72,11 @@ pub fn eval_unweighted_contribution(
                 second_to_last_eye_vertex.point,
                 cos_o,
             );
+            let hit: HitRecord = last_eye_vertex.into();
             cst = hit_light_material.emission(
-                &last_eye_vertex.into(),
+                hit.lambda,
+                hit.uv,
+                hit.transport_mode,
                 frame.to_local(&wi).normalized(),
                 None,
             );
@@ -158,8 +162,11 @@ pub fn eval_unweighted_contribution(
                     SingleEnergy::ZERO
                 } else {
                     let hit_light_material = world.get_material(last_light_vertex.material_id);
+                    let hit: HitRecord = last_light_vertex.into();
                     let emission = hit_light_material.emission(
-                        &last_light_vertex.into(),
+                        hit.lambda,
+                        hit.uv,
+                        hit.transport_mode,
                         llv_local_light_to_eye,
                         None,
                     );
@@ -175,8 +182,11 @@ pub fn eval_unweighted_contribution(
                 let second_to_last_light_vertex = light_path[s - 2];
                 let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
                 let hit_material = world.get_material(last_light_vertex.material_id);
+                let hit: HitRecord = last_light_vertex.into();
                 hit_material.f(
-                    &last_light_vertex.into(),
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
                     llv_frame.to_local(&wi).normalized(),
                     llv_local_light_to_eye,
                 )
@@ -214,8 +224,11 @@ pub fn eval_unweighted_contribution(
                 let wi = (second_to_last_eye_vertex.point - last_eye_vertex.point).normalized();
                 // let wo = -light_to_eye;
                 let hit_material = world.get_material(last_eye_vertex.material_id);
+                let hit: HitRecord = last_eye_vertex.into();
                 let reflectance = hit_material.f(
-                    &last_eye_vertex.into(),
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
                     lev_frame.to_local(&wi).normalized(),
                     lev_local_eye_to_light,
                 );
@@ -489,16 +502,21 @@ where
             //     llv.point,
             //     llv_local_light_to_eye.z().abs(),
             // );
+            let hit: HitRecord = llv.into();
             llv_forward_pdf = hit_material
                 .scatter_pdf(
-                    &llv.into(),
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
                     llv_frame.to_local(&wi).normalized(),
                     llv_local_light_to_eye,
                 )
                 .0;
             llv_backward_pdf = hit_material
                 .scatter_pdf(
-                    &llv.into(),
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
                     llv_local_light_to_eye,
                     llv_frame.to_local(&wi).normalized(),
                 )
@@ -532,8 +550,14 @@ where
                 //     llv.point,
                 //     llv_local_light_to_eye.z().abs(),
                 // );
+                let hit: HitRecord = llv.into();
                 llv_forward_pdf = hit_light_material
-                    .emission_pdf(&llv.into(), llv_local_light_to_eye)
+                    .emission_pdf(
+                        hit.lambda,
+                        hit.uv,
+                        hit.transport_mode,
+                        llv_local_light_to_eye,
+                    )
                     .0;
                 llv_backward_pdf = 1.0; // put area sampling pdf here?
             }
@@ -553,11 +577,24 @@ where
             //     llv.point,
             //     llv_local_light_to_eye.z().abs(),
             // );
+            let hit: HitRecord = lev.into();
             lev_forward_pdf = hit_material
-                .scatter_pdf(&lev.into(), llv_local_wi, llv_local_light_to_eye)
+                .scatter_pdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    llv_local_wi,
+                    llv_local_light_to_eye,
+                )
                 .0;
             lev_backward_pdf = hit_material
-                .scatter_pdf(&lev.into(), llv_local_light_to_eye, llv_local_wi)
+                .scatter_pdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    llv_local_light_to_eye,
+                    llv_local_wi,
+                )
                 .0;
         } else {
             // t must be 1
@@ -616,8 +653,14 @@ where
                 //     second_to_last_eye_vertex.point,
                 //     cos_o,
                 // );
+                let hit: HitRecord = last_eye_vertex.into();
                 llv_backward_pdf = hit_light_material
-                    .emission_pdf(&last_eye_vertex.into(), frame.to_local(&wi).normalized())
+                    .emission_pdf(
+                        hit.lambda,
+                        hit.uv,
+                        hit.transport_mode,
+                        frame.to_local(&wi).normalized(),
+                    )
                     .0;
                 llv_forward_pdf = 1.0; // do light area sampling pdf
                 lev_backward_pdf = 0.0;

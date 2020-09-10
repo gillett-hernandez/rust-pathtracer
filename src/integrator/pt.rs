@@ -56,7 +56,13 @@ impl PathTracingIntegrator {
                 return SingleEnergy::ZERO;
             }
             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
-            let reflectance = material.f(&hit, wi, local_light_direction);
+            let reflectance = material.f(
+                hit.lambda,
+                hit.uv,
+                hit.transport_mode,
+                wi,
+                local_light_direction,
+            );
             // if reflectance.0 < 0.00001 {
             //     // if reflectance is 0 for all components, skip this light sample
             //     continue;
@@ -71,7 +77,13 @@ impl PathTracingIntegrator {
             }
 
             let light_material = self.world.get_material(light.get_material_id());
-            let emission = light_material.emission(&hit, light_vertex_wi, None);
+            let emission = light_material.emission(
+                hit.lambda,
+                hit.uv,
+                hit.transport_mode,
+                light_vertex_wi,
+                None,
+            );
             // this should be the same as the other method, but maybe not.
             if emission.0 == 0.0 {
                 return SingleEnergy::ZERO;
@@ -79,8 +91,13 @@ impl PathTracingIntegrator {
 
             profile.shadow_rays += 1;
             if veach_v(&self.world, point_on_light, hit.point) {
-                let scatter_pdf_for_light_ray =
-                    material.scatter_pdf(&hit, wi, local_light_direction);
+                let scatter_pdf_for_light_ray = material.scatter_pdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    wi,
+                    local_light_direction,
+                );
                 let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
 
                 debug_assert!(emission.0 >= 0.0);
@@ -121,8 +138,9 @@ impl PathTracingIntegrator {
         let direction = uv_to_direction(uv);
         let local_wo = frame.to_local(&direction);
 
-        let reflectance = material.f(&hit, wi, local_wo);
-        let scatter_pdf_for_light_ray = material.scatter_pdf(&hit, wi, local_wo);
+        let reflectance = material.f(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
+        let scatter_pdf_for_light_ray =
+            material.scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
         profile.shadow_rays += 1;
         if let Some(light_hit) = self
@@ -143,7 +161,13 @@ impl PathTracingIntegrator {
             //     // if reflectance is 0 for all components, skip this light sample
             //     continue;
             // }
-            let emission = material.emission(&light_hit, light_wi, None);
+            let emission = material.emission(
+                light_hit.lambda,
+                light_hit.uv,
+                light_hit.transport_mode,
+                light_wi,
+                None,
+            );
             if emission.0 > 0.0 {
                 let light = self.world.get_primitive(light_hit.instance_id);
                 let pdf = light.psa_pdf(hit.normal, hit.point, point_on_light);
@@ -293,7 +317,8 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                     let material = self.world.get_material(vertex.material_id);
 
-                    let emission = material.emission(&hit, wi, wo);
+                    let emission =
+                        material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
 
                     if emission.0 > 0.0 {
                         // this will likely never get triggered, since hitting a light source is handled in the above branch
@@ -331,7 +356,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                 let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                 let material = self.world.get_material(vertex.material_id);
 
-                let emission = material.emission(&hit, wi, wo);
+                let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
 
                 if emission.0 > 0.0 {
                     // this will likely never get triggered, since hitting a light source is handled in the above branch
