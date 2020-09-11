@@ -1,8 +1,10 @@
 mod bdpt;
+pub mod gpu_style;
 mod lt;
 mod pt;
 mod sppm;
 pub mod utils;
+
 pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
 use crate::math::*;

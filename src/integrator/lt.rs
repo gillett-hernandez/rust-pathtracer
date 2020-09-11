@@ -7,9 +7,7 @@ use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
 use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::TransportMode;
-use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 
-use std::f32::INFINITY;
 use std::sync::Arc;
 
 fn evaluate_direct_importance(
@@ -262,7 +260,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     .get(index + 1)
                     .map(|v| (v.point - vertex.point).normalized());
                 let wi = frame.to_local(&dir_to_prev);
-                let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
+                // let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                 let material = self.world.get_material(vertex.material_id);
 
                 // let emission = material.emission(&hit, wi, wo);

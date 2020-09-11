@@ -18,9 +18,9 @@ impl Lambertian {
 impl Material for Lambertian {
     fn scatter_pdf(
         &self,
-        lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
+        _lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
     ) -> PDF {
@@ -33,9 +33,9 @@ impl Material for Lambertian {
     }
     fn generate(
         &self,
-        lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
+        _lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
         s: Sample2D,
         _wi: Vec3,
     ) -> Option<Vec3> {
@@ -50,7 +50,7 @@ impl Material for Lambertian {
         &self,
         lambda: f32,
         uv: (f32, f32),
-        transport_mode: TransportMode,
+        _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
     ) -> SingleEnergy {

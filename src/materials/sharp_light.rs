@@ -124,8 +124,8 @@ impl Material for SharpLight {
     fn emission(
         &self,
         lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
         wi: Vec3,
         _wo: Option<Vec3>,
     ) -> SingleEnergy {
@@ -151,9 +151,9 @@ impl Material for SharpLight {
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
         &self,
-        lambda: f32,
+        _lambda: f32,
         _uv: (f32, f32),
-        transport_mode: TransportMode,
+        _transport_mode: TransportMode,
         wo: Vec3,
     ) -> PDF {
         let cosine = wo.z();

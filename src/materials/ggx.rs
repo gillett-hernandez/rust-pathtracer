@@ -142,6 +142,7 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     debug_assert!(t2.0.is_finite().all(), "{:?}", t2);
     let a = 1.0 / (1.0 + v.z());
     let r = x.sqrt();
+    debug_assert!(r.is_finite(), "{}", x);
     let phi = if y < a {
         y / a * PI
     } else {
@@ -149,12 +150,13 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     };
 
     let (sin_phi, cos_phi) = phi.sin_cos();
+    debug_assert!(sin_phi.is_finite() && cos_phi.is_finite(), "{:?}", phi);
     let p1 = r * cos_phi;
     let p2 = r * sin_phi * if y < a { 1.0 } else { v.z() };
     let value = 1.0 - p1 * p1 - p2 * p2;
     let n = p1 * t1 + p2 * t2 + value.max(0.0).sqrt() * v;
 
-    debug_assert!(n.0.is_finite().all(), "{:?}", n);
+    debug_assert!(n.0.is_finite().all(), "{:?}, {:?}, {:?}, {:?}, {:?}, {:?}", n, p1, t1, p2, t2, v);
     Vec3::new(alpha * n.x(), alpha * n.y(), n.z().max(0.0)).normalized()
 }
 
@@ -369,7 +371,7 @@ impl Material for GGX {
     fn scatter_pdf(
         &self,
         lambda: f32,
-        uv: (f32, f32),
+        _uv: (f32, f32),
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
@@ -379,12 +381,14 @@ impl Material for GGX {
     fn generate(
         &self,
         lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
         mut sample: Sample2D,
         wi: Vec3,
     ) -> Option<Vec3> {
+        debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         let eta_inner = self.eta.evaluate_power(lambda);
+        debug_assert!(eta_inner.is_finite(), "{}", lambda);
         // let eta_rel = self.eta_rel(eta_inner, wi);
         let kappa = if self.permeability > 0.0 {
             0.0
@@ -392,9 +396,11 @@ impl Material for GGX {
             self.kappa.evaluate_power(lambda)
         };
         let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
+        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
         if refl_prob == 1.0 || sample.x < refl_prob {
             // rescale sample x value to 0 to 1 range
             sample.x = sample.x / refl_prob;
+            debug_assert!(sample.x.is_finite(), "{}", refl_prob);
             // reflection
             let wh = sample_wh(self.alpha, wi, sample).normalized();
             let wo = reflect(wi, wh);
@@ -402,6 +408,7 @@ impl Material for GGX {
         } else {
             // rescale sample x value to 0 to 1 range
             sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
+            debug_assert!(sample.x.is_finite(), "{}", refl_prob);
             // transmission
             let wh = sample_wh(self.alpha, wi, sample).normalized();
 
@@ -418,23 +425,23 @@ impl Material for GGX {
     fn f(
         &self,
         lambda: f32,
-        uv: (f32, f32),
+        _uv: (f32, f32),
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
     ) -> SingleEnergy {
         self.eval_pdf(lambda, wi, wo, transport_mode).0
     }
-    fn emission(
-        &self,
-        lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
-        _wi: Vec3,
-        _wo: Option<Vec3>,
-    ) -> SingleEnergy {
-        SingleEnergy::ZERO
-    }
+    // fn emission(
+    //     &self,
+    //     _lambda: f32,
+    //     _uv: (f32, f32),
+    //     _transport_mode: TransportMode,
+    //     _wi: Vec3,
+    //     _wo: Option<Vec3>,
+    // ) -> SingleEnergy {
+    //     SingleEnergy::ZERO
+    // }
 }
 
 #[cfg(test)]
