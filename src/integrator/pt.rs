@@ -321,7 +321,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
 
                     if emission.0 > 0.0 {
-                        // this will likely never get triggered, since hitting a light source is handled in the above branch
                         if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
                             sum.energy += vertex.throughput * emission;
                             debug_assert!(!sum.energy.is_nan());

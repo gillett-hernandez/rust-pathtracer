@@ -4,25 +4,25 @@ use crate::camera::{Camera, CameraId};
 use crate::config::Config;
 // use crate::hittable::Hittable;
 use crate::integrator::gpu_style::*;
-use crate::materials::*;
+// use crate::materials::*;
 use crate::math::*;
-use crate::profile::Profile;
+// use crate::profile::Profile;
 // use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
-use crate::MaterialId;
-use crate::TransportMode;
+// use crate::MaterialId;
+// use crate::TransportMode;
 
-use std::collections::HashMap;
+// use std::collections::HashMap;
 // use std::io::Write;
 // use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::cmp::Ordering;
+// use std::cmp::Ordering;
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::{Duration, Instant};
+// use std::thread;
+// use std::time::{Duration, Instant};
 
-use crossbeam::channel::unbounded;
-use pbr::ProgressBar;
+// use crossbeam::channel::unbounded;
+// use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 pub struct GPUStyleRenderer {}
@@ -66,8 +66,7 @@ impl Renderer for GPUStyleRenderer {
                 let mut intersection_buffer = IntersectionBuffer::new();
                 let mut shadow_ray_buffer = ShadowRayBuffer::new();
                 let mut shading_result_buffer = ShadingResultBuffer::new();
-                let mut sample_buffer =
-                    SampleCountBuffer::new(render_settings.min_samples as usize);
+                let mut sample_buffer = SampleBounceBuffer::new();
                 let x_max = (width as f32 / KERNEL_WIDTH as f32).floor() as usize; // change to ceil to allow partial tiles
                 let y_max = (height as f32 / KERNEL_HEIGHT as f32).floor() as usize; // change to ceil to allow partial tiles
                 println!(
@@ -89,18 +88,30 @@ impl Renderer for GPUStyleRenderer {
                             x: x_bounds,
                             y: y_bounds,
                         };
-                        for _ in 0..render_settings.min_samples {
-                            // generate primary rays to fill empty spots
-                            integrator.primary_ray_pass(
+                        // generate primary rays to fill empty spots
+                        loop {
+                            let status = integrator.primary_ray_pass(
                                 &mut primary_ray_buffer,
                                 &mut sample_buffer,
                                 KERNEL_WIDTH,
                                 KERNEL_HEIGHT,
+                                render_settings
+                                    .max_samples
+                                    .unwrap_or(render_settings.min_samples)
+                                    as usize,
                                 cam_bounds,
                                 camera_id,
                                 &cameras[camera_id as usize],
                             );
-                            // for _ in 0..integrator.min_bounces {
+                            match status {
+                                Status::Done => {
+                                    break;
+                                }
+                                Status::Underutilized => {
+                                    // println!("underutilized");
+                                }
+                                _ => {}
+                            }
                             integrator
                                 .intersection_pass(&primary_ray_buffer, &mut intersection_buffer);
 
@@ -114,11 +125,18 @@ impl Renderer for GPUStyleRenderer {
                                 &shadow_ray_buffer,
                                 cam_bounds,
                                 &mut shading_result_buffer,
+                                &mut sample_buffer,
+                                render_settings.max_bounces.unwrap_or(8) as usize,
                                 &mut primary_ray_buffer,
                                 &mut film,
                             );
-                            // }
                         }
+                        integrator.finalize_pass(
+                            &mut film,
+                            &sample_buffer,
+                            (x * KERNEL_WIDTH, y * KERNEL_HEIGHT),
+                        );
+                        sample_buffer.sample_count.fill((0, 0));
                     }
                 }
             });

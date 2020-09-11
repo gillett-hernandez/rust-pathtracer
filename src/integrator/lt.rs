@@ -256,9 +256,9 @@ impl GenericIntegrator for LightTracingIntegrator {
                 let hit = HitRecord::from(*vertex);
                 let frame = TangentFrame::from_normal(hit.normal);
                 let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                let maybe_dir_to_next = path
-                    .get(index + 1)
-                    .map(|v| (v.point - vertex.point).normalized());
+                // let _maybe_dir_to_next = path
+                //     .get(index + 1)
+                //     .map(|v| (v.point - vertex.point).normalized());
                 let wi = frame.to_local(&dir_to_prev);
                 // let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                 let material = self.world.get_material(vertex.material_id);
