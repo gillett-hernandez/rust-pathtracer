@@ -19,8 +19,8 @@ use std::sync::{Arc, Mutex};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
-pub const KERNEL_WIDTH: usize = 64;
-pub const KERNEL_HEIGHT: usize = 64;
+pub const KERNEL_WIDTH: usize = 128;
+pub const KERNEL_HEIGHT: usize = 128;
 pub const KERNEL_SIZE: usize = KERNEL_HEIGHT * KERNEL_WIDTH;
 
 #[derive(Copy, Clone, Debug)]
