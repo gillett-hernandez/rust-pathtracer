@@ -1,5 +1,5 @@
 // #![allow(unused_imports, unused_variables, unused)]
-#![feature(clamp, slice_fill, vec_remove_item, partition_point)]
+#![feature(clamp, slice_fill, vec_remove_item, partition_point, move_ref_pattern)]
 
 extern crate image;
 
@@ -38,6 +38,12 @@ pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 pub enum TransportMode {
     Radiance,
     Importance,
+}
+
+impl Default for TransportMode {
+    fn default() -> Self {
+        TransportMode::Importance
+    }
 }
 
 fn construct_scene(config: &Config) -> World {

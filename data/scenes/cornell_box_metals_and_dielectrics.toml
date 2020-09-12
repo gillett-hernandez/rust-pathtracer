@@ -1,8 +1,8 @@
 
-env_sampling_probability = 0.00
+env_sampling_probability = 0.1
 [environment]
 type="Constant"
-strength = 0.0000
+strength = 0.00001
 [environment.color]
 type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"

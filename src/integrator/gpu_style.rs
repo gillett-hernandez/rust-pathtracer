@@ -43,6 +43,7 @@ pub struct PrimaryRay {
     pub lambda: f32,
     pub throughput: f32,
     pub buffer_idx: usize,
+    pub transport_mode: TransportMode,
     // could be a ray from camera or ray from light.
     // ray from light will be represented with a None camera_id + pixel_uv
     pub cam_and_pixel_id: CameraPixelId,
@@ -108,13 +109,13 @@ impl ShadowRayBuffer {
 }
 
 pub struct ShadingResultBuffer {
-    pub data: Vec<(SingleEnergy, SingleEnergy, Vec3)>,
+    pub data: Vec<(SingleEnergy, SingleEnergy, Option<Vec3>)>,
 }
 
 impl ShadingResultBuffer {
     pub fn new() -> Self {
         ShadingResultBuffer {
-            data: vec![(SingleEnergy::ZERO, SingleEnergy::ZERO, Vec3::Z); KERNEL_SIZE],
+            data: vec![(SingleEnergy::ZERO, SingleEnergy::ZERO, None); KERNEL_SIZE],
         }
     }
 }
@@ -246,63 +247,54 @@ impl GPUStylePTIntegrator {
         cam_id: CameraId,
         camera: &Camera,
     ) -> Status {
-        buffer.rays.par_sort_unstable_by(|a, b| match (a, b) {
-            (Some(_), None) => Ordering::Less,
-            (None, Some(_)) => Ordering::Greater,
-            _ => Ordering::Equal,
-        });
-        let first_empty = buffer.rays.partition_point(|a| a.is_some());
+        // buffer.rays.par_sort_unstable_by(|a, b| match (a, b) {
+        //     (Some(_), None) => Ordering::Less,
+        //     (None, Some(_)) => Ordering::Greater,
+        //     _ => Ordering::Equal,
+        // });
+        // let first_empty = buffer.rays.partition_point(|a| a.is_some());
         // println!("first empty is {}", first_empty);
-        let mut sample_idx = 0;
-        let mut not_any_remaining = true;
-        for ray_idx in first_empty..KERNEL_SIZE {
-            // find the first valid sample to use.
-            // has to have a 0 bounce count (ready to be fired again from camera) and a sample count less than the max
-            loop {
-                if sample_idx >= KERNEL_SIZE {
-                    // went too far.
-                    return if not_any_remaining {
-                        Status::Done
-                    } else {
-                        Status::Underutilized
-                    };
-                }
-                let (sample, bounce) = sample_buffer.sample_count[sample_idx];
-                if sample > max_samples {
-                    sample_idx += 1;
-                    continue;
-                }
-                if bounce > 0 {
-                    // set not_any_remaining to false to indicate that there are still rays that need to be traced through bounces.
-                    not_any_remaining = false;
-                    sample_idx += 1;
-                    continue;
+        let any_remaining = buffer
+            .rays
+            .par_iter_mut()
+            .zip(sample_buffer.sample_count.par_iter())
+            .enumerate()
+            .map(|(index, (primary_ray, (sample_count, bounce_count)))| {
+                if *bounce_count == 0 && *sample_count < max_samples {
+                    // ready to fire from camera
+                    let tile_u = (index % width) as f32 / width as f32; // + pixel_offset.0;
+                    let tile_v = (index / width) as f32 / height as f32; // + pixel_offset.1;
+                    let tile_width = bounds.x.span();
+                    let tile_height = bounds.y.span();
+                    let (px, py) = (
+                        bounds.x.lower + (tile_u as f32) * tile_width,
+                        bounds.y.lower + (tile_v as f32) * tile_height,
+                    );
+                    let ray = camera.get_ray(Sample2D::new_random_sample(), px, py);
+                    *primary_ray = Some(PrimaryRay {
+                        ray,
+                        lambda: self.wavelength_bounds.lower
+                            + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
+                        buffer_idx: index,
+                        throughput: 1.0,
+                        transport_mode: TransportMode::default(),
+                        cam_and_pixel_id: Some((cam_id, Pixel::UV(px, py))),
+                    });
+                    true
                 } else {
-                    // found a pixel that's ready to have another ray fired from it.
-                    // println!("found pixel at idx = {}", sample_idx);
-                    break;
+                    if *sample_count < max_samples {
+                        true
+                    } else {
+                        false
+                    }
                 }
-            }
-            let tile_u = (sample_idx % width) as f32 / width as f32; // + pixel_offset.0;
-            let tile_v = (sample_idx / width) as f32 / height as f32; // + pixel_offset.1;
-            let tile_width = bounds.x.span();
-            let tile_height = bounds.y.span();
-            let (px, py) = (
-                bounds.x.lower + (tile_u as f32) * tile_width,
-                bounds.y.lower + (tile_v as f32) * tile_height,
-            );
-            let ray = camera.get_ray(Sample2D::new_random_sample(), px, py);
-            buffer.rays[ray_idx] = Some(PrimaryRay {
-                ray,
-                lambda: self.wavelength_bounds.lower
-                    + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
-                buffer_idx: sample_idx,
-                throughput: 1.0,
-                cam_and_pixel_id: Some((cam_id, Pixel::UV(px, py))),
-            });
-            sample_idx += 1;
+            })
+            .reduce(|| false, |a, b| a || b);
+        if any_remaining {
+            Status::Running
+        } else {
+            Status::Done
         }
-        Status::Running
     }
     pub fn intersection_pass(
         &self,
@@ -331,15 +323,16 @@ impl GPUStylePTIntegrator {
                     match maybe_hit {
                         Some(hit) => {
                             let frame = TangentFrame::from_normal(hit.normal);
-                            let wi = (primary.ray.origin - hit.point).normalized();
+                            // let wi = (primary.ray.origin - hit.point).normalized();
+                            let wi = -primary.ray.direction;
                             *isect = IntersectionData::Surface {
                                 lambda: primary.lambda,
-                                local_wi: frame.to_local(&wi),
+                                local_wi: frame.to_local(&wi).normalized(),
                                 point: hit.point,
                                 normal: hit.normal,
                                 instance_id: hit.instance_id,
                                 throughput: mult * primary.throughput,
-                                transport_mode: hit.transport_mode,
+                                transport_mode: primary.transport_mode,
                                 local_wo: None,
                                 material: hit.material,
                                 uv: hit.uv,
@@ -419,47 +412,48 @@ impl GPUStylePTIntegrator {
             .par_iter_mut()
             .zip(intersection_buffer.intersections.par_iter())
             .enumerate()
-            .for_each(|(index, (shading_result, isect_data))| {
-                match isect_data {
-                    IntersectionData::Surface {
-                        local_wi,
-                        uv,
-                        // normal,
-                        lambda,
-                        throughput,
-                        material,
-                        transport_mode,
-                        ..
-                    } => {
-                        let material = self.world.get_material(*material);
-                        let local_wo = material.generate(
-                            *lambda,
-                            *uv,
-                            *transport_mode,
-                            Sample2D::new_random_sample(),
-                            *local_wi,
-                        );
-                        let f = local_wo.map_or(SingleEnergy::ZERO, |v| {
-                            material.f(*lambda, *uv, *transport_mode, *local_wi, v)
-                        });
-                        let pdf = local_wo.map_or(0.0.into(), |v| {
-                            material.scatter_pdf(*lambda, *uv, *transport_mode, *local_wi, v)
-                        });
-                        let cos_i = local_wo.map_or(0.0, |wo| wo.z().abs());
-                        let emission =
-                            material.emission(*lambda, *uv, *transport_mode, *local_wi, local_wo);
-                        *shading_result = (
-                            *throughput * emission,
-                            *throughput * cos_i * f / pdf.0,
-                            local_wo.unwrap_or(Vec3::ZERO),
-                        );
-                    }
-                    IntersectionData::Environment { uv, lambda, .. } => {
-                        let energy = self.world.environment.emission(*uv, *lambda);
-                        // shading_result.
-                        *shading_result = (energy, SingleEnergy::ZERO, Vec3::ZERO);
-                    }
-                    _ => {}
+            .for_each(|(index, (shading_result, isect_data))| match isect_data {
+                IntersectionData::Surface {
+                    local_wi,
+                    uv,
+                    normal,
+                    lambda,
+                    throughput,
+                    material,
+                    transport_mode,
+                    ..
+                } => {
+                    let material = self.world.get_material(*material);
+                    let local_wo = material.generate(
+                        *lambda,
+                        *uv,
+                        *transport_mode,
+                        Sample2D::new_random_sample(),
+                        *local_wi,
+                    );
+                    let frame = TangentFrame::from_normal(*normal);
+                    let f = local_wo.map_or(SingleEnergy::ZERO, |v| {
+                        material.f(*lambda, *uv, *transport_mode, *local_wi, v)
+                    });
+                    let pdf = local_wo.map_or(0.0.into(), |v| {
+                        material.scatter_pdf(*lambda, *uv, *transport_mode, *local_wi, v)
+                    });
+                    let cos_i = local_wo.map_or(0.0, |wo| wo.z().abs());
+                    let emission =
+                        material.emission(*lambda, *uv, *transport_mode, *local_wi, local_wo);
+                    *shading_result = (
+                        *throughput * emission,
+                        *throughput * cos_i * f / pdf.0,
+                        local_wo.map(|v| frame.to_world(&v).normalized()),
+                    );
+                }
+                IntersectionData::Environment { uv, lambda, .. } => {
+                    let energy = self.world.environment.emission(*uv, *lambda);
+
+                    *shading_result = (energy, SingleEnergy::ZERO, None);
+                }
+                _ => {
+                    *shading_result = (SingleEnergy::ZERO, SingleEnergy::ZERO, None);
                 }
             });
 
@@ -498,18 +492,19 @@ impl GPUStylePTIntegrator {
             }
 
             if let IntersectionData::Surface { point, lambda, .. } = isect {
-                if wo == Vec3::ZERO || sample_buffer.sample_count[uray.buffer_idx].1 >= max_bounces
-                {
+                if wo.is_none() || sample_buffer.sample_count[uray.buffer_idx].1 >= max_bounces {
                     *ray = None;
                     sample_buffer.sample_count[uray.buffer_idx].1 = 0; // reset bounce count
                     sample_buffer.sample_count[uray.buffer_idx].0 += 1; // increment sample count
                     continue;
                 }
+
                 *ray = Some(PrimaryRay {
-                    ray: Ray::new(point, wo),
+                    ray: Ray::new(point, wo.unwrap()),
                     buffer_idx: uray.buffer_idx,
                     lambda,
                     throughput: next_throughput.0,
+                    transport_mode: uray.transport_mode,
                     cam_and_pixel_id,
                 });
                 sample_buffer.sample_count[uray.buffer_idx].1 += 1; // increment bounce count

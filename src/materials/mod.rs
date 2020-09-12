@@ -184,6 +184,7 @@ impl Material for MaterialEnum {
         debug_assert!(lambda > 0.0, "{}", lambda);
         debug_assert!(wi.0.is_finite().all());
         debug_assert!(wo.0.is_finite().all());
+        debug_assert!(wo != Vec3::ZERO);
         match self {
             MaterialEnum::GGX(inner) => inner.scatter_pdf(lambda, uv, transport_mode, wi, wo),
             MaterialEnum::Lambertian(inner) => {
@@ -263,6 +264,7 @@ impl Material for MaterialEnum {
         debug_assert!(lambda > 0.0, "{}", lambda);
         debug_assert!(wi.0.is_finite().all());
         debug_assert!(wo.0.is_finite().all());
+        debug_assert!(wo != Vec3::ZERO);
         match self {
             MaterialEnum::GGX(inner) => inner.f(lambda, uv, transport_mode, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.f(lambda, uv, transport_mode, wi, wo),
@@ -278,6 +280,7 @@ impl Material for MaterialEnum {
         wi: Vec3,
         wo: Option<Vec3>,
     ) -> SingleEnergy {
+        debug_assert!(wo.unwrap_or(Vec3::Z) != Vec3::ZERO);
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
             MaterialEnum::GGX(inner) => inner.emission(lambda, uv, transport_mode, wi, wo),
