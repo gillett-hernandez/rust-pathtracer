@@ -48,17 +48,17 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "gpu_style"
+filename = "GPUSPT"
 integrator = "PT"
-min_bounces = 0
-max_bounces = 8
+min_bounces = 3
+max_bounces = 12
 exposure = 1.0
-min_samples = 128
+min_samples = 32
 camera_id = 1
 russian_roulette = true
 only_direct = false
-light_samples = 4
-camera_samples = 4
+light_samples = 1
+camera_samples = 1
 [render_settings.resolution]
 width = 1024
 height = 1024

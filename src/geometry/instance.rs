@@ -154,17 +154,13 @@ impl Hittable for Instance {
             self.aggregate.sample_surface(s)
         }
     }
-    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
-        let (normal, from, to) = if let Some(transform) = self.transform {
-            (
-                transform.to_world(normal).normalized(),
-                transform.to_world(from),
-                transform.to_world(to),
-            )
+    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
+        let (from, to) = if let Some(transform) = self.transform {
+            (transform.to_world(from), transform.to_world(to))
         } else {
-            (normal, from, to)
+            (from, to)
         };
-        self.aggregate.psa_pdf(normal, from, to)
+        self.aggregate.psa_pdf(cos_o, from, to)
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {

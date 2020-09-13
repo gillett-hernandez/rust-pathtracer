@@ -107,11 +107,10 @@ impl Hittable for Sphere {
             (direction.normalized(), pdf)
         }
     }
-    fn psa_pdf(&self, normal: Vec3, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
-        let pdf = distance_squared
-            / ((normal * direction.normalized()).abs() * self.radius * self.radius * 4.0 * PI);
+        let pdf = distance_squared / (cos_o * self.radius * self.radius * 4.0 * PI);
         debug_assert!(pdf.is_finite() && pdf >= 0.0);
         pdf.into()
     }

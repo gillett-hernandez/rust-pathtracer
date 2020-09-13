@@ -275,8 +275,9 @@ mod tests {
         let sample = Sample2D::new_random_sample();
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);
+        let to = transform.to_world(Point3::ORIGIN);
         let result2 =
-            camera_surface.psa_pdf(Vec3::X, sample_from, transform.to_world(Point3::ORIGIN));
+            camera_surface.psa_pdf(Vec3::X * (to - sample_from).normalized(), sample_from, to);
         println!("{:?}", result2);
     }
 }

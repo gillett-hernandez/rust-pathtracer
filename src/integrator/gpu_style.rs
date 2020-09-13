@@ -14,13 +14,13 @@ use crate::TransportMode;
 // use std::io::Write;
 // use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::cmp::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
-pub const KERNEL_WIDTH: usize = 128;
-pub const KERNEL_HEIGHT: usize = 128;
+pub const KERNEL_WIDTH: usize = 32;
+pub const KERNEL_HEIGHT: usize = 32;
 pub const KERNEL_SIZE: usize = KERNEL_HEIGHT * KERNEL_WIDTH;
 
 #[derive(Copy, Clone, Debug)]
@@ -42,6 +42,8 @@ pub struct PrimaryRay {
     pub ray: Ray,
     pub lambda: f32,
     pub throughput: f32,
+    pub bsdf_pdf: f32,
+    pub cos_o: f32,
     pub buffer_idx: usize,
     pub transport_mode: TransportMode,
     // could be a ray from camera or ray from light.
@@ -68,7 +70,6 @@ pub enum IntersectionData {
         point: Point3,
         normal: Vec3,
         local_wi: Vec3,
-        local_wo: Option<Vec3>,
         instance_id: usize,
         throughput: f32,
         uv: (f32, f32),
@@ -122,13 +123,13 @@ impl ShadowRayBuffer {
 }
 
 pub struct ShadingResultBuffer {
-    pub data: Vec<(SingleEnergy, SingleEnergy, Option<Vec3>)>,
+    pub data: Vec<(SingleEnergy, SingleEnergy, Option<Vec3>, f32)>,
 }
 
 impl ShadingResultBuffer {
     pub fn new() -> Self {
         ShadingResultBuffer {
-            data: vec![(SingleEnergy::ZERO, SingleEnergy::ZERO, None); KERNEL_SIZE],
+            data: vec![(SingleEnergy::ZERO, SingleEnergy::ZERO, None, 0.0); KERNEL_SIZE],
         }
     }
 }
@@ -290,6 +291,8 @@ impl GPUStylePTIntegrator {
                             + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
                         buffer_idx: index,
                         throughput: 1.0,
+                        bsdf_pdf: 0.0,
+                        cos_o: 1.0,
                         transport_mode: TransportMode::default(),
                         cam_and_pixel_id: Some((cam_id, Pixel::UV(px, py))),
                     });
@@ -327,7 +330,8 @@ impl GPUStylePTIntegrator {
                         sample_buffer.sample_count[primary.buffer_idx];
                     let mut mult = 1.0;
                     const RR_THRESHOLD: f32 = 0.05;
-                    if bounce_count > self.min_bounces as usize && primary.throughput < RR_THRESHOLD {
+                    if bounce_count > self.min_bounces as usize && primary.throughput < RR_THRESHOLD
+                    {
                         let x = Sample1D::new_random_sample().x;
                         if x < primary.throughput {
                             mult /= RR_THRESHOLD;
@@ -345,13 +349,30 @@ impl GPUStylePTIntegrator {
                             // let wi = (primary.ray.origin - hit.point).normalized();
                             let wi = -primary.ray.direction;
                             let local_wi = frame.to_local(&wi).normalized();
-                            let emission = self.world.get_material(hit.material).emission(
+                            let mut emission = self.world.get_material(hit.material).emission(
                                 primary.lambda,
                                 hit.uv,
                                 primary.transport_mode,
                                 local_wi,
                                 None,
                             );
+
+                            // compensate for direct light hits
+                            if emission.0 > 0.0 {
+                                if primary.bsdf_pdf == 0.0 || self.light_samples == 0 {
+                                    // do nothing
+                                } else {
+                                    let hit_primitive = self.world.get_primitive(hit.instance_id);
+                                    // get psa_pdf of sampling the light
+                                    let pdf = hit_primitive.psa_pdf(
+                                        primary.cos_o,
+                                        primary.ray.origin,
+                                        hit.point,
+                                    );
+                                    let weight = power_heuristic(primary.bsdf_pdf, pdf.0);
+                                    emission.0 *= weight;
+                                }
+                            }
                             *isect = IntersectionData::Surface {
                                 lambda: primary.lambda,
                                 local_wi,
@@ -361,7 +382,7 @@ impl GPUStylePTIntegrator {
                                 emission,
                                 throughput: mult * primary.throughput,
                                 transport_mode: primary.transport_mode,
-                                local_wo: None,
+
                                 material: hit.material,
                                 uv: hit.uv,
                                 camera_pixel_id: primary.cam_and_pixel_id,
@@ -400,7 +421,14 @@ impl GPUStylePTIntegrator {
             .par_iter_mut()
             .zip(intersection_buffer.intersections.par_iter())
             .for_each(|(maybe_shadow, isect)| {
-                if let IntersectionData::Surface { lambda, point, .. } = isect {
+                if let IntersectionData::Surface {
+                    lambda,
+                    point,
+                    normal,
+                    ..
+                } = isect
+                {
+                    let frame = TangentFrame::from_normal(*normal);
                     let (wo, psa_pdf) = light.sample(Sample2D::new_random_sample(), *point);
                     debug_assert!(psa_pdf.0.is_finite(), "{:?} {:?}", point, wo);
                     *maybe_shadow = Some((
@@ -409,6 +437,8 @@ impl GPUStylePTIntegrator {
                             throughput: psa_pdf.0,
                             cam_and_pixel_id: None,
                             buffer_idx: 0,
+                            bsdf_pdf: 0.0,
+                            cos_o: (*normal * wo).abs(),
                             transport_mode: TransportMode::Importance,
                             lambda: *lambda,
                         },
@@ -457,7 +487,7 @@ impl GPUStylePTIntegrator {
                         emission,
                         throughput: primary.throughput,
                         transport_mode: primary.transport_mode,
-                        local_wo: None,
+
                         material: hit.material,
                         uv: hit.uv,
                         camera_pixel_id: None,
@@ -496,27 +526,24 @@ impl GPUStylePTIntegrator {
             .enumerate()
             .for_each(|(index, (shading_result, isect_data))| match isect_data {
                 IntersectionData::Surface {
+                    point,
+                    normal,
                     local_wi,
                     uv,
-                    normal,
                     lambda,
                     emission,
+
                     throughput,
                     material,
                     transport_mode,
                     ..
                 } => {
+                    // get material and regenerate tangentframe
                     let material = self.world.get_material(*material);
-                    let local_wo = material.generate(
-                        *lambda,
-                        *uv,
-                        *transport_mode,
-                        Sample2D::new_random_sample(),
-                        *local_wi,
-                    );
                     let frame = TangentFrame::from_normal(*normal);
+
+                    // estimate additional throughput from this path using NEE
                     let nee_data = shadow_buffer.rays[index];
-                    // estimate throughput from this path
                     let mut nee_contibution = SingleEnergy::ZERO;
                     if let Some((shadow_primary, status, data)) = nee_data {
                         match status {
@@ -524,14 +551,15 @@ impl GPUStylePTIntegrator {
                                 if let Some(ConnectionData::Intersection(
                                     IntersectionData::Surface {
                                         emission,
-                                        local_wi: light_local_wi,
+                                        // normal: light_surface_normal,
+                                        // local_wi: light_local_wi,
                                         ..
                                     },
                                 )) = data
                                 {
                                     // since we assigned the throughput as the pdf earlier, when doing the NEE intersection pass
                                     let light_psa_pdf = shadow_primary.throughput;
-                                    let wo = -light_local_wi;
+                                    let wo = frame.to_local(&shadow_primary.ray.direction);
                                     let f =
                                         material.f(*lambda, *uv, *transport_mode, *local_wi, wo);
                                     let pdf = material.scatter_pdf(
@@ -555,6 +583,15 @@ impl GPUStylePTIntegrator {
                             _ => {}
                         }
                     }
+
+                    // sample bsdf
+                    let local_wo = material.generate(
+                        *lambda,
+                        *uv,
+                        *transport_mode,
+                        Sample2D::new_random_sample(),
+                        *local_wi,
+                    );
 
                     // calculate data for next bounce
                     let f = local_wo.map_or(SingleEnergy::ZERO, |v| {
@@ -581,15 +618,16 @@ impl GPUStylePTIntegrator {
                             SingleEnergy::ZERO
                         },
                         local_wo.map(|v| frame.to_world(&v).normalized()),
+                        pdf.0,
                     );
                 }
                 IntersectionData::Environment { uv, lambda, .. } => {
                     let energy = self.world.environment.emission(*uv, *lambda);
 
-                    *shading_result = (energy, SingleEnergy::ZERO, None);
+                    *shading_result = (energy, SingleEnergy::ZERO, None, 0.0);
                 }
                 _ => {
-                    *shading_result = (SingleEnergy::ZERO, SingleEnergy::ZERO, None);
+                    *shading_result = (SingleEnergy::ZERO, SingleEnergy::ZERO, None, 0.0);
                 }
             });
 
@@ -601,7 +639,7 @@ impl GPUStylePTIntegrator {
             }
             let uray = ray.unwrap();
             let isect = intersection_buffer.intersections[i];
-            let (light, next_throughput, wo) = buffer.data[i];
+            let (light, next_throughput, wo, bsdf_pdf) = buffer.data[i];
             /*
             let tile_u = (idx % width) as f32 / width as f32; // + pixel_offset.0;
             let tile_v = (idx / width) as f32 / height as f32; // + pixel_offset.1;
@@ -628,7 +666,13 @@ impl GPUStylePTIntegrator {
                 }
             }
 
-            if let IntersectionData::Surface { point, lambda, .. } = isect {
+            if let IntersectionData::Surface {
+                point,
+                normal,
+                lambda,
+                ..
+            } = isect
+            {
                 if wo.is_none()
                     || sample_buffer.sample_count[uray.buffer_idx].1 >= max_bounces
                     || next_throughput.0 == 0.0
@@ -640,11 +684,14 @@ impl GPUStylePTIntegrator {
                     continue;
                 }
 
+                let wo = wo.unwrap();
                 *ray = Some(PrimaryRay {
-                    ray: Ray::new(point, wo.unwrap()),
+                    ray: Ray::new(point, wo),
                     buffer_idx: uray.buffer_idx,
                     lambda,
                     throughput: next_throughput.0,
+                    bsdf_pdf,
+                    cos_o: (normal * wo).abs(),
                     transport_mode: uray.transport_mode,
                     cam_and_pixel_id,
                 });
