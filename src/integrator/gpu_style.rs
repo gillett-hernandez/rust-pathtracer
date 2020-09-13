@@ -19,10 +19,6 @@ use std::sync::Arc;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
-pub const KERNEL_WIDTH: usize = 32;
-pub const KERNEL_HEIGHT: usize = 32;
-pub const KERNEL_SIZE: usize = KERNEL_HEIGHT * KERNEL_WIDTH;
-
 #[derive(Copy, Clone, Debug)]
 pub enum Pixel {
     UV(f32, f32),
@@ -56,9 +52,9 @@ pub struct PrimaryRayBuffer {
 }
 
 impl PrimaryRayBuffer {
-    pub fn new() -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         PrimaryRayBuffer {
-            rays: vec![None; KERNEL_SIZE],
+            rays: vec![None; width * height],
         }
     }
 }
@@ -90,9 +86,9 @@ pub struct IntersectionBuffer {
 }
 
 impl IntersectionBuffer {
-    pub fn new() -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         IntersectionBuffer {
-            intersections: vec![IntersectionData::Empty; KERNEL_SIZE],
+            intersections: vec![IntersectionData::Empty; width * height],
         }
     }
 }
@@ -115,9 +111,9 @@ pub struct ShadowRayBuffer {
 }
 
 impl ShadowRayBuffer {
-    pub fn new() -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         ShadowRayBuffer {
-            rays: vec![None; KERNEL_SIZE],
+            rays: vec![None; width * height],
         }
     }
 }
@@ -127,9 +123,9 @@ pub struct ShadingResultBuffer {
 }
 
 impl ShadingResultBuffer {
-    pub fn new() -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         ShadingResultBuffer {
-            data: vec![(SingleEnergy::ZERO, SingleEnergy::ZERO, None, 0.0); KERNEL_SIZE],
+            data: vec![(SingleEnergy::ZERO, SingleEnergy::ZERO, None, 0.0); width * height],
         }
     }
 }
@@ -139,9 +135,9 @@ pub struct SampleBounceBuffer {
 }
 
 impl SampleBounceBuffer {
-    pub fn new() -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         SampleBounceBuffer {
-            sample_count: vec![(0, 0); KERNEL_SIZE],
+            sample_count: vec![(0, 0); width * height],
         }
     }
 }
@@ -253,7 +249,7 @@ impl GPUStylePTIntegrator {
     pub fn primary_ray_pass(
         &self,
         buffer: &mut PrimaryRayBuffer,
-        sample_buffer: &mut SampleBounceBuffer,
+        sample_buffer: &SampleBounceBuffer,
         width: usize,
         height: usize,
         max_samples: usize,
@@ -261,56 +257,109 @@ impl GPUStylePTIntegrator {
         cam_id: CameraId,
         camera: &Camera,
     ) -> Status {
-        // buffer.rays.par_sort_unstable_by(|a, b| match (a, b) {
-        //     (Some(_), None) => Ordering::Less,
-        //     (None, Some(_)) => Ordering::Greater,
-        //     _ => Ordering::Equal,
-        // });
-        // let first_empty = buffer.rays.partition_point(|a| a.is_some());
+        // let any_remaining = buffer
+        //     .rays
+        //     .par_iter_mut()
+        //     .zip(sample_buffer.sample_count.par_iter())
+        //     .enumerate()
+        //     .map(|(index, (primary_ray, (sample_count, bounce_count)))| {
+        //         if *bounce_count == 0 && *sample_count < max_samples {
+        //             // ready to fire from camera
+        //             let tile_u = (index % width) as f32 / width as f32; // + pixel_offset.0;
+        //             let tile_v = (index / width) as f32 / height as f32; // + pixel_offset.1;
+        //             let tile_width = bounds.x.span();
+        //             let tile_height = bounds.y.span();
+        //             let (px, py) = (
+        //                 bounds.x.lower + (tile_u as f32) * tile_width,
+        //                 bounds.y.lower + (tile_v as f32) * tile_height,
+        //             );
+        //             let ray = camera.get_ray(Sample2D::new_random_sample(), px, py);
+        //             *primary_ray = Some(PrimaryRay {
+        //                 ray,
+        //                 lambda: self.wavelength_bounds.lower
+        //                     + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
+        //                 buffer_idx: index,
+        //                 throughput: 1.0,
+        //                 bsdf_pdf: 0.0,
+        //                 cos_o: 1.0,
+        //                 transport_mode: TransportMode::default(),
+        //                 cam_and_pixel_id: Some((cam_id, Pixel::UV(px, py))),
+        //             });
+        //             true
+        //         } else {
+        //             if *sample_count < max_samples {
+        //                 true
+        //             } else {
+        //                 false
+        //             }
+        //         }
+        //     })
+        //     .reduce(|| false, |a, b| a || b);
+        // if any_remaining {
+        //     Status::Running
+        // } else {
+        //     Status::Done
+        // }
+
+        buffer.rays.par_sort_unstable_by(|a, b| match (a, b) {
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            _ => Ordering::Equal,
+        });
+        let first_empty = buffer.rays.partition_point(|a| a.is_some());
         // println!("first empty is {}", first_empty);
-        let any_remaining = buffer
-            .rays
-            .par_iter_mut()
-            .zip(sample_buffer.sample_count.par_iter())
-            .enumerate()
-            .map(|(index, (primary_ray, (sample_count, bounce_count)))| {
-                if *bounce_count == 0 && *sample_count < max_samples {
-                    // ready to fire from camera
-                    let tile_u = (index % width) as f32 / width as f32; // + pixel_offset.0;
-                    let tile_v = (index / width) as f32 / height as f32; // + pixel_offset.1;
-                    let tile_width = bounds.x.span();
-                    let tile_height = bounds.y.span();
-                    let (px, py) = (
-                        bounds.x.lower + (tile_u as f32) * tile_width,
-                        bounds.y.lower + (tile_v as f32) * tile_height,
-                    );
-                    let ray = camera.get_ray(Sample2D::new_random_sample(), px, py);
-                    *primary_ray = Some(PrimaryRay {
-                        ray,
-                        lambda: self.wavelength_bounds.lower
-                            + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
-                        buffer_idx: index,
-                        throughput: 1.0,
-                        bsdf_pdf: 0.0,
-                        cos_o: 1.0,
-                        transport_mode: TransportMode::default(),
-                        cam_and_pixel_id: Some((cam_id, Pixel::UV(px, py))),
-                    });
-                    true
-                } else {
-                    if *sample_count < max_samples {
-                        true
+        let mut buffer_idx = 0;
+        let mut any_remaining = false;
+        let buffer_size = buffer.rays.len();
+        for index in first_empty..buffer_size {
+            loop {
+                if buffer_idx >= buffer_size {
+                    if !any_remaining {
+                        return Status::Done;
                     } else {
-                        false
+                        return Status::Running;
                     }
                 }
-            })
-            .reduce(|| false, |a, b| a || b);
-        if any_remaining {
-            Status::Running
-        } else {
-            Status::Done
+                let (sample_count, bounce_count) = sample_buffer.sample_count[buffer_idx];
+                if bounce_count > 0 {
+                    buffer_idx += 1;
+                    any_remaining = true;
+                    continue;
+                }
+                if sample_count > max_samples {
+                    buffer_idx += 1;
+                    continue;
+                } else {
+                    any_remaining = true;
+                    break;
+                }
+            }
+
+            // ready to fire from camera
+            let tile_u = (buffer_idx % width) as f32 / width as f32; // + pixel_offset.0;
+            let tile_v = (buffer_idx / width) as f32 / height as f32; // + pixel_offset.1;
+            let tile_width = bounds.x.span();
+            let tile_height = bounds.y.span();
+            let (px, py) = (
+                bounds.x.lower + (tile_u as f32) * tile_width,
+                bounds.y.lower + (tile_v as f32) * tile_height,
+            );
+            let ray = camera.get_ray(Sample2D::new_random_sample(), px, py);
+            buffer.rays[index] = Some(PrimaryRay {
+                ray,
+                lambda: self.wavelength_bounds.lower
+                    + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
+                buffer_idx,
+                throughput: 1.0,
+                bsdf_pdf: 0.0,
+                cos_o: 1.0,
+                transport_mode: TransportMode::default(),
+                cam_and_pixel_id: Some((cam_id, Pixel::UV(px, py))),
+            });
+            buffer_idx += 1;
         }
+
+        Status::Running
     }
     pub fn intersection_pass(
         &self,
@@ -428,7 +477,6 @@ impl GPUStylePTIntegrator {
                     ..
                 } = isect
                 {
-                    let frame = TangentFrame::from_normal(*normal);
                     let (wo, psa_pdf) = light.sample(Sample2D::new_random_sample(), *point);
                     debug_assert!(psa_pdf.0.is_finite(), "{:?} {:?}", point, wo);
                     *maybe_shadow = Some((
@@ -526,7 +574,6 @@ impl GPUStylePTIntegrator {
             .enumerate()
             .for_each(|(index, (shading_result, isect_data))| match isect_data {
                 IntersectionData::Surface {
-                    point,
                     normal,
                     local_wi,
                     uv,
@@ -708,9 +755,10 @@ impl GPUStylePTIntegrator {
         film: &mut Film<XYZColor>,
         sample_buffer: &SampleBounceBuffer,
         topleft: (usize, usize),
+        kernel_width: usize,
     ) {
         for (idx, (sample_count, _)) in sample_buffer.sample_count.iter().enumerate() {
-            let (sample_x, sample_y) = (idx % KERNEL_WIDTH, idx / KERNEL_WIDTH);
+            let (sample_x, sample_y) = (idx % kernel_width, idx / kernel_width);
             let (film_x, film_y) = (topleft.0 + sample_x, topleft.1 + sample_y);
             debug_assert!(*sample_count > 0, "{}", sample_count);
             film.buffer[film_y * film.width + film_x] /= *sample_count as f32;

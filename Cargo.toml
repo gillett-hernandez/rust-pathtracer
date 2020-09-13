@@ -34,3 +34,12 @@ debug=true
 
 [profile.test]
 opt-level = 0
+
+[profile.release]
+opt-level = 3
+debug = true
+lto = 'fat'
+incremental = false
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'

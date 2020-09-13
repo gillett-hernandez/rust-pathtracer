@@ -17,7 +17,7 @@ use crate::world::World;
 // use std::io::Write;
 // use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 // use std::cmp::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 // use std::thread;
 // use std::time::{Duration, Instant};
 
@@ -62,16 +62,19 @@ impl Renderer for GPUStyleRenderer {
                 );
                 let Resolution { width, height } = render_settings.resolution;
                 let camera_id = render_settings.camera_id.unwrap_or(0) as CameraId;
-                let mut primary_ray_buffer = PrimaryRayBuffer::new();
-                let mut intersection_buffer = IntersectionBuffer::new();
-                let mut shadow_ray_buffer = ShadowRayBuffer::new();
-                let mut shading_result_buffer = ShadingResultBuffer::new();
-                let mut sample_buffer = SampleBounceBuffer::new();
-                let x_max = (width as f32 / KERNEL_WIDTH as f32).floor() as usize; // change to ceil to allow partial tiles
-                let y_max = (height as f32 / KERNEL_HEIGHT as f32).floor() as usize; // change to ceil to allow partial tiles
+                let kernel_width = render_settings.tile_width;
+                let kernel_height = render_settings.tile_height;
+                let mut primary_ray_buffer = PrimaryRayBuffer::new(kernel_width, kernel_height);
+                let mut intersection_buffer = IntersectionBuffer::new(kernel_width, kernel_height);
+                let mut shadow_ray_buffer = ShadowRayBuffer::new(kernel_width, kernel_height);
+                let mut shading_result_buffer =
+                    ShadingResultBuffer::new(kernel_width, kernel_height);
+                let mut sample_buffer = SampleBounceBuffer::new(kernel_width, kernel_height);
+                let x_max = (width as f32 / kernel_width as f32).floor() as usize; // change to ceil to allow partial tiles
+                let y_max = (height as f32 / kernel_height as f32).floor() as usize; // change to ceil to allow partial tiles
                 println!(
                     "starting tiled render with {} x {} tiles and tile size of {}x{}",
-                    x_max, y_max, KERNEL_WIDTH, KERNEL_HEIGHT
+                    x_max, y_max, kernel_width, kernel_height
                 );
                 for y in 0..y_max {
                     for x in 0..x_max {
@@ -92,9 +95,9 @@ impl Renderer for GPUStyleRenderer {
                         loop {
                             let status = integrator.primary_ray_pass(
                                 &mut primary_ray_buffer,
-                                &mut sample_buffer,
-                                KERNEL_WIDTH,
-                                KERNEL_HEIGHT,
+                                &sample_buffer,
+                                kernel_width,
+                                kernel_height,
                                 render_settings
                                     .max_samples
                                     .unwrap_or(render_settings.min_samples)
@@ -141,12 +144,18 @@ impl Renderer for GPUStyleRenderer {
                         integrator.finalize_pass(
                             &mut film,
                             &sample_buffer,
-                            (x * KERNEL_WIDTH, y * KERNEL_HEIGHT),
+                            (x * kernel_width, y * kernel_height),
+                            kernel_width,
                         );
-                        sample_buffer.sample_count.fill((0, 0));
+                        // sample_buffer.sample_count.fill((0, 0));
+                        sample_buffer
+                            .sample_count
+                            .par_iter_mut()
+                            .for_each(|v| *v = (0, 0));
                     }
                 }
             });
+
         for (render_settings, film) in config.render_settings.iter().zip(films.iter()) {
             output_film(render_settings, film);
         }

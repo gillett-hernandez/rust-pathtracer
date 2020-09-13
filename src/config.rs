@@ -50,6 +50,8 @@ pub struct RenderSettings {
     pub light_samples: Option<u16>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
+    pub tile_width: usize,
+    pub tile_height: usize,
 }
 
 #[derive(Deserialize, Clone)]
