@@ -312,6 +312,7 @@ impl GPUStylePTIntegrator {
     pub fn intersection_pass(
         &self,
         ray_buffer: &PrimaryRayBuffer,
+        sample_buffer: &SampleBounceBuffer,
         buffer: &mut IntersectionBuffer,
     ) {
         // actually performs intersection with scene, putting results in the intersection buffer
@@ -322,16 +323,21 @@ impl GPUStylePTIntegrator {
             .for_each(|(isect, primary)| {
                 if let Some(primary) = primary {
                     // perform russian roulette
+                    let (_sample_count, bounce_count) =
+                        sample_buffer.sample_count[primary.buffer_idx];
                     let mut mult = 1.0;
-                    if primary.throughput < 0.05 {
+                    const RR_THRESHOLD: f32 = 0.05;
+                    if bounce_count > self.min_bounces as usize && primary.throughput < RR_THRESHOLD {
                         let x = Sample1D::new_random_sample().x;
                         if x < primary.throughput {
-                            mult *= 1.0 / x;
+                            mult /= RR_THRESHOLD;
                         } else {
                             *isect = IntersectionData::Empty;
                             return;
                         }
                     }
+                    debug_assert!(mult.is_finite());
+                    debug_assert!(primary.throughput.is_finite());
                     let maybe_hit = self.world.hit(primary.ray, 0.0001, primary.ray.tmax);
                     match maybe_hit {
                         Some(hit) => {
@@ -396,6 +402,7 @@ impl GPUStylePTIntegrator {
             .for_each(|(maybe_shadow, isect)| {
                 if let IntersectionData::Surface { lambda, point, .. } = isect {
                     let (wo, psa_pdf) = light.sample(Sample2D::new_random_sample(), *point);
+                    debug_assert!(psa_pdf.0.is_finite(), "{:?} {:?}", point, wo);
                     *maybe_shadow = Some((
                         PrimaryRay {
                             ray: Ray::new(*point, wo),
@@ -510,7 +517,7 @@ impl GPUStylePTIntegrator {
                     let frame = TangentFrame::from_normal(*normal);
                     let nee_data = shadow_buffer.rays[index];
                     // estimate throughput from this path
-                    let mut contribution = SingleEnergy::ZERO;
+                    let mut nee_contibution = SingleEnergy::ZERO;
                     if let Some((shadow_primary, status, data)) = nee_data {
                         match status {
                             VisibilityTestStatus::Visible => {
@@ -537,7 +544,11 @@ impl GPUStylePTIntegrator {
                                     // do MIS here
                                     let cos_i = wo.z().abs();
                                     let weight = power_heuristic(light_psa_pdf, pdf.0);
-                                    contribution = cos_i * emission * weight * f / light_psa_pdf;
+                                    nee_contibution = if light_psa_pdf > 0.0 {
+                                        cos_i * emission * weight * f / light_psa_pdf
+                                    } else {
+                                        SingleEnergy::ZERO
+                                    };
                                 } else {
                                 }
                             }
@@ -554,9 +565,21 @@ impl GPUStylePTIntegrator {
                     });
                     let cos_i = local_wo.map_or(0.0, |wo| wo.z().abs());
 
+                    let contribution = *throughput * (*emission + nee_contibution);
+                    debug_assert!(
+                        contribution.0.is_finite(),
+                        "{} {} {}",
+                        throughput,
+                        emission.0,
+                        nee_contibution.0
+                    );
                     *shading_result = (
-                        *throughput * (*emission + contribution),
-                        *throughput * cos_i * f / pdf.0,
+                        contribution,
+                        if pdf.0 > 0.0 {
+                            *throughput * cos_i * f / pdf.0
+                        } else {
+                            SingleEnergy::ZERO
+                        },
                         local_wo.map(|v| frame.to_world(&v).normalized()),
                     );
                 }
@@ -600,12 +623,17 @@ impl GPUStylePTIntegrator {
                     }
                 };
                 if let Some(v) = film.buffer.get_mut(idx) {
+                    debug_assert!(light.0.is_finite(), "{:?}", isect);
                     *v += XYZColor::from(SingleWavelength::new(lambda, light));
                 }
             }
 
             if let IntersectionData::Surface { point, lambda, .. } = isect {
-                if wo.is_none() || sample_buffer.sample_count[uray.buffer_idx].1 >= max_bounces {
+                if wo.is_none()
+                    || sample_buffer.sample_count[uray.buffer_idx].1 >= max_bounces
+                    || next_throughput.0 == 0.0
+                    || next_throughput.0.is_infinite()
+                {
                     *ray = None;
                     sample_buffer.sample_count[uray.buffer_idx].1 = 0; // reset bounce count
                     sample_buffer.sample_count[uray.buffer_idx].0 += 1; // increment sample count
@@ -634,10 +662,11 @@ impl GPUStylePTIntegrator {
         sample_buffer: &SampleBounceBuffer,
         topleft: (usize, usize),
     ) {
-        for (idx, (sample, _)) in sample_buffer.sample_count.iter().enumerate() {
+        for (idx, (sample_count, _)) in sample_buffer.sample_count.iter().enumerate() {
             let (sample_x, sample_y) = (idx % KERNEL_WIDTH, idx / KERNEL_WIDTH);
             let (film_x, film_y) = (topleft.0 + sample_x, topleft.1 + sample_y);
-            film.buffer[film_y * film.width + film_x] /= *sample as f32;
+            debug_assert!(*sample_count > 0, "{}", sample_count);
+            film.buffer[film_y * film.width + film_x] /= *sample_count as f32;
         }
     }
 }

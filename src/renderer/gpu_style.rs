@@ -112,8 +112,11 @@ impl Renderer for GPUStyleRenderer {
                                 }
                                 _ => {}
                             }
-                            integrator
-                                .intersection_pass(&primary_ray_buffer, &mut intersection_buffer);
+                            integrator.intersection_pass(
+                                &primary_ray_buffer,
+                                &sample_buffer,
+                                &mut intersection_buffer,
+                            );
 
                             integrator.nee_pass(
                                 render_settings.light_samples.unwrap() as usize,
