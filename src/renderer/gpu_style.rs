@@ -115,8 +115,12 @@ impl Renderer for GPUStyleRenderer {
                             integrator
                                 .intersection_pass(&primary_ray_buffer, &mut intersection_buffer);
 
-                            // integrator.nee_pass(&intersection_buffer, &mut shadow_ray_buffer);
-                            // integrator.visibility_intersection_pass(&mut shadow_ray_buffer);
+                            integrator.nee_pass(
+                                render_settings.light_samples.unwrap() as usize,
+                                &intersection_buffer,
+                                &mut shadow_ray_buffer,
+                            );
+                            integrator.visibility_intersection_pass(&mut shadow_ray_buffer);
                             // intersection_buffer
                             //     .intersections
                             //     .sort_unstable_by(|a, b| intersection_cmp(&a, &b));

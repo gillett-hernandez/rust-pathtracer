@@ -61,7 +61,7 @@ impl PrimaryRayBuffer {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum IntersectionData {
     Surface {
         lambda: f32,
@@ -72,6 +72,7 @@ pub enum IntersectionData {
         instance_id: usize,
         throughput: f32,
         uv: (f32, f32),
+        emission: SingleEnergy,
         camera_pixel_id: CameraPixelId,
         material: MaterialId,
         transport_mode: TransportMode,
@@ -95,15 +96,27 @@ impl IntersectionBuffer {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum ConnectionData {
+    Intersection(IntersectionData),
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum VisibilityTestStatus {
+    Unchecked,
+    Visible,
+    Blocked,
+}
+
 pub struct ShadowRayBuffer {
     // Ray, and whether it intersected anything. defaults to true, set to false upon tracing and testing.
-    pub rays: Vec<(Ray, bool)>,
+    pub rays: Vec<Option<(PrimaryRay, VisibilityTestStatus, Option<ConnectionData>)>>,
 }
 
 impl ShadowRayBuffer {
     pub fn new() -> Self {
         ShadowRayBuffer {
-            rays: vec![(Ray::default(), true); KERNEL_SIZE],
+            rays: vec![None; KERNEL_SIZE],
         }
     }
 }
@@ -325,12 +338,21 @@ impl GPUStylePTIntegrator {
                             let frame = TangentFrame::from_normal(hit.normal);
                             // let wi = (primary.ray.origin - hit.point).normalized();
                             let wi = -primary.ray.direction;
+                            let local_wi = frame.to_local(&wi).normalized();
+                            let emission = self.world.get_material(hit.material).emission(
+                                primary.lambda,
+                                hit.uv,
+                                primary.transport_mode,
+                                local_wi,
+                                None,
+                            );
                             *isect = IntersectionData::Surface {
                                 lambda: primary.lambda,
-                                local_wi: frame.to_local(&wi).normalized(),
+                                local_wi,
                                 point: hit.point,
                                 normal: hit.normal,
                                 instance_id: hit.instance_id,
+                                emission,
                                 throughput: mult * primary.throughput,
                                 transport_mode: primary.transport_mode,
                                 local_wo: None,
@@ -354,24 +376,10 @@ impl GPUStylePTIntegrator {
                 }
             });
     }
-    pub fn visibility_intersection_pass(&self, buffer: &mut ShadowRayBuffer) {
-        // actually performs intersection with scene, putting results in the intersection buffer
-        buffer.rays.par_iter_mut().for_each(|shadow| {
-            let ray = shadow.0;
-            let maybe_hit = self.world.hit(ray, 0.0001, ray.tmax);
-            match maybe_hit {
-                Some(_hit) => {
-                    shadow.1 = true;
-                }
-                None => {
-                    // handle no hit case
-                    shadow.1 = false;
-                }
-            }
-        });
-    }
+
     pub fn nee_pass(
         &self,
+        light_samples: usize,
         intersection_buffer: &IntersectionBuffer,
         shadow_buffer: &mut ShadowRayBuffer,
     ) {
@@ -385,19 +393,86 @@ impl GPUStylePTIntegrator {
             .rays
             .par_iter_mut()
             .zip(intersection_buffer.intersections.par_iter())
-            .for_each(|((ray, _hit), isect)| {
-                if let IntersectionData::Surface { point, .. } = isect {
-                    let (wo, _pdf) = light.sample(Sample2D::new_random_sample(), *point);
-                    *ray = Ray::new(*point, wo);
+            .for_each(|(maybe_shadow, isect)| {
+                if let IntersectionData::Surface { lambda, point, .. } = isect {
+                    let (wo, psa_pdf) = light.sample(Sample2D::new_random_sample(), *point);
+                    *maybe_shadow = Some((
+                        PrimaryRay {
+                            ray: Ray::new(*point, wo),
+                            throughput: psa_pdf.0,
+                            cam_and_pixel_id: None,
+                            buffer_idx: 0,
+                            transport_mode: TransportMode::Importance,
+                            lambda: *lambda,
+                        },
+                        VisibilityTestStatus::Unchecked,
+                        None,
+                    ));
                 } else {
+                    *maybe_shadow = None;
                 }
             });
+    }
+    pub fn visibility_intersection_pass(&self, buffer: &mut ShadowRayBuffer) {
+        // actually performs intersection with scene, putting results in the intersection buffer
+        buffer.rays.par_iter_mut().for_each(|shadow| {
+            if shadow.is_none() {
+                return;
+            }
+            let local_ray = shadow.unwrap();
+            let primary = local_ray.0;
+            let ray = primary.ray;
+            let maybe_hit = self.world.hit(ray, 0.0001, ray.tmax);
+            match maybe_hit {
+                Some(hit) => {
+                    let frame = TangentFrame::from_normal(hit.normal);
+                    // let wi = (primary.ray.origin - hit.point).normalized();
+                    let wi = -ray.direction;
+                    let local_wi = frame.to_local(&wi).normalized();
+                    let emission = self.world.get_material(hit.material).emission(
+                        primary.lambda,
+                        hit.uv,
+                        primary.transport_mode,
+                        local_wi,
+                        None,
+                    );
+                    let status = if emission.0 > 0.0 {
+                        VisibilityTestStatus::Visible
+                    } else {
+                        VisibilityTestStatus::Blocked
+                    };
+                    let local_isect = IntersectionData::Surface {
+                        lambda: primary.lambda,
+                        local_wi,
+                        point: hit.point,
+                        normal: hit.normal,
+                        instance_id: hit.instance_id,
+                        emission,
+                        throughput: primary.throughput,
+                        transport_mode: primary.transport_mode,
+                        local_wo: None,
+                        material: hit.material,
+                        uv: hit.uv,
+                        camera_pixel_id: None,
+                    };
+                    *shadow = Some((
+                        primary,
+                        status,
+                        Some(ConnectionData::Intersection(local_isect)),
+                    ));
+                }
+                None => {
+                    // handle no hit case
+                    *shadow = Some((primary, VisibilityTestStatus::Visible, None));
+                }
+            }
+        });
     }
     pub fn shading_pass(
         &self,
         intersection_buffer: &IntersectionBuffer,
         shadow_buffer: &ShadowRayBuffer,
-        cam_bounds: Bounds2D,
+        _cam_bounds: Bounds2D,
         buffer: &mut ShadingResultBuffer,
         sample_buffer: &mut SampleBounceBuffer,
         max_bounces: usize,
@@ -418,6 +493,7 @@ impl GPUStylePTIntegrator {
                     uv,
                     normal,
                     lambda,
+                    emission,
                     throughput,
                     material,
                     transport_mode,
@@ -432,6 +508,44 @@ impl GPUStylePTIntegrator {
                         *local_wi,
                     );
                     let frame = TangentFrame::from_normal(*normal);
+                    let nee_data = shadow_buffer.rays[index];
+                    // estimate throughput from this path
+                    let mut contribution = SingleEnergy::ZERO;
+                    if let Some((shadow_primary, status, data)) = nee_data {
+                        match status {
+                            VisibilityTestStatus::Visible => {
+                                if let Some(ConnectionData::Intersection(
+                                    IntersectionData::Surface {
+                                        emission,
+                                        local_wi: light_local_wi,
+                                        ..
+                                    },
+                                )) = data
+                                {
+                                    // since we assigned the throughput as the pdf earlier, when doing the NEE intersection pass
+                                    let light_psa_pdf = shadow_primary.throughput;
+                                    let wo = -light_local_wi;
+                                    let f =
+                                        material.f(*lambda, *uv, *transport_mode, *local_wi, wo);
+                                    let pdf = material.scatter_pdf(
+                                        *lambda,
+                                        *uv,
+                                        *transport_mode,
+                                        *local_wi,
+                                        wo,
+                                    );
+                                    // do MIS here
+                                    let cos_i = wo.z().abs();
+                                    let weight = power_heuristic(light_psa_pdf, pdf.0);
+                                    contribution = cos_i * emission * weight * f / light_psa_pdf;
+                                } else {
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    // calculate data for next bounce
                     let f = local_wo.map_or(SingleEnergy::ZERO, |v| {
                         material.f(*lambda, *uv, *transport_mode, *local_wi, v)
                     });
@@ -439,10 +553,9 @@ impl GPUStylePTIntegrator {
                         material.scatter_pdf(*lambda, *uv, *transport_mode, *local_wi, v)
                     });
                     let cos_i = local_wo.map_or(0.0, |wo| wo.z().abs());
-                    let emission =
-                        material.emission(*lambda, *uv, *transport_mode, *local_wi, local_wo);
+
                     *shading_result = (
-                        *throughput * emission,
+                        *throughput * (*emission + contribution),
                         *throughput * cos_i * f / pdf.0,
                         local_wo.map(|v| frame.to_world(&v).normalized()),
                     );
