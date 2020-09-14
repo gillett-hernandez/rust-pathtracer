@@ -449,6 +449,8 @@ impl GPUStylePTIntegrator {
                             }
                         }
                     }
+                } else {
+                    *isect = IntersectionData::Empty;
                 }
             });
     }

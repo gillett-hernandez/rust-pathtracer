@@ -25,6 +25,8 @@ use std::sync::Arc;
 // use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
+
+const COMPRESSED_STYLE: bool = true;
 pub struct GPUStyleRenderer {}
 
 impl GPUStyleRenderer {
@@ -91,55 +93,101 @@ impl Renderer for GPUStyleRenderer {
                             x: x_bounds,
                             y: y_bounds,
                         };
-                        // generate primary rays to fill empty spots
-                        loop {
-                            let status = integrator.primary_ray_pass(
-                                &mut primary_ray_buffer,
-                                &sample_buffer,
-                                kernel_width,
-                                kernel_height,
-                                render_settings
-                                    .max_samples
-                                    .unwrap_or(render_settings.min_samples)
-                                    as usize,
-                                cam_bounds,
-                                camera_id,
-                                &cameras[camera_id as usize],
-                            );
-                            match status {
-                                Status::Done => {
-                                    break;
+                        
+                        if COMPRESSED_STYLE {
+                            loop {
+                                let status = integrator.primary_ray_pass(
+                                    &mut primary_ray_buffer,
+                                    &sample_buffer,
+                                    kernel_width,
+                                    kernel_height,
+                                    render_settings
+                                        .max_samples
+                                        .unwrap_or(render_settings.min_samples)
+                                        as usize,
+                                    cam_bounds,
+                                    camera_id,
+                                    &cameras[camera_id as usize],
+                                );
+                                match status {
+                                    Status::Done => {
+                                        break;
+                                    }
+                                    _ => {}
                                 }
-                                Status::Underutilized => {
-                                    // println!("underutilized");
-                                }
-                                _ => {}
-                            }
-                            integrator.intersection_pass(
-                                &primary_ray_buffer,
-                                &sample_buffer,
-                                &mut intersection_buffer,
-                            );
+                                integrator.intersection_pass(
+                                    &primary_ray_buffer,
+                                    &sample_buffer,
+                                    &mut intersection_buffer,
+                                );
 
-                            integrator.nee_pass(
-                                render_settings.light_samples.unwrap() as usize,
-                                &intersection_buffer,
-                                &mut shadow_ray_buffer,
-                            );
-                            integrator.visibility_intersection_pass(&mut shadow_ray_buffer);
-                            // intersection_buffer
-                            //     .intersections
-                            //     .sort_unstable_by(|a, b| intersection_cmp(&a, &b));
-                            integrator.shading_pass(
-                                &intersection_buffer,
-                                &shadow_ray_buffer,
-                                cam_bounds,
-                                &mut shading_result_buffer,
-                                &mut sample_buffer,
-                                render_settings.max_bounces.unwrap_or(8) as usize,
-                                &mut primary_ray_buffer,
-                                &mut film,
-                            );
+                                integrator.nee_pass(
+                                    render_settings.light_samples.unwrap() as usize,
+                                    &intersection_buffer,
+                                    &mut shadow_ray_buffer,
+                                );
+                                integrator.visibility_intersection_pass(&mut shadow_ray_buffer);
+                                // intersection_buffer
+                                //     .intersections
+                                //     .sort_unstable_by(|a, b| intersection_cmp(&a, &b));
+                                integrator.shading_pass(
+                                    &intersection_buffer,
+                                    &shadow_ray_buffer,
+                                    cam_bounds,
+                                    &mut shading_result_buffer,
+                                    &mut sample_buffer,
+                                    render_settings.max_bounces.unwrap_or(8) as usize,
+                                    &mut primary_ray_buffer,
+                                    &mut film,
+                                );
+                            }
+                        } else {
+                            // generate primary rays to fill empty spots
+                            for _sample in 0..render_settings
+                                .max_samples
+                                .unwrap_or(render_settings.min_samples)
+                            {
+                                integrator.primary_ray_pass(
+                                    &mut primary_ray_buffer,
+                                    &sample_buffer,
+                                    kernel_width,
+                                    kernel_height,
+                                    render_settings
+                                        .max_samples
+                                        .unwrap_or(render_settings.min_samples)
+                                        as usize,
+                                    cam_bounds,
+                                    camera_id,
+                                    &cameras[camera_id as usize],
+                                );
+                                for _ in 0..render_settings.max_bounces.unwrap() {
+                                    integrator.intersection_pass(
+                                        &primary_ray_buffer,
+                                        &sample_buffer,
+                                        &mut intersection_buffer,
+                                    );
+
+                                    integrator.nee_pass(
+                                        render_settings.light_samples.unwrap() as usize,
+                                        &intersection_buffer,
+                                        &mut shadow_ray_buffer,
+                                    );
+                                    integrator.visibility_intersection_pass(&mut shadow_ray_buffer);
+                                    // intersection_buffer
+                                    //     .intersections
+                                    //     .sort_unstable_by(|a, b| intersection_cmp(&a, &b));
+                                    integrator.shading_pass(
+                                        &intersection_buffer,
+                                        &shadow_ray_buffer,
+                                        cam_bounds,
+                                        &mut shading_result_buffer,
+                                        &mut sample_buffer,
+                                        render_settings.max_bounces.unwrap_or(8) as usize,
+                                        &mut primary_ray_buffer,
+                                        &mut film,
+                                    );
+                                }
+                            }
                         }
                         integrator.finalize_pass(
                             &mut film,

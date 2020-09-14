@@ -271,7 +271,7 @@ impl GenericIntegrator for BDPTIntegrator {
                             )
                         } else {
                             1.0 / ((s + t) as f32)
-                        };
+                        } / (sampled.3).0;
                         return SingleWavelength::new(lambda, weight * factor / (sampled.3).0);
                     }
 
@@ -292,7 +292,7 @@ impl GenericIntegrator for BDPTIntegrator {
                             )
                         } else {
                             1.0 / ((s + t) as f32)
-                        };
+                        } / (sampled.3).0;
                         let contribution = weight * factor / (sampled.3).0;
                         let last_light_vertex = light_path[s - 1];
                         let (vert_on_lens, vert_in_scene) = if t == 1 {
