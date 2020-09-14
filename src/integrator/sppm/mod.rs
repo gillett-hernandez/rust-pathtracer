@@ -292,8 +292,8 @@ impl GenericIntegrator for SPPMIntegrator {
                 let material = self.world.get_material(vertex_in_scene.material_id);
 
                 let hit: HitRecord = (*vertex_in_scene).into();
-                let f = material.f(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
-                let pdf = material.scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+                let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+
                 if pdf.0 == 0.0 {
                     continue;
                 }

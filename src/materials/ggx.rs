@@ -156,7 +156,16 @@ fn sample_vndf(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
     let value = 1.0 - p1 * p1 - p2 * p2;
     let n = p1 * t1 + p2 * t2 + value.max(0.0).sqrt() * v;
 
-    debug_assert!(n.0.is_finite().all(), "{:?}, {:?}, {:?}, {:?}, {:?}, {:?}", n, p1, t1, p2, t2, v);
+    debug_assert!(
+        n.0.is_finite().all(),
+        "{:?}, {:?}, {:?}, {:?}, {:?}, {:?}",
+        n,
+        p1,
+        t1,
+        p2,
+        t2,
+        v
+    );
     Vec3::new(alpha * n.x(), alpha * n.y(), n.z().max(0.0)).normalized()
 }
 
@@ -368,16 +377,6 @@ impl GGX {
 }
 
 impl Material for GGX {
-    fn scatter_pdf(
-        &self,
-        lambda: f32,
-        _uv: (f32, f32),
-        transport_mode: TransportMode,
-        wi: Vec3,
-        wo: Vec3,
-    ) -> PDF {
-        self.eval_pdf(lambda, wi, wo, transport_mode).1
-    }
     fn generate(
         &self,
         lambda: f32,
@@ -422,15 +421,15 @@ impl Material for GGX {
             return wo;
         }
     }
-    fn f(
+    fn bsdf(
         &self,
         lambda: f32,
         _uv: (f32, f32),
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> SingleEnergy {
-        self.eval_pdf(lambda, wi, wo, transport_mode).0
+    ) -> (SingleEnergy, PDF) {
+        self.eval_pdf(lambda, wi, wo, transport_mode)
     }
     // fn emission(
     //     &self,
@@ -511,14 +510,7 @@ mod tests {
                 *wi,
             );
             if let Some(wo) = maybe_wo {
-                let orig_f = ggx_glass.f(
-                    fake_hit_record.lambda,
-                    fake_hit_record.uv,
-                    fake_hit_record.transport_mode,
-                    *wi,
-                    wo,
-                );
-                let orig_pdf = ggx_glass.scatter_pdf(
+                let (orig_f, orig_pdf) = ggx_glass.bsdf(
                     fake_hit_record.lambda,
                     fake_hit_record.uv,
                     fake_hit_record.transport_mode,
@@ -528,14 +520,7 @@ mod tests {
 
                 // check swapping wi and wo
                 let (wi, wo) = (wo, wi);
-                let sampled_f = ggx_glass.f(
-                    fake_hit_record.lambda,
-                    fake_hit_record.uv,
-                    fake_hit_record.transport_mode,
-                    wi,
-                    *wo,
-                );
-                let sampled_pdf = ggx_glass.scatter_pdf(
+                let (sampled_f, sampled_pdf) = ggx_glass.bsdf(
                     fake_hit_record.lambda,
                     fake_hit_record.uv,
                     fake_hit_record.transport_mode,
@@ -554,14 +539,7 @@ mod tests {
         println!("{} succeeded, {} failed", succeeded, wi_s.len() - succeeded);
         let wi = Vec3::new(0.9709351, 0.18724124, 0.14908342);
         let wo = Vec3::new(-0.008856451, 0.6295874, -0.7768792);
-        let orig_f = ggx_glass.f(
-            fake_hit_record.lambda,
-            fake_hit_record.uv,
-            fake_hit_record.transport_mode,
-            wi,
-            wo,
-        );
-        let orig_pdf = ggx_glass.scatter_pdf(
+        let (orig_f, orig_pdf) = ggx_glass.bsdf(
             fake_hit_record.lambda,
             fake_hit_record.uv,
             fake_hit_record.transport_mode,
@@ -569,14 +547,7 @@ mod tests {
             wo,
         );
         let (wi, wo) = (wo, wi);
-        let sampled_f = ggx_glass.f(
-            fake_hit_record.lambda,
-            fake_hit_record.uv,
-            fake_hit_record.transport_mode,
-            wi,
-            wo,
-        );
-        let sampled_pdf = ggx_glass.scatter_pdf(
+        let (sampled_f, sampled_pdf) = ggx_glass.bsdf(
             fake_hit_record.lambda,
             fake_hit_record.uv,
             fake_hit_record.transport_mode,

@@ -76,7 +76,6 @@ impl Material for DiffuseLight {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         wi: Vec3,
-        _wo: Option<Vec3>,
     ) -> SingleEnergy {
         let cosine = wi.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)

@@ -127,7 +127,6 @@ impl Material for SharpLight {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         wi: Vec3,
-        _wo: Option<Vec3>,
     ) -> SingleEnergy {
         // wi is in local space, and is normalized
         // lets check if it could have been constructed by sample_emission.

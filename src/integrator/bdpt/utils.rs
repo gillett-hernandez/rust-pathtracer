@@ -78,7 +78,6 @@ pub fn eval_unweighted_contribution(
                 hit.uv,
                 hit.transport_mode,
                 frame.to_local(&wi).normalized(),
-                None,
             );
         }
     } else if t == 0 {
@@ -168,7 +167,6 @@ pub fn eval_unweighted_contribution(
                         hit.uv,
                         hit.transport_mode,
                         llv_local_light_to_eye,
-                        None,
                     );
                     emission
                 }
@@ -183,13 +181,15 @@ pub fn eval_unweighted_contribution(
                 let wi = (second_to_last_light_vertex.point - last_light_vertex.point).normalized();
                 let hit_material = world.get_material(last_light_vertex.material_id);
                 let hit: HitRecord = last_light_vertex.into();
-                hit_material.f(
-                    hit.lambda,
-                    hit.uv,
-                    hit.transport_mode,
-                    llv_frame.to_local(&wi).normalized(),
-                    llv_local_light_to_eye,
-                )
+                hit_material
+                    .bsdf(
+                        hit.lambda,
+                        hit.uv,
+                        hit.transport_mode,
+                        llv_frame.to_local(&wi).normalized(),
+                        llv_local_light_to_eye,
+                    )
+                    .0
             }
         };
 
@@ -225,13 +225,15 @@ pub fn eval_unweighted_contribution(
                 // let wo = -light_to_eye;
                 let hit_material = world.get_material(last_eye_vertex.material_id);
                 let hit: HitRecord = last_eye_vertex.into();
-                let reflectance = hit_material.f(
-                    hit.lambda,
-                    hit.uv,
-                    hit.transport_mode,
-                    lev_frame.to_local(&wi).normalized(),
-                    lev_local_eye_to_light,
-                );
+                let reflectance = hit_material
+                    .bsdf(
+                        hit.lambda,
+                        hit.uv,
+                        hit.transport_mode,
+                        lev_frame.to_local(&wi).normalized(),
+                        lev_local_eye_to_light,
+                    )
+                    .0;
                 reflectance
             }
         };
@@ -504,23 +506,25 @@ where
             // );
             let hit: HitRecord = llv.into();
             llv_forward_pdf = hit_material
-                .scatter_pdf(
+                .bsdf(
                     hit.lambda,
                     hit.uv,
                     hit.transport_mode,
                     llv_frame.to_local(&wi).normalized(),
                     llv_local_light_to_eye,
                 )
-                .0;
+                .1
+                 .0;
             llv_backward_pdf = hit_material
-                .scatter_pdf(
+                .bsdf(
                     hit.lambda,
                     hit.uv,
                     hit.transport_mode,
                     llv_local_light_to_eye,
                     llv_frame.to_local(&wi).normalized(),
                 )
-                .0;
+                .1
+                 .0;
         } else {
             // s must be 1
             // which means the connection is to the surface of a light
@@ -579,23 +583,25 @@ where
             // );
             let hit: HitRecord = lev.into();
             lev_forward_pdf = hit_material
-                .scatter_pdf(
+                .bsdf(
                     hit.lambda,
                     hit.uv,
                     hit.transport_mode,
                     llv_local_wi,
                     llv_local_light_to_eye,
                 )
-                .0;
+                .1
+                 .0;
             lev_backward_pdf = hit_material
-                .scatter_pdf(
+                .bsdf(
                     hit.lambda,
                     hit.uv,
                     hit.transport_mode,
                     llv_local_light_to_eye,
                     llv_local_wi,
                 )
-                .0;
+                .1
+                 .0;
         } else {
             // t must be 1
             // which means the connection is to the surface of the camera

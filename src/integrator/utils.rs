@@ -205,20 +205,20 @@ pub fn random_walk(
             );
 
             // what to do in this situation, where there is a wo and there's also emission?
-            let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, maybe_wo);
+            let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
 
             // wo is generated in tangent space.
 
             if let Some(wo) = maybe_wo {
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
-                let f = material.f(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+                let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
                 let cos_i = wo.z().abs();
                 let cos_o = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
                 // if emission.0 > 0.0 {
 
                 // }
-                let pdf = material.scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.0 < 0.00000001 || pdf.is_nan() {
                     break;
@@ -239,8 +239,9 @@ pub fn random_walk(
                 // eval pdf in reverse direction
                 vertex.pdf_backward = rr_continue_prob
                     * material
-                        .scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
-                        .0
+                        .bsdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
+                        .1
+                         .0
                     / cos_o;
 
                 debug_assert!(

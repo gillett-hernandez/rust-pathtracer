@@ -16,21 +16,6 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter_pdf(
-        &self,
-        _lambda: f32,
-        _uv: (f32, f32),
-        _transport_mode: TransportMode,
-        wi: Vec3,
-        wo: Vec3,
-    ) -> PDF {
-        let cosine = wo.z();
-        if cosine * wi.z() > 0.0 {
-            (cosine / PI).into()
-        } else {
-            0.0.into()
-        }
-    }
     fn generate(
         &self,
         _lambda: f32,
@@ -46,19 +31,22 @@ impl Material for Lambertian {
 
     // implement f
 
-    fn f(
+    fn bsdf(
         &self,
         lambda: f32,
         uv: (f32, f32),
         _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> SingleEnergy {
+    ) -> (SingleEnergy, PDF) {
         let cosine = wo.z();
         if cosine * wi.z() > 0.0 {
-            SingleEnergy::new(self.color.eval_at(lambda, uv).min(1.0) / PI)
+            (
+                SingleEnergy::new(self.color.eval_at(lambda, uv).min(1.0) / PI),
+                (cosine / PI).into(),
+            )
         } else {
-            0.0.into()
+            (0.0.into(), 0.0.into())
         }
     }
     // fn emission(&self, _hit: &HitRecord, _wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {

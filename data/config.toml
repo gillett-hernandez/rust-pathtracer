@@ -1,6 +1,6 @@
 scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
-renderer="GPUStyle"
-# renderer="Naive"
+# renderer="GPUStyle"
+renderer="Naive"
 
 # distant camera
 [[cameras]]
@@ -48,8 +48,8 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "GPUSPT"
-integrator = "PT"
+filename = "BDPT"
+integrator = "BDPT"
 tile_width = 128
 tile_height = 128
 min_bounces = 3

@@ -403,7 +403,6 @@ impl GPUStylePTIntegrator {
                                 hit.uv,
                                 primary.transport_mode,
                                 local_wi,
-                                None,
                             );
 
                             // compensate for direct light hits
@@ -521,7 +520,6 @@ impl GPUStylePTIntegrator {
                         hit.uv,
                         primary.transport_mode,
                         local_wi,
-                        None,
                     );
                     let status = if emission.0 > 0.0 {
                         VisibilityTestStatus::Visible
@@ -609,15 +607,9 @@ impl GPUStylePTIntegrator {
                                     // since we assigned the throughput as the pdf earlier, when doing the NEE intersection pass
                                     let light_psa_pdf = shadow_primary.throughput;
                                     let wo = frame.to_local(&shadow_primary.ray.direction);
-                                    let f =
-                                        material.f(*lambda, *uv, *transport_mode, *local_wi, wo);
-                                    let pdf = material.scatter_pdf(
-                                        *lambda,
-                                        *uv,
-                                        *transport_mode,
-                                        *local_wi,
-                                        wo,
-                                    );
+                                    let (f, pdf) =
+                                        material.bsdf(*lambda, *uv, *transport_mode, *local_wi, wo);
+
                                     // do MIS here
                                     let cos_i = wo.z().abs();
                                     let weight = power_heuristic(light_psa_pdf, pdf.0);
@@ -643,12 +635,10 @@ impl GPUStylePTIntegrator {
                     );
 
                     // calculate data for next bounce
-                    let f = local_wo.map_or(SingleEnergy::ZERO, |v| {
-                        material.f(*lambda, *uv, *transport_mode, *local_wi, v)
+                    let (f, pdf) = local_wo.map_or((SingleEnergy::ZERO, 0.0.into()), |v| {
+                        material.bsdf(*lambda, *uv, *transport_mode, *local_wi, v)
                     });
-                    let pdf = local_wo.map_or(0.0.into(), |v| {
-                        material.scatter_pdf(*lambda, *uv, *transport_mode, *local_wi, v)
-                    });
+
                     let cos_i = local_wo.map_or(0.0, |wo| wo.z().abs());
 
                     let contribution = *throughput * (*emission + nee_contibution);

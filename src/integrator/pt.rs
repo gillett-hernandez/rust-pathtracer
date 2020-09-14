@@ -56,7 +56,7 @@ impl PathTracingIntegrator {
                 return SingleEnergy::ZERO;
             }
             // since direction is already in world space, no need to call frame.to_world(direction) in the above line
-            let reflectance = material.f(
+            let (reflectance, scatter_pdf_for_light_ray) = material.bsdf(
                 hit.lambda,
                 hit.uv,
                 hit.transport_mode,
@@ -81,13 +81,8 @@ impl PathTracingIntegrator {
             }
 
             let light_material = self.world.get_material(light.get_material_id());
-            let emission = light_material.emission(
-                hit.lambda,
-                hit.uv,
-                hit.transport_mode,
-                light_vertex_wi,
-                None,
-            );
+            let emission =
+                light_material.emission(hit.lambda, hit.uv, hit.transport_mode, light_vertex_wi);
             // this should be the same as the other method, but maybe not.
             if emission.0 == 0.0 {
                 return SingleEnergy::ZERO;
@@ -95,13 +90,6 @@ impl PathTracingIntegrator {
 
             profile.shadow_rays += 1;
             if veach_v(&self.world, point_on_light, hit.point) {
-                let scatter_pdf_for_light_ray = material.scatter_pdf(
-                    hit.lambda,
-                    hit.uv,
-                    hit.transport_mode,
-                    wi,
-                    local_light_direction,
-                );
                 let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
 
                 debug_assert!(emission.0 >= 0.0);
@@ -142,9 +130,8 @@ impl PathTracingIntegrator {
         let direction = uv_to_direction(uv);
         let local_wo = frame.to_local(&direction);
 
-        let reflectance = material.f(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
-        let scatter_pdf_for_light_ray =
-            material.scatter_pdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
+        let (reflectance, scatter_pdf_for_light_ray) =
+            material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
         profile.shadow_rays += 1;
         if let Some(mut light_hit) =
@@ -171,7 +158,6 @@ impl PathTracingIntegrator {
                 light_hit.uv,
                 light_hit.transport_mode,
                 light_wi,
-                None,
             );
             if emission.0 > 0.0 {
                 let light = self.world.get_primitive(light_hit.instance_id);
@@ -326,8 +312,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                     let material = self.world.get_material(vertex.material_id);
 
-                    let emission =
-                        material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+                    let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
 
                     if emission.0 > 0.0 {
                         if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
@@ -364,7 +349,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                 let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                 let material = self.world.get_material(vertex.material_id);
 
-                let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+                let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
 
                 if emission.0 > 0.0 {
                     // this will likely never get triggered, since hitting a light source is handled in the above branch
