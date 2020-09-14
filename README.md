@@ -1,6 +1,6 @@
 # Kagayaki
 
-This is a wavelength aware physically based 3D rendering engine written in Rust. Performance is not the focus, as the focus is mostly in implementing concepts in a concise and readable manner.
+This is a wavelength aware physically based 3D rendering engine written in Rust. The main focus is in implementing concepts in a concise and readable manner, however there are some performance optimizations. This project uses `packed_simd` in much of the code where possible.
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
 
@@ -75,8 +75,8 @@ That should theoretically cause images to converge faster, though the feature is
 * [x] implement scene parser to reduce compilations even more
 * [x] implement light tracing
 * [x] implement BDPT
+* [x] refactor bsdf trait methods to reduce duplication
 * [ ] basic mediums
-* [ ] refactor bsdf trait methods to reduce duplication
 * [ ] implement real units for radiance and camera importance
 * [ ] research image reconstruction theory and implement proper pixel filtering
 
