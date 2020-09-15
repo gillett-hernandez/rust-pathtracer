@@ -309,7 +309,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         .get(index + 1)
                         .map(|v| (v.point - vertex.point).normalized());
                     let wi = frame.to_local(&dir_to_prev);
-                    let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                     let material = self.world.get_material(vertex.material_id);
 
                     let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
@@ -346,7 +345,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     .get(index + 1)
                     .map(|v| (v.point - vertex.point).normalized());
                 let wi = frame.to_local(&dir_to_prev);
-                let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
                 let material = self.world.get_material(vertex.material_id);
 
                 let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);

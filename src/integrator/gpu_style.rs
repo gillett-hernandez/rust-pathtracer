@@ -456,7 +456,7 @@ impl GPUStylePTIntegrator {
 
     pub fn nee_pass(
         &self,
-        light_samples: usize,
+        _light_samples: usize,
         intersection_buffer: &IntersectionBuffer,
         shadow_buffer: &mut ShadowRayBuffer,
     ) {

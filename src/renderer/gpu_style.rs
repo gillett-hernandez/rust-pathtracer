@@ -19,7 +19,7 @@ use crate::world::World;
 // use std::cmp::Ordering;
 use std::sync::Arc;
 // use std::thread;
-// use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 // use crossbeam::channel::unbounded;
 // use pbr::ProgressBar;
@@ -45,6 +45,7 @@ impl Renderer for GPUStyleRenderer {
             films.push(Film::new(width, height, XYZColor::BLACK));
         }
 
+        let now = Instant::now();
         let arc_world = Arc::new(world.clone());
         films
             .par_iter_mut()
@@ -93,7 +94,7 @@ impl Renderer for GPUStyleRenderer {
                             x: x_bounds,
                             y: y_bounds,
                         };
-                        
+
                         if COMPRESSED_STYLE {
                             loop {
                                 let status = integrator.primary_ray_pass(
@@ -203,6 +204,8 @@ impl Renderer for GPUStyleRenderer {
                     }
                 }
             });
+
+        println!("{}s", now.elapsed().as_millis() as f32 / 1000.0);
 
         for (render_settings, film) in config.render_settings.iter().zip(films.iter()) {
             output_film(render_settings, film);
