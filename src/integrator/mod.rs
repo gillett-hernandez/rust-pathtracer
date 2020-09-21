@@ -9,8 +9,8 @@ pub use crate::camera::{Camera, CameraId};
 use crate::config::RenderSettings;
 use crate::math::*;
 use crate::profile::Profile;
-use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::world::World;
+use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;

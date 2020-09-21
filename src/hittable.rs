@@ -3,7 +3,8 @@ use crate::math::*;
 use std::fmt::Debug;
 
 pub use crate::aabb::{HasBoundingBox, AABB};
-use crate::TransportMode;
+use crate::world::TransportMode;
+
 
 #[derive(Clone, Copy, Debug)]
 pub struct HitRecord {

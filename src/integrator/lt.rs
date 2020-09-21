@@ -5,8 +5,9 @@ use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
-use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
-use crate::TransportMode;
+use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+
+use crate::world::TransportMode;
 
 use std::sync::Arc;
 

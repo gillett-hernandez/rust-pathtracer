@@ -2,7 +2,7 @@ extern crate serde;
 
 use crate::curves::*;
 use crate::math::*;
-use crate::spectral::InterpolationMode;
+use math::spectral::InterpolationMode;
 
 use std::error::Error;
 use std::fs::File;

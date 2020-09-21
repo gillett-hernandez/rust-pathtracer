@@ -3,9 +3,9 @@ use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
-use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::world::TransportMode;
 use crate::world::World;
-use crate::TransportMode;
+use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 
 use std::sync::Arc;

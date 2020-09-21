@@ -11,7 +11,7 @@ use crate::math::*;
 // use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 // use crate::MaterialId;
-// use crate::TransportMode;
+// use crate::world::TransportMode;
 
 // use std::collections::HashMap;
 // use std::io::Write;

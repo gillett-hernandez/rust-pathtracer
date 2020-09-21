@@ -11,6 +11,22 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
+pub const NORMAL_OFFSET: f32 = 0.00001;
+pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum TransportMode {
+    Radiance,
+    Importance,
+}
+
+impl Default for TransportMode {
+    fn default() -> Self {
+        TransportMode::Importance
+    }
+}
+
+
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,

@@ -12,9 +12,9 @@ use crate::config::RenderSettings;
 use crate::integrator::*;
 use crate::math::*;
 use crate::profile::Profile;
-use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
+use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 use std::collections::HashMap;
 // use std::io::Write;

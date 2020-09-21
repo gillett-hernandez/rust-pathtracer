@@ -7,8 +7,7 @@ use crate::materials::*;
 use crate::math::*;
 // use crate::profile::Profile;
 use crate::world::World;
-use crate::MaterialId;
-use crate::TransportMode;
+use crate::world::{MaterialId, TransportMode};
 
 // use std::collections::HashMap;
 // use std::io::Write;

@@ -1,6 +1,6 @@
 use crate::materials::Material;
 use crate::math::*;
-use crate::TransportMode;
+use crate::world::TransportMode;
 
 pub fn reflect(wi: Vec3, normal: Vec3) -> Vec3 {
     let wi = -wi;
@@ -182,11 +182,11 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
 
 #[derive(Debug, Clone)]
 pub struct GGX {
-    alpha: f32,
-    eta: SPD,
-    eta_o: f32, // replace with SPD
-    kappa: SPD,
-    permeability: f32,
+    pub alpha: f32,
+    pub eta: SPD,
+    pub eta_o: f32, // replace with SPD
+    pub kappa: SPD,
+    pub permeability: f32,
 }
 
 impl GGX {

@@ -1,5 +1,5 @@
 use crate::math::*;
-use crate::TransportMode;
+use crate::world::TransportMode;
 
 use std::marker::{Send, Sync};
 
@@ -83,7 +83,7 @@ mod lambertian;
 mod sharp_light;
 
 pub use diffuse_light::DiffuseLight;
-pub use ggx::GGX;
+pub use ggx::{GGX, refract, reflect};
 pub use lambertian::Lambertian;
 pub use sharp_light::SharpLight;
 

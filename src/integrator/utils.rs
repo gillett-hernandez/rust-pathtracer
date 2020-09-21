@@ -3,8 +3,8 @@ use crate::materials::{Material, MaterialId};
 use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;
-use crate::INTERSECTION_TIME_OFFSET;
-use crate::{TransportMode, NORMAL_OFFSET};
+use crate::world::INTERSECTION_TIME_OFFSET;
+use crate::world::{TransportMode, NORMAL_OFFSET};
 
 use std::sync::Arc;
 

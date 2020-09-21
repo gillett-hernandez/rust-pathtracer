@@ -5,7 +5,7 @@ use crate::integrator::utils::{random_walk, veach_v, LightSourceType, Vertex, Ve
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
-use crate::TransportMode;
+use crate::world::TransportMode;
 // use crate::world::EnvironmentMap;
 
 use std::f32::INFINITY;

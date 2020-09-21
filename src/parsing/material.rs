@@ -1,7 +1,7 @@
 use crate::materials::*;
 use crate::parsing::curves::{parse_curve, Curve};
 use crate::texture::TexStack;
-use crate::Sidedness;
+use math::Sidedness;
 
 use serde::{Deserialize, Serialize};
 

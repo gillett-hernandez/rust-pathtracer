@@ -9,10 +9,9 @@ use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::*;
 use crate::math::*;
-use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use crate::world::TransportMode;
 use crate::world::World;
-use crate::TransportMode;
-
+use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use std::f32::INFINITY;
 use std::sync::Arc;
 

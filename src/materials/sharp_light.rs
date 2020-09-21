@@ -1,6 +1,6 @@
 use crate::materials::Material;
 use crate::math::*;
-use crate::TransportMode;
+use crate::world::TransportMode;
 
 #[derive(Clone, Debug)]
 pub struct SharpLight {
