@@ -12,6 +12,10 @@ impl Bounds1D {
         self.upper - self.lower
     }
 
+    pub fn lerp(&self, t: f32) -> f32 {
+        t * self.span() + self.lower
+    }
+
     pub fn contains(&self, value: &f32) -> bool {
         &self.lower <= value && value < &self.upper
     }

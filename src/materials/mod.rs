@@ -75,17 +75,50 @@ pub trait Material: Send + Sync {
     ) -> Option<(f32, PDF)> {
         None
     }
+
+    fn is_medium(&self) -> bool {
+        false
+    }
+    fn eval_phase(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, PDF) {
+        (0.0.into(), 0.0.into())
+    }
+    fn sample_phase(&self, lambda: f32, wi: Vec3, s: Sample2D) -> (Vec3, PDF) {
+        (Vec3::ZERO, 0.0.into())
+    }
+    fn tr(&self, lambda: f32, distance: f32) -> SingleEnergy {
+        // Tr
+        0.0.into()
+    }
+    fn sample_tr(
+        &self,
+        lambda: f32,
+        time_bounds: Bounds1D,
+        s: Sample1D,
+    ) -> (f32, SingleEnergy, PDF) {
+        if s.x < 0.5 {
+            (1.0, self.tr(lambda, 1.0), 0.1.into())
+        } else {
+            let t = time_bounds.lerp(0.5);
+            (
+                t,                                 // time
+                self.tr(lambda, t),                // Tr
+                (0.9 / time_bounds.span()).into(), //PDF of scattering within time bounds
+            )
+        }
+    }
 }
 
 mod diffuse_light;
 mod ggx;
 mod lambertian;
 mod sharp_light;
+mod volumes;
 
 pub use diffuse_light::DiffuseLight;
-pub use ggx::{GGX, refract, reflect};
+pub use ggx::{reflect, refract, GGX};
 pub use lambertian::Lambertian;
 pub use sharp_light::SharpLight;
+pub use volumes::*;
 
 // type required for an id into the Material Table
 // pub type MaterialId = u8;
@@ -124,6 +157,7 @@ pub enum MaterialEnum {
     Lambertian(Lambertian),
     DiffuseLight(DiffuseLight),
     SharpLight(SharpLight),
+    Isotropic(Isotropic),
 }
 
 impl From<DiffuseLight> for MaterialEnum {
@@ -149,6 +183,11 @@ impl From<GGX> for MaterialEnum {
         MaterialEnum::GGX(value)
     }
 }
+impl From<Isotropic> for MaterialEnum {
+    fn from(value: Isotropic) -> Self {
+        MaterialEnum::Isotropic(value)
+    }
+}
 
 impl MaterialEnum {
     pub fn get_name(&self) -> &str {
@@ -157,6 +196,7 @@ impl MaterialEnum {
             MaterialEnum::Lambertian(_inner) => Lambertian::NAME,
             MaterialEnum::SharpLight(_inner) => SharpLight::NAME,
             MaterialEnum::DiffuseLight(_inner) => DiffuseLight::NAME,
+            MaterialEnum::Isotropic(_inner) => Isotropic::NAME,
         }
     }
 }
@@ -176,6 +216,7 @@ impl Material for MaterialEnum {
             MaterialEnum::Lambertian(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
             MaterialEnum::SharpLight(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
             MaterialEnum::DiffuseLight(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
+            MaterialEnum::Isotropic(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
         }
     }
     fn sample_emission(
@@ -215,6 +256,13 @@ impl Material for MaterialEnum {
                 scatter_sample,
                 wavelength_sample,
             ),
+            MaterialEnum::Isotropic(inner) => inner.sample_emission(
+                point,
+                normal,
+                wavelength_range,
+                scatter_sample,
+                wavelength_sample,
+            ),
         }
     }
     fn bsdf(
@@ -234,6 +282,7 @@ impl Material for MaterialEnum {
             MaterialEnum::Lambertian(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
             MaterialEnum::SharpLight(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
             MaterialEnum::DiffuseLight(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::Isotropic(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
         }
     }
     fn emission(
@@ -249,6 +298,7 @@ impl Material for MaterialEnum {
             MaterialEnum::Lambertian(inner) => inner.emission(lambda, uv, transport_mode, wi),
             MaterialEnum::SharpLight(inner) => inner.emission(lambda, uv, transport_mode, wi),
             MaterialEnum::DiffuseLight(inner) => inner.emission(lambda, uv, transport_mode, wi),
+            MaterialEnum::Isotropic(inner) => inner.emission(lambda, uv, transport_mode, wi),
         }
     }
     fn sample_emission_spectra(
@@ -270,6 +320,63 @@ impl Material for MaterialEnum {
             MaterialEnum::DiffuseLight(inner) => {
                 inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
             }
+            MaterialEnum::Isotropic(inner) => {
+                inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
+            }
+        }
+    }
+    fn sample_tr(
+        &self,
+        lambda: f32,
+        time_bounds: Bounds1D,
+        s: Sample1D,
+    ) -> (f32, SingleEnergy, PDF) {
+        debug_assert!(lambda > 0.0, "{}", lambda);
+        match self {
+            MaterialEnum::GGX(inner) => inner.sample_tr(lambda, time_bounds, s),
+            MaterialEnum::Lambertian(inner) => inner.sample_tr(lambda, time_bounds, s),
+            MaterialEnum::SharpLight(inner) => inner.sample_tr(lambda, time_bounds, s),
+            MaterialEnum::DiffuseLight(inner) => inner.sample_tr(lambda, time_bounds, s),
+            MaterialEnum::Isotropic(inner) => inner.sample_tr(lambda, time_bounds, s),
+        }
+    }
+    fn sample_phase(&self, lambda: f32, wi: Vec3, s: Sample2D) -> (Vec3, PDF) {
+        debug_assert!(lambda > 0.0, "{}", lambda);
+        match self {
+            MaterialEnum::GGX(inner) => inner.sample_phase(lambda, wi, s),
+            MaterialEnum::Lambertian(inner) => inner.sample_phase(lambda, wi, s),
+            MaterialEnum::SharpLight(inner) => inner.sample_phase(lambda, wi, s),
+            MaterialEnum::DiffuseLight(inner) => inner.sample_phase(lambda, wi, s),
+            MaterialEnum::Isotropic(inner) => inner.sample_phase(lambda, wi, s),
+        }
+    }
+    fn eval_phase(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, PDF) {
+        debug_assert!(lambda > 0.0, "{}", lambda);
+        match self {
+            MaterialEnum::GGX(inner) => inner.eval_phase(lambda, wi, wo),
+            MaterialEnum::Lambertian(inner) => inner.eval_phase(lambda, wi, wo),
+            MaterialEnum::SharpLight(inner) => inner.eval_phase(lambda, wi, wo),
+            MaterialEnum::DiffuseLight(inner) => inner.eval_phase(lambda, wi, wo),
+            MaterialEnum::Isotropic(inner) => inner.eval_phase(lambda, wi, wo),
+        }
+    }
+    fn tr(&self, lambda: f32, distance: f32) -> SingleEnergy {
+        debug_assert!(lambda > 0.0, "{}", lambda);
+        match self {
+            MaterialEnum::GGX(inner) => inner.tr(lambda, distance),
+            MaterialEnum::Lambertian(inner) => inner.tr(lambda, distance),
+            MaterialEnum::SharpLight(inner) => inner.tr(lambda, distance),
+            MaterialEnum::DiffuseLight(inner) => inner.tr(lambda, distance),
+            MaterialEnum::Isotropic(inner) => inner.tr(lambda, distance),
+        }
+    }
+    fn is_medium(&self) -> bool {
+        match self {
+            MaterialEnum::GGX(inner) => inner.is_medium(),
+            MaterialEnum::Lambertian(inner) => inner.is_medium(),
+            MaterialEnum::SharpLight(inner) => inner.is_medium(),
+            MaterialEnum::DiffuseLight(inner) => inner.is_medium(),
+            MaterialEnum::Isotropic(inner) => inner.is_medium(),
         }
     }
 }
