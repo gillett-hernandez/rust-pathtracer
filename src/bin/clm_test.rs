@@ -59,10 +59,14 @@ impl Layer {
     pub fn perfect_transmission(&self, lambda: f32, wo: Vec3) -> Option<Vec3> {
         match self {
             Layer::Dielectric(GGX) => {
+                println!("ggx perfect transmission");
                 let eta = GGX.eta.evaluate(lambda);
                 refract(wo, Vec3::Z, 1.0 / eta)
             }
-            Layer::Diffuse { .. } => None,
+            Layer::Diffuse { .. } => {
+                println!("diffuse perfect transmission (no transmission)");
+                None
+            }
             Layer::HGMedium { g, .. } => {
                 if *g > -1.0 {
                     Some(-wo)
@@ -109,32 +113,45 @@ impl CLM {
         let mut path = Vec::new();
         let num_layers = self.layers.len();
         let (mut index, direction) = if wo.z() > 0.0 {
+            println!("index {}-1 case", num_layers);
             (num_layers - 1, -1)
         } else {
+            println!("index 0 case");
             (0, 1)
         };
         let mut throughput = 1.0;
         let mut path_pdf = 1.0;
         loop {
             let layer = &self.layers[index];
+            println!(
+                "calling perfect transmission on layer {} with wo = {:?}",
+                index, wo
+            );
             let wi = match layer.perfect_transmission(lambda, wo) {
-                Some(wi) => wi,
+                Some(wi) => {
+                    path.push(CLMVertex {
+                        wi,
+                        wo,
+                        throughput,
+                        path_pdf,
+                        index,
+                    });
+                    wi
+                }
                 None => {
-                    println!("broke");
+                    path.push(CLMVertex {
+                        wi: Vec3::Z,
+                        wo,
+                        throughput: 0.0,
+                        path_pdf: 0.0,
+                        index,
+                    });
                     break;
                 }
             };
 
-            path.push(CLMVertex {
-                wi,
-                wo,
-                throughput,
-                path_pdf,
-                index,
-            });
-
             if (index == 0 && direction == -1) || (index + 1 == num_layers && direction == 1) {
-                println!("broke");
+                println!("broke2");
                 break;
             }
 
@@ -214,9 +231,22 @@ impl CLM {
         // let wo = long_path.0.last().unwrap().wo;
         let short_path = self.generate_short(lambda, wo, opposite_mode);
         // let num_layers = self.layers.len();
-
+        self.eval_path_full(lambda, long_path, short_path, transport_mode)
+    }
+    pub fn eval_path_full(
+        &self,
+        lambda: f32,
+        long_path: CLMPath,
+        short_path: CLMPath,
+        transport_mode: TransportMode,
+    ) -> (SingleEnergy, PDF) {
+        let opposite_mode = match transport_mode {
+            TransportMode::Importance => TransportMode::Radiance,
+            TransportMode::Radiance => TransportMode::Importance,
+        };
         let mut sum = 0.0;
         let mut pdf_sum = 0.0;
+        let wo = short_path.0.first().unwrap().wo;
 
         let nee_direction = if wo.z() > 0.0 { 1 } else { -1 };
 
@@ -281,14 +311,16 @@ fn main() {
             Layer::Diffuse {
                 color: cornell_white,
             },
-            Layer::Dielectric(ggx_glass),
+            // Layer::Dielectric(ggx_glass),
         ],
         20,
     );
 
+    let lambda = 500.0;
+
     let path = clm.generate(
-        500.0,
-        Vec3::new(1.0, 1.0, 10.0).normalized(),
+        lambda,
+        Vec3::new(1.0, 0.0, 10.0).normalized(),
         &mut *sampler,
         TransportMode::Importance,
     );
@@ -298,12 +330,8 @@ fn main() {
 
     let wo = path.0.last().unwrap().wo;
 
-    let (f, pdf) = clm.bsdf(
-        500.0,
-        Vec3::new(1.0, 1.0, 10.0).normalized(),
-        wo,
-        &mut *sampler,
-        TransportMode::Importance,
-    );
+    let short_path = clm.generate_short(lambda, wo, TransportMode::Radiance);
+
+    let (f, pdf) = clm.eval_path_full(lambda, path, short_path, TransportMode::Importance);
     println!("{}, {}", f.0, pdf.0);
 }
