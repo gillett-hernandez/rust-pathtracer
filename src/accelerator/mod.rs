@@ -104,28 +104,46 @@ impl Accelerator {
             }
             Accelerator::BVH { instances, bvh } => {
                 let mut possible_hit_instances = bvh.traverse(&r, instances);
-                possible_hit_instances.sort_unstable_by(|a, b| {
-                    // let hit0_t1 = a.2;
-                    // let hit1_t1 = b.2;
-                    // let sign = (hit1_t1-hit0_t1).signum();
-                    (a.2).partial_cmp(&b.2).unwrap()
-                });
-                let mut closest_so_far: f32 = t1;
-                debug_assert!(!t1.is_nan());
-                let mut hit_record: Option<HitRecord> = None;
+                // possible_hit_instances.sort_unstable_by(|a, b| {
+                //     // let hit0_t1 = a.2;
+                //     // let hit1_t1 = b.2;
+                //     // let sign = (hit1_t1-hit0_t1).signum();
+                //     (a.2).partial_cmp(&b.2).unwrap()
+                // });
+                // let mut closest_so_far: f32 = t1;
+                // debug_assert!(!t1.is_nan());
+                // let mut hit_record: Option<HitRecord> = None;
+                // for (instance, t0_aabb_hit, t1_aabb_hit) in possible_hit_instances {
+                //     if t1_aabb_hit < t0 || t0_aabb_hit > t1 {
+                //         // if bounding box hit was outside of hit time bounds
+                //         continue;
+                //     }
+                //     if t0_aabb_hit > closest_so_far {
+                //         // ignore aabb hit that happened after closest so far
+                //         continue;
+                //     }
+                //     // let t0 = t0.max(t0_aabb_hit);
+
+                //     // let t1 = closest_so_far.min(t1_aabb_hit);
+                //     // let tmp_hit_record = instance.hit(r, t0, t1);
+                //     let tmp_hit_record = instance.hit(r, t0, closest_so_far);
+                //     if let Some(hit) = &tmp_hit_record {
+                //         closest_so_far = hit.time;
+                //         hit_record = tmp_hit_record;
+                //     } else {
+                //         continue;
+                //     }
+                // }
+
+                // temporary inefficient method. brute force somewhat.
+                let mut hit_record = None;
+                let mut closest_so_far = 0.0;
                 for (instance, t0_aabb_hit, t1_aabb_hit) in possible_hit_instances {
                     if t1_aabb_hit < t0 || t0_aabb_hit > t1 {
-                        // if bounding box hit was outside of hit time bounds
+                        // if bounding box hit was outside of prescribed hit time bounds
                         continue;
                     }
-                    if t0_aabb_hit > closest_so_far {
-                        // ignore aabb hit that happened after closest so far
-                        continue;
-                    }
-                    // let t0 = t0.max(t0_aabb_hit);
 
-                    // let t1 = closest_so_far.min(t1_aabb_hit);
-                    // let tmp_hit_record = instance.hit(r, t0, t1);
                     let tmp_hit_record = instance.hit(r, t0, closest_so_far);
                     if let Some(hit) = &tmp_hit_record {
                         closest_so_far = hit.time;
