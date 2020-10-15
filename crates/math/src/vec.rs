@@ -4,6 +4,7 @@ use crate::Point3;
 use packed_simd::f32x4;
 use serde::{Deserialize, Serialize};
 
+use std::fmt;
 use std::ops::{Add, Div, Mul, MulAssign, Neg, Sub};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -13,8 +14,18 @@ pub enum Axis {
     Z,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
+#[derive(Copy, Clone, PartialEq, Default)]
 pub struct Vec3(pub f32x4);
+
+impl fmt::Debug for Vec3 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Vec3")
+            .field(&self.x())
+            .field(&self.y())
+            .field(&self.z())
+            .finish()
+    }
+}
 
 impl Vec3 {
     pub const fn new(x: f32, y: f32, z: f32) -> Vec3 {

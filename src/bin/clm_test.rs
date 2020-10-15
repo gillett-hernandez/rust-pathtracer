@@ -142,6 +142,7 @@ impl CLM {
             let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
             throughput *= f.0;
             path_pdf *= pdf.0;
+            println!("gs {:?} {:?}", throughput, path_pdf);
 
             index = (index as isize + direction) as usize;
 
@@ -168,7 +169,7 @@ impl CLM {
                 None => break,
             };
 
-            println!("{:?} {:?}", wi, wo);
+            println!("g {:?} {:?}", wi, wo);
 
             path.push(CLMVertex {
                 wi,
@@ -193,22 +194,16 @@ impl CLM {
 
         CLMPath(path)
     }
-    pub fn bsdf(
+    pub fn bsdf_eval(
         &self,
         lambda: f32,
-        wi: Vec3,
-        wo: Vec3,
+        long_path: &CLMPath,
+        short_path: &CLMPath,
         sampler: &mut dyn Sampler,
         transport_mode: TransportMode,
     ) -> (SingleEnergy, PDF) {
-        let opposite_mode = match transport_mode {
-            TransportMode::Importance => TransportMode::Radiance,
-            TransportMode::Radiance => TransportMode::Importance,
-        };
-        let long_path = self.generate(lambda, wi, sampler, transport_mode);
-        println!("long path finished");
-        // let wo = long_path.0.last().unwrap().wo;
-        let short_path = self.generate_short(lambda, wo, opposite_mode);
+        let wi = long_path.0.first().unwrap().wi;
+        let wo = short_path.0.first().unwrap().wo;
         // let num_layers = self.layers.len();
 
         let mut sum = 0.0;
@@ -245,8 +240,10 @@ impl CLM {
                 let weight = balance(left_connection_pdf.0, pdf.0);
 
                 if total_path_pdf > 0.0 {
-                    sum += weight * total_throughput / total_path_pdf;
+                    let addend = weight * total_throughput / total_path_pdf;
+                    sum += addend;
                     pdf_sum += total_path_pdf;
+                    println!("a {} {}", addend, total_path_pdf);
                 }
 
                 throughput *= (1.0 - weight) * f.0;
@@ -278,8 +275,10 @@ impl CLM {
                 );
 
                 if total_path_pdf > 0.0 {
-                    sum += weight * total_throughput / total_path_pdf;
+                    let addend = weight * total_throughput / total_path_pdf;
+                    sum += addend;
                     pdf_sum += total_path_pdf;
+                    println!("a2 {} {}", addend, total_path_pdf);
                 }
 
                 throughput *= (1.0 - weight) * f.0;
@@ -322,27 +321,30 @@ fn main() {
             Layer::Diffuse {
                 color: cornell_white,
             },
-            Layer::Dielectric(ggx_glass),
+            Layer::Dielectric(ggx_glass.clone()),
+            Layer::Dielectric(ggx_glass.clone()),
         ],
         20,
     );
 
+    let lambda = 500.0;
+
     let path = clm.generate(
-        500.0,
+        lambda,
         Vec3::new(1.0, 1.0, 10.0).normalized(),
         &mut *sampler,
         TransportMode::Importance,
     );
     println!("long path finished");
 
-    println!("{:?}", path);
-
     let wo = path.0.last().unwrap().wo;
 
-    let (f, pdf) = clm.bsdf(
-        500.0,
-        Vec3::new(1.0, 1.0, 10.0).normalized(),
-        wo,
+    let short_path = clm.generate_short(lambda, wo, TransportMode::Radiance);
+
+    let (f, pdf) = clm.bsdf_eval(
+        lambda,
+        &path,
+        &short_path,
         &mut *sampler,
         TransportMode::Importance,
     );
