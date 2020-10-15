@@ -1,6 +1,6 @@
 scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
-renderer="GPUStyle"
-# renderer="Naive"
+# renderer="GPUStyle"
+renderer="Naive"
 
 # distant camera
 [[cameras]]
