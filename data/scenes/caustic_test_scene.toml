@@ -1,0 +1,256 @@
+env_sampling_probability = 0.0
+[environment]
+type="Sun"
+strength = 0.0
+solid_angle = 0.1
+sun_direction = [0.0, 1.0, 1.0]
+[environment.color]
+type = "TabulatedCSV"
+filename = "data/curves/csv/D65.csv"
+column = 1
+interpolation_mode = "Cubic"
+
+
+[[textures]]
+name = "lambertian_white"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 1
+interpolation_mode = "Cubic"
+
+[[textures]]
+name = "lambertian_green"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 2
+interpolation_mode = "Cubic"
+
+[[textures]]
+name = "lambertian_red"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 3
+interpolation_mode = "Cubic"
+
+
+
+
+[[materials]]
+name = "lambertian_white"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_white"
+
+[[materials]]
+name = "lambertian_green"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_green"
+
+[[materials]]
+name = "lambertian_red"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_red"
+
+
+[[materials]]
+name = "ggx_glass"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 1.4
+b = 4500.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+[[materials]]
+name = "ggx_glass_dispersive"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 1.45
+b = 50000.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+[[materials]]
+name = "ggx_moissanite"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 1.0
+alpha = 0.0004
+[materials.data.eta]
+type = "Cauchy"
+a = 2.4
+b = 34000.0
+[materials.data.kappa]
+type = "Flat"
+strength = 0.0
+
+[[materials]]
+name = "ggx_gold"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 0.0
+alpha = 0.01
+[materials.data.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 1
+interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
+[materials.data.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 2
+interpolation_mode = "Cubic"
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
+
+[[materials]]
+name = "ggx_copper"
+[materials.data]
+type = "GGX"
+eta_o = 1.0004
+permeability = 0.0
+alpha = 0.005
+[materials.data.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/copper-mcpeak.csv"
+column = 1
+interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
+[materials.data.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/copper-mcpeak.csv"
+column = 2
+interpolation_mode = "Cubic"
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
+
+[[materials]]
+name = "diffuse_light_fluorescent"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
+name = "diffuse_light_warm"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "diffuse_light"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Dual"
+[materials.data.color]
+type = "Blackbody"
+temperature = 5000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light_fluorescent"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
+name = "sharp_light_xenon"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
+name = "sharp_light_warm"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 30.0
+[materials.data.color]
+type = "Blackbody"
+temperature = 5500.0
+strength = 5.0
+
+
+
+
+[[instances]]
+material_identifier = "diffuse_light"
+[instances.aggregate]
+type = "Rect"
+size = [0.9, 0.9]
+origin = [-2.2, 0.0, 2.9]
+normal = "X"
+two_sided = true
+
+
+[[instances]]
+# skip specifying material identifier and it defaults to the one from the .obj file itself
+# material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "MeshBundle"
+filename = "data/meshes/caustic_test.obj"

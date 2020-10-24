@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
+scene_file = "data/scenes/caustic_test_scene.toml"
 # renderer="GPUStyle"
 renderer="Naive"
 
@@ -37,6 +37,15 @@ aperture_size = 0.07
 focal_distance = 5.0
 vfov = 27.2
 
+# caustic test camera
+[[cameras]]
+type="SimpleCamera"
+look_from = [18, 5, 3]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.03
+focal_distance = 25.0
+vfov = 45.2
+
 # closeup camera
 [[cameras]]
 type="SimpleCamera"
@@ -48,19 +57,19 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "PT"
-integrator = "PT"
+filename = "BDPT"
+integrator = "BDPT"
 tile_width = 256
 tile_height = 256
 min_bounces = 3
-max_bounces = 12
+max_bounces = 8
 exposure = 1.0
-min_samples = 64
-camera_id = 1
+min_samples = 256
+camera_id = 4
 russian_roulette = true
 only_direct = false
 light_samples = 1
 camera_samples = 1
 [render_settings.resolution]
-width = 1024
-height = 1024
+width = 2160
+height = 2160
