@@ -15,7 +15,7 @@ num_cpus = "1.13.0"
 serde = { version = "1.0.114", features = ["derive"] }
 rand = "0.7"
 image = "0.23.6"
-packed_simd = "0.3.3"
+packed_simd = { version = "0.3.4", package = "packed_simd_2" }
 nalgebra = "0.21"
 ordered-float = "1.1.0"
 exr = "0.8.0"

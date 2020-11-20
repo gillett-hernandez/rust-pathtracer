@@ -61,6 +61,7 @@ pub struct Config {
     pub cameras: Vec<CameraSettings>,
     pub renderer: String,
     pub render_settings: Vec<RenderSettings>,
+    pub selected_preview_film_id: usize,
 }
 
 pub fn parse_cameras_from(settings: &Config) -> Vec<Camera> {

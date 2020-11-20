@@ -1,10 +1,12 @@
 // #![allow(unused_imports, unused_variables, unused)]
-#![feature(clamp, slice_fill, vec_remove_item, partition_point, move_ref_pattern)]
+#![feature(clamp, slice_fill, vec_remove_item, partition_point)]
 
 extern crate image;
 
 #[macro_use]
 extern crate packed_simd;
+
+extern crate minifb;
 
 pub use math;
 

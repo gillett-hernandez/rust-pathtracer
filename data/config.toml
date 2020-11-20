@@ -1,6 +1,8 @@
-scene_file = "data/scenes/caustic_test_scene.toml"
+scene_file = "data/scenes/cornell_box_diamond_arrangement.toml"
 # renderer="GPUStyle"
-renderer="Naive"
+# renderer="Naive"
+renderer="Preview"
+selected_preview_film_id = 0
 
 # distant camera
 [[cameras]]
@@ -57,19 +59,19 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
-integrator = "BDPT"
+filename = "PT"
+integrator = "PT"
 tile_width = 256
 tile_height = 256
 min_bounces = 3
 max_bounces = 8
 exposure = 1.0
 min_samples = 256
-camera_id = 4
+camera_id = 1
 russian_roulette = true
 only_direct = false
 light_samples = 1
 camera_samples = 1
 [render_settings.resolution]
-width = 2160
-height = 2160
+width = 1000
+height = 1000

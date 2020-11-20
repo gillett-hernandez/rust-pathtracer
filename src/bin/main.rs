@@ -3,7 +3,7 @@ use math::*;
 use root::camera::*;
 use root::config::*;
 use root::parsing::construct_world;
-use root::renderer::{GPUStyleRenderer, NaiveRenderer, Renderer};
+use root::renderer::{GPUStyleRenderer, NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
 
 fn construct_scene(config: &Config) -> World {
@@ -14,6 +14,7 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     match &*config.renderer {
         "Naive" => Box::new(NaiveRenderer::new()),
         "GPUStyle" => Box::new(GPUStyleRenderer::new()),
+        "Preview" => Box::new(PreviewRenderer::new()),
         _ => panic!(),
     }
 }
