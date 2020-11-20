@@ -1,13 +1,24 @@
 env_sampling_probability = 1.0
 [environment]
-type="Constant"
-strength = 1.0
+type="Sun"
+strength = 0.4
+solid_angle = 0.08
+sun_direction = [0.0, 0.0, 1.0]
 [environment.color]
 type = "Flat"
 strength = 1.0
 interpolation_mode = "Linear"
 
 
+[[textures]]
+name = "lambertian_white_2"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "Flat"
+strength = 1.0
+interpolation_mode = "Linear"
 
 [[textures]]
 name = "lambertian_white"
@@ -62,15 +73,12 @@ type = "Lambertian"
 color = "lambertian_red"
 
 
-
 [[materials]]
 name = "lambertian_white_2"
 [materials.data]
 type = "Lambertian"
-[materials.data.color]
-type = "Flat"
-strength = 1.0
-interpolation_mode = "Linear"
+color = "lambertian_white_2"
+
 
 
 [[materials]]
@@ -253,7 +261,6 @@ sidedness = "Dual"
 type = "Blackbody"
 temperature = 5000.0
 strength = 15.0
-
 
 
 [[instances]]
