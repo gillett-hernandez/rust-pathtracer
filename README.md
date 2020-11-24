@@ -44,9 +44,9 @@ However, there are some concepts that I'm still unfamiliar with or that I'm work
 
 ## Installing and running:
 
-Requirements are Rust nightly.
+The main requirements are the Rust nightly (which can be installed through rustup) and the MSVC build tools.
 
-Building and running should be as simple as executing `cargo run` from the shell while in the project root directory.
+To build and run, run `cargo run --bin main` from the shell while in the project root directory.
 
 to change render settings, modify the provided file at data/config.toml
 
