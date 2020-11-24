@@ -62,11 +62,7 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled = if let Some(data) = maybe_sampled {
                 data
             } else {
-                println!(
-                    "light instance is {:?}, material is {:?}",
-                    light,
-                    material.get_name()
-                );
+                println!("failed to sample, material is {:?}", material.get_name());
                 panic!();
             };
 

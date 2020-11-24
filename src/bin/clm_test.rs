@@ -5,6 +5,10 @@ use root::materials::{refract, Material, GGX};
 
 use root::world::TransportMode;
 
+pub fn balance(f: f32, g: f32) -> f32 {
+    f / (f + g)
+}
+
 #[derive(Clone)]
 pub enum Layer {
     Diffuse { color: SPD },
@@ -139,6 +143,7 @@ impl CLM {
                     wi
                 }
                 None => {
+
                     path.push(CLMVertex {
                         wi: Vec3::Z,
                         wo,
@@ -151,15 +156,16 @@ impl CLM {
             };
 
             if (index == 0 && direction == -1) || (index + 1 == num_layers && direction == 1) {
+
                 println!("broke2");
                 break;
             }
-
-            index = (index as isize + direction) as usize;
-
             let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
             throughput *= f.0;
             path_pdf *= pdf.0;
+            println!("gs {:?} {:?}", throughput, path_pdf);
+
+            index = (index as isize + direction) as usize;
 
             wo = -wi;
         }
@@ -176,8 +182,7 @@ impl CLM {
         let mut path = Vec::new();
         let num_layers = self.layers.len();
         let mut index = if wi.z() > 0.0 { num_layers - 1 } else { 0 };
-        let mut throughput = 1.0;
-        let mut path_pdf = 1.0;
+
         for _ in 0..self.bounce_limit {
             let layer = &self.layers[index];
             let wo = match layer.generate(lambda, wi, sampler.draw_2d(), transport_mode) {
@@ -185,13 +190,13 @@ impl CLM {
                 None => break,
             };
 
-            println!("{:?} {:?}", wi, wo);
+            println!("g {:?} {:?}", wi, wo);
 
             path.push(CLMVertex {
                 wi,
                 wo,
-                throughput,
-                path_pdf,
+                throughput: 0.0,
+                path_pdf: 0.0,
                 index,
             });
 
@@ -205,31 +210,21 @@ impl CLM {
                 break;
             }
 
-            let (f, pdf) = layer.bsdf(lambda, wi, wo, TransportMode::Radiance);
-            throughput *= f.0;
-            path_pdf *= pdf.0;
-
             wi = -wo;
         }
 
         CLMPath(path)
     }
-    pub fn bsdf(
+    pub fn bsdf_eval(
         &self,
         lambda: f32,
-        wi: Vec3,
-        wo: Vec3,
+        long_path: &CLMPath,
+        short_path: &CLMPath,
         sampler: &mut dyn Sampler,
         transport_mode: TransportMode,
     ) -> (SingleEnergy, PDF) {
-        let opposite_mode = match transport_mode {
-            TransportMode::Importance => TransportMode::Radiance,
-            TransportMode::Radiance => TransportMode::Importance,
-        };
-        let long_path = self.generate(lambda, wi, sampler, transport_mode);
-        println!("long path finished");
-        // let wo = long_path.0.last().unwrap().wo;
-        let short_path = self.generate_short(lambda, wo, opposite_mode);
+        let wi = long_path.0.first().unwrap().wi;
+        let wo = short_path.0.first().unwrap().wo;
         // let num_layers = self.layers.len();
         self.eval_path_full(lambda, long_path, short_path, transport_mode)
     }
@@ -250,30 +245,79 @@ impl CLM {
 
         let nee_direction = if wo.z() > 0.0 { 1 } else { -1 };
 
+        let mut throughput = 1.0;
+        let mut path_pdf = 1.0;
+
         for vert in long_path.0.iter() {
             let index = vert.index;
             let layer = &self.layers[index];
             let nee_index = index as isize + nee_direction;
 
             if nee_index < 0 || nee_index as usize >= self.layers.len() {
-                continue;
+                let nee_wo = if nee_index < 0 {
+                    short_path.0.first().unwrap().wo
+                } else {
+                    short_path.0.last().unwrap().wo
+                };
+                let (left_f, left_path_pdf) = (throughput, path_pdf);
+
+                let (left_connection_f, left_connection_pdf) =
+                    layer.bsdf(lambda, vert.wi, nee_wo, transport_mode);
+
+                let (total_throughput, total_path_pdf) = (
+                    left_f * left_connection_f.0,
+                    left_path_pdf * left_connection_pdf.0,
+                );
+
+                let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
+
+                let weight = balance(left_connection_pdf.0, pdf.0);
+
+                if total_path_pdf > 0.0 {
+                    let addend = weight * total_throughput / total_path_pdf;
+                    sum += addend;
+                    pdf_sum += total_path_pdf;
+                    println!("a {} {}", addend, total_path_pdf);
+                }
+
+                throughput *= (1.0 - weight) * f.0;
+                path_pdf *= pdf.0
+            } else {
+                let nee_index = nee_index as usize;
+                let nee_layer = &self.layers[nee_index];
+                let nee_vert = short_path.0[short_path.0.len() - nee_index];
+
+                let (left_f, left_path_pdf) = (throughput, path_pdf);
+
+                let (right_f, right_path_pdf) = (nee_vert.throughput, nee_vert.path_pdf);
+
+                let (left_connection_f, left_connection_pdf) =
+                    layer.bsdf(lambda, vert.wi, -nee_vert.wi, transport_mode);
+                let (right_connection_f, right_connection_pdf) =
+                    nee_layer.bsdf(lambda, nee_vert.wi, nee_vert.wo, transport_mode);
+
+                let (total_throughput, total_path_pdf) = (
+                    left_f * left_connection_f.0 * right_connection_f.0 * right_f,
+                    left_path_pdf * left_connection_pdf.0 * right_connection_pdf.0 * right_path_pdf,
+                );
+
+                let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
+
+                let weight = balance(
+                    left_connection_pdf.0 * right_connection_pdf.0 * right_path_pdf,
+                    pdf.0,
+                );
+
+                if total_path_pdf > 0.0 {
+                    let addend = weight * total_throughput / total_path_pdf;
+                    sum += addend;
+                    pdf_sum += total_path_pdf;
+                    println!("a2 {} {}", addend, total_path_pdf);
+                }
+
+                throughput *= (1.0 - weight) * f.0;
+                path_pdf *= pdf.0
             }
-            dbg!(nee_index);
-            let nee_index = nee_index as usize;
-            let nee_layer = &self.layers[nee_index];
-            let nee_vert = short_path.0[short_path.0.len() - nee_index];
-            let (left_f, left_path_pdf) = (vert.throughput, vert.path_pdf);
-            let (right_f, right_path_pdf) = (nee_vert.throughput, nee_vert.path_pdf);
-            let (left_connection_f, left_connection_pdf) =
-                layer.bsdf(lambda, vert.wi, -nee_vert.wi, transport_mode);
-            let (right_connection_f, right_connection_pdf) =
-                nee_layer.bsdf(lambda, nee_vert.wi, nee_vert.wo, transport_mode);
-            let (total_throughput, total_path_pdf) = (
-                left_f * left_connection_f.0 * right_connection_f.0 * right_f,
-                left_path_pdf * left_connection_pdf.0 * right_connection_pdf.0 * right_path_pdf,
-            );
-            sum += total_throughput;
-            pdf_sum += total_path_pdf;
         }
         (sum.into(), pdf_sum.into())
     }
@@ -311,7 +355,8 @@ fn main() {
             Layer::Diffuse {
                 color: cornell_white,
             },
-            // Layer::Dielectric(ggx_glass),
+            // Layer::Dielectric(ggx_glass.clone()),
+            // Layer::Dielectric(ggx_glass.clone()),
         ],
         20,
     );
@@ -326,12 +371,16 @@ fn main() {
     );
     println!("long path finished");
 
-    println!("{:?}", path);
-
     let wo = path.0.last().unwrap().wo;
 
     let short_path = clm.generate_short(lambda, wo, TransportMode::Radiance);
 
-    let (f, pdf) = clm.eval_path_full(lambda, path, short_path, TransportMode::Importance);
+    let (f, pdf) = clm.bsdf_eval(
+        lambda,
+        &path,
+        &short_path,
+        &mut *sampler,
+        TransportMode::Importance,
+    );
     println!("{}, {}", f.0, pdf.0);
 }

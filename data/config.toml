@@ -1,6 +1,8 @@
-scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
-renderer="GPUStyle"
-# renderer="Naive"
+scene_file = "data/scenes/sun_test_2.toml"
+# renderer="GPUStyle"
+renderer="Naive"
+# renderer="Preview"
+selected_preview_film_id = 0
 
 # distant camera
 [[cameras]]
@@ -37,13 +39,23 @@ aperture_size = 0.07
 focal_distance = 5.0
 vfov = 27.2
 
+# caustic test camera
+[[cameras]]
+type="SimpleCamera"
+look_from = [18, 5, 3]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.03
+focal_distance = 25.0
+vfov = 45.2
+
 # closeup camera
 [[cameras]]
 type="SimpleCamera"
 look_from = [-1, 0, 0]
 look_at = [0, 0, 0]
 aperture_size = 0.03
-vfov = 90
+focal_distance = 1.0
+vfov = 45
 
 
 [[render_settings]]
@@ -53,14 +65,14 @@ integrator = "PT"
 tile_width = 256
 tile_height = 256
 min_bounces = 3
-max_bounces = 12
+max_bounces = 8
 exposure = 1.0
-min_samples = 64
-camera_id = 1
+min_samples = 256
+camera_id = 5
 russian_roulette = true
 only_direct = false
 light_samples = 1
 camera_samples = 1
 [render_settings.resolution]
-width = 1024
-height = 1024
+width = 1000
+height = 1000

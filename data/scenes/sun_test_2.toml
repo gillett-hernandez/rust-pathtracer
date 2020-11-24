@@ -1,15 +1,24 @@
-
-env_sampling_probability = 0.01
+env_sampling_probability = 1.0
 [environment]
-type="Constant"
-strength = 0.00000
+type="Sun"
+strength = 0.4
+solid_angle = 0.08
+sun_direction = [0.0, 0.0, 1.0]
 [environment.color]
-type = "TabulatedCSV"
-filename = "data/curves/csv/D65.csv"
-column = 1
-interpolation_mode = "Cubic"
+type = "Flat"
+strength = 1.0
+interpolation_mode = "Linear"
 
 
+[[textures]]
+name = "lambertian_white_2"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "Flat"
+strength = 1.0
+interpolation_mode = "Linear"
 
 [[textures]]
 name = "lambertian_white"
@@ -62,6 +71,14 @@ name = "lambertian_red"
 [materials.data]
 type = "Lambertian"
 color = "lambertian_red"
+
+
+[[materials]]
+name = "lambertian_white_2"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_white_2"
+
 
 
 [[materials]]
@@ -212,16 +229,6 @@ temperature = 3000.0
 strength = 5.0
 
 [[materials]]
-name = "diffuse_light"
-[materials.data]
-type = "DiffuseLight"
-sidedness = "Reverse"
-[materials.data.color]
-type = "Blackbody"
-temperature = 5000.0
-strength = 5.0
-
-[[materials]]
 name = "sharp_light"
 [materials.data]
 type = "SharpLight"
@@ -245,123 +252,20 @@ interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0
 
+[[materials]]
+name = "diffuse_light"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Dual"
+[materials.data.color]
+type = "Blackbody"
+temperature = 5000.0
+strength = 15.0
 
 
 [[instances]]
-material_identifier = "diffuse_light"
-[instances.aggregate]
-type = "Rect"
-size = [0.6, 0.6]
-origin = [0.0, 0.0, 0.9]
-normal = "Z"
-two_sided = false
-
-[[instances]]
-material_identifier = "lambertian_white"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, 0.0, 1.0]
-normal = "Z"
-two_sided = true
-
-[[instances]]
-material_identifier = "lambertian_white"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, 0.0, -1.0]
-normal = "Z"
-two_sided = true
-
-[[instances]]
-material_identifier = "lambertian_red"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, 1.0, 0.0]
-normal = "Y"
-two_sided = true
-
-[[instances]]
-material_identifier = "lambertian_green"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, -1.0, 0.0]
-normal = "Y"
-two_sided = true
-
-[[instances]]
-material_identifier = "lambertian_white"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [1.0, 0.0, 0.0]
-normal = "X"
-two_sided = true
-
-# sphere below light
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.4
-origin = [0.0, 0.0, 0.45]
-
-
-# sphere near floor
-[[instances]]
-material_identifier = "ggx_gold"
+material_identifier = "lambertian_white_2"
 [instances.aggregate]
 type = "Sphere"
 radius = 0.2
-origin = [0.0, 0.0, -0.75]
-
-
-# quad of spheres above
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.21, 0.21, -0.45]
-
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.21, -0.21, -0.45]
-
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [-0.21, 0.21, -0.45]
-
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [-0.21, -0.21, -0.45]
-
-
-# sphere on top
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.0, 0.0, -0.15]
-
-
-
-# [[instances]]
-# material_identifier = "ggx_copper"
-# [instances.aggregate]
-# type = "Sphere"
-# radius = 0.3
-# origin = [0.0, -0.6, -0.7]
+origin = [0.0, 0.0, 0.0]
