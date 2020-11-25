@@ -11,6 +11,8 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
+use std::collections::HashMap;
+
 pub const NORMAL_OFFSET: f32 = 0.00001;
 pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 
@@ -26,12 +28,11 @@ impl Default for TransportMode {
     }
 }
 
-
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
-    pub cameras: Vec<Camera>,
+    pub cameras: HashMap<String, Camera>,
     pub materials: MaterialTable,
     pub environment: EnvironmentMap,
     env_sampling_probability: f32,
@@ -160,8 +161,8 @@ impl World {
         self.accelerator.get_primitive(index)
     }
 
-    pub fn get_camera(&self, index: usize) -> &Camera {
-        &self.cameras[index]
+    pub fn get_camera(&self, index: String) -> &Camera {
+        &self.cameras[&index]
     }
 
     pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {

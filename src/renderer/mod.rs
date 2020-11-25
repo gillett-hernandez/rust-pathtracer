@@ -305,13 +305,15 @@ impl NaiveRenderer {
         // Light tracing will use an unbounded amount of memory though.
         let per_splat_sleep_time = Duration::from_nanos(0);
 
-
         let stats: Vec<Profile> = films
             .par_iter_mut()
             .enumerate()
             .map(
                 |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
-                    if let IntegratorKind::BDPT{selected_pair: Some((s,t))} = settings.integrator {
+                    if let IntegratorKind::BDPT {
+                        selected_pair: Some((s, t)),
+                    } = settings.integrator
+                    {
                         println!("rendering specific pair {} {}", s, t);
                     }
 
@@ -465,11 +467,11 @@ impl NaiveRenderer {
 }
 
 pub trait Renderer {
-    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config);
+    fn render(&self, world: World, cameras: HashMap<String, Camera>, config: &Config);
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
+    fn render(&self, mut world: World, cameras: HashMap<String, Camera>, config: &Config) {
         // bin the render settings into bins corresponding to what integrator they need.
 
         let mut bundled_cameras: Vec<Camera> = Vec::new();
@@ -485,7 +487,7 @@ impl Renderer for NaiveRenderer {
 
         // phase 1, gather and sort what renders need to be done
         for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
-            let camera_id = render_settings.camera_id.unwrap_or(0) as usize;
+            let camera_id = render_settings.camera_id;
 
             let (width, height) = (
                 render_settings.resolution.width,
@@ -494,14 +496,14 @@ impl Renderer for NaiveRenderer {
             let aspect_ratio = width as f32 / height as f32;
 
             // copy camera and modify its aspect ratio (so that uv splatting works correctly)
-            let copied_camera = cameras[camera_id].with_aspect_ratio(aspect_ratio);
+            let copied_camera = cameras[&camera_id].with_aspect_ratio(aspect_ratio);
 
             let integrator_type: IntegratorType = IntegratorType::from(render_settings.integrator);
 
             match integrator_type {
                 IntegratorType::PathTracing => {
                     let mut updated_render_settings = render_settings.clone();
-                    updated_render_settings.camera_id = Some(bundled_cameras.len() as u16);
+                    updated_render_settings.camera_id = camera_id;
                     bundled_cameras.push(copied_camera);
                     sampled_renders.push((IntegratorType::PathTracing, updated_render_settings));
                 }
@@ -509,7 +511,7 @@ impl Renderer for NaiveRenderer {
                     // then determine new camera id
                     let list = splatting_renders_and_cameras.get_mut(&t).unwrap();
                     let mut updated_render_settings = render_settings.clone();
-                    updated_render_settings.camera_id = Some(list.len() as u16);
+                    updated_render_settings.camera_id = camera_id;
 
                     list.push((updated_render_settings, copied_camera))
                 }
@@ -521,10 +523,7 @@ impl Renderer for NaiveRenderer {
         for (integrator_type, render_settings) in sampled_renders.iter() {
             match integrator_type {
                 IntegratorType::PathTracing => {
-                    world.assign_cameras(
-                        vec![bundled_cameras[render_settings.camera_id.unwrap() as usize].clone()],
-                        false,
-                    );
+                    world.assign_cameras(vec![cameras[&render_settings.camera_id].clone()], false);
                     let arc_world = Arc::new(world.clone());
                     if let Some(Integrator::PathTracing(integrator)) =
                         Integrator::from_settings_and_world(
@@ -540,7 +539,7 @@ impl Renderer for NaiveRenderer {
                             NaiveRenderer::render_sampled(
                                 integrator,
                                 render_settings,
-                                &bundled_cameras[render_settings.camera_id.unwrap() as usize],
+                                &cameras[&render_settings.camera_id],
                             ),
                         );
                         output_film(&render_settings, &film);
@@ -597,7 +596,10 @@ impl Renderer for NaiveRenderer {
                     // );
                     for (mut render_settings, film) in render_splatted_result {
                         // if selected pair, add the pair numbers to the filename automatically
-                        if let IntegratorKind::BDPT{selected_pair: Some((s,t))} = render_settings.integrator {
+                        if let IntegratorKind::BDPT {
+                            selected_pair: Some((s, t)),
+                        } = render_settings.integrator
+                        {
                             let new_filename = format!(
                                 "{}{}_{}",
                                 render_settings

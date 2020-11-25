@@ -6,6 +6,8 @@ use root::parsing::construct_world;
 use root::renderer::{GPUStyleRenderer, NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
 
+use std::collections::HashMap;
+
 fn construct_scene(config: &Config) -> World {
     construct_world(config)
 }
@@ -40,7 +42,7 @@ fn main() -> () {
 
     let world = construct_scene(&config);
 
-    let cameras: Vec<Camera> = parse_cameras_from(&config);
+    let cameras: HashMap<String, Camera> = parse_cameras_from(&config);
 
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);

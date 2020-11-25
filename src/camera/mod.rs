@@ -8,7 +8,7 @@ use crate::math::*;
 
 use std::marker::{Send, Sync};
 
-pub type CameraId = u16;
+pub type CameraId = usize;
 
 #[derive(Debug, Clone)]
 pub enum Camera {

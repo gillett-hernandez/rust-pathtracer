@@ -10,6 +10,8 @@ use crate::math::*;
 // use crate::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
+
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -28,7 +30,7 @@ impl GPUStyleRenderer {
 }
 
 impl Renderer for GPUStyleRenderer {
-    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config) {
+    fn render(&self, world: World, cameras: HashMap<String, Camera>, config: &Config) {
         if let RendererType::GPUStyle {
             tile_width: kernel_width,
             tile_height: kernel_height,
@@ -67,7 +69,7 @@ impl Renderer for GPUStyleRenderer {
                             .map_or(Bounds1D::new(400.0, 780.0), |v| Bounds1D::new(v.0, v.1)),
                     );
                     let Resolution { width, height } = render_settings.resolution;
-                    let camera_id = render_settings.camera_id.unwrap_or(0) as CameraId;
+                    let camera_id = render_settings.camera_id;
                     let mut primary_ray_buffer = PrimaryRayBuffer::new(kernel_width, kernel_height);
                     let mut intersection_buffer =
                         IntersectionBuffer::new(kernel_width, kernel_height);
