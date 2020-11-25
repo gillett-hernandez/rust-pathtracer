@@ -130,6 +130,8 @@ impl PathTracingIntegrator {
         let direction = uv_to_direction(uv);
         let local_wo = frame.to_local(&direction);
 
+        let local_dropoff = local_wo.z();
+
         let (reflectance, scatter_pdf_for_light_ray) =
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
@@ -138,6 +140,8 @@ impl PathTracingIntegrator {
             self.world
                 .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
         {
+            return 0.0.into();
+
             light_hit.lambda = lambda;
             // handle case where we intended to hit the world but instead hit a light
             let material = self.world.get_material(light_hit.material);
@@ -180,7 +184,7 @@ impl PathTracingIntegrator {
             let emission = self.world.environment.emission(uv, lambda);
 
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            reflectance * throughput * emission * weight / light_pdf.0
+            reflectance * local_dropoff.abs() * throughput * emission * weight / light_pdf.0
         }
     }
 
@@ -297,7 +301,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
             if let VertexType::LightSource(light_source) = vertex.vertex_type {
                 if light_source == LightSourceType::Environment {
-                    let wo = -vertex.local_wi;
+                    let wo = vertex.local_wi;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
                     sum.energy += emission * vertex.throughput;

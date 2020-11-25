@@ -1,7 +1,7 @@
 scene_file = "data/scenes/sun_test_2.toml"
 # renderer="GPUStyle"
-renderer="Naive"
-# renderer="Preview"
+# renderer="Naive"
+renderer="Preview"
 selected_preview_film_id = 0
 
 # distant camera
@@ -57,11 +57,21 @@ aperture_size = 0.03
 focal_distance = 1.0
 vfov = 45
 
+# closeup zoom debug camera (debugging sun test)
+[[cameras]]
+type="SimpleCamera"
+look_from = [-1, 0, 0]
+look_at = [0.0, 0.0, -0.1]
+aperture_size = 0.03
+focal_distance = 1.0
+vfov = 5
+
 
 [[render_settings]]
-threads = 22
+threads = 4
 filename = "PT"
 integrator = "PT"
+# wavelength_bounds = [380.0, 750.0]
 tile_width = 256
 tile_height = 256
 min_bounces = 3
@@ -71,7 +81,7 @@ min_samples = 256
 camera_id = 5
 russian_roulette = true
 only_direct = false
-light_samples = 1
+light_samples = 10
 camera_samples = 1
 [render_settings.resolution]
 width = 1000

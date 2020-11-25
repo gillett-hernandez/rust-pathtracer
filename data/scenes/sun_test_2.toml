@@ -1,8 +1,8 @@
 env_sampling_probability = 1.0
 [environment]
 type="Sun"
-strength = 0.4
-solid_angle = 0.08
+strength = 1.0
+angular_diameter = 0.0565
 sun_direction = [0.0, 0.0, 1.0]
 [environment.color]
 type = "Flat"

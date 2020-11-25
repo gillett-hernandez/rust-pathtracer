@@ -109,6 +109,9 @@ impl Renderer for PreviewRenderer {
 
             let clone2 = pixel_count.clone();
             for s in 0..render_settings.min_samples {
+                if !window.is_open() || window.is_key_down(Key::Escape) {
+                    break;
+                }
                 let now = Instant::now();
                 let stats: Profile = (&mut films[film_idx])
                     .buffer
@@ -185,6 +188,7 @@ impl Renderer for PreviewRenderer {
                     panic
                 );
             }
+            output_film(&render_settings, &films[film_idx]);
         }
     }
 }
