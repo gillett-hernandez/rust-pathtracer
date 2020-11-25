@@ -236,7 +236,7 @@ impl GenericIntegrator for BDPTIntegrator {
 
         static MIS_ENABLED: bool = true;
         let russian_roulette_threshold = 0.005;
-        if let Some((s, t)) = settings.selected_pair {
+        if let IntegratorKind::BDPT{selected_pair:Some((s, t))} = settings.integrator {
             if s <= light_vertex_count && t <= eye_vertex_count {
                 let res = eval_unweighted_contribution(
                     &self.world,

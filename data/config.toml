@@ -1,7 +1,8 @@
-scene_file = "data/scenes/sun_test_2.toml"
-# renderer="GPUStyle"
-# renderer="Naive"
-renderer="Preview"
+scene_file = "data/scenes/sun_test.toml"
+[renderer]
+# type="GPUStyle"
+# type="Naive"
+type="Preview"
 selected_preview_film_id = 0
 
 # distant camera
@@ -70,19 +71,17 @@ vfov = 5
 [[render_settings]]
 threads = 4
 filename = "PT"
-integrator = "PT"
-# wavelength_bounds = [380.0, 750.0]
-tile_width = 256
-tile_height = 256
+min_samples = 256
 min_bounces = 3
 max_bounces = 8
+camera_id = 3
 exposure = 1.0
-min_samples = 256
-camera_id = 5
 russian_roulette = true
 only_direct = false
+# wavelength_bounds = [380.0, 750.0]
+[render_settings.integrator]
+type = "PT"
 light_samples = 10
-camera_samples = 1
 [render_settings.resolution]
-width = 1000
-height = 1000
+width = 500
+height = 500

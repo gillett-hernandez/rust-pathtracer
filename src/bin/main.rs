@@ -11,10 +11,10 @@ fn construct_scene(config: &Config) -> World {
 }
 
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
-    match &*config.renderer {
-        "Naive" => Box::new(NaiveRenderer::new()),
-        "GPUStyle" => Box::new(GPUStyleRenderer::new()),
-        "Preview" => Box::new(PreviewRenderer::new()),
+    match config.renderer {
+        RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
+        RendererType::GPUStyle { .. } => Box::new(GPUStyleRenderer::new()),
+        RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
         _ => panic!(),
     }
 }

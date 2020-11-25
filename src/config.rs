@@ -33,12 +33,29 @@ pub struct SimpleCameraSettings {
 pub enum CameraSettings {
     SimpleCamera(SimpleCameraSettings),
 }
+
+#[derive(Deserialize, Copy, Clone)]
+#[serde(tag = "type")]
+pub enum IntegratorKind {
+    PT {
+        light_samples: Option<u16>,
+    },
+    BDPT {
+        selected_pair: Option<(usize, usize)>,
+    },
+    LT {
+        camera_samples: Option<u16>,
+    },
+    SPPM {
+        photon_cache_size: usize,
+    },
+}
+
 #[derive(Deserialize, Clone)]
 pub struct RenderSettings {
     pub filename: Option<String>,
     pub resolution: Resolution,
-    pub integrator: Option<String>,
-    pub selected_pair: Option<(usize, usize)>,
+    pub integrator: IntegratorKind,
     pub min_bounces: Option<u16>,
     pub max_bounces: Option<u16>,
     pub threads: Option<u16>,
@@ -47,11 +64,25 @@ pub struct RenderSettings {
     pub max_samples: Option<u16>,
     pub camera_id: Option<u16>,
     pub russian_roulette: Option<bool>,
-    pub light_samples: Option<u16>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
-    pub tile_width: usize,
-    pub tile_height: usize,
+}
+
+#[derive(Deserialize, Copy, Clone)]
+#[serde(tag = "type")]
+pub enum RendererType {
+    Naive,
+    GPUStyle {
+        tile_width: usize,
+        tile_height: usize,
+    },
+    /* Tiled {
+        tile_width: usize,
+        tile_height: usize,
+    }, */
+    Preview {
+        selected_preview_film_id: usize,
+    },
 }
 
 #[derive(Deserialize, Clone)]
@@ -59,9 +90,8 @@ pub struct Config {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub scene_file: String,
     pub cameras: Vec<CameraSettings>,
-    pub renderer: String,
+    pub renderer: RendererType,
     pub render_settings: Vec<RenderSettings>,
-    pub selected_preview_film_id: usize,
 }
 
 pub fn parse_cameras_from(settings: &Config) -> Vec<Camera> {

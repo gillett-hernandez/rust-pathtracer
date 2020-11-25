@@ -9,13 +9,14 @@ pub use gpu_style::GPUStyleRenderer;
 pub use preview::PreviewRenderer;
 
 use crate::camera::{Camera, CameraId};
-use crate::config::Config;
-use crate::config::RenderSettings;
+use crate::config::*;
+
 use crate::integrator::*;
 use crate::math::*;
 use crate::profile::Profile;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
+
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 use std::collections::HashMap;
@@ -304,12 +305,13 @@ impl NaiveRenderer {
         // Light tracing will use an unbounded amount of memory though.
         let per_splat_sleep_time = Duration::from_nanos(0);
 
+
         let stats: Vec<Profile> = films
             .par_iter_mut()
             .enumerate()
             .map(
                 |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
-                    if let Some((s, t)) = settings.selected_pair {
+                    if let IntegratorKind::BDPT{selected_pair: Some((s,t))} = settings.integrator {
                         println!("rendering specific pair {} {}", s, t);
                     }
 
@@ -494,12 +496,7 @@ impl Renderer for NaiveRenderer {
             // copy camera and modify its aspect ratio (so that uv splatting works correctly)
             let copied_camera = cameras[camera_id].with_aspect_ratio(aspect_ratio);
 
-            let integrator_type: IntegratorType = IntegratorType::from_string(
-                &render_settings
-                    .integrator
-                    .as_ref()
-                    .unwrap_or(&"PT".to_string()),
-            );
+            let integrator_type: IntegratorType = IntegratorType::from(render_settings.integrator);
 
             match integrator_type {
                 IntegratorType::PathTracing => {
@@ -600,7 +597,7 @@ impl Renderer for NaiveRenderer {
                     // );
                     for (mut render_settings, film) in render_splatted_result {
                         // if selected pair, add the pair numbers to the filename automatically
-                        if let Some((s, t)) = render_settings.selected_pair {
+                        if let IntegratorKind::BDPT{selected_pair: Some((s,t))} = render_settings.integrator {
                             let new_filename = format!(
                                 "{}{}_{}",
                                 render_settings

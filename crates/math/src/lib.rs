@@ -1,4 +1,4 @@
-#![feature(clamp, slice_fill, vec_remove_item)]
+#![feature( slice_fill, vec_remove_item)]
 
 #[macro_use]
 extern crate packed_simd;

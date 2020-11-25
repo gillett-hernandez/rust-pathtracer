@@ -10,6 +10,7 @@ use crate::config::RenderSettings;
 use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;
+use crate::config::IntegratorKind;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 pub use bdpt::BDPTIntegrator;
@@ -44,6 +45,19 @@ impl IntegratorType {
     }
 }
 
+impl From<IntegratorKind> for IntegratorType {
+    fn from(data: IntegratorKind) -> Self {
+        match data {
+            IntegratorKind::SPPM{..} => IntegratorType::SPPM,
+            IntegratorKind::PT{..} => IntegratorType::PathTracing,
+            IntegratorKind::LT{..} => IntegratorType::LightTracing,
+            IntegratorKind::BDPT{..} => IntegratorType::BDPT,
+            IntegratorKind::SPPM{..} => IntegratorType::SPPM,
+            _ => IntegratorType::PathTracing,
+        }
+    }
+}
+
 pub enum Integrator {
     PathTracing(PathTracingIntegrator),
     LightTracing(LightTracingIntegrator),
@@ -68,7 +82,7 @@ impl Integrator {
                 max_bounces: settings.max_bounces.unwrap(),
                 world,
                 russian_roulette: settings.russian_roulette.unwrap_or(true),
-                light_samples: settings.light_samples.unwrap_or(4),
+                light_samples: 4,
                 only_direct: settings.only_direct.unwrap_or(false),
                 wavelength_bounds: Bounds1D::new(lower, upper),
             })),

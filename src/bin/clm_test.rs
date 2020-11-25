@@ -231,8 +231,8 @@ impl CLM {
     pub fn eval_path_full(
         &self,
         lambda: f32,
-        long_path: CLMPath,
-        short_path: CLMPath,
+        long_path: &CLMPath,
+        short_path: &CLMPath,
         transport_mode: TransportMode,
     ) -> (SingleEnergy, PDF) {
         let opposite_mode = match transport_mode {
@@ -252,6 +252,7 @@ impl CLM {
             let index = vert.index;
             let layer = &self.layers[index];
             let nee_index = index as isize + nee_direction;
+            let wi = Vec3::ZERO; // TODO: fix this
 
             if nee_index < 0 || nee_index as usize >= self.layers.len() {
                 let nee_wo = if nee_index < 0 {
