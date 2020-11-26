@@ -1,12 +1,9 @@
 extern crate rust_pathtracer as root;
-use math::*;
-use root::camera::*;
+
 use root::config::*;
 use root::parsing::construct_world;
 use root::renderer::{GPUStyleRenderer, NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
-
-use std::collections::HashMap;
 
 fn construct_scene(config: &Config) -> World {
     construct_world(config)
@@ -17,12 +14,11 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
         RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
         RendererType::GPUStyle { .. } => Box::new(GPUStyleRenderer::new()),
         RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
-        _ => panic!(),
     }
 }
 
 fn main() -> () {
-    let config: Config = match get_settings("data/config.toml".to_string()) {
+    let config: TOMLConfig = match get_settings("data/config.toml".to_string()) {
         Ok(expr) => expr,
         Err(v) => {
             println!("{:?}", "couldn't read config.toml");
@@ -40,9 +36,8 @@ fn main() -> () {
         .build_global()
         .unwrap();
 
+    let (config, cameras) = parse_cameras_from(&config);
     let world = construct_scene(&config);
-
-    let cameras: HashMap<String, Camera> = parse_cameras_from(&config);
 
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);

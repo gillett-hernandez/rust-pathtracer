@@ -1,6 +1,6 @@
 use super::{output_film, Film, Renderer};
 
-use crate::camera::{Camera, CameraId};
+use crate::camera::Camera;
 use crate::config::{Config, IntegratorKind, RendererType, Resolution};
 // use crate::hittable::Hittable;
 use crate::integrator::gpu_style::*;
@@ -11,7 +11,6 @@ use crate::math::*;
 // use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -30,7 +29,7 @@ impl GPUStyleRenderer {
 }
 
 impl Renderer for GPUStyleRenderer {
-    fn render(&self, world: World, cameras: HashMap<String, Camera>, config: &Config) {
+    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config) {
         if let RendererType::GPUStyle {
             tile_width: kernel_width,
             tile_height: kernel_height,

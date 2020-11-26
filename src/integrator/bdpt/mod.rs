@@ -154,7 +154,7 @@ impl GenericIntegrator for BDPTIntegrator {
 
         let camera_ray;
         let camera_id = camera_sample.1;
-        let camera = self.world.get_camera(camera_id );
+        let camera = self.world.get_camera(camera_id);
         let film_sample = Sample2D::new(
             (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
@@ -179,7 +179,7 @@ impl GenericIntegrator for BDPTIntegrator {
             camera_ray.origin,
             lens_normal,
             (0.0, 0.0),
-            MaterialId::Camera(camera_id),
+            MaterialId::Camera(camera_id as u16),
             0,
             SingleEnergy::ONE,
             camera_pdf.0,
@@ -236,7 +236,10 @@ impl GenericIntegrator for BDPTIntegrator {
 
         static MIS_ENABLED: bool = true;
         let russian_roulette_threshold = 0.005;
-        if let IntegratorKind::BDPT{selected_pair:Some((s, t))} = settings.integrator {
+        if let IntegratorKind::BDPT {
+            selected_pair: Some((s, t)),
+        } = settings.integrator
+        {
             if s <= light_vertex_count && t <= eye_vertex_count {
                 let res = eval_unweighted_contribution(
                     &self.world,
@@ -315,7 +318,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                     SingleWavelength::new(lambda, contribution),
                                     pixel_uv,
                                 );
-                                samples.push((sample, camera_id));
+                                samples.push((sample, camera_id as usize));
                             } else {
                                 // println!("pixel uv was nothing");
                             }
@@ -408,7 +411,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 SingleWavelength::new(lambda, contribution),
                                 pixel_uv,
                             );
-                            samples.push((sample, camera_id));
+                            samples.push((sample, camera_id as usize));
                         } else {
                             // println!("pixel uv was nothing");
                         }

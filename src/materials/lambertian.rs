@@ -54,6 +54,7 @@ impl Material for Lambertian {
     // }
 }
 
+#[cfg(test)]
 mod test {
     use math::*;
     use spectral::EXTENDED_VISIBLE_RANGE;

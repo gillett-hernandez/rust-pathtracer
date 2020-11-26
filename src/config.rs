@@ -87,6 +87,26 @@ pub struct TOMLRenderSettings {
     pub wavelength_bounds: Option<(f32, f32)>,
 }
 
+impl From<TOMLRenderSettings> for RenderSettings {
+    fn from(data: TOMLRenderSettings) -> Self {
+        RenderSettings {
+            filename: data.filename,
+            resolution: data.resolution,
+            integrator: data.integrator,
+            min_bounces: data.min_bounces,
+            max_bounces: data.max_bounces,
+            threads: data.threads,
+            min_samples: data.min_samples,
+            exposure: data.exposure,
+            max_samples: data.max_samples,
+            camera_id: 0,
+            russian_roulette: data.russian_roulette,
+            only_direct: data.only_direct,
+            wavelength_bounds: data.wavelength_bounds,
+        }
+    }
+}
+
 #[derive(Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
 pub enum RendererType {
@@ -110,20 +130,38 @@ pub struct TOMLConfig {
     pub scene_file: String,
     pub cameras: Vec<CameraSettings>,
     pub renderer: RendererType,
-    pub render_settings: Vec<RenderSettings>,
+    pub render_settings: Vec<TOMLRenderSettings>,
 }
 
+#[derive(Clone)]
 pub struct Config {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub scene_file: String,
     pub cameras: Vec<CameraSettings>,
     pub renderer: RendererType,
-    pub render_settings: Vec<TOMLRenderSettings>,
+    pub render_settings: Vec<RenderSettings>,
 }
 
-pub fn parse_cameras_from(settings: &mut TOMLConfig) -> (Config, Vec<Camera>) {
+impl From<TOMLConfig> for Config {
+    fn from(data: TOMLConfig) -> Self {
+        Config {
+            env_sampling_probability: data.env_sampling_probability,
+            scene_file: data.scene_file,
+            cameras: data.cameras,
+            renderer: data.renderer,
+            render_settings: data
+                .render_settings
+                .iter()
+                .map(|e| RenderSettings::from(e.clone()))
+                .collect(),
+        }
+    }
+}
+
+pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
     let mut cameras: Vec<Camera> = Vec::new();
-    let mut config = Config::from(settings);
+    let mut camera_map: HashMap<String, Camera> = HashMap::new();
+    let mut config = Config::from(settings.clone());
     for camera_config in &settings.cameras {
         let (name, camera): (String, Camera) = match camera_config {
             CameraSettings::SimpleCamera(cam) => {
@@ -144,14 +182,22 @@ pub fn parse_cameras_from(settings: &mut TOMLConfig) -> (Config, Vec<Camera>) {
                 )
             }
         };
-        let cam_id = cameras.len();
-        cameras.push(camera);
-        for render_settings in settings.render_settings.iter_mut() {}
+        camera_map.insert(name, camera);
     }
-    cameras
+    for (render_settings, toml_settings) in config
+        .render_settings
+        .iter_mut()
+        .zip(settings.render_settings.iter())
+    {
+        let cam_id = cameras.len();
+        let camera = camera_map[&toml_settings.camera_id].clone();
+        render_settings.camera_id = cam_id;
+        cameras.push(camera);
+    }
+    (config, cameras)
 }
 
-pub fn get_settings(filepath: String) -> Result<Config, toml::de::Error> {
+pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
@@ -161,7 +207,7 @@ pub fn get_settings(filepath: String) -> Result<Config, toml::de::Error> {
     // uncomment the following line to print out the raw contents
     // println!("{:?}", input);
     let num_cpus = num_cpus::get();
-    let mut settings: Config = toml::from_str(&input)?;
+    let mut settings: TOMLConfig = toml::from_str(&input)?;
     for render_settings in settings.render_settings.iter_mut() {
         render_settings.threads = match render_settings.threads {
             Some(expr) => Some(expr),

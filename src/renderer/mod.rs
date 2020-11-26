@@ -467,11 +467,11 @@ impl NaiveRenderer {
 }
 
 pub trait Renderer {
-    fn render(&self, world: World, cameras: HashMap<String, Camera>, config: &Config);
+    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config);
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, mut world: World, cameras: HashMap<String, Camera>, config: &Config) {
+    fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
         // bin the render settings into bins corresponding to what integrator they need.
 
         let mut bundled_cameras: Vec<Camera> = Vec::new();
@@ -496,7 +496,7 @@ impl Renderer for NaiveRenderer {
             let aspect_ratio = width as f32 / height as f32;
 
             // copy camera and modify its aspect ratio (so that uv splatting works correctly)
-            let copied_camera = cameras[&camera_id].with_aspect_ratio(aspect_ratio);
+            let copied_camera = cameras[camera_id].with_aspect_ratio(aspect_ratio);
 
             let integrator_type: IntegratorType = IntegratorType::from(render_settings.integrator);
 
@@ -523,7 +523,7 @@ impl Renderer for NaiveRenderer {
         for (integrator_type, render_settings) in sampled_renders.iter() {
             match integrator_type {
                 IntegratorType::PathTracing => {
-                    world.assign_cameras(vec![cameras[&render_settings.camera_id].clone()], false);
+                    world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
                     let arc_world = Arc::new(world.clone());
                     if let Some(Integrator::PathTracing(integrator)) =
                         Integrator::from_settings_and_world(
@@ -539,7 +539,7 @@ impl Renderer for NaiveRenderer {
                             NaiveRenderer::render_sampled(
                                 integrator,
                                 render_settings,
-                                &cameras[&render_settings.camera_id],
+                                &cameras[render_settings.camera_id],
                             ),
                         );
                         output_film(&render_settings, &film);

@@ -136,49 +136,49 @@ impl PathTracingIntegrator {
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
         profile.shadow_rays += 1;
-        if let Some(mut light_hit) =
+        if let Some(mut _light_hit) =
             self.world
                 .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
         {
             return 0.0.into();
+        /*
+        light_hit.lambda = lambda;
+        // handle case where we intended to hit the world but instead hit a light
+        let material = self.world.get_material(light_hit.material);
 
-            light_hit.lambda = lambda;
-            // handle case where we intended to hit the world but instead hit a light
-            let material = self.world.get_material(light_hit.material);
+        let point_on_light = light_hit.point;
+        let light_frame = TangentFrame::from_normal(light_hit.normal);
+        let light_wi = light_frame.to_local(&-direction);
+        let dropoff = light_wi.z().abs();
+        if dropoff == 0.0 {
+            return SingleEnergy::ZERO;
+        }
+        // if reflectance.0 < 0.00001 {
+        //     // if reflectance is 0 for all components, skip this light sample
+        //     continue;
+        // }
+        let emission = material.emission(
+            light_hit.lambda,
+            light_hit.uv,
+            light_hit.transport_mode,
+            light_wi,
+        );
+        if emission.0 > 0.0 {
+            let light = self.world.get_primitive(light_hit.instance_id);
+            let pdf = light.psa_pdf(
+                hit.normal * (point_on_light - hit.point).normalized(),
+                hit.point,
+                point_on_light,
+            );
 
-            let point_on_light = light_hit.point;
-            let light_frame = TangentFrame::from_normal(light_hit.normal);
-            let light_wi = light_frame.to_local(&-direction);
-            let dropoff = light_wi.z().abs();
-            if dropoff == 0.0 {
+            if pdf.0 == 0.0 {
                 return SingleEnergy::ZERO;
             }
-            // if reflectance.0 < 0.00001 {
-            //     // if reflectance is 0 for all components, skip this light sample
-            //     continue;
-            // }
-            let emission = material.emission(
-                light_hit.lambda,
-                light_hit.uv,
-                light_hit.transport_mode,
-                light_wi,
-            );
-            if emission.0 > 0.0 {
-                let light = self.world.get_primitive(light_hit.instance_id);
-                let pdf = light.psa_pdf(
-                    hit.normal * (point_on_light - hit.point).normalized(),
-                    hit.point,
-                    point_on_light,
-                );
-
-                if pdf.0 == 0.0 {
-                    return SingleEnergy::ZERO;
-                }
-                let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-                reflectance * throughput * dropoff * emission * weight / light_pdf.0
-            } else {
-                SingleEnergy::ZERO
-            }
+            let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+            reflectance * throughput * dropoff * emission * weight / light_pdf.0
+        } else {
+            SingleEnergy::ZERO
+        } */
         } else {
             // successfully hit nothing, which is to say, hit the world
             let emission = self.world.environment.emission(uv, lambda);
@@ -309,7 +309,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let hit = HitRecord::from(*vertex);
                     let frame = TangentFrame::from_normal(hit.normal);
                     let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                    let maybe_dir_to_next = path
+                    let _maybe_dir_to_next = path
                         .get(index + 1)
                         .map(|v| (v.point - vertex.point).normalized());
                     let wi = frame.to_local(&dir_to_prev);
@@ -345,7 +345,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                 let hit = HitRecord::from(*vertex);
                 let frame = TangentFrame::from_normal(hit.normal);
                 let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                let maybe_dir_to_next = path
+                let _maybe_dir_to_next = path
                     .get(index + 1)
                     .map(|v| (v.point - vertex.point).normalized());
                 let wi = frame.to_local(&dir_to_prev);

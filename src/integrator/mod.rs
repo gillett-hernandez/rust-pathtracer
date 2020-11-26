@@ -6,11 +6,11 @@ mod sppm;
 pub mod utils;
 
 pub use crate::camera::{Camera, CameraId};
+use crate::config::IntegratorKind;
 use crate::config::RenderSettings;
 use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;
-use crate::config::IntegratorKind;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 pub use bdpt::BDPTIntegrator;
@@ -48,12 +48,10 @@ impl IntegratorType {
 impl From<IntegratorKind> for IntegratorType {
     fn from(data: IntegratorKind) -> Self {
         match data {
-            IntegratorKind::SPPM{..} => IntegratorType::SPPM,
-            IntegratorKind::PT{..} => IntegratorType::PathTracing,
-            IntegratorKind::LT{..} => IntegratorType::LightTracing,
-            IntegratorKind::BDPT{..} => IntegratorType::BDPT,
-            IntegratorKind::SPPM{..} => IntegratorType::SPPM,
-            _ => IntegratorType::PathTracing,
+            IntegratorKind::SPPM { .. } => IntegratorType::SPPM,
+            IntegratorKind::PT { .. } => IntegratorType::PathTracing,
+            IntegratorKind::LT { .. } => IntegratorType::LightTracing,
+            IntegratorKind::BDPT { .. } => IntegratorType::BDPT,
         }
     }
 }

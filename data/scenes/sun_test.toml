@@ -1,9 +1,9 @@
-env_sampling_probability = 0.7
+env_sampling_probability = 0.5
 [environment]
 type="Sun"
 strength = 0.4
 angular_diameter = 0.08
-sun_direction = [-1.0, 0.0, 1.0]
+sun_direction = [1.0, 0.0, 1.0]
 [environment.color]
 type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"

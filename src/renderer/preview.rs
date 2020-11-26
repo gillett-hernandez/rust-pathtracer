@@ -9,7 +9,6 @@ use crate::profile::Profile;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -35,7 +34,7 @@ fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
 }
 
 impl Renderer for PreviewRenderer {
-    fn render(&self, mut world: World, cameras: HashMap<String, Camera>, config: &Config) {
+    fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
         use crate::config::Resolution;
 
         if let RendererType::Preview {
@@ -53,7 +52,7 @@ impl Renderer for PreviewRenderer {
             let film_idx = selected_preview_film_id;
             let render_settings = config.render_settings[film_idx].clone();
 
-            world.assign_cameras(vec![cameras[&render_settings.camera_id].clone()], false);
+            world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
             let arc_world = Arc::new(world.clone());
 
             let Resolution { width, height } = render_settings.resolution;

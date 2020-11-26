@@ -689,7 +689,7 @@ impl GPUStylePTIntegrator {
             );
             */
             let cam_and_pixel_id = uray.cam_and_pixel_id;
-            if let Some((cam_id, pixel)) = cam_and_pixel_id {
+            if let Some((_cam_id, pixel)) = cam_and_pixel_id {
                 let lambda = uray.lambda;
                 let idx = match pixel {
                     Pixel::Id(id) => id,
