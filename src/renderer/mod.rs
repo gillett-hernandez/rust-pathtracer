@@ -10,7 +10,7 @@ pub use gpu_style::GPUStyleRenderer;
 pub use naive::NaiveRenderer;
 pub use preview::PreviewRenderer;
 
-use crate::camera::{Camera, CameraId};
+use crate::camera::Camera;
 use crate::config::*;
 
 use crate::math::*;

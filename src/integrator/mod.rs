@@ -73,17 +73,25 @@ impl Integrator {
         let (lower, upper) = settings
             .wavelength_bounds
             .unwrap_or((VISIBLE_RANGE.lower, VISIBLE_RANGE.upper));
+        let bounds = Bounds1D::new(lower, upper);
         assert!(lower < upper);
         match integrator_type {
-            _ => Some(Integrator::PathTracing(PathTracingIntegrator {
-                min_bounces: settings.min_bounces.unwrap_or(4),
+            IntegratorType::BDPT { .. } => Some(Integrator::BDPT(BDPTIntegrator {
                 max_bounces: settings.max_bounces.unwrap(),
                 world,
-                russian_roulette: settings.russian_roulette.unwrap_or(true),
-                light_samples: 4,
-                only_direct: settings.only_direct.unwrap_or(false),
-                wavelength_bounds: Bounds1D::new(lower, upper),
+                wavelength_bounds: bounds,
             })),
+            IntegratorType::PathTracing { .. } | _ => {
+                Some(Integrator::PathTracing(PathTracingIntegrator {
+                    min_bounces: settings.min_bounces.unwrap_or(4),
+                    max_bounces: settings.max_bounces.unwrap(),
+                    world,
+                    russian_roulette: settings.russian_roulette.unwrap_or(true),
+                    light_samples: 4,
+                    only_direct: settings.only_direct.unwrap_or(false),
+                    wavelength_bounds: bounds,
+                }))
+            }
         }
     }
 }
