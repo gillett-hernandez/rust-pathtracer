@@ -70,10 +70,10 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
-min_samples = 128
+filename = "PT"
+min_samples = 16
 min_bounces = 3
-max_bounces = 22
+max_bounces = 8
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
@@ -81,9 +81,10 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "BDPT"
+type = "PT"
 # light_samples = 10
+# camera_samples = 10
 # selected_pair = [2,2]
 [render_settings.resolution]
-width = 1080
-height = 1080
+width = 1000
+height = 1000

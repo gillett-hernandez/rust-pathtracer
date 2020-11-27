@@ -1,7 +1,7 @@
-// use crate::materials::*;
 use crate::math::*;
+use crate::texture::TexStack;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum EnvironmentMap {
     Constant {
         color: CDF,
@@ -12,6 +12,11 @@ pub enum EnvironmentMap {
         strength: f32,
         angular_diameter: f32,
         sun_direction: Vec3,
+    },
+    HDRi {
+        texture: TexStack,
+        rotation: Transform3,
+        strength: f32,
     },
 }
 
@@ -66,6 +71,17 @@ impl EnvironmentMap {
                     SingleEnergy::ZERO
                 }
             }
+            EnvironmentMap::HDRi {
+                texture,
+                rotation,
+                strength,
+            } => {
+                let direction = uv_to_direction(uv);
+                let new_direction = rotation.to_local(direction);
+                let uv = direction_to_uv(new_direction);
+                let result = texture.eval_at(lambda, uv) * strength;
+                result.into()
+            }
         }
     }
 
@@ -106,7 +122,8 @@ impl EnvironmentMap {
                 angular_diameter: _,
                 sun_direction: _,
             } => {
-                let (mut sw, wavelength_pdf) = color.sample_power_and_pdf(wavelength_range, wavelength_sample);
+                let (mut sw, wavelength_pdf) =
+                    color.sample_power_and_pdf(wavelength_range, wavelength_sample);
                 sw.energy *= *strength;
                 let (uv, directional_pdf) =
                     self.sample_env_uv_given_wavelength(direction_sample, sw.lambda);
@@ -118,8 +135,18 @@ impl EnvironmentMap {
                     + direction * world_radius
                     + frame.to_world(&random_on_normal_disk);
 
-                (Ray::new(point, -direction), sw, directional_pdf, wavelength_pdf)
+                (
+                    Ray::new(point, -direction),
+                    sw,
+                    directional_pdf,
+                    wavelength_pdf,
+                )
             }
+            EnvironmentMap::HDRi {
+                texture,
+                rotation,
+                strength,
+            } => {}
         }
     }
 
@@ -175,10 +202,11 @@ impl EnvironmentMap {
             EnvironmentMap::Sun {
                 color: _color,
                 strength: _strength,
-                 angular_diameter,
+                angular_diameter,
                 sun_direction,
             } => {
-                let local_wo = Vec3::Z + (*angular_diameter / 2.0).sin() * random_in_unit_disk(sample);
+                let local_wo =
+                    Vec3::Z + (*angular_diameter / 2.0).sin() * random_in_unit_disk(sample);
                 let sun_direction = *sun_direction;
                 let frame = TangentFrame::from_normal(sun_direction);
                 let direction = frame.to_world(&local_wo);
@@ -263,7 +291,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sample_env_map (){
+    fn test_sample_env_map() {
         let env_map = EnvironmentMap::Sun {
             color: curves::blackbody(5500.0, 40.0).into(),
             strength: 1.0,
