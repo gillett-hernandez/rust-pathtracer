@@ -71,7 +71,7 @@ vfov = 5
 [[render_settings]]
 threads = 22
 filename = "BDPT"
-min_samples = 512
+min_samples = 16
 min_bounces = 3
 max_bounces = 16
 camera_id = "sun test camera"

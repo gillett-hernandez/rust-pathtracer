@@ -49,7 +49,7 @@ pub enum IntegratorKind {
         camera_samples: Option<u16>,
     },
     SPPM {
-        photon_cache_size: usize,
+        photon_cache_size: Option<usize>,
     },
 }
 

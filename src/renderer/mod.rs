@@ -337,8 +337,10 @@ impl NaiveRenderer {
                             for s in 0..settings.min_samples {
                                 let sample = sampler.draw_2d();
                                 let camera_uv = (
-                                    (x as f32 + sample.x) / (settings.resolution.width as f32),
-                                    (y as f32 + sample.y) / (settings.resolution.height as f32),
+                                    ((x as f32 + sample.x) / (settings.resolution.width as f32))
+                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                    ((y as f32 + sample.y) / (settings.resolution.height as f32))
+                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
                                 );
                                 temp_color += XYZColor::from(integrator.color(
                                     &mut sampler,
