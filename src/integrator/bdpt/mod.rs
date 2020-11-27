@@ -11,7 +11,6 @@ use crate::materials::*;
 use crate::math::*;
 use crate::world::TransportMode;
 use crate::world::World;
-use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 // use std::f32::INFINITY;
 use std::sync::Arc;
 
@@ -55,7 +54,7 @@ impl GenericIntegrator for BDPTIntegrator {
             let maybe_sampled = material.sample_emission(
                 light_surface_point,
                 light_surface_normal,
-                VISIBLE_RANGE,
+                self.wavelength_bounds,
                 sampler.draw_2d(),
                 wavelength_sample,
             );
@@ -119,7 +118,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 world_center,
                 sampler.draw_2d(),
                 sampler.draw_2d(),
-                VISIBLE_RANGE,
+                self.wavelength_bounds,
                 wavelength_sample,
             );
             let light_g_term = 1.0;

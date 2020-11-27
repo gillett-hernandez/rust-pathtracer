@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_parsing_config() {
-        let settings: Config = match get_settings("data/config.toml".to_string()) {
+        let settings: TOMLConfig = match get_settings("data/config.toml".to_string()) {
             Ok(expr) => expr,
             Err(v) => {
                 println!("{:?}", "couldn't read config.toml");

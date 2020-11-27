@@ -5,7 +5,6 @@ use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
-use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 use crate::world::TransportMode;
 
@@ -120,7 +119,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 .sample_emission(
                     light_surface_point,
                     light_surface_normal,
-                    VISIBLE_RANGE,
+                    self.wavelength_bounds,
                     sampler.draw_2d(),
                     wavelength_sample,
                 )
@@ -146,7 +145,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 world_center,
                 sampler.draw_2d(),
                 sampler.draw_2d(),
-                VISIBLE_RANGE,
+                self.wavelength_bounds,
                 wavelength_sample,
             );
             light_g_term = 1.0;
