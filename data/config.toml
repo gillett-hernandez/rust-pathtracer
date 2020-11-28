@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_diamond_arrangement.toml"
+scene_file = "data/scenes/cornell_box_diamond_gem.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -83,7 +83,7 @@ only_direct = false
 [render_settings.integrator]
 type = "BDPT"
 # light_samples = 10
-# selected_pair = [2,2]
+# selected_pair = [3,3]
 [render_settings.resolution]
 width = 1080
 height = 1080

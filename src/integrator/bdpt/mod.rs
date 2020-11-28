@@ -186,11 +186,19 @@ impl GenericIntegrator for BDPTIntegrator {
             1.0,
         ));
         light_path.push(start_light_vertex);
+        let (sp1, tp1) = if let IntegratorKind::BDPT {
+            selected_pair: Some((s, t)),
+        } = settings.integrator
+        {
+            (s + 1, t + 1)
+        } else {
+            (self.max_bounces as usize, self.max_bounces as usize)
+        };
 
         let _additional_contribution_eye_path = random_walk(
             camera_ray,
             lambda,
-            self.max_bounces,
+            tp1 as u16,
             SingleEnergy::ONE,
             TransportMode::Importance,
             sampler,
@@ -202,7 +210,7 @@ impl GenericIntegrator for BDPTIntegrator {
         random_walk(
             light_ray,
             lambda,
-            self.max_bounces,
+            sp1 as u16,
             radiance,
             TransportMode::Radiance,
             sampler,

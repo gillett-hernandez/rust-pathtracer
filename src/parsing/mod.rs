@@ -11,6 +11,7 @@ pub mod texture;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
+use math::{Transform3, Vec3};
 use primitives::*;
 use texture::*;
 
@@ -30,6 +31,7 @@ use crate::texture::*;
 use crate::world::{AcceleratorType, World};
 
 use std::collections::HashMap;
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Read;
 
@@ -46,6 +48,34 @@ pub struct Scene {
     pub instances: Vec<InstanceData>,
     pub environment: EnvironmentData,
     pub env_sampling_probability: Option<f32>,
+}
+
+impl From<Transform3Data> for Transform3 {
+    fn from(data: Transform3Data) -> Self {
+        println!("parsing transform data");
+        let maybe_scale = data.scale.map(|v| Transform3::from_scale(Vec3::from(v)));
+        let maybe_rotate = if let Some(rotations) = data.rotate {
+            let mut base = None;
+            for rotation in rotations {
+                let transform = Transform3::from_axis_angle(
+                    Vec3::from(rotation.axis),
+                    PI * rotation.angle / 180.0,
+                );
+                if base.is_none() {
+                    base = Some(transform);
+                } else {
+                    base = Some(transform * base.unwrap());
+                };
+            }
+            base
+        } else {
+            None
+        };
+        let maybe_translate = data
+            .translate
+            .map(|v| Transform3::from_translation(Vec3::from(v)));
+        Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
+    }
 }
 
 fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
@@ -105,10 +135,11 @@ pub fn construct_world(config: &Config) -> World {
         match instance.aggregate {
             AggregateData::MeshBundle(data) => {
                 let meshes = load_obj_file(&data.filename, &material_names_to_ids);
+                let transform: Option<Transform3> = instance.transform.clone().map(|e| e.into());
                 for mut mesh in meshes {
                     let id = instances.len();
                     mesh.init();
-                    instances.push(Instance::new(Aggregate::Mesh(mesh), None, None, id));
+                    instances.push(Instance::new(Aggregate::Mesh(mesh), transform, None, id));
                 }
             }
             _ => {
