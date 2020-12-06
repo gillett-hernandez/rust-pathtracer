@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_diamond_gem.toml"
+scene_file = "data/scenes/cornell_box_single_orb_caustic.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -70,10 +70,10 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
+filename = "BDPT2"
 min_samples = 128
 min_bounces = 3
-max_bounces = 22
+max_bounces = 64
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
