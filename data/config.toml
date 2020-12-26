@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_single_orb_caustic.toml"
+scene_file = "data/scenes/cornell_box.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -69,11 +69,12 @@ vfov = 5
 
 
 [[render_settings]]
-threads = 22
-filename = "BDPT2"
-min_samples = 128
+threads = 8
+filename = "PT"
+min_samples = 8
 min_bounces = 3
-max_bounces = 64
+max_bounces = 16
+hwss = false
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
@@ -81,8 +82,8 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "BDPT"
-# light_samples = 10
+type = "PT"
+light_samples = 10
 # selected_pair = [3,3]
 [render_settings.resolution]
 width = 1080

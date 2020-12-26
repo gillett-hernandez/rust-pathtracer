@@ -188,7 +188,7 @@ impl PathTracingIntegrator {
         }
     }
 
-    fn estimate_direct_illumination_with_loop(
+    pub fn estimate_direct_illumination_with_loop(
         &self,
         lambda: f32,
         hit: &HitRecord,
@@ -246,7 +246,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         profile.camera_rays += 1;
 
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, self.wavelength_bounds);
@@ -399,6 +399,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
             }
         }
 
-        sum
+        XYZColor::from(sum)
     }
 }

@@ -29,7 +29,7 @@ impl GenericIntegrator for BDPTIntegrator {
         _sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
 
         let wavelength_sample = sampler.draw_1d();
@@ -262,7 +262,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 match res {
                     SampleKind::Sampled((factor, g)) => {
                         if g == 0.0 || factor == SingleEnergy::ZERO {
-                            return SingleWavelength::BLACK;
+                            return XYZColor::from(SingleWavelength::BLACK);
                         }
                         let weight = if MIS_ENABLED {
                             eval_mis(
@@ -277,13 +277,16 @@ impl GenericIntegrator for BDPTIntegrator {
                         } else {
                             1.0 / ((s + t) as f32)
                         } / (sampled.3).0;
-                        return SingleWavelength::new(lambda, weight * factor / (sampled.3).0);
+                        return XYZColor::from(SingleWavelength::new(
+                            lambda,
+                            weight * factor / (sampled.3).0,
+                        ));
                     }
 
                     SampleKind::Splatted((factor, g)) => {
                         // println!("should be splatting0 {:?} and {}", factor, g);
                         if g == 0.0 || factor == SingleEnergy::ZERO {
-                            return SingleWavelength::BLACK;
+                            return XYZColor::from(SingleWavelength::BLACK);
                         }
                         let weight = if MIS_ENABLED {
                             eval_mis(
@@ -322,7 +325,7 @@ impl GenericIntegrator for BDPTIntegrator {
                             if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
                                 // println!("found good pixel uv at {:?}", pixel_uv);
                                 let sample = Sample::LightSample(
-                                    SingleWavelength::new(lambda, contribution),
+                                    XYZColor::from(SingleWavelength::new(lambda, contribution)),
                                     pixel_uv,
                                 );
                                 samples.push((sample, camera_id as usize));
@@ -330,11 +333,11 @@ impl GenericIntegrator for BDPTIntegrator {
                                 // println!("pixel uv was nothing");
                             }
                         }
-                        return SingleWavelength::BLACK;
+                        return XYZColor::from(SingleWavelength::BLACK);
                     }
                 }
             }
-            return SingleWavelength::BLACK;
+            return XYZColor::from(SingleWavelength::BLACK);
         }
 
         let mut sum = SingleEnergy::ZERO;
@@ -415,7 +418,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
                             // println!("found good pixel uv at {:?}", pixel_uv);
                             let sample = Sample::LightSample(
-                                SingleWavelength::new(lambda, contribution),
+                                XYZColor::from(SingleWavelength::new(lambda, contribution)),
                                 pixel_uv,
                             );
                             samples.push((sample, camera_id as usize));
@@ -430,6 +433,6 @@ impl GenericIntegrator for BDPTIntegrator {
             }
         }
         debug_assert!(sum.0.is_finite());
-        SingleWavelength::new(lambda, sum)
+        XYZColor::from(SingleWavelength::new(lambda, sum))
     }
 }

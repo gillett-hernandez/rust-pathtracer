@@ -67,8 +67,8 @@ fn evaluate_direct_importance(
                 );
                 let energy = reflectance * beta * dropoff * weight / camera_pdf.0;
                 debug_assert!(energy.0.is_finite());
-                let sw = SingleWavelength::new(lambda, energy);
-                let ret = (Sample::LightSample(sw, uv), camera_id as CameraId);
+                let sample = XYZColor::from(SingleWavelength::new(lambda, energy));
+                let ret = (Sample::LightSample(sample, uv), camera_id as CameraId);
                 // println!("adding camera sample to splatting list");
                 samples.push(ret);
             }
@@ -93,7 +93,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         _sample_id: usize,
         mut samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
         let wavelength_sample = sampler.draw_1d();
         let light_pick_sample = sampler.draw_1d();
@@ -156,7 +156,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
         if radiance.0 == 0.0 {
-            return SingleWavelength::BLACK;
+            return XYZColor::from(SingleWavelength::BLACK);
         }
         let light_pdf = sampled.2;
         let lambda_pdf = sampled.3;
@@ -300,6 +300,6 @@ impl GenericIntegrator for LightTracingIntegrator {
                 }
             }
         }
-        SingleWavelength::BLACK
+        XYZColor::from(SingleWavelength::BLACK)
     }
 }

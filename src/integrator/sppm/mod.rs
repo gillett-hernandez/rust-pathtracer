@@ -219,7 +219,7 @@ impl GenericIntegrator for SPPMIntegrator {
         sample_id: usize,
         mut _samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         // naive implementation of SPPM
         // iterate through all deposited photons and add contributions based on if they are close to the eye vertex in question
 
@@ -305,6 +305,6 @@ impl GenericIntegrator for SPPMIntegrator {
                     );
             }
         }
-        sum
+        XYZColor::from(sum)
     }
 }

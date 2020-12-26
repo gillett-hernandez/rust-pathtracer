@@ -84,12 +84,8 @@ impl NaiveRenderer {
                         (x as f32 + sample.x) / (settings.resolution.width as f32),
                         (y as f32 + sample.y) / (settings.resolution.height as f32),
                     );
-                    temp_color += XYZColor::from(integrator.color(
-                        &mut sampler,
-                        (camera_uv, 0),
-                        s as usize,
-                        &mut profile,
-                    ));
+                    temp_color +=
+                        integrator.color(&mut sampler, (camera_uv, 0), s as usize, &mut profile);
                     // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
                     debug_assert!(
                         temp_color.0.is_finite().all(),
@@ -232,7 +228,7 @@ impl NaiveRenderer {
                     match sample {
                         Sample::LightSample(sw, pixel) => {
                             let film = &mut films[film_id as usize];
-                            let color = XYZColor::from(sw);
+                            let color = sw;
                             let (x, y) = (
                                 (pixel.0 * film.width as f32) as usize,
                                 film.height - (pixel.1 * film.height as f32) as usize - 1,
@@ -299,14 +295,14 @@ impl NaiveRenderer {
                                     ((y as f32 + sample.y) / (settings.resolution.height as f32))
                                         .clamp(0.0, 1.0 - std::f32::EPSILON),
                                 );
-                                temp_color += XYZColor::from(integrator.color(
+                                temp_color += integrator.color(
                                     &mut sampler,
                                     settings,
                                     (camera_uv, camera_id as CameraId),
                                     s as usize,
                                     &mut local_additional_splats,
                                     &mut profile,
-                                ));
+                                );
 
                                 debug_assert!(
                                     temp_color.0.is_finite().all(),
@@ -480,24 +476,37 @@ impl Renderer for NaiveRenderer {
                 IntegratorType::PathTracing => {
                     world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
                     let arc_world = Arc::new(world.clone());
-                    if let Some(Integrator::PathTracing(integrator)) =
-                        Integrator::from_settings_and_world(
-                            arc_world.clone(),
-                            IntegratorType::PathTracing,
-                            &bundled_cameras,
-                            render_settings,
-                        )
-                    {
-                        println!("rendering with path tracing integrator");
-                        let (render_settings, film) = (
-                            render_settings.clone(),
-                            NaiveRenderer::render_sampled(
-                                integrator,
-                                render_settings,
-                                &cameras[render_settings.camera_id],
-                            ),
-                        );
-                        output_film(&render_settings, &film);
+                    match Integrator::from_settings_and_world(
+                        arc_world.clone(),
+                        IntegratorType::PathTracing,
+                        &bundled_cameras,
+                        render_settings,
+                    ) {
+                        Some(Integrator::PathTracing(integrator)) => {
+                            println!("rendering with path tracing integrator");
+                            let (render_settings, film) = (
+                                render_settings.clone(),
+                                NaiveRenderer::render_sampled(
+                                    integrator,
+                                    render_settings,
+                                    &cameras[render_settings.camera_id],
+                                ),
+                            );
+                            output_film(&render_settings, &film);
+                        }
+                        Some(Integrator::HWSSPathTracing(integrator)) => {
+                            println!("rendering with hwss path tracing integrator");
+                            let (render_settings, film) = (
+                                render_settings.clone(),
+                                NaiveRenderer::render_sampled(
+                                    integrator,
+                                    render_settings,
+                                    &cameras[render_settings.camera_id],
+                                ),
+                            );
+                            output_film(&render_settings, &film);
+                        }
+                        _ => {}
                     }
                 }
                 _ => {}

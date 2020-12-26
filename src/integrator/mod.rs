@@ -2,6 +2,7 @@ mod bdpt;
 pub mod gpu_style;
 mod lt;
 mod pt;
+mod pt_hwss;
 mod sppm;
 pub mod utils;
 
@@ -16,6 +17,7 @@ use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
 pub use pt::PathTracingIntegrator;
+pub use pt_hwss::HWSSPathTracingIntegrator;
 pub use sppm::SPPMIntegrator;
 
 use std::hash::Hash;
@@ -58,6 +60,7 @@ impl From<IntegratorKind> for IntegratorType {
 
 pub enum Integrator {
     PathTracing(PathTracingIntegrator),
+    HWSSPathTracing(HWSSPathTracingIntegrator),
     LightTracing(LightTracingIntegrator),
     BDPT(BDPTIntegrator),
     SPPM(SPPMIntegrator),
@@ -75,14 +78,10 @@ impl Integrator {
             .unwrap_or((VISIBLE_RANGE.lower, VISIBLE_RANGE.upper));
         let bounds = Bounds1D::new(lower, upper);
         assert!(lower < upper);
-        match integrator_type {
-            IntegratorType::BDPT { .. } => Some(Integrator::BDPT(BDPTIntegrator {
-                max_bounces: settings.max_bounces.unwrap(),
-                world,
-                wavelength_bounds: bounds,
-            })),
-            IntegratorType::PathTracing { .. } | _ => {
-                Some(Integrator::PathTracing(PathTracingIntegrator {
+        if settings.hwss {
+            println!("constructing and returning hwss pt integrator");
+            Some(Integrator::HWSSPathTracing(HWSSPathTracingIntegrator {
+                inner: PathTracingIntegrator {
                     min_bounces: settings.min_bounces.unwrap_or(4),
                     max_bounces: settings.max_bounces.unwrap(),
                     world,
@@ -90,7 +89,26 @@ impl Integrator {
                     light_samples: 4,
                     only_direct: settings.only_direct.unwrap_or(false),
                     wavelength_bounds: bounds,
-                }))
+                },
+            }))
+        } else {
+            match integrator_type {
+                IntegratorType::BDPT { .. } => Some(Integrator::BDPT(BDPTIntegrator {
+                    max_bounces: settings.max_bounces.unwrap(),
+                    world,
+                    wavelength_bounds: bounds,
+                })),
+                IntegratorType::PathTracing { .. } | _ => {
+                    Some(Integrator::PathTracing(PathTracingIntegrator {
+                        min_bounces: settings.min_bounces.unwrap_or(4),
+                        max_bounces: settings.max_bounces.unwrap(),
+                        world,
+                        russian_roulette: settings.russian_roulette.unwrap_or(true),
+                        light_samples: 4,
+                        only_direct: settings.only_direct.unwrap_or(false),
+                        wavelength_bounds: bounds,
+                    }))
+                }
             }
         }
     }
@@ -103,12 +121,12 @@ pub trait SamplerIntegrator: Sync + Send {
         camera_sample: ((f32, f32), CameraId),
         sample_id: usize,
         profile: &mut Profile,
-    ) -> SingleWavelength;
+    ) -> XYZColor;
 }
 
 pub enum Sample {
-    ImageSample(SingleWavelength, (f32, f32)),
-    LightSample(SingleWavelength, (f32, f32)),
+    ImageSample(XYZColor, (f32, f32)),
+    LightSample(XYZColor, (f32, f32)),
 }
 
 #[allow(unused)]
@@ -128,5 +146,5 @@ pub trait GenericIntegrator: Send + Sync {
         sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
         profile: &mut Profile,
-    ) -> SingleWavelength;
+    ) -> XYZColor;
 }

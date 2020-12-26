@@ -1,6 +1,11 @@
 use super::{Vec3, PI};
+use packed_simd::f32x4;
 
 pub fn power_heuristic(a: f32, b: f32) -> f32 {
+    (a * a) / (a * a + b * b)
+}
+
+pub fn power_heuristic_hero(a: f32x4, b: f32x4) -> f32x4 {
     (a * a) / (a * a + b * b)
 }
 
