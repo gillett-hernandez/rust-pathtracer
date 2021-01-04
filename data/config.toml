@@ -69,12 +69,12 @@ vfov = 5
 
 
 [[render_settings]]
-threads = 8
+threads = 23
 filename = "PT"
-min_samples = 8
+min_samples = 64
 min_bounces = 3
 max_bounces = 16
-hwss = false
+hwss = true
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
@@ -83,7 +83,7 @@ only_direct = false
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
 type = "PT"
-light_samples = 10
+light_samples = 2
 # selected_pair = [3,3]
 [render_settings.resolution]
 width = 1080
