@@ -6,6 +6,7 @@ use crate::math::*;
 use crate::world::TransportMode;
 use crate::world::World;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use nalgebra::coordinates::XY;
 // use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 
 use std::sync::Arc;
@@ -226,85 +227,97 @@ impl GenericIntegrator for SPPMIntegrator {
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id as usize);
         let bounds = self.wavelength_bounds;
-        let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, bounds);
+        let mut sum = XYZColor::ZERO;
         // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
         // let direction = direction.normalized();
         let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
-        let aperture_sample = sampler.draw_2d();
-        let (camera_ray, _lens_normal, pdf) =
-            camera.sample_we(film_sample, aperture_sample, sum.lambda);
-        let _camera_pdf = pdf;
+        for lambda_idx in 0..10 {
+            let lambda = bounds.lower + bounds.span() * lambda_idx as f32 / 10.0;
+            let aperture_sample = sampler.draw_2d();
+            let (camera_ray, _lens_normal, pdf) =
+                camera.sample_we(film_sample, aperture_sample, lambda);
+            let _camera_pdf = pdf;
 
-        let mut path: Vec<Vertex> = vec![Vertex::new(
-            VertexType::Camera,
-            camera_ray.time,
-            sum.lambda,
-            Vec3::ZERO,
-            camera_ray.origin,
-            camera_ray.direction,
-            (0.0, 0.0),
-            MaterialId::Camera(0),
-            0,
-            SingleEnergy::ONE,
-            0.0,
-            0.0,
-            1.0,
-        )];
+            let mut path: Vec<Vertex> = vec![Vertex::new(
+                VertexType::Camera,
+                camera_ray.time,
+                lambda,
+                Vec3::ZERO,
+                camera_ray.origin,
+                camera_ray.direction,
+                (0.0, 0.0),
+                MaterialId::Camera(0),
+                0,
+                SingleEnergy::ONE,
+                0.0,
+                0.0,
+                1.0,
+            )];
 
-        let _ = random_walk(
-            camera_ray,
-            sum.lambda,
-            1,
-            SingleEnergy::ONE,
-            TransportMode::Importance,
-            sampler,
-            &self.world,
-            &mut path,
-            0,
-            &mut profile,
-        );
+            let _ = random_walk(
+                camera_ray,
+                lambda,
+                1,
+                SingleEnergy::ONE,
+                TransportMode::Importance,
+                sampler,
+                &self.world,
+                &mut path,
+                0,
+                &mut profile,
+            );
 
-        profile.camera_rays += 1;
-        // camera random walk is now stored in path, with length limited to 1 (for now)
-        let vertex_in_scene = path.last().unwrap();
-        let radius_squared = 1.0 / vertex_in_scene.time / (1.0 + sample_id as f32);
+            profile.camera_rays += 1;
+            // camera random walk is now stored in path, with length limited to 1 (for now)
+            let vertex_in_scene = path.last().unwrap();
+            let radius_squared = 0.1 / (1.0 + sample_id as f32);
 
-        // collect photons that are within a certain radius
-        for vert in self.photon_map.as_ref().unwrap().photons.iter() {
-            let point = vert.point;
+            let mut temp_sum = XYZColor::ZERO;
+            let mut n = 0;
+            // collect photons that are within a certain radius
+            for vert in self.photon_map.as_ref().unwrap().photons.iter() {
+                let point = vert.point;
 
-            let vec_to_camera: Vec3 = camera_ray.origin - vertex_in_scene.point;
-            if vec_to_camera.norm_squared() < 0.001 {
-                continue;
-            }
-            let distance_squared = (point - vertex_in_scene.point).norm_squared();
-            if distance_squared < radius_squared {
-                let wi_global: Vec3 = vert.local_wi;
-                let wo_global: Vec3 = vec_to_camera / distance_squared.sqrt();
-
-                let normal = vert.normal;
-                let frame = TangentFrame::from_normal(normal);
-
-                let wi = frame.to_local(&wi_global);
-                let wo = frame.to_local(&wo_global);
-
-                let material = self.world.get_material(vertex_in_scene.material_id);
-
-                let hit: HitRecord = (*vertex_in_scene).into();
-                let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
-
-                if pdf.0 == 0.0 {
+                let vec_to_camera: Vec3 = camera_ray.origin - vertex_in_scene.point;
+                if vec_to_camera.norm_squared() < 0.001 {
                     continue;
                 }
+                let distance_squared = (point - vertex_in_scene.point).norm_squared();
+                if distance_squared < radius_squared {
+                    let wi_global: Vec3 = vert.local_wi;
+                    let wo_global: Vec3 = vec_to_camera / distance_squared.sqrt();
 
-                sum.energy += vert.throughput.0 * f / pdf.0
-                    * (1.1 - (-(sample_id as f32)).exp())
-                    * window_function(
-                        0.1 * sum.lambda * (1.0 + sample_id as f32),
-                        0.1 * vert.lambda * (1.0 + sample_id as f32),
-                    );
+                    let normal = vert.normal;
+                    let frame = TangentFrame::from_normal(normal);
+
+                    let wi = frame.to_local(&wi_global);
+                    let wo = frame.to_local(&wo_global);
+
+                    let material = self.world.get_material(vertex_in_scene.material_id);
+
+                    let hit: HitRecord = (*vertex_in_scene).into();
+                    let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+
+                    if pdf.0 == 0.0 {
+                        continue;
+                    }
+
+                    temp_sum += XYZColor::from(SingleWavelength::new(
+                        lambda,
+                        vert.throughput.0 * f / pdf.0
+                            * (1.1 - (-(sample_id as f32)).exp())
+                            * window_function(
+                                0.1 * lambda * (1.0 + sample_id as f32),
+                                0.1 * vert.lambda * (1.0 + sample_id as f32),
+                            ),
+                    ));
+                    n += 1;
+                }
+            }
+            if n > 0 {
+                sum += temp_sum / n as f32;
             }
         }
-        XYZColor::from(sum)
+        sum / 10.0
     }
 }

@@ -34,7 +34,7 @@ impl Sample1D {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Sample2D {
     pub x: f32,
     pub y: f32,

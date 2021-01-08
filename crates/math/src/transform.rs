@@ -211,6 +211,7 @@ impl Transform3 {
     //   Bx By Bz    *     vy     =   [Tx * vx + Ty * vy + Tz * vz, ...]
     //   Nx Ny Nz ]        vz ]
 
+
     pub fn from_vector_stack(v0: f32x4, v1: f32x4, v2: f32x4) -> Self {
         let [m11, m12, m13, _]: [f32; 4] = v0.into();
         let [m21, m22, m23, _]: [f32; 4] = v1.into();
