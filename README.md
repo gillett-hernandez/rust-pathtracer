@@ -95,3 +95,7 @@ I grabbed some sRGB basis functions for upsampling textures from [this](https://
 ## Contribution
 
 Please view this as a hobby or reference implementation. If you find any issues, please feel free to log them on GitHub's issue tracker, or submit a pull request to fix them :)
+
+## Support the author
+
+If you're so inclined, buy me a coffee at https://ko-fi.com/nacly
