@@ -4,6 +4,7 @@ pub mod curves;
 pub mod environment;
 pub mod instance;
 pub mod material;
+pub mod medium;
 pub mod primitives;
 pub mod texture;
 
@@ -12,6 +13,7 @@ use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
 use math::{Transform3, Vec3};
+use medium::*;
 use primitives::*;
 use texture::*;
 
@@ -20,7 +22,7 @@ pub use curves::{
     parse_tabulated_curve_from_csv,
 };
 
-use crate::config::Config;
+use crate::{config::Config, mediums::MediumEnum};
 // use crate::curves::*;
 use crate::geometry::*;
 use crate::materials::*;
@@ -45,6 +47,7 @@ pub type Point3Data = [f32; 3];
 pub struct Scene {
     pub textures: Vec<TextureStackData>,
     pub materials: Vec<NamedMaterial>,
+    pub mediums: Vec<NamedMedium>,
     pub instances: Vec<InstanceData>,
     pub environment: EnvironmentData,
     pub env_sampling_probability: Option<f32>,
@@ -100,11 +103,14 @@ fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
 pub fn construct_world(config: &Config) -> World {
     let scene = get_scene(&config.scene_file).expect("scene file failed to parse");
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
+    let mut medium_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut texture_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut materials: Vec<MaterialEnum> = Vec::new();
+    let mut mediums: Vec<MediumEnum> = Vec::new();
     let mut instances: Vec<Instance> = Vec::new();
     let mut textures: Vec<TexStack> = Vec::new();
     let mut material_count: usize = 0;
+    let mut medium_count: usize = 0;
     let mut texture_count: usize = 0;
     for tex in scene.textures {
         texture_count += 1;
@@ -131,6 +137,12 @@ pub fn construct_world(config: &Config) -> World {
             &textures,
         ));
     }
+    for medium in scene.mediums {
+        medium_count += 1;
+        let id = medium_count - 1;
+        medium_names_to_ids.insert(medium.name, id);
+        mediums.push(parse_medium(medium.data));
+    }
     for instance in scene.instances {
         match instance.aggregate {
             AggregateData::MeshBundle(data) => {
@@ -152,6 +164,7 @@ pub fn construct_world(config: &Config) -> World {
     let world = World::new(
         instances,
         materials,
+        mediums,
         parse_environment(scene.environment),
         scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::BVH,

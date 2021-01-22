@@ -1,5 +1,5 @@
 use crate::math::*;
-use crate::parsing::curves::{parse_curve, Curve};
+use crate::parsing::curves::{parse_curve, CurveData};
 use crate::renderer::Film;
 use crate::texture::*;
 
@@ -12,11 +12,11 @@ use std::path::Path;
 #[serde(tag = "type")]
 pub enum TextureData {
     Texture1 {
-        curve: Curve,
+        curve: CurveData,
         filename: String,
     },
     Texture4 {
-        curves: [Curve; 4],
+        curves: [CurveData; 4],
         filename: String,
     },
 }

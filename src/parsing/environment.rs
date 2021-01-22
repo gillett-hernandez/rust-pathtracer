@@ -1,4 +1,4 @@
-use crate::parsing::curves::Curve;
+use crate::parsing::curves::CurveData;
 use crate::parsing::Vec3Data;
 use serde::{Deserialize, Serialize};
 
@@ -8,13 +8,13 @@ use crate::world::EnvironmentMap;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ConstantData {
-    pub color: Curve,
+    pub color: CurveData,
     pub strength: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SunData {
-    pub color: Curve,
+    pub color: CurveData,
     pub strength: f32,
     pub angular_diameter: f32,
     pub sun_direction: Vec3Data,

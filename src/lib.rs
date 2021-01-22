@@ -19,6 +19,7 @@ pub mod geometry;
 pub mod hittable;
 pub mod integrator;
 pub mod materials;
+pub mod mediums;
 pub mod parsing;
 pub mod profile;
 pub mod renderer;

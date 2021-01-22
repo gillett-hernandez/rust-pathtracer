@@ -1,5 +1,5 @@
 use crate::materials::*;
-use crate::parsing::curves::{parse_curve, Curve};
+use crate::parsing::curves::{parse_curve, CurveData};
 use crate::texture::TexStack;
 use math::Sidedness;
 
@@ -16,20 +16,20 @@ pub struct LambertianData {
 pub struct GGXData {
     pub alpha: f32,
     pub eta_o: f32,
-    pub eta: Curve,
-    pub kappa: Curve,
+    pub eta: CurveData,
+    pub kappa: CurveData,
     pub permeability: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DiffuseLightData {
-    pub color: Curve,
+    pub color: CurveData,
     pub sidedness: Sidedness,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SharpLightData {
-    pub color: Curve,
+    pub color: CurveData,
     pub sidedness: Sidedness,
     pub sharpness: f32,
 }

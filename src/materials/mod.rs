@@ -83,7 +83,7 @@ mod lambertian;
 mod sharp_light;
 
 pub use diffuse_light::DiffuseLight;
-pub use ggx::{GGX, refract, reflect};
+pub use ggx::{reflect, refract, GGX};
 pub use lambertian::Lambertian;
 pub use sharp_light::SharpLight;
 
@@ -273,16 +273,6 @@ impl Material for MaterialEnum {
         }
     }
 }
-
-// impl std::convert::Into<usize> for MaterialId {
-//     fn into(self) -> usize {
-//         usize::from(self)
-//     }
-// }
-
-// pub struct MaterialTable {
-//     pub materials: Vec<Box<dyn Material>>,
-// }
 pub type MaterialTable = Vec<MaterialEnum>;
 
 // #[cfg(test)]
