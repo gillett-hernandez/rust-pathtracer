@@ -162,9 +162,9 @@ impl GenericIntegrator for LightTracingIntegrator {
         let lambda_pdf = sampled.3;
 
         // light loop here
-        let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
-        path.push(Vertex::new(
+        path.push(SurfaceVertex::new(
             VertexType::Camera,
             light_ray.time,
             lambda,

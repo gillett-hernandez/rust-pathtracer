@@ -44,6 +44,9 @@ impl Point3 {
         }
         self
     }
+    pub fn as_tuple(&self) -> (f32, f32, f32) {
+        (self.x(), self.y(), self.z())
+    }
 }
 
 impl Default for Point3 {

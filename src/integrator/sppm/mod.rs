@@ -20,7 +20,7 @@ fn window_function(lambda1: f32, lambda2: f32) -> f32 {
 }
 
 pub struct PhotonMap {
-    pub photons: Vec<Vertex>,
+    pub photons: Vec<SurfaceVertex>,
 }
 
 pub struct SPPMIntegrator {
@@ -41,7 +41,7 @@ impl GenericIntegrator for SPPMIntegrator {
     ) {
         let num_beams = 10000;
         println!("preprocessing and mapping beams");
-        let mut beams: Vec<Vec<Vertex>> = vec![Vec::new(); num_beams];
+        let mut beams: Vec<Vec<SurfaceVertex>> = vec![Vec::new(); num_beams];
         let beams_profile = beams
             .par_iter_mut()
             .map(|beam| {
@@ -116,7 +116,7 @@ impl GenericIntegrator for SPPMIntegrator {
                             sampled.1.energy
                         );
 
-                        start_light_vertex = Vertex::new(
+                        start_light_vertex = SurfaceVertex::new(
                             VertexType::LightSource(LightSourceType::Instance),
                             0.0,
                             sampled.1.lambda,
@@ -149,7 +149,7 @@ impl GenericIntegrator for SPPMIntegrator {
                         );
                         let light_g_term = 1.0;
                         let directional_pdf = sampled.2;
-                        start_light_vertex = Vertex::new(
+                        start_light_vertex = SurfaceVertex::new(
                             VertexType::LightSource(LightSourceType::Environment),
                             0.0,
                             sampled.1.lambda,
@@ -238,7 +238,7 @@ impl GenericIntegrator for SPPMIntegrator {
                 camera.sample_we(film_sample, aperture_sample, lambda);
             let _camera_pdf = pdf;
 
-            let mut path: Vec<Vertex> = vec![Vertex::new(
+            let mut path: Vec<SurfaceVertex> = vec![SurfaceVertex::new(
                 VertexType::Camera,
                 camera_ray.time,
                 lambda,

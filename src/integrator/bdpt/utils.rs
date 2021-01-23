@@ -17,9 +17,9 @@ pub enum SampleKind {
 
 pub fn eval_unweighted_contribution(
     world: &Arc<World>,
-    light_path: &Vec<Vertex>,
+    light_path: &Vec<SurfaceVertex>,
     s: usize,
-    eye_path: &Vec<Vertex>,
+    eye_path: &Vec<SurfaceVertex>,
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
     russian_roulette_threshold: f32,
@@ -284,8 +284,8 @@ pub fn eval_unweighted_contribution(
 
 #[derive(Debug)]
 pub struct CombinedPath<'a> {
-    pub light_path: &'a Vec<Vertex>,
-    pub eye_path: &'a Vec<Vertex>,
+    pub light_path: &'a Vec<SurfaceVertex>,
+    pub eye_path: &'a Vec<SurfaceVertex>,
     pub s: usize,
     pub t: usize,
     pub connecting_g: f32,
@@ -386,7 +386,7 @@ impl<'a> CombinedPath<'a> {
 }
 
 impl<'a> Index<usize> for CombinedPath<'a> {
-    type Output = Vertex;
+    type Output = SurfaceVertex;
     fn index(&self, index: usize) -> &Self::Output {
         if index < self.s {
             debug_assert!(index < self.light_path.len());
@@ -409,9 +409,9 @@ impl<'a> Index<usize> for CombinedPath<'a> {
 #[allow(unused)]
 pub fn eval_mis<F>(
     world: &Arc<World>,
-    light_path: &Vec<Vertex>,
+    light_path: &Vec<SurfaceVertex>,
     s: usize,
-    eye_path: &Vec<Vertex>,
+    eye_path: &Vec<SurfaceVertex>,
     t: usize,
     connecting_g: f32,
     mis_function: F,

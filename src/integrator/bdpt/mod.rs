@@ -94,7 +94,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampled.1.energy
             );
 
-            start_light_vertex = Vertex::new(
+            start_light_vertex = SurfaceVertex::new(
                 VertexType::LightSource(LightSourceType::Instance),
                 0.0,
                 sampled.1.lambda,
@@ -123,7 +123,7 @@ impl GenericIntegrator for BDPTIntegrator {
             );
             let light_g_term = 1.0;
             let directional_pdf = sampled.2;
-            start_light_vertex = Vertex::new(
+            start_light_vertex = SurfaceVertex::new(
                 VertexType::LightSource(LightSourceType::Environment),
                 0.0,
                 sampled.1.lambda,
@@ -167,10 +167,10 @@ impl GenericIntegrator for BDPTIntegrator {
         let radiance = sampled.1.energy;
 
         // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
-        let mut light_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
-        let mut eye_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut light_path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut eye_path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
-        eye_path.push(Vertex::new(
+        eye_path.push(SurfaceVertex::new(
             VertexType::Camera,
             camera_ray.time,
             lambda,

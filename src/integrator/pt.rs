@@ -1,7 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
-use crate::integrator::utils::{random_walk, veach_v, LightSourceType, Vertex, VertexType};
+use crate::integrator::utils::{random_walk, veach_v, LightSourceType, SurfaceVertex, VertexType};
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
@@ -94,7 +94,18 @@ impl PathTracingIntegrator {
 
                 debug_assert!(emission.0 >= 0.0);
                 // successful_light_samples += 1;
-                return reflectance * throughput * dropoff * emission * weight / light_pdf.0;
+                let v = reflectance * throughput * dropoff * emission * weight / light_pdf.0;
+                debug_assert!(
+                    v.0.is_finite(),
+                    "{:?},{:?},{:?},{:?},{:?},{:?},",
+                    reflectance,
+                    throughput,
+                    dropoff,
+                    emission,
+                    weight,
+                    light_pdf.0
+                );
+                return v;
                 // debug_assert!(
                 //     !light_contribution.0.is_nan(),
                 //     "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} ",
@@ -136,6 +147,7 @@ impl PathTracingIntegrator {
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
         profile.shadow_rays += 1;
+        // TODO: add support for passthrough material, such that it doesn't fully interfere with direct illumination
         if let Some(mut _light_hit) =
             self.world
                 .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
@@ -184,7 +196,19 @@ impl PathTracingIntegrator {
             let emission = self.world.environment.emission(uv, lambda);
 
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            reflectance * local_dropoff.abs() * throughput * emission * weight / light_pdf.0
+            let v =
+                reflectance * local_dropoff.abs() * throughput * emission * weight / light_pdf.0;
+            debug_assert!(
+                v.0.is_finite(),
+                "{:?},{:?},{:?},{:?},{:?},{:?},",
+                reflectance,
+                local_dropoff,
+                throughput,
+                emission,
+                weight,
+                light_pdf.0
+            );
+            v
         }
     }
 
@@ -234,6 +258,15 @@ impl PathTracingIntegrator {
                     &mut profile,
                 );
             }
+            debug_assert!(
+                light_contribution.0.is_finite(),
+                "{:?}, {}, {:?}, {:?}, {:?}",
+                light_contribution,
+                sample_world,
+                hit.material,
+                material.get_name(),
+                wi,
+            );
         }
         light_contribution
     }
@@ -263,9 +296,9 @@ impl SamplerIntegrator for PathTracingIntegrator {
             camera.sample_we(film_sample, aperture_sample, sum.lambda);
         let _camera_pdf = pdf;
 
-        let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
-        path.push(Vertex::new(
+        path.push(SurfaceVertex::new(
             VertexType::Camera,
             camera_ray.time,
             lambda,

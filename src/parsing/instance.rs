@@ -45,14 +45,19 @@ pub fn parse_instance(
     let transform = instance_data
         .transform
         .map(|transform_data| transform_data.into());
-    let material_id = instance_data.material_identifier.map(|v| {
+
+    let material_id = instance_data.material_identifier.clone().map(|v| {
         *materials_mapping
             .get(&v)
             .expect("material mapping did not contain material name")
     });
     println!(
-        "parsed instance, assigned material id {:?} and instance id {}",
-        material_id, instance_id
+        "parsed instance, assigned material id {:?} from {:?}, and instance id {}",
+        material_id,
+        instance_data
+            .material_identifier
+            .unwrap_or("None".to_string()),
+        instance_id
     );
     Instance::new(aggregate, transform, material_id, instance_id)
 }

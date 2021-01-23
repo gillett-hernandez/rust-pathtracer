@@ -1,10 +1,7 @@
 use crate::mediums::*;
 use crate::parsing::curves::{parse_curve, CurveData};
-use crate::texture::TexStack;
 
 use serde::{Deserialize, Serialize};
-
-use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HGMediumData {

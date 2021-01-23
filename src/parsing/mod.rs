@@ -125,7 +125,7 @@ pub fn construct_world(config: &Config) -> World {
                 material_count += 1;
                 MaterialId::Light((material_count - 1) as u16)
             }
-            MaterialData::Lambertian(_) | MaterialData::GGX(_) => {
+            _ => {
                 material_count += 1;
                 MaterialId::Material((material_count - 1) as u16)
             }
@@ -151,7 +151,23 @@ pub fn construct_world(config: &Config) -> World {
                 for mut mesh in meshes {
                     let id = instances.len();
                     mesh.init();
-                    instances.push(Instance::new(Aggregate::Mesh(mesh), transform, None, id));
+                    println!(
+                        "pushing instance of mesh from meshbundle, with material id {:?} from {:?}",
+                        instance
+                            .material_identifier
+                            .clone()
+                            .map(|s| material_names_to_ids[&s]),
+                        instance.material_identifier.clone()
+                    );
+                    instances.push(Instance::new(
+                        Aggregate::Mesh(mesh),
+                        transform,
+                        instance
+                            .material_identifier
+                            .clone()
+                            .map(|s| material_names_to_ids[&s]),
+                        id,
+                    ));
                 }
             }
             _ => {

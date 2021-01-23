@@ -11,8 +11,8 @@
 env_sampling_probability = 0.0
 [environment]
 type="Sun"
-strength = 0.0
-angular_diameter = 0.04
+strength = 0.0000
+angular_diameter = 0.0565
 sun_direction = [-1.0, 0.0, 1.0]
 [environment.color]
 type = "TabulatedCSV"
@@ -268,30 +268,45 @@ type = "Blackbody"
 temperature = 5500.0
 strength = 5.0
 
+[[materials]]
+name = "fog_boundary"
+[materials.data]
+type = "PassthroughFilter"
+outer_medium_id = 0
+inner_medium_id = 1
+[materials.data.color]
+type = "Blackbody"
+temperature = 5500.0
+strength = 5.0
+
+
 [[mediums]]
 name = "fog"
 [mediums.data]
 type = "HG"
 [mediums.data.g]
-type = "Blackbody"
-temperature = 5500.0
-strength = 2.0
+type = "Flat"
+strength = 1.0
 [mediums.data.sigma_s]
-type = "Blackbody"
-temperature = 5500.0
+# type = "Blackbody"
+# temperature = 5500.0
+# strength = 2.0
+type = "Flat"
 strength = 2.0
 [mediums.data.sigma_t]
-type = "Blackbody"
-temperature = 5500.0
-strength = 2.0
+# type = "Blackbody"
+# temperature = 5500.0
+# strength = 2.0
+type = "Flat"
+strength = 5.0
 
 
 
 [[instances]]
-material_identifier = "sharp_light_warm"
+material_identifier = "diffuse_light_warm"
 [instances.aggregate]
 type = "Rect"
-size = [0.4, 0.4]
+size = [0.6, 0.6]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = false
@@ -343,7 +358,16 @@ two_sided = true
 
 [[instances]]
 # skip specifying material identifier and it defaults to the one from the .obj file itself
-# material_identifier = "ggx_glass_dispersive"
+material_identifier = "fog_boundary"
 [instances.aggregate]
 type = "MeshBundle"
-filename = "data/meshes/prism.obj"
+filename = "data/meshes/monkey.obj"
+[instances.transform]
+scale = [0.7, 0.7, 0.7]
+translate = [0.0, 0.0, -0.5]
+# [[instances.transform.rotate]]
+# axis = [0, 0, 1]
+# angle = 170
+# [[instances.transform.rotate]]
+# axis = [0, 1, 0]
+# angle = 20

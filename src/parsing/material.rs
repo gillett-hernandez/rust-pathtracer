@@ -35,10 +35,18 @@ pub struct SharpLightData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct PassthroughFilterData {
+    pub color: CurveData,
+    pub outer_medium_id: usize,
+    pub inner_medium_id: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum MaterialData {
     GGX(GGXData),
     Lambertian(LambertianData),
+    PassthroughFilter(PassthroughFilterData),
 
     DiffuseLight(DiffuseLightData),
     SharpLight(SharpLightData),
@@ -74,6 +82,16 @@ pub fn parse_material(
             // let color = parse_texture_stack(data.color);
             let color = parse_curve(data.color).into();
             MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
+        }
+        MaterialData::PassthroughFilter(data) => {
+            println!("parsing PassthroughFilter");
+            // let color = parse_texture_stack(data.color);
+            let color = parse_curve(data.color).into();
+            MaterialEnum::PassthroughFilter(PassthroughFilter::new(
+                color,
+                data.outer_medium_id,
+                data.inner_medium_id,
+            ))
         }
         MaterialData::DiffuseLight(data) => {
             println!("parsing DiffuseLight");
