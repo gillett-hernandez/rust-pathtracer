@@ -47,7 +47,7 @@ pub type Point3Data = [f32; 3];
 pub struct Scene {
     pub textures: Vec<TextureStackData>,
     pub materials: Vec<NamedMaterial>,
-    pub mediums: Vec<NamedMedium>,
+    pub mediums: Option<Vec<NamedMedium>>,
     pub instances: Vec<InstanceData>,
     pub environment: EnvironmentData,
     pub env_sampling_probability: Option<f32>,
@@ -137,11 +137,13 @@ pub fn construct_world(config: &Config) -> World {
             &textures,
         ));
     }
-    for medium in scene.mediums {
-        medium_count += 1;
-        let id = medium_count - 1;
-        medium_names_to_ids.insert(medium.name, id);
-        mediums.push(parse_medium(medium.data));
+    if let Some(scene_mediums) = scene.mediums {
+        for medium in scene_mediums {
+            medium_count += 1;
+            let id = medium_count - 1;
+            medium_names_to_ids.insert(medium.name, id);
+            mediums.push(parse_medium(medium.data));
+        }
     }
     for instance in scene.instances {
         match instance.aggregate {

@@ -32,6 +32,163 @@ pub fn generate_hero(x: f32, bounds: Bounds1D) -> f32x4 {
     wavelengths - sub
 }
 
+pub fn medium_direct_illumination_transmittance(
+    world: &Arc<World>,
+    sample_world: bool,
+    medium: &MediumEnum,
+    lambda: f32x4,
+    vertex: &HeroMediumVertex,
+    mediums: &[usize],
+    light_pick_sample: Sample1D,
+    additional_light_sample: Sample2D,
+    profile: &mut Profile,
+) -> HeroEnergy {
+    if sample_world {
+        // light_contribution += direct_illumination_from_world;
+        let (uv, light_pdf) = world
+            .environment
+            .sample_env_uv_given_wavelength(additional_light_sample, lambda.extract(0));
+        // direction is the direction to the sampled point on the environment
+        let wo = uv_to_direction(uv);
+
+        profile.shadow_rays += 1;
+        let mut point = vertex.point;
+        loop {
+            if let Some(mut _light_hit) = world.hit(Ray::new(point, wo), 0.00001, INFINITY) {
+                // handle case where we intended to hit the world but instead hit a light?
+                match world.get_material(_light_hit.material) {
+                    MaterialEnum::PassthroughFilter(_) => {
+                        // need to update mediums for this step, and update transmittance.
+                        point = _light_hit.point + 0.00001 * wo;
+                        continue;
+                    }
+                    _ => {
+                        return HeroEnergy::ZERO;
+                    }
+                }
+            }
+            break;
+        }
+        let mut contribution = f32x4::splat(0.0);
+        for i in 0..4 {
+            let f_and_pdf = medium.p(lambda.extract(i), vertex.uvw, vertex.wi, wo);
+
+            // successfully hit nothing, which is to say, hit the world
+            let emission = world.environment.emission(uv, lambda.extract(i));
+
+            let weight = power_heuristic(light_pdf.0, f_and_pdf);
+            contribution = contribution.replace(
+                i,
+                f_and_pdf * vertex.throughput.0.extract(i) * emission.0 * weight / light_pdf.0,
+            );
+
+            debug_assert!(
+                contribution.is_finite().all(),
+                "{:?}, {:?}, {:?}, {:?}, {:?}, {:?}",
+                i,
+                f_and_pdf,
+                vertex.throughput,
+                emission,
+                weight,
+                light_pdf
+            );
+        }
+        debug_assert!(contribution.is_finite().all(), "{:?}", contribution);
+        HeroEnergy(contribution)
+    } else {
+        // light_contribution += direct_illumination_from_light;
+        if let Some((light, light_pick_pdf)) = world.pick_random_light(light_pick_sample) {
+            // determine pick pdf
+            // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
+            // sample the primitive from hit_point
+            // let (direction, light_pdf) = light.sample(additional_light_sample, hit.point);
+            let (point_on_light, normal, light_area_pdf) =
+                light.sample_surface(additional_light_sample);
+            debug_assert!(light_area_pdf.0.is_finite());
+            if light_area_pdf.0 == 0.0 {
+                return HeroEnergy::ZERO;
+            }
+            // direction is from shading point to light
+            let wo = (point_on_light - vertex.point).normalized();
+            // direction is already in world space.
+            // direction is also oriented away from the shading point already, so no need to negate directions until later.
+
+            let light_vertex_wi = TangentFrame::from_normal(normal).to_local(&(-wo));
+
+            let dropoff = light_vertex_wi.z().abs();
+            if dropoff == 0.0 {
+                return HeroEnergy::ZERO;
+            }
+
+            let pdf = light.psa_pdf(1.0, vertex.point, point_on_light);
+            let light_pdf = pdf * light_pick_pdf; // / light_vertex_wi.z().abs();
+            if light_pdf.0 == 0.0 {
+                // println!("light pdf was 0");
+                // go to next pick
+                return HeroEnergy::ZERO;
+            }
+            let light_material = world.get_material(light.get_material_id());
+            let mut contribution = f32x4::splat(0.0);
+            for i in 0..4 {
+                let f_and_pdf = medium.p(lambda.extract(i), vertex.uvw, vertex.wi, wo);
+                let emission = light_material.emission(
+                    lambda.extract(i),
+                    (0.0, 0.0),
+                    vertex.transport_mode(),
+                    light_vertex_wi,
+                );
+                // this should be the same as the other method, but maybe not.
+                if emission.0 == 0.0 {
+                    //
+                } else {
+                    profile.shadow_rays += 1;
+                    let mut point = vertex.point;
+                    let direction = (point_on_light - vertex.point).normalized();
+                    loop {
+                        if let Some(light_hit) =
+                            world.hit(Ray::new(point, direction), 0.00001, INFINITY)
+                        {
+                            match world.get_material(light_hit.material) {
+                                MaterialEnum::PassthroughFilter(_) => {
+                                    // need to update mediums for this step, and update transmittance.
+                                    point = light_hit.point + 0.00001 * direction;
+                                    continue;
+                                }
+                                _ => {
+                                    return HeroEnergy::ZERO;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    let weight = power_heuristic(light_pdf.0, f_and_pdf);
+
+                    debug_assert!(emission.0 >= 0.0);
+                    // successful_light_samples += 1;
+                    contribution = contribution.replace(
+                        i,
+                        f_and_pdf * vertex.throughput.0.extract(i) * dropoff * emission.0 * weight
+                            / light_pdf.0,
+                    );
+                    debug_assert!(
+                        contribution.is_finite().all(),
+                        "{:?}, {:?}, {:?}, {:?}, {:?}, {:?}",
+                        i,
+                        f_and_pdf,
+                        vertex.throughput,
+                        emission,
+                        weight,
+                        light_pdf
+                    );
+                }
+            }
+            debug_assert!(contribution.is_finite().all(), "{:?}", contribution);
+            HeroEnergy(contribution)
+        } else {
+            HeroEnergy::ZERO
+        }
+    }
+}
 pub fn medium_direct_illumination(
     world: &Arc<World>,
     sample_world: bool,

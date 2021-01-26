@@ -298,7 +298,7 @@ strength = 2.0
 # temperature = 5500.0
 # strength = 2.0
 type = "Flat"
-strength = 5.0
+strength = 0.4
 
 
 
@@ -356,18 +356,34 @@ origin = [1.0, 0.0, 0.0]
 normal = "X"
 two_sided = true
 
+# [[instances]]
+# # skip specifying material identifier and it defaults to the one from the .obj file itself
+# material_identifier = "fog_boundary"
+# [instances.aggregate]
+# type = "MeshBundle"
+# filename = "data/meshes/monkey.obj"
+# [instances.transform]
+# scale = [0.7, 0.7, 0.7]
+# translate = [0.0, 0.0, -0.5]
+# # [[instances.transform.rotate]]
+# # axis = [0, 0, 1]
+# # angle = 170
+# # [[instances.transform.rotate]]
+# # axis = [0, 1, 0]
+# # angle = 20
+
+# middle sphere
 [[instances]]
-# skip specifying material identifier and it defaults to the one from the .obj file itself
 material_identifier = "fog_boundary"
 [instances.aggregate]
-type = "MeshBundle"
-filename = "data/meshes/monkey.obj"
-[instances.transform]
-scale = [0.7, 0.7, 0.7]
-translate = [0.0, 0.0, -0.5]
-# [[instances.transform.rotate]]
-# axis = [0, 0, 1]
-# angle = 170
-# [[instances.transform.rotate]]
-# axis = [0, 1, 0]
-# angle = 20
+type = "Sphere"
+radius = 4.0
+origin = [0.0, 0.0, 0.0]
+
+# sphere on top
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.3
+origin = [0.1, 0.1, -0.15]
