@@ -287,7 +287,7 @@ name = "fog"
 type = "HG"
 [mediums.data.g]
 type = "Flat"
-strength = 1.0
+strength = 1.7
 [mediums.data.sigma_s]
 # type = "Blackbody"
 # temperature = 5500.0
@@ -299,7 +299,7 @@ strength = 1.0
 # temperature = 5500.0
 # strength = 2.0
 type = "Flat"
-strength = 1.0
+strength = 0.4
 
 
 
@@ -378,7 +378,7 @@ two_sided = true
 material_identifier = "fog_boundary"
 [instances.aggregate]
 type = "Sphere"
-radius = 4.0
+radius = 0.8
 origin = [0.0, 0.0, 0.0]
 
 # sphere on top

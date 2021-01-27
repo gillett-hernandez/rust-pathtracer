@@ -820,15 +820,19 @@ pub fn random_walk_medium_hero(
 
             let mut vertex = HeroVertex::Surface(surface_vertex);
 
+            let mut hero_weight = 1.0;
+            let mut hero_tr = 1.0;
             for medium_id in tracked_mediums.iter() {
                 let medium = &world.mediums[*medium_id - 1];
-                let (p, _tr, scatter) =
+                let (p, tr, scatter) =
                     medium.sample(lambda.extract(0), ray, Sample1D::new_random_sample());
                 if scatter {
                     let t = (p - ray.origin).norm();
                     if t < medium_vertex.time {
                         medium_vertex.time = t;
                         medium_vertex.point = p;
+                        hero_weight = tr;
+                        hero_tr = medium.tr(lambda.extract(0), ray.origin, p);
                         medium_vertex.medium_id = *medium_id;
                         // println!(
                         //     "overrode surface vertex with medium vertex, p = {:?}",
@@ -838,16 +842,27 @@ pub fn random_walk_medium_hero(
                     }
                 }
             }
-
+            // multiply in hero weight, since it includes some of the hero pdf information and that would be lost if unaccounted for.
+            // hero weight also includes tr.
+            beta *= hero_weight;
             for i in 0..4 {
                 let mut combined_throughput = 1.0;
                 for medium_id in tracked_mediums.iter() {
+                    if *medium_id == medium_vertex.medium_id && i == 0 {
+                        // skip hero
+                        continue;
+                    }
                     let medium = &world.mediums[*medium_id - 1];
                     combined_throughput *=
                         medium.tr(lambda.extract(i), ray.origin, medium_vertex.point);
                 }
-                beta = beta.replace(i, beta.extract(i) * combined_throughput);
+
+                // divide out hero_tr for all wavelengths, since it was included in overall beta mult.
+                beta = beta.replace(i, beta.extract(i) * combined_throughput / hero_tr);
             }
+            // multiply hero_tr back in for only hero wavelength.
+            beta = beta.replace(0, beta.extract(0) * hero_tr);
+
             match vertex {
                 HeroVertex::Surface(mut vertex) => {
                     let frame = TangentFrame::from_normal(hit.normal);
