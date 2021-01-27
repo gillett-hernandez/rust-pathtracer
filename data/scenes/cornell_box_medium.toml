@@ -98,6 +98,7 @@ type = "GGX"
 eta_o = 1.0004
 permeability = 1.0
 alpha = 0.0004
+outer_medium_id = 1
 [materials.data.eta]
 type = "Cauchy"
 a = 1.45
@@ -292,13 +293,13 @@ strength = 1.0
 # temperature = 5500.0
 # strength = 2.0
 type = "Flat"
-strength = 2.0
+strength = 1.0
 [mediums.data.sigma_t]
 # type = "Blackbody"
 # temperature = 5500.0
 # strength = 2.0
 type = "Flat"
-strength = 0.4
+strength = 1.0
 
 
 

@@ -1138,14 +1138,15 @@ pub fn random_walk_medium_hero(
 
                     // do russian roulette?
 
-                    vertex.pdf_forward = f32x4::splat(1.0);
-                    vertex.pdf_backward = f32x4::splat(1.0);
+                    vertex.pdf_forward = f32x4::splat(f_and_pdf);
+                    vertex.pdf_backward = f32x4::splat(f_and_pdf); // TODO: fix this, probably incorrect.
                     vertex.veach_g = veach_g(vertex.point, 1.0, ray.origin, 1.0);
                     vertices.push(HeroVertex::Medium(vertex));
                     // println!(
                     //     "medium interaction {}, wi = {:?}, wo = {:?}",
                     //     vertex.medium_id, wi, wo
                     // );
+                    beta /= f_and_pdf; // pre divide by hero pdf
                     beta = beta.replace(0, beta.extract(0) * f_and_pdf);
                     debug_assert!(beta.is_finite().all(), "{:?} {:?}", beta, f_and_pdf);
                     for i in 1..4 {

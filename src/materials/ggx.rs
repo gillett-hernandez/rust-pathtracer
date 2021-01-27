@@ -187,10 +187,18 @@ pub struct GGX {
     pub eta_o: f32, // replace with SPD
     pub kappa: SPD,
     pub permeability: f32,
+    pub outer_medium_id: usize,
 }
 
 impl GGX {
-    pub fn new(roughness: f32, eta: SPD, eta_o: f32, kappa: SPD, permeability: f32) -> Self {
+    pub fn new(
+        roughness: f32,
+        eta: SPD,
+        eta_o: f32,
+        kappa: SPD,
+        permeability: f32,
+        outer_medium_id: usize,
+    ) -> Self {
         debug_assert!(roughness > 0.0);
         GGX {
             alpha: roughness,
@@ -198,6 +206,7 @@ impl GGX {
             eta_o,
             kappa,
             permeability,
+            outer_medium_id,
         }
     }
 
@@ -431,16 +440,12 @@ impl Material for GGX {
     ) -> (SingleEnergy, PDF) {
         self.eval_pdf(lambda, wi, wo, transport_mode)
     }
-    // fn emission(
-    //     &self,
-    //     _lambda: f32,
-    //     _uv: (f32, f32),
-    //     _transport_mode: TransportMode,
-    //     _wi: Vec3,
-    //     _wo: Option<Vec3>,
-    // ) -> SingleEnergy {
-    //     SingleEnergy::ZERO
-    // }
+    fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+        0
+    }
+    fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+        self.outer_medium_id
+    }
 }
 
 #[cfg(test)]
@@ -471,7 +476,7 @@ mod tests {
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
 
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
 
@@ -604,7 +609,7 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0, 0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
@@ -616,7 +621,7 @@ mod tests {
 
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
 
         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
@@ -635,7 +640,7 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);

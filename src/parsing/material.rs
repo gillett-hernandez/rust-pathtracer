@@ -19,6 +19,7 @@ pub struct GGXData {
     pub eta: CurveData,
     pub kappa: CurveData,
     pub permeability: f32,
+    pub outer_medium_id: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -68,6 +69,7 @@ pub fn parse_material(
                 data.eta_o,
                 kappa,
                 data.permeability,
+                data.outer_medium_id.unwrap_or(0),
             ))
         }
         MaterialData::Lambertian(data) => {

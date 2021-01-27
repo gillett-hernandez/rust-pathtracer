@@ -54,7 +54,7 @@ fn main() -> () {
         .expect("Could not create notification");
 
     notification.show().expect("Failed to show notification");
-    thread::sleep(Duration::from_secs(5));
+    thread::sleep(Duration::from_secs(3));
     notification
         .delete()
         .expect("Failed to delete notification");

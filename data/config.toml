@@ -73,7 +73,7 @@ threads = 23
 filename = "PT"
 min_samples = 128
 min_bounces = 4
-max_bounces = 12
+max_bounces = 40
 hwss = true
 camera_id = "cornell camera"
 exposure = 1.0
@@ -83,7 +83,7 @@ only_direct = false
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
 type = "PT"
-light_samples = 2
+light_samples = 1
 # selected_pair = [3,3]
 [render_settings.resolution]
 width = 1080
