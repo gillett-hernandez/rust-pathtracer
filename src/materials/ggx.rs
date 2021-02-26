@@ -395,6 +395,41 @@ impl Material for GGX {
         mut sample: Sample2D,
         wi: Vec3,
     ) -> Option<Vec3> {
+        // debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
+        // let eta_inner = self.eta.evaluate_power(lambda);
+        // debug_assert!(eta_inner.is_finite(), "{}", lambda);
+        // // let eta_rel = self.eta_rel(eta_inner, wi);
+        // let kappa = if self.permeability > 0.0 {
+        //     0.0
+        // } else {
+        //     self.kappa.evaluate_power(lambda)
+        // };
+        // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
+        // debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
+        // if refl_prob == 1.0 || sample.x < refl_prob {
+        //     // rescale sample x value to 0 to 1 range
+        //     sample.x = sample.x / refl_prob;
+        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        //     // reflection
+        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
+        //     let wo = reflect(wi, wh);
+        //     return Some(wo);
+        // } else {
+        //     // rescale sample x value to 0 to 1 range
+        //     sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
+        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        //     // transmission
+        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
+
+        //     let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
+
+        //     let wo = refract(wi, wh, eta_rel);
+        //     /* if wo.is_none() {
+        //         println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
+        //         //     wo = Some(reflect(wi, -wh));
+        //     } */
+        //     return wo;
+        // }
         debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         let eta_inner = self.eta.evaluate_power(lambda);
         debug_assert!(eta_inner.is_finite(), "{}", lambda);
@@ -404,30 +439,29 @@ impl Material for GGX {
         } else {
             self.kappa.evaluate_power(lambda)
         };
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
-        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
+        let wh = sample_wh(self.alpha, wi, sample).normalized();
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, wh * wi);
+        debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wh * wi);
         if refl_prob == 1.0 || sample.x < refl_prob {
             // rescale sample x value to 0 to 1 range
-            sample.x = sample.x / refl_prob;
-            debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+            // sample.x = sample.x / refl_prob;
+            // debug_assert!(sample.x.is_finite(), "{}", refl_prob);
             // reflection
-            let wh = sample_wh(self.alpha, wi, sample).normalized();
             let wo = reflect(wi, wh);
             return Some(wo);
         } else {
             // rescale sample x value to 0 to 1 range
-            sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
-            debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+            // sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
             // transmission
-            let wh = sample_wh(self.alpha, wi, sample).normalized();
 
             let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
 
-            let wo = refract(wi, wh, eta_rel);
-            /* if wo.is_none() {
-                println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
-                //     wo = Some(reflect(wi, -wh));
-            } */
+            let mut wo = refract(wi, wh, eta_rel);
+            if wo.is_none() {
+                // println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
+                wo = Some(reflect(wi, wh));
+            }
             return wo;
         }
     }

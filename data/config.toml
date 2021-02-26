@@ -71,7 +71,7 @@ vfov = 5
 [[render_settings]]
 threads = 23
 filename = "PT"
-min_samples = 256
+min_samples = 16
 min_bounces = 4
 max_bounces = 30
 hwss = true

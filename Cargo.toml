@@ -22,7 +22,6 @@ crossbeam = "0.8.0"
 tobj = "2.0.3"
 minifb = "0.19.1"
 math = {path = "crates/math"}
-optics = {path = "crates/optics"}
 win32_notification = "0.1.0"
 
 [build-dependencies]

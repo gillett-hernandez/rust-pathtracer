@@ -378,13 +378,13 @@ two_sided = true
 # # axis = [0, 1, 0]
 # # angle = 20
 
-# middle sphere
-[[instances]]
-material_identifier = "fog_boundary"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.8
-origin = [0.0, 0.0, 0.0]
+# # middle sphere
+# [[instances]]
+# material_identifier = "fog_boundary"
+# [instances.aggregate]
+# type = "Sphere"
+# radius = 0.8
+# origin = [0.0, 0.0, 0.0]
 
 # sphere on top
 [[instances]]
