@@ -22,6 +22,9 @@ impl Bounds1D {
     pub fn union(&self, other: Self) -> Self {
         Bounds1D::new(self.lower.min(other.lower), self.upper.max(other.upper))
     }
+    pub fn sample(&self, x: f32) -> f32 {
+        x * self.span() + self.lower
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -47,5 +50,8 @@ impl Bounds2D {
 
     pub fn union(&self, other: Self) -> Self {
         Bounds2D::new(self.x.union(other.x), self.y.union(other.y))
+    }
+    pub fn sample(&self, x: f32, y: f32) -> (f32, f32) {
+        (self.x.sample(x), self.y.sample(y))
     }
 }

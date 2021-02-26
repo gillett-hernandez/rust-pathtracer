@@ -85,6 +85,7 @@ pub fn fresnel_conductor(eta_i: f32, eta_t: f32, k_t: f32, cos_theta_i: f32) -> 
 
     (rs + rp) / 2.0
 }
+
 fn ggx_d(alpha: f32, wm: Vec3) -> f32 {
     let slope = (wm.x() / alpha, wm.y() / alpha);
     let slope2 = (slope.0 * slope.0, slope.1 * slope.1);

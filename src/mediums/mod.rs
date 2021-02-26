@@ -44,7 +44,7 @@ impl Medium for HenyeyGreensteinHomogeneous {
     fn p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
         let cos_theta = wi * wo;
 
-        let g = self.g.evaluate_power(lambda) - 1.0;
+        let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
         let phase = phase_hg(cos_theta, g);
         let sigma_s = self.sigma_s.evaluate_power(lambda);
 
@@ -61,13 +61,14 @@ impl Medium for HenyeyGreensteinHomogeneous {
     }
     fn sample_p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, f32) {
         // just do isomorphic as a test
-        let g = self.g.evaluate_power(lambda) - 1.0;
+        let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
         let cos_theta = if g.abs() < 0.001 {
             1.0 - 2.0 * s.x
         } else {
             let sqr = (1.0 - g * g) / (1.0 + g - 2.0 * g * s.x);
             -(1.0 + g * g - sqr * sqr) / (2.0 * g)
         };
+        // println!("{} {}", cos_theta, g);
 
         let sin_theta = (0.0f32).max(1.0 - cos_theta * cos_theta).sqrt();
         let phi = std::f32::consts::TAU * s.y;
