@@ -254,6 +254,7 @@ impl GGX {
         wo: Vec3,
         transport_mode: TransportMode,
     ) -> (SingleEnergy, PDF) {
+        let wi = wi.normalized();
         let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
@@ -286,6 +287,7 @@ impl GGX {
             debug_assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
             glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
+            debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
         } else {
             if self.permeability > 0.0 {
                 let eta_rel = self.eta_rel(eta_inner, wi);

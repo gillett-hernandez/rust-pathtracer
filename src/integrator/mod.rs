@@ -93,10 +93,18 @@ impl Integrator {
             }))
         } else {
             match integrator_type {
-                IntegratorType::BDPT { .. } => Some(Integrator::BDPT(BDPTIntegrator {
+                IntegratorType::BDPT => Some(Integrator::BDPT(BDPTIntegrator {
                     max_bounces: settings.max_bounces.unwrap(),
                     world,
                     wavelength_bounds: bounds,
+                })),
+                IntegratorType::SPPM => Some(Integrator::SPPM(SPPMIntegrator {
+                    max_bounces: settings.max_bounces.unwrap(),
+                    world,
+                    russian_roulette: settings.russian_roulette.unwrap_or(false),
+                    camera_samples: settings.min_samples,
+                    wavelength_bounds: bounds,
+                    photon_map: None,
                 })),
                 IntegratorType::PathTracing { .. } | _ => {
                     Some(Integrator::PathTracing(PathTracingIntegrator {
@@ -115,6 +123,13 @@ impl Integrator {
 }
 
 pub trait SamplerIntegrator: Sync + Send {
+    fn preprocess(
+        &mut self,
+        _sampler: &mut Box<dyn Sampler>,
+        _settings: &Vec<RenderSettings>,
+        _profile: &mut Profile,
+    ) {
+    }
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,

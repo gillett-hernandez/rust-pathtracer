@@ -30,13 +30,17 @@ impl NaiveRenderer {
     }
 
     pub fn render_sampled<I: SamplerIntegrator>(
-        integrator: I,
+        mut integrator: I,
         settings: &RenderSettings,
         _camera: &Camera,
     ) -> Film<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
         println!("starting render with film resolution {}x{}", width, height);
         let min_camera_rays = width * height * settings.min_samples as usize;
+        println!(
+            "minimum samples per pixel: {}",
+            settings.min_samples as usize
+        );
         println!("minimum total samples: {}", min_camera_rays);
 
         let now = Instant::now();
@@ -44,6 +48,10 @@ impl NaiveRenderer {
         let mut film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
 
         let mut pb = ProgressBar::new((width * height) as u64);
+
+        let mut presampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let mut preprofile = Profile::default();
+        integrator.preprocess(&mut presampler, &vec![settings.clone()], &mut preprofile);
 
         let total_pixels = width * height;
 
@@ -434,7 +442,6 @@ impl Renderer for NaiveRenderer {
         > = HashMap::new();
         splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
-        splatting_renders_and_cameras.insert(IntegratorType::SPPM, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
         for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
@@ -457,6 +464,12 @@ impl Renderer for NaiveRenderer {
                     updated_render_settings.camera_id = camera_id;
                     bundled_cameras.push(copied_camera);
                     sampled_renders.push((IntegratorType::PathTracing, updated_render_settings));
+                }
+                IntegratorType::SPPM => {
+                    let mut updated_render_settings = render_settings.clone();
+                    updated_render_settings.camera_id = camera_id;
+                    bundled_cameras.push(copied_camera);
+                    sampled_renders.push((IntegratorType::SPPM, updated_render_settings));
                 }
                 t if splatting_renders_and_cameras.contains_key(&t) => {
                     // then determine new camera id
@@ -496,6 +509,30 @@ impl Renderer for NaiveRenderer {
                         }
                         Some(Integrator::HWSSPathTracing(integrator)) => {
                             println!("rendering with hwss path tracing integrator");
+                            let (render_settings, film) = (
+                                render_settings.clone(),
+                                NaiveRenderer::render_sampled(
+                                    integrator,
+                                    render_settings,
+                                    &cameras[render_settings.camera_id],
+                                ),
+                            );
+                            output_film(&render_settings, &film);
+                        }
+                        _ => {}
+                    }
+                }
+                IntegratorType::SPPM => {
+                    world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
+                    let arc_world = Arc::new(world.clone());
+                    match Integrator::from_settings_and_world(
+                        arc_world.clone(),
+                        IntegratorType::SPPM,
+                        &bundled_cameras,
+                        render_settings,
+                    ) {
+                        Some(Integrator::SPPM(integrator)) => {
+                            println!("rendering with sppm integrator");
                             let (render_settings, film) = (
                                 render_settings.clone(),
                                 NaiveRenderer::render_sampled(
@@ -619,48 +656,7 @@ impl Renderer for NaiveRenderer {
                         output_film(&render_settings, &film);
                     }
                 }
-                IntegratorType::SPPM => {
-                    let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
-                        splatting_renders_and_cameras
-                            .get(integrator_type)
-                            .unwrap()
-                            .iter()
-                            .cloned()
-                            .unzip();
-                    let mut max_bounces = 0;
-                    for settings in bundled_settings.iter() {
-                        max_bounces = max_bounces.max(settings.max_bounces.unwrap_or(2));
-                    }
-                    let wavelength_bounds =
-                        parse_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
-                    world.assign_cameras(bundled_cameras.clone(), true);
-                    let arc_world = Arc::new(world.clone());
-                    let integrator = SPPMIntegrator {
-                        max_bounces,
-                        world: arc_world.clone(),
-                        russian_roulette: true,
-                        camera_samples: 4,
-                        wavelength_bounds,
-                        photon_map: None,
-                    };
 
-                    println!("rendering with SPPM integrator");
-                    let render_splatted_result = NaiveRenderer::render_splatted(
-                        integrator,
-                        bundled_settings.clone(),
-                        bundled_cameras.clone(),
-                    );
-                    assert!(render_splatted_result.len() > 0);
-                    // films.extend(
-                    //     (&bundled_settings)
-                    //         .iter()
-                    //         .cloned()
-                    //         .zip(render_splatted_result),
-                    // );
-                    for (render_settings, film) in render_splatted_result {
-                        output_film(&render_settings, &film);
-                    }
-                }
                 _ => {}
             }
         }

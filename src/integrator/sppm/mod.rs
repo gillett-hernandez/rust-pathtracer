@@ -9,7 +9,7 @@ use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use nalgebra::coordinates::XY;
 // use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 
-use std::sync::Arc;
+use std::{f32::EPSILON, sync::Arc};
 
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
@@ -29,17 +29,17 @@ pub struct SPPMIntegrator {
     pub russian_roulette: bool,
     pub camera_samples: u16,
     pub wavelength_bounds: Bounds1D,
-    pub photon_map: Option<Arc<PhotonMap>>,
+    pub photon_map: Option<PhotonMap>,
 }
 
-impl GenericIntegrator for SPPMIntegrator {
+impl SamplerIntegrator for SPPMIntegrator {
     fn preprocess(
         &mut self,
         _sampler: &mut Box<dyn Sampler>,
         _settings: &Vec<RenderSettings>,
         profile: &mut Profile,
     ) {
-        let num_beams = 10000;
+        let num_beams = 1000;
         println!("preprocessing and mapping beams");
         let mut beams: Vec<Vec<SurfaceVertex>> = vec![Vec::new(); num_beams];
         let beams_profile = beams
@@ -201,9 +201,9 @@ impl GenericIntegrator for SPPMIntegrator {
             })
             .reduce(|| Profile::default(), |a, b| a.combine(b));
         *profile = profile.combine(beams_profile);
-        self.photon_map = Some(Arc::new(PhotonMap {
+        self.photon_map = Some(PhotonMap {
             photons: beams.into_iter().flatten().collect(),
-        }));
+        });
         println!(
             "stored {} photons in the photon map",
             self.photon_map
@@ -215,10 +215,8 @@ impl GenericIntegrator for SPPMIntegrator {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
-        _settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
         sample_id: usize,
-        mut _samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
     ) -> XYZColor {
         // naive implementation of SPPM
@@ -226,52 +224,56 @@ impl GenericIntegrator for SPPMIntegrator {
 
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id as usize);
-        let bounds = self.wavelength_bounds;
+
         let mut sum = XYZColor::ZERO;
         // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
         // let direction = direction.normalized();
-        let film_sample = Sample2D::new((camera_sample.0).0, (camera_sample.0).1);
-        for lambda_idx in 0..10 {
-            let lambda = bounds.lower + bounds.span() * lambda_idx as f32 / 10.0;
-            let aperture_sample = sampler.draw_2d();
-            let (camera_ray, _lens_normal, pdf) =
-                camera.sample_we(film_sample, aperture_sample, lambda);
-            let _camera_pdf = pdf;
+        let film_sample = Sample2D::new(
+            (camera_sample.0).0.clamp(0.0, 1.0 - EPSILON),
+            (camera_sample.0).1.clamp(0.0, 1.0 - EPSILON),
+        );
 
-            let mut path: Vec<SurfaceVertex> = vec![SurfaceVertex::new(
-                VertexType::Camera,
-                camera_ray.time,
-                lambda,
-                Vec3::ZERO,
-                camera_ray.origin,
-                camera_ray.direction,
-                (0.0, 0.0),
-                MaterialId::Camera(0),
-                0,
-                SingleEnergy::ONE,
-                0.0,
-                0.0,
-                1.0,
-            )];
+        let lambda = self.wavelength_bounds.sample(sampler.draw_1d().x);
+        let aperture_sample = sampler.draw_2d();
+        let (camera_ray, _lens_normal, pdf) =
+            camera.sample_we(film_sample, aperture_sample, lambda);
+        let _camera_pdf = pdf;
 
-            let _ = random_walk(
-                camera_ray,
-                lambda,
-                1,
-                SingleEnergy::ONE,
-                TransportMode::Importance,
-                sampler,
-                &self.world,
-                &mut path,
-                0,
-                &mut profile,
-            );
+        let mut path: Vec<SurfaceVertex> = vec![SurfaceVertex::new(
+            VertexType::Camera,
+            camera_ray.time,
+            lambda,
+            Vec3::ZERO,
+            camera_ray.origin,
+            camera_ray.direction,
+            (0.0, 0.0),
+            MaterialId::Camera(0),
+            0,
+            SingleEnergy::ONE,
+            0.0,
+            0.0,
+            1.0,
+        )];
 
-            profile.camera_rays += 1;
-            // camera random walk is now stored in path, with length limited to 1 (for now)
-            let vertex_in_scene = path.last().unwrap();
-            let radius_squared = 0.1 / (1.0 + sample_id as f32);
+        let _ = random_walk(
+            camera_ray,
+            lambda,
+            self.max_bounces,
+            SingleEnergy::ONE,
+            TransportMode::Importance,
+            sampler,
+            &self.world,
+            &mut path,
+            0,
+            &mut profile,
+        );
 
+        profile.camera_rays += 1;
+        // camera random walk is now stored in path, with length limited to 1 (for now)
+        // let vertex_in_scene = path.last().unwrap();
+        let radius_squared = 0.05 / (1.0 + sample_id as f32);
+
+        for vertex_in_scene in path.iter().skip(1) {
             let mut temp_sum = XYZColor::ZERO;
             let mut n = 0;
             // collect photons that are within a certain radius
@@ -318,6 +320,7 @@ impl GenericIntegrator for SPPMIntegrator {
                 sum += temp_sum / n as f32;
             }
         }
-        sum / 10.0
+
+        sum
     }
 }

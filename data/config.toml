@@ -70,11 +70,11 @@ vfov = 5
 
 [[render_settings]]
 threads = 23
-filename = "PT"
-min_samples = 16
-min_bounces = 4
-max_bounces = 30
-hwss = true
+filename = "SPPM"
+min_samples = 10
+min_bounces = 2
+max_bounces = 6
+hwss = false
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
@@ -82,9 +82,10 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "PT"
-light_samples = 1
+type = "SPPM"
+# light_samples = 1
 # selected_pair = [3,3]
+photon_cache_size = 1024
 [render_settings.resolution]
 width = 1080
 height = 1080
