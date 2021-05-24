@@ -286,7 +286,11 @@ impl GGX {
             let refl = self.reflectance(eta_inner, kappa, ndotv);
             debug_assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
-            glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
+            if ndotv.abs() == 0.0 {
+                glossy_pdf = 0.0;
+            } else {
+                glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
+            }
             debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
         } else {
             if self.permeability > 0.0 {
@@ -487,6 +491,11 @@ impl Material for GGX {
 
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::TAU;
+
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
+    use spectral::BOUNDED_VISIBLE_RANGE;
+
     use super::*;
     use crate::curves;
     use crate::hittable::*;
@@ -681,5 +690,44 @@ mod tests {
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
+    }
+
+    #[test]
+    fn test_integral() {
+        let visible_bounds = BOUNDED_VISIBLE_RANGE;
+        let glass = curves::cauchy(1.45, 3540.0);
+        let flat_zero = curves::void();
+        let ggx_glass = GGX::new(0.1, glass, 1.0, flat_zero, 1.0, 0);
+        let n = 10000000;
+        let sum: f32 = (0..n)
+            .into_par_iter()
+            .map(|_| {
+                let lambda = visible_bounds.sample(Sample1D::new_random_sample().x);
+                let Sample2D { x: u, y: v } = Sample2D::new_random_sample();
+                let phi = u * TAU;
+                let theta = v * PI;
+                let wi = Vec3::new(
+                    phi.cos() * theta.cos(),
+                    phi.sin() * theta.cos(),
+                    theta.sin(),
+                );
+                let wo = ggx_glass
+                    .generate(
+                        lambda,
+                        (0.0, 0.0),
+                        TransportMode::Importance,
+                        Sample2D::new_random_sample(),
+                        wi,
+                    )
+                    .unwrap();
+                let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
+                if pdf.0 == 0.0 {
+                    0.0
+                } else {
+                    wi.z() * f.0 / pdf.0
+                }
+            })
+            .sum();
+        println!("{}", sum / n as f32);
     }
 }

@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_medium.toml"
+scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -70,11 +70,11 @@ vfov = 5
 
 [[render_settings]]
 threads = 23
-filename = "SPPM"
-min_samples = 10
-min_bounces = 2
-max_bounces = 6
-hwss = false
+filename = "PT"
+min_samples = 100
+min_bounces = 3
+max_bounces = 12
+hwss = true
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
@@ -82,8 +82,8 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "SPPM"
-# light_samples = 1
+type = "PT"
+light_samples = 2
 # selected_pair = [3,3]
 photon_cache_size = 1024
 [render_settings.resolution]

@@ -1,5 +1,5 @@
 // #![allow(unused_imports, unused_variables, unused)]
-#![feature(slice_fill, vec_remove_item, partition_point)]
+
 
 extern crate image;
 

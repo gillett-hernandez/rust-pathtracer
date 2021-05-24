@@ -6,7 +6,6 @@ use crate::math::*;
 use crate::world::TransportMode;
 use crate::world::World;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
-use nalgebra::coordinates::XY;
 // use crate::{INTERSECTION_TIME_OFFSET, NORMAL_OFFSET};
 
 use std::{f32::EPSILON, sync::Arc};
@@ -264,14 +263,15 @@ impl SamplerIntegrator for SPPMIntegrator {
             sampler,
             &self.world,
             &mut path,
-            0,
+            1,
             &mut profile,
         );
 
         profile.camera_rays += 1;
         // camera random walk is now stored in path, with length limited to 1 (for now)
         // let vertex_in_scene = path.last().unwrap();
-        let radius_squared = 0.05 / (1.0 + sample_id as f32);
+        let radius_squared = 0.005 / (1.0 + sample_id as f32);
+        let scaling_factor = PI * radius_squared;
 
         for vertex_in_scene in path.iter().skip(1) {
             let mut temp_sum = XYZColor::ZERO;
@@ -287,7 +287,7 @@ impl SamplerIntegrator for SPPMIntegrator {
                 let distance_squared = (point - vertex_in_scene.point).norm_squared();
                 if distance_squared < radius_squared {
                     let wi_global: Vec3 = vert.local_wi;
-                    let wo_global: Vec3 = vec_to_camera / distance_squared.sqrt();
+                    let wo_global: Vec3 = vec_to_camera.normalized();
 
                     let normal = vert.normal;
                     let frame = TangentFrame::from_normal(normal);
@@ -307,11 +307,11 @@ impl SamplerIntegrator for SPPMIntegrator {
                     temp_sum += XYZColor::from(SingleWavelength::new(
                         lambda,
                         vert.throughput.0 * f / pdf.0
-                            * (1.1 - (-(sample_id as f32)).exp())
                             * window_function(
                                 0.1 * lambda * (1.0 + sample_id as f32),
                                 0.1 * vert.lambda * (1.0 + sample_id as f32),
-                            ),
+                            )
+                            / scaling_factor,
                     ));
                     n += 1;
                 }
