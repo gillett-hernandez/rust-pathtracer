@@ -68,13 +68,59 @@ focal_distance = 1.0
 vfov = 5
 
 
+# [[render_settings]]
+# threads = 23
+# filename = "PT"
+# min_samples = 16
+# min_bounces = 3
+# max_bounces = 12
+# hwss = false
+# camera_id = "cornell camera"
+# exposure = 1.0
+# russian_roulette = true
+# only_direct = false
+# # wavelength_bounds = [380.0, 750.0]
+# # wavelength_bounds = [500.0, 510.0]
+# [render_settings.integrator]
+# type = "PT"
+# light_samples = 2
+# # selected_pair = [3,3]
+# photon_cache_size = 1024
+# [render_settings.resolution]
+# width = 1080
+# height = 1080
+
+
+# [[render_settings]]
+# threads = 8
+# filename = "LT"
+# min_samples = 16
+# min_bounces = 3
+# max_bounces = 12
+# hwss = false
+# camera_id = "cornell camera"
+# exposure = 1.0
+# russian_roulette = true
+# only_direct = false
+# # wavelength_bounds = [380.0, 750.0]
+# # wavelength_bounds = [500.0, 510.0]
+# [render_settings.integrator]
+# type = "LT"
+# # light_samples = 2
+# camera_samples = 25
+# # selected_pair = [3,3]
+# photon_cache_size = 1024
+# [render_settings.resolution]
+# width = 1080
+# height = 1080
+
 [[render_settings]]
-threads = 23
-filename = "PT"
-min_samples = 100
+threads = 8
+filename = "BDPT"
+min_samples = 16
 min_bounces = 3
 max_bounces = 12
-hwss = true
+hwss = false
 camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
@@ -82,8 +128,9 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "PT"
-light_samples = 2
+type = "BDPT"
+# light_samples = 2
+# camera_samples = 25
 # selected_pair = [3,3]
 photon_cache_size = 1024
 [render_settings.resolution]
