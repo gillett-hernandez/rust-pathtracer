@@ -105,6 +105,7 @@ impl Integrator {
                     camera_samples: settings.min_samples,
                     wavelength_bounds: bounds,
                     photon_map: None,
+                    last_lambda: 0.0,
                 })),
                 IntegratorType::PathTracing { .. } | _ => {
                     Some(Integrator::PathTracing(PathTracingIntegrator {

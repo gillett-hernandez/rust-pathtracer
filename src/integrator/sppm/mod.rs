@@ -29,16 +29,20 @@ pub struct SPPMIntegrator {
     pub camera_samples: u16,
     pub wavelength_bounds: Bounds1D,
     pub photon_map: Option<PhotonMap>,
+    pub last_lambda: f32,
 }
 
 impl SamplerIntegrator for SPPMIntegrator {
     fn preprocess(
         &mut self,
-        _sampler: &mut Box<dyn Sampler>,
+        sampler: &mut Box<dyn Sampler>,
         _settings: &Vec<RenderSettings>,
         profile: &mut Profile,
     ) {
         let num_beams = 1000;
+
+        let wavelength_sample = sampler.draw_1d();
+        self.last_lambda = wavelength_sample.x;
         println!("preprocessing and mapping beams");
         let mut beams: Vec<Vec<SurfaceVertex>> = vec![Vec::new(); num_beams];
         let beams_profile = beams
@@ -46,7 +50,6 @@ impl SamplerIntegrator for SPPMIntegrator {
             .map(|beam| {
                 let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
                 let mut profile = Profile::default();
-                let wavelength_sample = sampler.draw_1d();
 
                 let env_sampling_probability = self.world.get_env_sampling_probability();
 
@@ -232,7 +235,7 @@ impl SamplerIntegrator for SPPMIntegrator {
             (camera_sample.0).1.clamp(0.0, 1.0 - EPSILON),
         );
 
-        let lambda = self.wavelength_bounds.sample(sampler.draw_1d().x);
+        let lambda = self.wavelength_bounds.sample(self.last_lambda);
         let aperture_sample = sampler.draw_2d();
         let (camera_ray, _lens_normal, pdf) =
             camera.sample_we(film_sample, aperture_sample, lambda);
@@ -324,3 +327,119 @@ impl SamplerIntegrator for SPPMIntegrator {
         sum
     }
 }
+
+// impl SPPMIntegrator {
+//     fn color_given_lambda(
+//         &self,
+//         sampler: &mut Box<dyn Sampler>,
+//         camera_sample: ((f32, f32), CameraId),
+//         sample_id: usize,
+//         mut profile: &mut Profile,
+//         lambda: f32,
+//     ) -> XYZColor {
+//         // naive implementation of SPPM
+//         // iterate through all deposited photons and add contributions based on if they are close to the eye vertex in question
+
+//         let camera_id = camera_sample.1;
+//         let camera = self.world.get_camera(camera_id as usize);
+
+//         let mut sum = XYZColor::ZERO;
+//         // let (direction, camera_pdf) = camera_surface.sample(camera_direction_sample, hit.point);
+//         // let direction = direction.normalized();
+//         let film_sample = Sample2D::new(
+//             (camera_sample.0).0.clamp(0.0, 1.0 - EPSILON),
+//             (camera_sample.0).1.clamp(0.0, 1.0 - EPSILON),
+//         );
+
+//         let lambda = self.wavelength_bounds.sample(sampler.draw_1d().x);
+//         let aperture_sample = sampler.draw_2d();
+//         let (camera_ray, _lens_normal, pdf) =
+//             camera.sample_we(film_sample, aperture_sample, lambda);
+//         let _camera_pdf = pdf;
+
+//         let mut path: Vec<SurfaceVertex> = vec![SurfaceVertex::new(
+//             VertexType::Camera,
+//             camera_ray.time,
+//             lambda,
+//             Vec3::ZERO,
+//             camera_ray.origin,
+//             camera_ray.direction,
+//             (0.0, 0.0),
+//             MaterialId::Camera(0),
+//             0,
+//             SingleEnergy::ONE,
+//             0.0,
+//             0.0,
+//             1.0,
+//         )];
+
+//         let _ = random_walk(
+//             camera_ray,
+//             lambda,
+//             self.max_bounces,
+//             SingleEnergy::ONE,
+//             TransportMode::Importance,
+//             sampler,
+//             &self.world,
+//             &mut path,
+//             1,
+//             &mut profile,
+//         );
+
+//         profile.camera_rays += 1;
+//         // camera random walk is now stored in path, with length limited to 1 (for now)
+//         // let vertex_in_scene = path.last().unwrap();
+//         let radius_squared = 0.005 / (1.0 + sample_id as f32);
+//         let scaling_factor = PI * radius_squared;
+
+//         for vertex_in_scene in path.iter().skip(1) {
+//             let mut temp_sum = XYZColor::ZERO;
+//             let mut n = 0;
+//             // collect photons that are within a certain radius
+//             for vert in self.photon_map.as_ref().unwrap().photons.iter() {
+//                 let point = vert.point;
+
+//                 let vec_to_camera: Vec3 = camera_ray.origin - vertex_in_scene.point;
+//                 if vec_to_camera.norm_squared() < 0.001 {
+//                     continue;
+//                 }
+//                 let distance_squared = (point - vertex_in_scene.point).norm_squared();
+//                 if distance_squared < radius_squared {
+//                     let wi_global: Vec3 = vert.local_wi;
+//                     let wo_global: Vec3 = vec_to_camera.normalized();
+
+//                     let normal = vert.normal;
+//                     let frame = TangentFrame::from_normal(normal);
+
+//                     let wi = frame.to_local(&wi_global);
+//                     let wo = frame.to_local(&wo_global);
+
+//                     let material = self.world.get_material(vertex_in_scene.material_id);
+
+//                     let hit: HitRecord = (*vertex_in_scene).into();
+//                     let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+
+//                     if pdf.0 == 0.0 {
+//                         continue;
+//                     }
+
+//                     temp_sum += XYZColor::from(SingleWavelength::new(
+//                         lambda,
+//                         vert.throughput.0 * f / pdf.0
+//                             * window_function(
+//                                 0.1 * lambda * (1.0 + sample_id as f32),
+//                                 0.1 * vert.lambda * (1.0 + sample_id as f32),
+//                             )
+//                             / scaling_factor,
+//                     ));
+//                     n += 1;
+//                 }
+//             }
+//             if n > 0 {
+//                 sum += temp_sum / n as f32;
+//             }
+//         }
+
+//         sum
+//     }
+// }

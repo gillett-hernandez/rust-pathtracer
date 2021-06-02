@@ -21,7 +21,7 @@ parking_lot = "0.11.1"
 crossbeam = "0.8.0"
 tobj = "2.0.3"
 minifb = "0.19.1"
-math = {path = "crates/math"}
+math =  { git = "https://github.com/gillett-hernandez/rust_cg_math" }
 win32_notification = "0.1.0"
 
 [build-dependencies]

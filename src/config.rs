@@ -125,6 +125,7 @@ pub enum RendererType {
     Preview {
         selected_preview_film_id: usize,
     },
+    SPPM,
 }
 
 #[derive(Deserialize, Clone)]

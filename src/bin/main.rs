@@ -1,9 +1,9 @@
 extern crate rust_pathtracer as root;
 
-use root::config::*;
 use root::parsing::construct_world;
 use root::renderer::{GPUStyleRenderer, NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
+use root::{config::*, renderer::SPPMRenderer};
 
 use std::time::Duration;
 use std::{thread, time::Instant};
@@ -18,6 +18,7 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
         RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
         RendererType::GPUStyle { .. } => Box::new(GPUStyleRenderer::new()),
         RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
+        RendererType::SPPM { .. } => Box::new(SPPMRenderer::new()),
     }
 }
 
