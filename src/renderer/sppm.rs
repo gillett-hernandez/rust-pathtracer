@@ -35,7 +35,10 @@ impl SPPMRenderer {
         _camera: &Camera,
     ) -> Film<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
-        println!("starting render with film resolution {}x{}", width, height);
+        println!(
+            "starting sppm render with film resolution {}x{}",
+            width, height
+        );
         let min_camera_rays = width * height * settings.min_samples as usize;
         println!(
             "minimum samples per pixel: {}",
@@ -65,10 +68,10 @@ impl SPPMRenderer {
         });
 
         let mut stats: Profile = Profile::default();
+        let mut presampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let mut preprofile = Profile::default();
 
         for s in 0..settings.min_samples {
-            let mut presampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-            let mut preprofile = Profile::default();
             integrator.preprocess(&mut presampler, &vec![settings.clone()], &mut preprofile);
 
             let clone2 = pixel_count.clone();
