@@ -1,7 +1,8 @@
 mod projective_camera;
-// mod simple_camera;
+mod realistic_camera;
 
 pub use projective_camera::ProjectiveCamera;
+pub use realistic_camera::RealisticCamera;
 
 use crate::geometry::*;
 use crate::math::*;
@@ -13,6 +14,7 @@ pub type CameraId = usize;
 #[derive(Debug, Clone)]
 pub enum Camera {
     ProjectiveCamera(ProjectiveCamera),
+    // RealisticCamera(RealisticCamera),
 }
 
 impl Camera {
