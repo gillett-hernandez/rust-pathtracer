@@ -7,6 +7,7 @@ use root::{config::*, renderer::SPPMRenderer};
 
 use std::time::Duration;
 use std::{thread, time::Instant};
+#[cfg(windows)]
 use win32_notification::NotificationBuilder;
 
 fn construct_scene(config: &Config) -> World {
@@ -48,15 +49,17 @@ fn main() -> () {
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);
 
-    let notification = NotificationBuilder::new()
-        .title_text("Render finished")
-        .info_text(&format!("Took {} seconds", time.elapsed().as_secs()))
-        .build()
-        .expect("Could not create notification");
+    if cfg!(windows) {
+        let notification = NotificationBuilder::new()
+            .title_text("Render finished")
+            .info_text(&format!("Took {} seconds", time.elapsed().as_secs()))
+            .build()
+            .expect("Could not create notification");
 
-    notification.show().expect("Failed to show notification");
-    thread::sleep(Duration::from_secs(3));
-    notification
-        .delete()
-        .expect("Failed to delete notification");
+        notification.show().expect("Failed to show notification");
+        thread::sleep(Duration::from_secs(3));
+        notification
+            .delete()
+            .expect("Failed to delete notification");
+    }
 }
