@@ -3,6 +3,7 @@ name = "rust_pathtracer"
 version = "0.1.0"
 authors = ["Gillett Hernandez <gillett.hernandez@gmail.com>"]
 edition = "2018"
+default-run = "main"
 
 [dependencies]
 itertools = "0.10.0"
@@ -56,3 +57,7 @@ incremental = false
 debug-assertions = false
 codegen-units = 1
 panic = 'abort'
+
+
+
+
