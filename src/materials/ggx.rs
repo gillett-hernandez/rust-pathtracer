@@ -398,7 +398,7 @@ impl Material for GGX {
         lambda: f32,
         _uv: (f32, f32),
         _transport_mode: TransportMode,
-        mut sample: Sample2D,
+        sample: Sample2D,
         wi: Vec3,
     ) -> Option<Vec3> {
         // debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
@@ -481,10 +481,10 @@ impl Material for GGX {
     ) -> (SingleEnergy, PDF) {
         self.eval_pdf(lambda, wi, wo, transport_mode)
     }
-    fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+    fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
         0
     }
-    fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
         self.outer_medium_id
     }
 }

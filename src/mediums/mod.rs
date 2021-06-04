@@ -1,5 +1,4 @@
 use crate::math::*;
-use crate::world::TransportMode;
 
 use std::marker::{Send, Sync};
 
@@ -14,10 +13,10 @@ pub trait Medium {
     ) -> (Vec3, f32);
     fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool);
     fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32;
-    fn emission(&self, lambda: f32, wo: Vec3, uvw: (f32, f32, f32)) -> SingleEnergy {
+    fn emission(&self, _lambda: f32, _wo: Vec3, _uvw: (f32, f32, f32)) -> SingleEnergy {
         0.0.into()
     }
-    fn sample_emission(&self, lambda: f32, uvw: (f32, f32, f32)) -> (Vec3, SingleEnergy) {
+    fn sample_emission(&self, _lambda: f32, _uvw: (f32, f32, f32)) -> (Vec3, SingleEnergy) {
         (Vec3::ZERO, 0.0.into())
     }
 }
@@ -41,7 +40,7 @@ pub struct HenyeyGreensteinHomogeneous {
 }
 
 impl Medium for HenyeyGreensteinHomogeneous {
-    fn p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
+    fn p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
         let cos_theta = wi * wo;
 
         let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
@@ -59,7 +58,7 @@ impl Medium for HenyeyGreensteinHomogeneous {
         );
         v
     }
-    fn sample_p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, f32) {
+    fn sample_p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, f32) {
         // just do isomorphic as a test
         let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
         let cos_theta = if g.abs() < 0.001 {

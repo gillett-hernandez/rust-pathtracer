@@ -1,6 +1,5 @@
 use crate::materials::Material;
 use crate::math::*;
-use crate::texture::TexStack;
 use crate::world::TransportMode;
 
 #[derive(Clone)]
@@ -46,10 +45,10 @@ impl Material for PassthroughFilter {
             1.0.into(),
         )
     }
-    fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
         self.outer_medium_id
     }
-    fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+    fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
         self.inner_medium_id
     }
 }

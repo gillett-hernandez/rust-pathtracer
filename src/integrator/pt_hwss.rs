@@ -1,9 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
-use crate::hittable::{HitRecord, Hittable};
-use crate::integrator::utils::{
-    random_walk, veach_v, HeroEnergy, HeroSurfaceVertex, LightSourceType, SurfaceVertex, VertexType,
-};
+use crate::hittable::Hittable;
+use crate::integrator::utils::{HeroEnergy, HeroSurfaceVertex, LightSourceType, VertexType};
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
@@ -15,7 +13,7 @@ use crate::integrator::pt::PathTracingIntegrator;
 use packed_simd::f32x4;
 use std::f32::INFINITY;
 use std::sync::Arc;
-use utils::{random_walk_hero, random_walk_medium_hero, HeroMediumVertex, HeroVertex};
+use utils::{random_walk_medium_hero, HeroMediumVertex, HeroVertex};
 
 pub struct HWSSPathTracingIntegrator {
     pub inner: PathTracingIntegrator,
@@ -32,13 +30,15 @@ pub fn generate_hero(x: f32, bounds: Bounds1D) -> f32x4 {
     wavelengths - sub
 }
 
+// TODO: finish this function
+#[allow(dead_code)]
 pub fn medium_direct_illumination(
     world: &Arc<World>,
     sample_world: bool,
     medium: &MediumEnum,
     lambda: f32x4,
     vertex: &HeroMediumVertex,
-    mediums: &[usize],
+    _mediums: &[usize],
     light_pick_sample: Sample1D,
     additional_light_sample: Sample2D,
     profile: &mut Profile,
@@ -209,7 +209,7 @@ impl SamplerIntegrator for HWSSPathTracingIntegrator {
             (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
         );
-        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
+
         let (camera_ray, _lens_normal, pdf) =
             camera.sample_we(film_sample, &mut sampler, lambda.extract(0));
         let _camera_pdf = pdf;

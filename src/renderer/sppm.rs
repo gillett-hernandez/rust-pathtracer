@@ -1,22 +1,19 @@
-use super::{output_film, parse_wavelength_bounds, Film, Renderer};
+use super::{output_film, Film, Renderer};
 
-use crate::camera::{Camera, CameraId};
+use crate::camera::Camera;
 use crate::config::*;
 use crate::integrator::*;
 use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;
 
-use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
-
 use std::collections::HashMap;
 // use std::io::Write;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crossbeam::channel::unbounded;
 // use crossbeam::channel::{bounded};
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;

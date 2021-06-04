@@ -1,7 +1,7 @@
 use crate::hittable::HitRecord;
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
-use crate::mediums::{Medium, MediumEnum};
+use crate::mediums::Medium;
 use crate::profile::Profile;
 use crate::world::World;
 use crate::world::INTERSECTION_TIME_OFFSET;
@@ -531,7 +531,7 @@ pub fn random_walk_hero(
                         f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
                     )
                 };
-                let (reverse_multi_f, reverse_multi_pdf) = {
+                let (_reverse_multi_f, reverse_multi_pdf) = {
                     let (f0, pdf0) =
                         material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wo, wi);
                     let (f1, pdf1) =
