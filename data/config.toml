@@ -19,9 +19,21 @@ type="SimpleCamera"
 name = "cornell camera"
 look_from = [-5, 0, 0]
 look_at = [0, 0, 0]
-aperture_size = 0.03
+aperture_size = 0.2
 focal_distance = 5.0
 vfov = 27.4
+
+
+[[cameras]]
+type="RealisticCamera"
+name = "realistic cornell camera"
+lens_spec = "data/cameras/petzval_kodak.txt"
+look_from = [-5, 0, 0]
+look_at = [0, 0, 0]
+focal_adjustment = 0.0
+fstop = 3.0
+radial_bins = 128
+wavelength_bins = 128
 
 [[cameras]]
 type="SimpleCamera"
@@ -76,7 +88,7 @@ min_samples = 16
 min_bounces = 3
 max_bounces = 12
 hwss = false
-camera_id = "cornell camera"
+camera_id = "realistic cornell camera"
 exposure = 1.0
 russian_roulette = true
 only_direct = false
@@ -93,11 +105,11 @@ height = 1080
 
 
 # [[render_settings]]
-# threads = 8
+# threads = 23
 # filename = "LT"
-# min_samples = 16
-# min_bounces = 3
-# max_bounces = 12
+# min_samples = 1
+# min_bounces = 1
+# max_bounces = 3
 # hwss = false
 # camera_id = "cornell camera"
 # exposure = 1.0
@@ -108,12 +120,12 @@ height = 1080
 # [render_settings.integrator]
 # type = "LT"
 # # light_samples = 2
-# camera_samples = 25
+# camera_samples = 100
 # # selected_pair = [3,3]
 # # photon_cache_size = 1024
 # [render_settings.resolution]
-# width = 1080
-# height = 1080
+# width = 512
+# height = 512
 
 # [[render_settings]]
 # threads = 8

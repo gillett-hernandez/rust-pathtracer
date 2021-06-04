@@ -49,7 +49,8 @@ fn main() -> () {
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);
 
-    if cfg!(windows) {
+    #[cfg(target_os = "windows")]
+    {
         let notification = NotificationBuilder::new()
             .title_text("Render finished")
             .info_text(&format!("Took {} seconds", time.elapsed().as_secs()))

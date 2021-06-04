@@ -216,7 +216,7 @@ impl SamplerIntegrator for SPPMIntegrator {
     }
     fn color(
         &self,
-        sampler: &mut Box<dyn Sampler>,
+        mut sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         sample_id: usize,
         mut profile: &mut Profile,
@@ -237,8 +237,7 @@ impl SamplerIntegrator for SPPMIntegrator {
 
         let lambda = self.wavelength_bounds.sample(self.last_lambda);
         let aperture_sample = sampler.draw_2d();
-        let (camera_ray, _lens_normal, pdf) =
-            camera.sample_we(film_sample, aperture_sample, lambda);
+        let (camera_ray, _lens_normal, pdf) = camera.sample_we(film_sample, &mut sampler, lambda);
         let _camera_pdf = pdf;
 
         let mut path: Vec<SurfaceVertex> = vec![SurfaceVertex::new(

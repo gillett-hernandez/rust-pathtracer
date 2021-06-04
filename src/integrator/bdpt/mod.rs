@@ -23,7 +23,7 @@ pub struct BDPTIntegrator {
 impl GenericIntegrator for BDPTIntegrator {
     fn color(
         &self,
-        sampler: &mut Box<dyn Sampler>,
+        mut sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
@@ -158,9 +158,9 @@ impl GenericIntegrator for BDPTIntegrator {
             (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
         );
-        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
+
         let (sampled_camera_ray, lens_normal, camera_pdf) =
-            camera.sample_we(film_sample, aperture_sample, lambda);
+            camera.sample_we(film_sample, &mut sampler, lambda);
         // let camera_pdf = pdf;
         camera_ray = sampled_camera_ray;
 
@@ -322,7 +322,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 (vert_in_scene.point - vert_on_lens.point).normalized(),
                             );
 
-                            if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                            if let Some(pixel_uv) = camera.get_pixel_for_ray(ray, lambda) {
                                 // println!("found good pixel uv at {:?}", pixel_uv);
                                 let sample = Sample::LightSample(
                                     XYZColor::from(SingleWavelength::new(lambda, contribution)),
@@ -415,7 +415,7 @@ impl GenericIntegrator for BDPTIntegrator {
                             (vert_in_scene.point - vert_on_lens.point).normalized(),
                         );
 
-                        if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                        if let Some(pixel_uv) = camera.get_pixel_for_ray(ray, lambda) {
                             // println!("found good pixel uv at {:?}", pixel_uv);
                             let sample = Sample::LightSample(
                                 XYZColor::from(SingleWavelength::new(lambda, contribution)),

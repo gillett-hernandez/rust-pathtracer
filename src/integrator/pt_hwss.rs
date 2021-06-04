@@ -193,7 +193,7 @@ pub fn medium_direct_illumination(
 impl SamplerIntegrator for HWSSPathTracingIntegrator {
     fn color(
         &self,
-        sampler: &mut Box<dyn Sampler>,
+        mut sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         mut profile: &mut Profile,
@@ -211,7 +211,7 @@ impl SamplerIntegrator for HWSSPathTracingIntegrator {
         );
         let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
         let (camera_ray, _lens_normal, pdf) =
-            camera.sample_we(film_sample, aperture_sample, lambda.extract(0));
+            camera.sample_we(film_sample, &mut sampler, lambda.extract(0));
         let _camera_pdf = pdf;
 
         let mut path: Vec<HeroVertex> = Vec::with_capacity(1 + self.inner.max_bounces as usize);

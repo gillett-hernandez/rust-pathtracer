@@ -275,7 +275,7 @@ impl PathTracingIntegrator {
 impl SamplerIntegrator for PathTracingIntegrator {
     fn color(
         &self,
-        sampler: &mut Box<dyn Sampler>,
+        mut sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         mut profile: &mut Profile,
@@ -292,9 +292,12 @@ impl SamplerIntegrator for PathTracingIntegrator {
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
         );
         let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
-        let (camera_ray, _lens_normal, pdf) =
-            camera.sample_we(film_sample, aperture_sample, sum.lambda);
-        let _camera_pdf = pdf;
+        let (camera_ray, _lens_normal, throughput_and_pdf) =
+            camera.sample_we(film_sample, &mut sampler, sum.lambda);
+        let camera_pdf = throughput_and_pdf;
+        if camera_pdf.0 == 0.0 {
+            return XYZColor::BLACK;
+        }
 
         let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
@@ -308,7 +311,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             (0.0, 0.0),
             MaterialId::Camera(0),
             0,
-            SingleEnergy::ONE,
+            SingleEnergy::from(throughput_and_pdf.0),
             0.0,
             0.0,
             1.0,
@@ -317,7 +320,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             camera_ray,
             lambda,
             self.max_bounces,
-            SingleEnergy::ONE,
+            SingleEnergy::from(throughput_and_pdf.0),
             TransportMode::Importance,
             sampler,
             &self.world,

@@ -1,18 +1,28 @@
+use std::f32::consts::SQRT_2;
+
 use crate::geometry::*;
 use crate::materials::MaterialId;
 use crate::math::*;
 
-use optics::{lens_sampler::RadialSampler, LensAssembly, LensInterface};
+use optics::{
+    bladed_aperture, lens_sampler::RadialSampler, Input, LensAssembly, LensInterface, Output,
+};
+use spectral::EXTENDED_VISIBLE_RANGE;
 
 #[derive(Debug, Clone)]
 pub struct RealisticCamera {
     pub origin: Point3,
     pub direction: Vec3,
-    focal_distance: f32,
-    vfov: f32,
+    focal_adjustment: f32,
     pub lens: Instance,
     pub assembly: LensAssembly,
+    sampler: RadialSampler,
+    aspect_ratio: f32, // 16:9 would yield an aspect ratio of 16/9
+    sensor_size: f32,
+    film_position: f32,
+    aperture_radius: f32,
     transform: Transform3,
+    lens_zoom: f32,
     lens_radius: f32,
     t0: f32,
     t1: f32,
@@ -23,58 +33,70 @@ impl RealisticCamera {
         look_from: Point3,
         look_at: Point3,
         v_up: Vec3,
-        vertical_fov: f32,
-        aspect_ratio: f32,
-        focal_distance: f32,
-        aperture: f32,
+        focal_adjustment: f32,
+        sensor_size: f32,
+        f_stop: f32,
+        lens_zoom: f32,
         interfaces: Vec<LensInterface>,
         t0: f32,
         t1: f32,
+        radial_bins: usize,
+        wavelength_bins: usize,
+        solver_heat: f32,
     ) -> RealisticCamera {
         let direction = (look_at - look_from).normalized();
-        let lens_radius = aperture / 2.0;
         // vertical_fov should be given in degrees, since it is converted to radians
-        let theta: f32 = vertical_fov.to_radians();
-        let half_height = (theta / 2.0).tan();
-        let half_width = aspect_ratio * half_height;
-        #[cfg(test)]
-        {
-            let aspect_ratio = half_width / half_height;
-            println!("{}", aspect_ratio);
-        }
+        let mut assembly = LensAssembly::new(&interfaces);
+        let mut aperture_radius = assembly.lenses[assembly.aperture_index].housing_radius;
+        aperture_radius /= f_stop;
+        assembly.lenses[assembly.aperture_index].housing_radius = aperture_radius;
+        let lens_radius = assembly.lenses[0].housing_radius;
+
         let w = -direction;
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
-        // println!(
-        //     "constructing camera with point, direction, and uvw = {:?} {:?} {:?} {:?} {:?}",
-        //     look_from, direction, u, v, w
-        // );
+        let film_position = -assembly.total_thickness_at(lens_zoom) + focal_adjustment;
 
+        // scale down, rotate, and move
         let transform = Transform3::from_stack(
-            None,
+            Some(Transform3::from_scale(Vec3::new(1000.0, 1000.0, 1000.0))),
             Some(TangentFrame::new(u, -v, w).into()), // rotate and stuff
             Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
         )
         .inverse();
-
-        if lens_radius == 0.0 {
-            println!("Warn: lens radius is 0");
-        }
+        let sampler = RadialSampler::new(
+            SQRT_2 * sensor_size / 2.0, // diagonal.
+            radial_bins,
+            wavelength_bins,
+            EXTENDED_VISIBLE_RANGE,
+            film_position,
+            &assembly,
+            lens_zoom,
+            |aperture_radius, ray| bladed_aperture(aperture_radius, 6, ray),
+            solver_heat,
+            sensor_size,
+        );
 
         RealisticCamera {
             origin: look_from,
             direction,
-            focal_distance,
-            vfov: vertical_fov,
+            focal_adjustment,
+
             lens: Instance::new(
                 Aggregate::from(Disk::new(lens_radius, Point3::ORIGIN, true)),
                 Some(transform),
                 Some(MaterialId::Camera(0)),
                 0,
             ),
-            assembly: LensAssembly::new(&interfaces),
+            aspect_ratio: 1.0,
+            sensor_size,
+            film_position,
+            lens_zoom,
+            assembly,
+            aperture_radius,
+            sampler,
             transform,
-            lens_radius: aperture / 2.0,
+            lens_radius,
             t0,
             t1,
         }
@@ -85,62 +107,90 @@ impl RealisticCamera {
 }
 
 impl RealisticCamera {
-    pub fn get_ray(&self, sample: Sample2D, s: f32, t: f32) -> Ray {
+    pub fn get_ray(
+        &self,
+        sampler: &mut Box<dyn Sampler>,
+        lambda: f32,
+        s: f32,
+        t: f32,
+    ) -> (Ray, f32) {
         // circular aperture/lens
         let time: f32 = self.t0 + random() * (self.t1 - self.t0);
-        let ray_origin: Point3 = self.origin;
-        Ray::new(ray_origin, Vec3::Z)
+        // crop sensor to match aspect ratio
+        let (x_factor, y_factor) = if self.aspect_ratio > 1.0 {
+            // x larger than y
+            // thus x needs to be scaled down
+            (1.0, self.aspect_ratio)
+        } else {
+            // y larger than x
+            // thus x is scaled down
+            (1.0 / self.aspect_ratio, 1.0)
+        };
+        let central_point: Point3 = Point3::new(
+            (s - 0.5) * self.sensor_size * x_factor,
+            (t - 0.5) * self.sensor_size * y_factor,
+            self.film_position,
+        );
+        let mut attempts = 0;
+        let mut result = None;
+
+        for _ in 0..100 {
+            // let s0 = sampler.draw_2d();
+            // let [x, y, z, _]: [f32; 4] = central_point.0.into();
+            // x += (s0.x - 0.5) / width as f32 * self.sensor_size;
+            // y += (s0.y - 0.5) / height as f32 * self.sensor_size;
+
+            // let point = Point3::new(x, y, z);
+            let point = central_point;
+            let v = self
+                .sampler
+                .sample(lambda, point, sampler.draw_2d(), sampler.draw_1d());
+            let ray = Ray::new(point, v);
+
+            attempts += 1;
+            // do actual tracing through lens for film sample
+            let trace_result =
+                self.assembly
+                    .trace_forward(self.lens_zoom, &Input { ray, lambda }, 1.0, |e| {
+                        (bladed_aperture(self.aperture_radius, 6, e), false)
+                    });
+            if let Some(Output {
+                ray: mut pupil_ray,
+                tau,
+            }) = trace_result
+            {
+                // scale back down to meters
+                // pupil_ray.origin = Point3::from(Vec3::from(pupil_ray.origin) / 1000.0);
+                pupil_ray = self.transform.to_world(pupil_ray);
+                pupil_ray.direction = pupil_ray.direction.normalized();
+                result = Some((pupil_ray, tau));
+                break;
+            }
+        }
+        if let Some(r) = result {
+            r
+        } else {
+            // println!(
+            //     "{:?}, {}, {:?}",
+            //     central_point,
+            //     lambda,
+            //     self.sampler
+            //         .sample(lambda, central_point, sampler.draw_2d(), sampler.draw_1d())
+            // );
+
+            // panic!();
+            (Ray::new(central_point, Vec3::Z), 0.0)
+        }
     }
     // returns None if the point on the lens was not from a valid pixel
-    // pub fn get_pixel_for_ray(&self, ray: Ray) -> Option<(f32, f32)> {
-    //     // would require tracing ray backwards, but for now, try and see what image uv it went through according to the thinlens approximation
-
-    //     // println!("ray is {:?}", ray);
-    //     let ray_in_local_space = self.lens.transform.unwrap().to_local(ray);
-    //     // let ray_in_local_space = self.lens.transform.unwrap() * ray;
-    //     // println!("ray in local space is {:?}", ray_in_local_space);
-
-    //     // trace ray in local space to intersect with virtual focal plane
-
-    //     let plane_z = self.focal_distance;
-
-    //     let t = -plane_z / ray_in_local_space.direction.z();
-    //     // let t = 0.0;
-
-    //     let point_on_focal_plane = ray_in_local_space.point_at_parameter(t);
-
-    //     let (plane_width, plane_height) = (self.horizontal.norm(), self.vertical.norm());
-
-    //     #[cfg(test)]
-    //     println!(
-    //         "{:?} {} {} {}",
-    //         point_on_focal_plane,
-    //         plane_width / 2.0,
-    //         plane_height / 2.0,
-    //         plane_width / plane_height
-    //     );
-
-    //     let (u, v) = (
-    //         point_on_focal_plane.x() / plane_width + 0.5,
-    //         point_on_focal_plane.y() / plane_height + 0.5,
-    //     );
-
-    //     #[cfg(test)]
-    //     println!("{} {}", u, v);
-
-    //     if u < 0.0 || u >= 1.0 || v < 0.0 || v >= 1.0 {
-    //         None
-    //     } else {
-    //         Some((u, v))
-    //     }
-    // }
-    // pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
-    //     assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
-    //     let theta: f32 = self.vfov.to_radians();
-    //     let half_height = (theta / 2.0).tan();
-    //     let half_width = aspect_ratio * half_height;
-    //     self
-    // }
+    pub fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
+        // TODO: implement backwards tracing. requires a reversed radial sampler cache or something like an OMP fit.
+        todo!();
+    }
+    pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
+        self.aspect_ratio = aspect_ratio;
+        self
+    }
 }
 
 unsafe impl Send for RealisticCamera {}
@@ -148,7 +198,43 @@ unsafe impl Sync for RealisticCamera {}
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::Read};
+
+    use optics::parse_lenses_from;
+
     use super::*;
+
+    fn read_from_file(path: &str) -> Vec<LensInterface> {
+        let mut camera_file = File::open(path).unwrap();
+        let mut camera_spec = String::new();
+        camera_file.read_to_string(&mut camera_spec).unwrap();
+        let (interfaces, _n0, _n1) = parse_lenses_from(&camera_spec);
+        interfaces
+    }
+
+    #[test]
+    fn test_generate_ray() {
+        let interfaces = read_from_file("data/cameras/petzval_kodak.txt");
+        assert!(interfaces.len() > 0);
+        let camera: RealisticCamera = RealisticCamera::new(
+            Point3::new(-5.0, 0.0, 0.0),
+            Point3::ZERO,
+            Vec3::Z,
+            0.0,
+            35.0,
+            2.0,
+            0.0,
+            interfaces,
+            0.0,
+            1.0,
+            128,
+            128,
+            0.01,
+        );
+        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let r = camera.get_ray(&mut sampler, 550.0, 0.5, 0.5);
+        println!("{:?}", r);
+    }
 
     // #[test]
     // fn test_camera_wide_aspect() {
@@ -195,17 +281,21 @@ mod tests {
     #[test]
     fn check_camera_position_and_orientation() {
         use crate::hittable::Hittable;
+        let interfaces = read_from_file("data/cameras/petzval_kodak.fx");
         let camera: RealisticCamera = RealisticCamera::new(
             Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
             Vec3::Z,
-            27.0,
-            0.6,
-            5.0,
-            0.08,
-            vec![],
+            0.0,
+            35.0,
+            2.0,
+            0.0,
+            interfaces,
             0.0,
             1.0,
+            128,
+            128,
+            0.01,
         );
 
         let sample_from = Point3::ORIGIN;

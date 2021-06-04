@@ -53,7 +53,7 @@ fn evaluate_direct_importance(
 
             // correctly connected.
             let candidate_camera_ray = Ray::new(point_on_lens, -direction);
-            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
+            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray, lambda);
             // println!(
             //     " weight {}, uv for ray {:?} is {:?}",
             //     weight, candidate_camera_ray, pixel_uv

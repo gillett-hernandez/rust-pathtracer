@@ -27,7 +27,6 @@ impl ProjectiveCamera {
         look_at: Point3,
         v_up: Vec3,
         vertical_fov: f32,
-        aspect_ratio: f32,
         focal_distance: f32,
         aperture: f32,
         t0: f32,
@@ -38,7 +37,7 @@ impl ProjectiveCamera {
         // vertical_fov should be given in degrees, since it is converted to radians
         let theta: f32 = vertical_fov.to_radians();
         let half_height = (theta / 2.0).tan();
-        let half_width = aspect_ratio * half_height;
+        let half_width = 1.0 * half_height;
         #[cfg(test)]
         {
             let aspect_ratio = half_width / half_height;
@@ -96,9 +95,15 @@ impl ProjectiveCamera {
 }
 
 impl ProjectiveCamera {
-    pub fn get_ray(&self, sample: Sample2D, s: f32, t: f32) -> Ray {
+    pub fn get_ray(
+        &self,
+        sampler: &mut Box<dyn Sampler>,
+        _lambda: f32,
+        s: f32,
+        t: f32,
+    ) -> (Ray, f32) {
         // circular aperture/lens
-        let rd: Vec3 = self.lens_radius * random_in_unit_disk(sample);
+        let rd: Vec3 = self.lens_radius * random_in_unit_disk(sampler.draw_2d());
         let offset = self.u * rd.x() + self.v * rd.y();
         let time: f32 = self.t0 + random() * (self.t1 - self.t0);
         let ray_origin: Point3 = self.origin + offset;
@@ -109,10 +114,10 @@ impl ProjectiveCamera {
         let ray_direction = (point_on_plane - ray_origin).normalized();
         debug_assert!(ray_origin.is_finite());
         debug_assert!(ray_direction.is_finite());
-        Ray::new_with_time(ray_origin, ray_direction, time)
+        (Ray::new_with_time(ray_origin, ray_direction, time), 1.0)
     }
     // returns None if the point on the lens was not from a valid pixel
-    pub fn get_pixel_for_ray(&self, ray: Ray) -> Option<(f32, f32)> {
+    pub fn get_pixel_for_ray(&self, ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
         // would require tracing ray backwards, but for now, try and see what image uv it went through according to the thinlens approximation
 
         // println!("ray is {:?}", ray);
@@ -183,28 +188,22 @@ mod tests {
             Point3::ZERO,
             Vec3::Z,
             35.2,
-            0.6,
             5.0,
             0.08,
             0.0,
             1.0,
-        );
+        )
+        .with_aspect_ratio(0.6);
         let s = random();
         let t = random();
-        let r: Ray = camera.get_ray(
-            Sample2D {
-                x: random(),
-                y: random(),
-            },
-            s,
-            t,
-        );
+        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let (r, tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
         println!(
             "camera ray in camera local space {:?}",
             camera.lens.transform.unwrap().to_local(r)
         );
-        let pixel_uv = camera.get_pixel_for_ray(r);
+        let pixel_uv = camera.get_pixel_for_ray(r, 550.0);
         println!("s and t are actually {} and {}", s, t);
         println!("{:?}", pixel_uv);
     }
@@ -217,24 +216,18 @@ mod tests {
             Point3::ZERO,
             Vec3::Z,
             35.2,
-            width as f32 / height as f32,
             5.0,
             0.08,
             0.0,
             1.0,
-        );
+        )
+        .with_aspect_ratio(width as f32 / height as f32);
         let px = (0.99 * width) as usize;
         let py = (0.99 * height) as usize;
         let s = (px as f32) / width + random() / width;
         let t = (py as f32) / height + random() / height;
-        let r: Ray = camera.get_ray(
-            Sample2D {
-                x: random(),
-                y: random(),
-            },
-            s,
-            t,
-        );
+        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+        let (r, tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
         println!(
             "camera ray in camera local space {:?}",
@@ -242,7 +235,7 @@ mod tests {
         );
         println!("s and t are actually {} and {}", s, t);
         println!("px and py are actually {} and {}", px, py);
-        let maybe_pixel_uv = camera.get_pixel_for_ray(r);
+        let maybe_pixel_uv = camera.get_pixel_for_ray(r, 550.0);
         println!("calculated pixel uv is {:?}", maybe_pixel_uv);
         if let Some(pixel_uv) = maybe_pixel_uv {
             let px_c = pixel_uv.0 * width;
@@ -259,12 +252,12 @@ mod tests {
             Point3::ZERO,
             Vec3::Z,
             27.0,
-            0.6,
             5.0,
             0.08,
             0.0,
             1.0,
-        );
+        )
+        .with_aspect_ratio(0.6);
 
         let sample_from = Point3::ORIGIN;
 
