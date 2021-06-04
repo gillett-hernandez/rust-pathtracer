@@ -210,6 +210,7 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
                 camera_file.read_to_string(&mut camera_spec).unwrap();
                 let (interfaces, _n0, _n1) = parse_lenses_from(&camera_spec);
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
+                println!("{}", "reached camera constructor");
                 (
                     cam.name.clone(),
                     Camera::RealisticCamera(RealisticCamera::new(
@@ -231,6 +232,7 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
             }
         };
         camera_map.insert(name, camera);
+        println!("{}", "reached camera insertion");
     }
     for (render_settings, toml_settings) in config
         .render_settings
@@ -242,6 +244,7 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
         render_settings.camera_id = cam_id;
         cameras.push(camera);
     }
+    println!("{}", "reached camera return");
     (config, cameras)
 }
 

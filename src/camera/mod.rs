@@ -54,7 +54,7 @@ impl Camera {
         }
     }
 
-    pub fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+    pub fn eval_we(&self, _lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
         // from is on surface of camera
         // (0.01, 1.0.into())
         // (1.0, 0.01.into())

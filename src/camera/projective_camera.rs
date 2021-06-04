@@ -197,7 +197,7 @@ mod tests {
         let s = random();
         let t = random();
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-        let (r, tau) = camera.get_ray(&mut sampler, 550.0, s, t);
+        let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
         println!(
             "camera ray in camera local space {:?}",
@@ -227,7 +227,7 @@ mod tests {
         let s = (px as f32) / width + random() / width;
         let t = (py as f32) / height + random() / height;
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-        let (r, tau) = camera.get_ray(&mut sampler, 550.0, s, t);
+        let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
         println!(
             "camera ray in camera local space {:?}",

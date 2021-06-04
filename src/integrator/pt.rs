@@ -291,7 +291,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
         );
-        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
+
         let (camera_ray, _lens_normal, throughput_and_pdf) =
             camera.sample_we(film_sample, &mut sampler, sum.lambda);
         let camera_pdf = throughput_and_pdf;

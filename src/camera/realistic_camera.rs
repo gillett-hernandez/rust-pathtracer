@@ -44,6 +44,7 @@ impl RealisticCamera {
         wavelength_bins: usize,
         solver_heat: f32,
     ) -> RealisticCamera {
+        println!("{}", "constructing realistic camera");
         let direction = (look_at - look_from).normalized();
         // vertical_fov should be given in degrees, since it is converted to radians
         let mut assembly = LensAssembly::new(&interfaces);
@@ -60,10 +61,11 @@ impl RealisticCamera {
         // scale down, rotate, and move
         let transform = Transform3::from_stack(
             Some(Transform3::from_scale(Vec3::new(1000.0, 1000.0, 1000.0))),
-            Some(TangentFrame::new(u, -v, w).into()), // rotate and stuff
+            Some(TangentFrame::new(u, -v, -w).into()), // rotate and stuff
             Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
         )
         .inverse();
+        println!("{}", "creating cache");
         let sampler = RadialSampler::new(
             SQRT_2 * sensor_size / 2.0, // diagonal.
             radial_bins,
@@ -76,6 +78,7 @@ impl RealisticCamera {
             solver_heat,
             sensor_size,
         );
+        println!("{}", "finished cache");
 
         RealisticCamera {
             origin: look_from,
@@ -115,7 +118,7 @@ impl RealisticCamera {
         t: f32,
     ) -> (Ray, f32) {
         // circular aperture/lens
-        let time: f32 = self.t0 + random() * (self.t1 - self.t0);
+        let _time: f32 = self.t0 + random() * (self.t1 - self.t0);
         // crop sensor to match aspect ratio
         let (x_factor, y_factor) = if self.aspect_ratio > 1.0 {
             // x larger than y
@@ -131,7 +134,7 @@ impl RealisticCamera {
             (t - 0.5) * self.sensor_size * y_factor,
             self.film_position,
         );
-        let mut attempts = 0;
+        let mut _attempts = 0;
         let mut result = None;
 
         for _ in 0..100 {
@@ -147,7 +150,7 @@ impl RealisticCamera {
                 .sample(lambda, point, sampler.draw_2d(), sampler.draw_1d());
             let ray = Ray::new(point, v);
 
-            attempts += 1;
+            _attempts += 1;
             // do actual tracing through lens for film sample
             let trace_result =
                 self.assembly
@@ -220,9 +223,9 @@ mod tests {
             Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
             Vec3::Z,
-            0.0,
+            10.0,
             35.0,
-            2.0,
+            6.0,
             0.0,
             interfaces,
             0.0,
@@ -286,9 +289,9 @@ mod tests {
             Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
             Vec3::Z,
-            0.0,
+            -10.0,
             35.0,
-            2.0,
+            10.0,
             0.0,
             interfaces,
             0.0,
