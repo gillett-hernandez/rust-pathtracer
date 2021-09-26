@@ -351,17 +351,17 @@ mod tests {
 
         println!(
             "{:?}",
-            cornell_white.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+            cornell_white.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0, true)
         );
 
         println!(
             "{:?}",
-            cornell_red.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+            cornell_red.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0, true)
         );
 
         println!(
             "{:?}",
-            cornell_green.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+            cornell_green.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0, true)
         );
     }
     #[test]

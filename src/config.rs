@@ -56,6 +56,15 @@ pub enum CameraSettings {
     RealisticCamera(RealisticCameraSettings),
 }
 
+impl CameraSettings {
+    pub fn get_name(&self) -> &str {
+        match self {
+            CameraSettings::SimpleCamera(data) => &data.name,
+            CameraSettings::RealisticCamera(data) => &data.name,
+        }
+    }
+}
+
 #[derive(Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
 pub enum IntegratorKind {
@@ -186,7 +195,17 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
     let mut cameras: Vec<Camera> = Vec::new();
     let mut camera_map: HashMap<String, Camera> = HashMap::new();
     let mut config = Config::from(settings.clone());
+    let mut camera_ids = Vec::new();
+
+    for toml_settings in settings.render_settings.iter() {
+        if !camera_ids.contains(&toml_settings.camera_id) {
+            camera_ids.push(toml_settings.camera_id.clone());
+        }
+    }
     for camera_config in &settings.cameras {
+        if !camera_ids.contains(&camera_config.get_name().to_owned()) {
+            continue;
+        }
         let (name, camera): (String, Camera) = match camera_config {
             CameraSettings::SimpleCamera(cam) => {
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);

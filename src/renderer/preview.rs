@@ -254,7 +254,8 @@ impl Renderer for PreviewRenderer {
                         println!("rendering specific pair {} {}", s, t);
                     }
 
-                    for s in 0..render_settings.min_samples {
+                    let mut s = 0;
+                    loop {
                         if !window.is_open()
                             || window.is_key_down(Key::Escape)
                             || !light_window.is_open()
@@ -304,7 +305,7 @@ impl Renderer for PreviewRenderer {
                                     temp_color
                                 );
 
-                                *pixel_ref += temp_color / (render_settings.min_samples as f32);
+                                *pixel_ref += temp_color;
                                 clone2.fetch_add(1, Ordering::Relaxed);
                                 if per_splat_sleep_time.as_nanos() > 0 {
                                     thread::sleep(
@@ -337,6 +338,7 @@ impl Renderer for PreviewRenderer {
                         light_window
                             .update_with_buffer(&light_buffer.lock().unwrap(), width, height)
                             .unwrap();
+                        s += 1;
                     }
 
                     if let Err(panic) = thread.join() {
@@ -398,7 +400,8 @@ impl Renderer for PreviewRenderer {
                     });
 
                     let clone2 = pixel_count.clone();
-                    for s in 0..render_settings.min_samples {
+                    let mut s = 0;
+                    loop {
                         if !window.is_open() || window.is_key_down(Key::Escape) {
                             break;
                         }
@@ -451,7 +454,7 @@ impl Renderer for PreviewRenderer {
                                 // }
                                 // pb.inc();
                                 // unsafe {
-                                *pixel_ref += temp_color / (render_settings.min_samples as f32);
+                                *pixel_ref += temp_color;
                                 // }
                                 profile
                             })
@@ -478,6 +481,7 @@ impl Renderer for PreviewRenderer {
                                 );
                             });
                         window.update_with_buffer(&buffer, width, height).unwrap();
+                        s += 1;
                     }
                     if let Err(panic) = thread.join() {
                         println!(

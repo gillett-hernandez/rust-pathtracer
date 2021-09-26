@@ -88,9 +88,9 @@ I am referencing [this](https://rendering-memo.blogspot.com/2016/03/bidirectiona
 
 Thanks to members of the Rendering & Lighting (offline) discord server for pointing me in the right direction in fixing some color output issues.
 
-I used [this](https://github.com/svenstaro/bvh) to implement the BVH. I modified it to use my AABB implementation and other math routines, but for the most part the algorithm is unchanged.
+I used [this](https://github.com/svenstaro/bvh) to implement the BVH, so thanks to [svenstaro](https://github.com/svenstaro). I modified it to use my AABB implementation and other math routines, but for the most part the algorithm is unchanged.
 
-I grabbed some sRGB basis functions for upsampling textures from [this](https://github.com/imallett/simple-spectral) paper/repo
+I grabbed some sRGB basis functions for upsampling textures from [this](https://github.com/imallett/simple-spectral) paper/repo. Thanks to the authors.
 
 ## Contribution
 
@@ -98,4 +98,4 @@ Please view this as a hobby or reference implementation. If you find any issues,
 
 ## Support the author
 
-If you're so inclined, buy me a coffee at https://ko-fi.com/nacly
+If you're so inclined, buy me a coffee at my [ko-fi](https://ko-fi.com/nacly)
