@@ -2,18 +2,18 @@ use std::f32::consts::SQRT_2;
 
 use crate::geometry::*;
 use crate::materials::MaterialId;
-use crate::math::*;
-
+use crate::math::{
+    random, spectral::EXTENDED_VISIBLE_RANGE, Point3, Ray, Sampler, TangentFrame, Transform3, Vec3,
+};
 use optics::{
     bladed_aperture, lens_sampler::RadialSampler, Input, LensAssembly, LensInterface, Output,
 };
-use spectral::EXTENDED_VISIBLE_RANGE;
 
 #[derive(Debug, Clone)]
 pub struct RealisticCamera {
     pub origin: Point3,
     pub direction: Vec3,
-    focal_adjustment: f32,
+    // focal_adjustment: f32,
     pub lens: Instance,
     pub assembly: LensAssembly,
     sampler: RadialSampler,
@@ -23,7 +23,7 @@ pub struct RealisticCamera {
     aperture_radius: f32,
     transform: Transform3,
     lens_zoom: f32,
-    lens_radius: f32,
+    // lens_radius: f32,
     t0: f32,
     t1: f32,
 }
@@ -83,8 +83,7 @@ impl RealisticCamera {
         RealisticCamera {
             origin: look_from,
             direction,
-            focal_adjustment,
-
+            // focal_adjustment,
             lens: Instance::new(
                 Aggregate::from(Disk::new(lens_radius, Point3::ORIGIN, true)),
                 Some(transform),
@@ -99,7 +98,7 @@ impl RealisticCamera {
             aperture_radius,
             sampler,
             transform,
-            lens_radius,
+            // lens_radius,
             t0,
             t1,
         }
@@ -201,6 +200,7 @@ unsafe impl Sync for RealisticCamera {}
 
 #[cfg(test)]
 mod tests {
+    use crate::math::{RandomSampler, Sample2D, Sampler};
     use std::{fs::File, io::Read};
 
     use optics::parse_lenses_from;

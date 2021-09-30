@@ -1,12 +1,14 @@
 use crate::geometry::*;
 use crate::materials::MaterialId;
-use crate::math::*;
+use crate::math::{
+    random, random_in_unit_disk, Point3, Ray, Sampler, TangentFrame, Transform3, Vec3,
+};
 #[derive(Debug, Clone)]
 pub struct ProjectiveCamera {
     pub origin: Point3,
     pub direction: Vec3,
-    half_height: f32,
-    half_width: f32,
+    // half_height: f32,
+    // half_width: f32,
     focal_distance: f32,
     lower_left_corner: Point3,
     vfov: f32,
@@ -65,8 +67,8 @@ impl ProjectiveCamera {
         ProjectiveCamera {
             origin: look_from,
             direction,
-            half_height,
-            half_width,
+            // half_height,
+            // half_width,
             focal_distance,
             lower_left_corner: look_from
                 - u * half_width * focal_distance
@@ -180,6 +182,7 @@ unsafe impl Sync for ProjectiveCamera {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::math::{RandomSampler, Sample2D};
 
     #[test]
     fn test_camera() {
