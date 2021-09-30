@@ -1,8 +1,11 @@
 use super::{output_film, Film, Renderer};
 
 use crate::config::{Config, IntegratorKind, RenderSettings, Resolution};
-use crate::integrator::*;
-use crate::math::*;
+// use crate::integrator::*;
+use crate::integrator::{
+    CameraId, GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator,
+};
+use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
 use crate::profile::Profile;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;

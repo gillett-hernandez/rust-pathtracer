@@ -13,9 +13,9 @@ pub use preview::PreviewRenderer;
 pub use sppm::SPPMRenderer;
 
 use crate::camera::Camera;
-use crate::config::*;
 
-use crate::math::*;
+use crate::config::{Config, RenderSettings};
+use crate::math::{Bounds1D, XYZColor};
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 

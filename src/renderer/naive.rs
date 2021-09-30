@@ -1,9 +1,13 @@
 use super::{output_film, parse_wavelength_bounds, Film, Renderer};
 
 use crate::camera::{Camera, CameraId};
-use crate::config::*;
-use crate::integrator::*;
-use crate::math::*;
+
+use crate::config::{Config, IntegratorKind, RenderSettings};
+use crate::integrator::{
+    BDPTIntegrator, GenericIntegrator, Integrator, IntegratorType, LightTracingIntegrator, Sample,
+    SamplerIntegrator,
+};
+use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
 use crate::profile::Profile;
 use crate::world::World;
 

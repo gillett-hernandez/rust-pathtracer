@@ -4,7 +4,7 @@ scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
 type="Naive"
 # type="SPPM"
 # type="Preview"
-# selected_preview_film_id = 0
+selected_preview_film_id = 0
 
 [[cameras]]
 type="SimpleCamera"
@@ -26,15 +26,50 @@ vfov = 27.4
 
 [[cameras]]
 type="RealisticCamera"
-name = "realistic cornell camera"
+name = "petzval kodak"
 lens_spec = "data/cameras/petzval_kodak.txt"
-# lens_spec = "data/cameras/wideangle_2.txt"
-# lens_spec = "data/cameras/kreitzer_telephoto.txt"
 look_from = [-15.0, 0.0, 0.0]
 look_at = [0.0, 0.0, 0.0]
 focal_adjustment = 25.0
 fstop = 6.0
 sensor_size = 23.0
+radial_bins = 512
+wavelength_bins = 512
+
+
+[[cameras]]
+type="RealisticCamera"
+name = "simple 2"
+lens_spec = "data/cameras/simple_2.txt"
+look_from = [-15.0, 0.0, 0.0]
+look_at = [0.0, 0.0, 0.0]
+focal_adjustment = 0.0
+fstop = 6.0
+sensor_size = 35.0
+radial_bins = 512
+wavelength_bins = 512
+
+[[cameras]]
+type="RealisticCamera"
+name = "wideangle 2"
+lens_spec = "data/cameras/wideangle_2.txt"
+look_from = [-35.0, 0.0, -0.5]
+look_at = [0.0, 0.0, -0.5]
+focal_adjustment = -77.0
+fstop = 6.0
+sensor_size = 35.0
+radial_bins = 512
+wavelength_bins = 512
+
+[[cameras]]
+type="RealisticCamera"
+name = "telephoto"
+lens_spec = "data/cameras/kreitzer_telephoto.txt"
+look_from = [-100.0, 0.0, 0.0]
+look_at = [0.0, 0.0, 0.0]
+focal_adjustment = 0.0
+fstop = 3.0
+sensor_size = 35.0
 radial_bins = 512
 wavelength_bins = 512
 
@@ -87,11 +122,11 @@ vfov = 5
 [[render_settings]]
 threads = 23
 filename = "PT"
-min_samples = 512
+min_samples = 128
 min_bounces = 3
 max_bounces = 12
 hwss = false
-camera_id = "realistic cornell camera"
+camera_id = "cornell camera"
 exposure = 1.0
 russian_roulette = true
 only_direct = false
@@ -103,8 +138,8 @@ light_samples = 4
 # selected_pair = [3,3]
 # photon_cache_size = 1024
 [render_settings.resolution]
-width = 2160
-height = 2160
+width = 1080
+height = 1080
 
 
 # [[render_settings]]
