@@ -28,7 +28,7 @@ impl ProjectiveCamera {
         look_from: Point3,
         look_at: Point3,
         v_up: Vec3,
-        vertical_fov: f32,
+        vertical_fov: f32, // vertical_fov should be given in degrees, since it is converted to radians
         focal_distance: f32,
         aperture: f32,
         t0: f32,
@@ -36,7 +36,6 @@ impl ProjectiveCamera {
     ) -> ProjectiveCamera {
         let direction = (look_at - look_from).normalized();
         let lens_radius = aperture / 2.0;
-        // vertical_fov should be given in degrees, since it is converted to radians
         let theta: f32 = vertical_fov.to_radians();
         let half_height = (theta / 2.0).tan();
         let half_width = 1.0 * half_height;
@@ -267,7 +266,7 @@ mod tests {
         let camera_surface = camera.get_surface().unwrap();
         let transform = camera_surface.transform.unwrap();
         println!("transform * = {:?}", transform.to_local(sample_from));
-        println!("transform / ={:?}", transform.to_world(sample_from));
+        println!("transform / = {:?}", transform.to_world(sample_from));
         let sample = Sample2D::new_random_sample();
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);

@@ -17,7 +17,7 @@ pub struct RealisticCamera {
     pub lens: Instance,
     pub assembly: LensAssembly,
     sampler: RadialSampler,
-    aspect_ratio: f32, // 16:9 would yield an aspect ratio of 16/9
+    aspect_ratio: f32, // 16:9 would yield an aspect ratio of 16/9 ~= 1.777777777
     sensor_size: f32,
     film_position: f32,
     aperture_radius: f32,
@@ -46,7 +46,6 @@ impl RealisticCamera {
     ) -> RealisticCamera {
         println!("{}", "constructing realistic camera");
         let direction = (look_at - look_from).normalized();
-        // vertical_fov should be given in degrees, since it is converted to radians
         let mut assembly = LensAssembly::new(&interfaces);
         let mut aperture_radius = assembly.lenses[assembly.aperture_index].housing_radius;
         aperture_radius /= f_stop;
