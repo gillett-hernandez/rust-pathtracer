@@ -1,6 +1,6 @@
-[submodule "src/camera/lens/optics"]
-	path = src/camera/lens/optics
-	url = git@github.com:gillett-hernandez/rust_optics.git
-[submodule "crates/rust_optics"]
-	path = crates/rust_optics
+[submodule "crates/math"]
+	path = crates/math
+	url = git@github.com:gillett-hernandez/rust_cg_math.git
+[submodule "crates/optics"]
+	path = crates/optics
 	url = git@github.com:gillett-hernandez/rust_optics.git

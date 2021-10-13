@@ -53,3 +53,52 @@ impl Material for Lambertian {
     //     SingleEnergy::ZERO
     // }
 }
+
+#[cfg(test)]
+mod test {
+    use math::*;
+    use spectral::EXTENDED_VISIBLE_RANGE;
+
+    use crate::renderer::Film;
+    use crate::texture::{Texture, Texture1};
+
+    use super::*;
+    #[test]
+    fn test_material() {
+        let flat = SPD::Linear {
+            signal: vec![1.0],
+            bounds: EXTENDED_VISIBLE_RANGE,
+            mode: InterpolationMode::Linear,
+        };
+        let cdf = CDF::from(flat);
+        let tex = Texture1 {
+            curve: cdf,
+            texture: Film::new(1, 1, 1.0),
+            interpolation_mode: InterpolationMode::Linear,
+        };
+        let color = TexStack {
+            textures: vec![Texture::Texture1 { 0: tex }],
+        };
+        let material = Lambertian::new(color);
+        let wo = Vec3::Z;
+        let wi = material
+            .generate(
+                500.0,
+                (0.0, 0.0),
+                TransportMode::Radiance,
+                Sample2D::new_random_sample(),
+                wo,
+            )
+            .expect("couldn't generate wi from lambert");
+        let (reflectance, pdf) =
+            material.bsdf(500.0, (0.0, 0.0), TransportMode::Importance, wi, wo);
+
+        println!("{:?} -> {:?}", wi, wo);
+        println!(
+            "f(wi -> wo) = {} / {} = {}",
+            reflectance.0,
+            pdf.0,
+            reflectance.0 / pdf.0
+        );
+    }
+}

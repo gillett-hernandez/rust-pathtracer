@@ -3,29 +3,35 @@ name = "rust_pathtracer"
 version = "0.1.0"
 authors = ["Gillett Hernandez <gillett.hernandez@gmail.com>"]
 edition = "2018"
+default-run = "main"
 
 [dependencies]
-itertools = "0.9.0"
-rayon = "1.4.0"
-toml = "0.5"
-num_cpus = "1.13.0"
-serde = { version = "1.0.114", features = ["derive"] }
-rand = "0.7"
-image = "0.23.9"
-packed_simd = { version = "0.3.4", package = "packed_simd_2" }
-nalgebra = "0.22"
-ordered-float = "2.0.0"
+crossbeam = "0.8.1"
 exr = "0.9.0"
-pbr = "1.0.3"
-parking_lot = "0.11.0"
-crossbeam = "0.7.3"
-tobj = "2.0.2"
-math = {path = "crates/math"}
-optics = {path = "crates/optics"}
+image = "0.23.12"
+minifb = "0.19.1"
+nalgebra = "0.29.0"
+num_cpus = "1.13.0"
+ordered-float = "2.8.0"
+packed_simd = { version = "0.3.4", package = "packed_simd_2" }
+parking_lot = "0.11.1"
+pbr = "1.0.4"
+rand = "0.8.4"
+rayon = "1.5.0"
+serde = { version = "1.0.120", features = ["derive"] }
+tobj = "2.0.3"
+toml = "0.5"
+
+
+math =  { git = "https://github.com/gillett-hernandez/rust_cg_math" }
+rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics" }
+
+[target.'cfg(windows)'.dependencies]
+win32_notification = "0.1.0"
 
 [build-dependencies]
-serde = { version = "1.0.114", features = ["derive"] }
-serde_json = "1.0.56"
+serde = { version = "1.0.120", features = ["derive"] }
+serde_json = "1.0.61"
 
 [lib]
 path = "src/lib.rs"
@@ -54,3 +60,7 @@ incremental = false
 debug-assertions = false
 codegen-units = 1
 panic = 'abort'
+
+
+
+

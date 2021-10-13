@@ -10,7 +10,7 @@ pub enum EnvironmentMap {
     Sun {
         color: CDF,
         strength: f32,
-        solid_angle: f32,
+        angular_diameter: f32,
         sun_direction: Vec3,
     },
 }
@@ -53,13 +53,13 @@ impl EnvironmentMap {
             EnvironmentMap::Sun {
                 color,
                 strength,
-                solid_angle,
+                angular_diameter,
                 sun_direction,
             } => {
                 let direction = uv_to_direction(uv);
                 let cos = *sun_direction * direction;
                 let sin = (1.0 - cos * cos).sqrt();
-                if sin.abs() < *solid_angle && cos > 0.0 {
+                if sin.abs() < (*angular_diameter / 2.0).sin() && cos > 0.0 {
                     // within solid angle
                     SingleEnergy::new(color.evaluate_power(lambda) * *strength)
                 } else {
@@ -103,10 +103,10 @@ impl EnvironmentMap {
             EnvironmentMap::Sun {
                 color,
                 strength,
-                solid_angle: _,
+                angular_diameter: _,
                 sun_direction: _,
             } => {
-                let (mut sw, pdf) = color.sample_power_and_pdf(wavelength_range, wavelength_sample);
+                let (mut sw, wavelength_pdf) = color.sample_power_and_pdf(wavelength_range, wavelength_sample);
                 sw.energy *= *strength;
                 let (uv, directional_pdf) =
                     self.sample_env_uv_given_wavelength(direction_sample, sw.lambda);
@@ -118,7 +118,7 @@ impl EnvironmentMap {
                     + direction * world_radius
                     + frame.to_world(&random_on_normal_disk);
 
-                (Ray::new(point, -direction), sw, directional_pdf, pdf)
+                (Ray::new(point, -direction), sw, directional_pdf, wavelength_pdf)
             }
         }
     }
@@ -154,7 +154,7 @@ impl EnvironmentMap {
         //     EnvironmentMap::Sun {
         //         color,
         //         strength,
-        //         solid_angle,
+        //         angular_diameter,
         //         sun_direction,
         //     } => {}
         // }
@@ -175,16 +175,17 @@ impl EnvironmentMap {
             EnvironmentMap::Sun {
                 color: _color,
                 strength: _strength,
-                solid_angle,
+                 angular_diameter,
                 sun_direction,
             } => {
-                let local_wo = Vec3::Z + *solid_angle * random_in_unit_disk(sample);
+                let local_wo = Vec3::Z + (*angular_diameter / 2.0).sin() * random_in_unit_disk(sample);
                 let sun_direction = *sun_direction;
                 let frame = TangentFrame::from_normal(sun_direction);
                 let direction = frame.to_world(&local_wo);
                 (
                     direction_to_uv(direction.normalized()),
-                    PDF::from(1.0 / (2.0 * PI * (1.0 - *solid_angle))),
+                    PDF::from(1.0 / (2.0 * PI * (1.0 - *angular_diameter))),
+                    // 1.0.into()
                 )
             }
         }
@@ -227,7 +228,7 @@ mod tests {
         let env_map = EnvironmentMap::Sun {
             color: curves::blackbody(5500.0, 40.0).into(),
             strength: 1.0,
-            solid_angle: 0.1,
+            angular_diameter: 0.1,
             sun_direction: Vec3::Z,
         };
         let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
@@ -259,5 +260,17 @@ mod tests {
         println!("{:?}", uv);
         let direction_again = uv_to_direction(uv);
         println!("{:?}", direction_again);
+    }
+
+    #[test]
+    fn test_sample_env_map (){
+        let env_map = EnvironmentMap::Sun {
+            color: curves::blackbody(5500.0, 40.0).into(),
+            strength: 1.0,
+            angular_diameter: 0.1,
+            sun_direction: Vec3::Z,
+        };
+
+        env_map.sample_direction_given_wavelength(Sample2D::new_random_sample(), 500.0);
     }
 }

@@ -2,7 +2,7 @@
 env_sampling_probability = 0.1
 [environment]
 type="Constant"
-strength = 0.00001
+strength = 0.0000
 [environment.color]
 type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"
@@ -317,7 +317,7 @@ y_scale = 5.0
 material_identifier = "diffuse_light_xenon"
 [instances.aggregate]
 type = "Rect"
-size = [0.6, 0.6]
+size = [0.1, 0.1]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = false

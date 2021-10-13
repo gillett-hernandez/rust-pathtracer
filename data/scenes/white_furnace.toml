@@ -7,25 +7,71 @@ type = "Flat"
 strength = 1.0
 interpolation_mode = "Linear"
 
-[[materials]]
+
+
+[[textures]]
 name = "lambertian_white"
-[materials.data]
-type = "Lambertian"
-[materials.data.color]
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
 type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 1
 interpolation_mode = "Cubic"
 
-[[materials]]
+[[textures]]
 name = "lambertian_green"
-[materials.data]
-type = "Lambertian"
-[materials.data.color]
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
 type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 2
 interpolation_mode = "Cubic"
+
+[[textures]]
+name = "lambertian_red"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "TabulatedCSV"
+filename = "data/curves/csv/cornell.csv"
+column = 3
+interpolation_mode = "Cubic"
+
+
+[[materials]]
+name = "lambertian_white"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_white"
+
+[[materials]]
+name = "lambertian_green"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_green"
+
+[[materials]]
+name = "lambertian_red"
+[materials.data]
+type = "Lambertian"
+color = "lambertian_red"
+
+
+
+[[materials]]
+name = "lambertian_white_2"
+[materials.data]
+type = "Lambertian"
+[materials.data.color]
+type = "Flat"
+strength = 1.0
+interpolation_mode = "Linear"
+
 
 [[materials]]
 name = "ggx_glass"
@@ -84,11 +130,15 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
 column = 1
 interpolation_mode = "Cubic"
+[materials.data.eta.domain_mapping]
+x_scale = 1000.0
 [materials.data.kappa]
 type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
 column = 2
 interpolation_mode = "Cubic"
+[materials.data.kappa.domain_mapping]
+x_scale = 1000.0
 
 [[materials]]
 name = "ggx_copper"
@@ -96,7 +146,7 @@ name = "ggx_copper"
 type = "GGX"
 eta_o = 1.0004
 permeability = 0.0
-alpha = 0.005
+alpha = 0.002
 [materials.data.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/copper-mcpeak.csv"
@@ -113,17 +163,19 @@ interpolation_mode = "Cubic"
 x_scale = 1000.0
 
 [[materials]]
-name = "lambertian_red"
+name = "diffuse_light_fluorescent"
 [materials.data]
-type = "Lambertian"
+type = "DiffuseLight"
+sidedness = "Reverse"
 [materials.data.color]
-type = "TabulatedCSV"
-filename = "data/curves/csv/cornell.csv"
-column = 3
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
 interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
 
 [[materials]]
-name = "diffuse_light"
+name = "diffuse_light_xenon"
 [materials.data]
 type = "DiffuseLight"
 sidedness = "Reverse"
@@ -135,11 +187,11 @@ interpolation_mode = "Cubic"
 y_scale = 5.0
 
 [[materials]]
-name = "sharp_light"
+name = "sharp_light_xenon"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 2.0
+sharpness = 4.0
 [materials.data.color]
 type = "Linear"
 filename = "data/curves/spectra/xenon_lamp.spectra"
@@ -147,10 +199,66 @@ interpolation_mode = "Cubic"
 [materials.data.color.domain_mapping]
 y_scale = 5.0
 
+[[materials]]
+name = "diffuse_light_warm"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light_warm"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+[materials.data.color]
+type = "Blackbody"
+temperature = 3000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+[materials.data.color]
+type = "Blackbody"
+temperature = 5000.0
+strength = 5.0
+
+[[materials]]
+name = "sharp_light_fluorescent"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
+name = "diffuse_light"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Dual"
+[materials.data.color]
+type = "Blackbody"
+temperature = 5000.0
+strength = 15.0
+
+
 
 [[instances]]
-material_identifier = "ggx_glass_dispersive"
+material_identifier = "lambertian_white_2"
 [instances.aggregate]
 type = "Sphere"
-radius = 1.0
+radius = 0.2
 origin = [0.0, 0.0, 0.0]

@@ -49,7 +49,7 @@ impl sRGB {
             exposure_adjustment / max_luminance
         );
         sRGB {
-            factor: (1.0 / max_luminance).min(1000000.0),
+            factor: (1.0 / avg_luminance).min(1000000.0).max(0.00000000001),
             exposure_adjustment,
             // gamma_adjustment,
         }
@@ -105,6 +105,7 @@ impl Tonemapper for sRGB {
             SampleType::F16,           // convert the generated f32 values to f16 while writing
         );
 
+        print!("saving exr image...");
         image_info
             .write_pixels_to_file(
                 exr_filename,
@@ -113,6 +114,7 @@ impl Tonemapper for sRGB {
             )
             .unwrap();
 
+        println!(" done!");
         let mut img: image::RgbImage =
             image::ImageBuffer::new(film.width as u32, film.height as u32);
 
@@ -125,8 +127,9 @@ impl Tonemapper for sRGB {
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
         }
-        println!("saving image...");
+        print!("saving image...");
         img.save(png_filename).unwrap();
+        println!(" done!");
 
         println!(
             "took {}s to tonemap and output\n",

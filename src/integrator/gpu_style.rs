@@ -310,6 +310,8 @@ impl GPUStylePTIntegrator {
         let mut buffer_idx = 0;
         let mut any_remaining = false;
         let buffer_size = buffer.rays.len();
+        let sampler = RandomSampler::new();
+        let mut boxed: Box<dyn Sampler> = Box::new(sampler);
         for index in first_empty..buffer_size {
             loop {
                 if buffer_idx >= buffer_size {
@@ -343,13 +345,13 @@ impl GPUStylePTIntegrator {
                 bounds.x.lower + (tile_u as f32) * tile_width,
                 bounds.y.lower + (tile_v as f32) * tile_height,
             );
-            let ray = camera.get_ray(Sample2D::new_random_sample(), px, py);
+            let lambda = self.wavelength_bounds.sample(boxed.draw_1d().x);
+            let (ray, tau) = camera.get_ray(&mut boxed, lambda, px, py);
             buffer.rays[index] = Some(PrimaryRay {
                 ray,
-                lambda: self.wavelength_bounds.lower
-                    + self.wavelength_bounds.span() * Sample1D::new_random_sample().x,
+                lambda,
                 buffer_idx,
-                throughput: 1.0,
+                throughput: tau,
                 bsdf_pdf: 0.0,
                 cos_o: 1.0,
                 transport_mode: TransportMode::default(),
@@ -689,7 +691,7 @@ impl GPUStylePTIntegrator {
             );
             */
             let cam_and_pixel_id = uray.cam_and_pixel_id;
-            if let Some((cam_id, pixel)) = cam_and_pixel_id {
+            if let Some((_cam_id, pixel)) = cam_and_pixel_id {
                 let lambda = uray.lambda;
                 let idx = match pixel {
                     Pixel::Id(id) => id,

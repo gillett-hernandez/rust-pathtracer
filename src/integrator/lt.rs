@@ -5,7 +5,6 @@ use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
-use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
 use crate::world::TransportMode;
 
@@ -54,7 +53,7 @@ fn evaluate_direct_importance(
 
             // correctly connected.
             let candidate_camera_ray = Ray::new(point_on_lens, -direction);
-            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray);
+            let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray, lambda);
             // println!(
             //     " weight {}, uv for ray {:?} is {:?}",
             //     weight, candidate_camera_ray, pixel_uv
@@ -68,8 +67,8 @@ fn evaluate_direct_importance(
                 );
                 let energy = reflectance * beta * dropoff * weight / camera_pdf.0;
                 debug_assert!(energy.0.is_finite());
-                let sw = SingleWavelength::new(lambda, energy);
-                let ret = (Sample::LightSample(sw, uv), camera_id as CameraId);
+                let sample = XYZColor::from(SingleWavelength::new(lambda, energy));
+                let ret = (Sample::LightSample(sample, uv), camera_id as CameraId);
                 // println!("adding camera sample to splatting list");
                 samples.push(ret);
             }
@@ -94,7 +93,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         _sample_id: usize,
         mut samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
         let wavelength_sample = sampler.draw_1d();
         let light_pick_sample = sampler.draw_1d();
@@ -120,7 +119,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 .sample_emission(
                     light_surface_point,
                     light_surface_normal,
-                    VISIBLE_RANGE,
+                    self.wavelength_bounds,
                     sampler.draw_2d(),
                     wavelength_sample,
                 )
@@ -146,7 +145,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 world_center,
                 sampler.draw_2d(),
                 sampler.draw_2d(),
-                VISIBLE_RANGE,
+                self.wavelength_bounds,
                 wavelength_sample,
             );
             light_g_term = 1.0;
@@ -157,15 +156,15 @@ impl GenericIntegrator for LightTracingIntegrator {
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
         if radiance.0 == 0.0 {
-            return SingleWavelength::BLACK;
+            return XYZColor::from(SingleWavelength::BLACK);
         }
         let light_pdf = sampled.2;
         let lambda_pdf = sampled.3;
 
         // light loop here
-        let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
-        path.push(Vertex::new(
+        path.push(SurfaceVertex::new(
             VertexType::Camera,
             light_ray.time,
             lambda,
@@ -301,6 +300,6 @@ impl GenericIntegrator for LightTracingIntegrator {
                 }
             }
         }
-        SingleWavelength::BLACK
+        XYZColor::from(SingleWavelength::BLACK)
     }
 }

@@ -502,7 +502,7 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
-        println!("building");
+        println!("building bvh");
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2;
         let mut nodes = Vec::with_capacity(expected_node_count);

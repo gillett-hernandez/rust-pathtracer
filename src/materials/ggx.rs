@@ -85,6 +85,7 @@ pub fn fresnel_conductor(eta_i: f32, eta_t: f32, k_t: f32, cos_theta_i: f32) -> 
 
     (rs + rp) / 2.0
 }
+
 fn ggx_d(alpha: f32, wm: Vec3) -> f32 {
     let slope = (wm.x() / alpha, wm.y() / alpha);
     let slope2 = (slope.0 * slope.0, slope.1 * slope.1);
@@ -187,10 +188,18 @@ pub struct GGX {
     pub eta_o: f32, // replace with SPD
     pub kappa: SPD,
     pub permeability: f32,
+    pub outer_medium_id: usize,
 }
 
 impl GGX {
-    pub fn new(roughness: f32, eta: SPD, eta_o: f32, kappa: SPD, permeability: f32) -> Self {
+    pub fn new(
+        roughness: f32,
+        eta: SPD,
+        eta_o: f32,
+        kappa: SPD,
+        permeability: f32,
+        outer_medium_id: usize,
+    ) -> Self {
         debug_assert!(roughness > 0.0);
         GGX {
             alpha: roughness,
@@ -198,6 +207,7 @@ impl GGX {
             eta_o,
             kappa,
             permeability,
+            outer_medium_id,
         }
     }
 
@@ -244,6 +254,7 @@ impl GGX {
         wo: Vec3,
         transport_mode: TransportMode,
     ) -> (SingleEnergy, PDF) {
+        let wi = wi.normalized();
         let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
@@ -275,7 +286,12 @@ impl GGX {
             let refl = self.reflectance(eta_inner, kappa, ndotv);
             debug_assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
-            glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
+            if ndotv.abs() == 0.0 {
+                glossy_pdf = 0.0;
+            } else {
+                glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
+            }
+            debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
         } else {
             if self.permeability > 0.0 {
                 let eta_rel = self.eta_rel(eta_inner, wi);
@@ -382,9 +398,44 @@ impl Material for GGX {
         lambda: f32,
         _uv: (f32, f32),
         _transport_mode: TransportMode,
-        mut sample: Sample2D,
+        sample: Sample2D,
         wi: Vec3,
     ) -> Option<Vec3> {
+        // debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
+        // let eta_inner = self.eta.evaluate_power(lambda);
+        // debug_assert!(eta_inner.is_finite(), "{}", lambda);
+        // // let eta_rel = self.eta_rel(eta_inner, wi);
+        // let kappa = if self.permeability > 0.0 {
+        //     0.0
+        // } else {
+        //     self.kappa.evaluate_power(lambda)
+        // };
+        // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
+        // debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
+        // if refl_prob == 1.0 || sample.x < refl_prob {
+        //     // rescale sample x value to 0 to 1 range
+        //     sample.x = sample.x / refl_prob;
+        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        //     // reflection
+        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
+        //     let wo = reflect(wi, wh);
+        //     return Some(wo);
+        // } else {
+        //     // rescale sample x value to 0 to 1 range
+        //     sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
+        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        //     // transmission
+        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
+
+        //     let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
+
+        //     let wo = refract(wi, wh, eta_rel);
+        //     /* if wo.is_none() {
+        //         println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
+        //         //     wo = Some(reflect(wi, -wh));
+        //     } */
+        //     return wo;
+        // }
         debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         let eta_inner = self.eta.evaluate_power(lambda);
         debug_assert!(eta_inner.is_finite(), "{}", lambda);
@@ -394,30 +445,29 @@ impl Material for GGX {
         } else {
             self.kappa.evaluate_power(lambda)
         };
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
-        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
+        let wh = sample_wh(self.alpha, wi, sample).normalized();
+        let refl_prob = self.reflectance_probability(eta_inner, kappa, wh * wi);
+        debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wh * wi);
         if refl_prob == 1.0 || sample.x < refl_prob {
             // rescale sample x value to 0 to 1 range
-            sample.x = sample.x / refl_prob;
-            debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+            // sample.x = sample.x / refl_prob;
+            // debug_assert!(sample.x.is_finite(), "{}", refl_prob);
             // reflection
-            let wh = sample_wh(self.alpha, wi, sample).normalized();
             let wo = reflect(wi, wh);
             return Some(wo);
         } else {
             // rescale sample x value to 0 to 1 range
-            sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
-            debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+            // sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
             // transmission
-            let wh = sample_wh(self.alpha, wi, sample).normalized();
 
             let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
 
-            let wo = refract(wi, wh, eta_rel);
-            /* if wo.is_none() {
-                println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
-                //     wo = Some(reflect(wi, -wh));
-            } */
+            let mut wo = refract(wi, wh, eta_rel);
+            if wo.is_none() {
+                // println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
+                wo = Some(reflect(wi, wh));
+            }
             return wo;
         }
     }
@@ -431,20 +481,21 @@ impl Material for GGX {
     ) -> (SingleEnergy, PDF) {
         self.eval_pdf(lambda, wi, wo, transport_mode)
     }
-    // fn emission(
-    //     &self,
-    //     _lambda: f32,
-    //     _uv: (f32, f32),
-    //     _transport_mode: TransportMode,
-    //     _wi: Vec3,
-    //     _wo: Option<Vec3>,
-    // ) -> SingleEnergy {
-    //     SingleEnergy::ZERO
-    // }
+    fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
+        0
+    }
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
+        self.outer_medium_id
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::TAU;
+
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
+    use spectral::BOUNDED_VISIBLE_RANGE;
+
     use super::*;
     use crate::curves;
     use crate::hittable::*;
@@ -471,7 +522,7 @@ mod tests {
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
 
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
 
@@ -604,7 +655,7 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0, 0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
@@ -616,7 +667,7 @@ mod tests {
 
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
 
         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
@@ -635,9 +686,48 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0);
+        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
+    }
+
+    #[test]
+    fn test_integral() {
+        let visible_bounds = BOUNDED_VISIBLE_RANGE;
+        let glass = curves::cauchy(1.45, 3540.0);
+        let flat_zero = curves::void();
+        let ggx_glass = GGX::new(0.1, glass, 1.0, flat_zero, 1.0, 0);
+        let n = 10000000;
+        let sum: f32 = (0..n)
+            .into_par_iter()
+            .map(|_| {
+                let lambda = visible_bounds.sample(Sample1D::new_random_sample().x);
+                let Sample2D { x: u, y: v } = Sample2D::new_random_sample();
+                let phi = u * TAU;
+                let theta = v * PI;
+                let wi = Vec3::new(
+                    phi.cos() * theta.cos(),
+                    phi.sin() * theta.cos(),
+                    theta.sin(),
+                );
+                let wo = ggx_glass
+                    .generate(
+                        lambda,
+                        (0.0, 0.0),
+                        TransportMode::Importance,
+                        Sample2D::new_random_sample(),
+                        wi,
+                    )
+                    .unwrap();
+                let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
+                if pdf.0 == 0.0 {
+                    0.0
+                } else {
+                    wi.z() * f.0 / pdf.0
+                }
+            })
+            .sum();
+        println!("{}", sum / n as f32);
     }
 }

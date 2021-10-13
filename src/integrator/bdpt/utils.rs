@@ -17,14 +17,15 @@ pub enum SampleKind {
 
 pub fn eval_unweighted_contribution(
     world: &Arc<World>,
-    light_path: &Vec<Vertex>,
+    light_path: &Vec<SurfaceVertex>,
     s: usize,
-    eye_path: &Vec<Vertex>,
+    eye_path: &Vec<SurfaceVertex>,
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
     russian_roulette_threshold: f32,
     profile: &mut Profile,
 ) -> SampleKind {
+    let lambda = light_path[0].lambda;
     let last_light_vertex_throughput = if s == 0 {
         SingleEnergy::ONE
     } else {
@@ -89,6 +90,7 @@ pub fn eval_unweighted_contribution(
             cst = SingleEnergy(
                 camera
                     .eval_we(
+                        lambda,
                         last_light_vertex.normal,
                         last_light_vertex.point,
                         second_to_last_light_vertex.point,
@@ -209,7 +211,12 @@ pub fn eval_unweighted_contribution(
                 sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
                 SingleEnergy(
                     camera
-                        .eval_we(lev_normal, last_eye_vertex.point, last_light_vertex.point)
+                        .eval_we(
+                            lambda,
+                            lev_normal,
+                            last_eye_vertex.point,
+                            last_light_vertex.point,
+                        )
                         .0,
                 )
             } else {
@@ -284,8 +291,8 @@ pub fn eval_unweighted_contribution(
 
 #[derive(Debug)]
 pub struct CombinedPath<'a> {
-    pub light_path: &'a Vec<Vertex>,
-    pub eye_path: &'a Vec<Vertex>,
+    pub light_path: &'a Vec<SurfaceVertex>,
+    pub eye_path: &'a Vec<SurfaceVertex>,
     pub s: usize,
     pub t: usize,
     pub connecting_g: f32,
@@ -386,7 +393,7 @@ impl<'a> CombinedPath<'a> {
 }
 
 impl<'a> Index<usize> for CombinedPath<'a> {
-    type Output = Vertex;
+    type Output = SurfaceVertex;
     fn index(&self, index: usize) -> &Self::Output {
         if index < self.s {
             debug_assert!(index < self.light_path.len());
@@ -409,9 +416,9 @@ impl<'a> Index<usize> for CombinedPath<'a> {
 #[allow(unused)]
 pub fn eval_mis<F>(
     world: &Arc<World>,
-    light_path: &Vec<Vertex>,
+    light_path: &Vec<SurfaceVertex>,
     s: usize,
-    eye_path: &Vec<Vertex>,
+    eye_path: &Vec<SurfaceVertex>,
     t: usize,
     connecting_g: f32,
     mis_function: F,
@@ -419,6 +426,7 @@ pub fn eval_mis<F>(
 where
     F: FnOnce(&Vec<f32>) -> f32,
 {
+    let lambda = light_path[0].lambda;
     // computes the mis weight of generating the path determined by s and t
     // path index is i = s
     // need to compute the relative probabilities of all the other paths that have the same path length
@@ -614,7 +622,7 @@ where
                     llv_local_light_to_eye.z().abs(),
                 );
                 let camera = world.get_camera(camera_id as usize);
-                lev_forward_pdf = (camera.eval_we(lev_normal, lev.point, llv.point).1).0;
+                lev_forward_pdf = (camera.eval_we(lambda, lev_normal, lev.point, llv.point).1).0;
                 lev_backward_pdf = 1.0; // do camera area sampling?
             } else {
                 lev_forward_pdf = 0.0;
@@ -690,6 +698,7 @@ where
                 // );
                 llv_forward_pdf = (camera
                     .eval_we(
+                        lambda,
                         last_light_vertex.normal,
                         last_light_vertex.point,
                         second_to_last_light_vertex.point,

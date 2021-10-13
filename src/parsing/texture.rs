@@ -1,5 +1,5 @@
 use crate::math::*;
-use crate::parsing::curves::{parse_curve, Curve};
+use crate::parsing::curves::{parse_curve, CurveData};
 use crate::renderer::Film;
 use crate::texture::*;
 
@@ -12,11 +12,11 @@ use std::path::Path;
 #[serde(tag = "type")]
 pub enum TextureData {
     Texture1 {
-        curve: Curve,
+        curve: CurveData,
         filename: String,
     },
     Texture4 {
-        curves: [Curve; 4],
+        curves: [CurveData; 4],
         filename: String,
     },
 }
@@ -31,7 +31,7 @@ pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
     println!("parsing rgba texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::open(path).unwrap();
-    let rgba_image = img.into_rgba();
+    let rgba_image = img.into_rgba8();
     let (width, height) = rgba_image.dimensions();
     let mut new_film = Film::new(width as usize, height as usize, f32x4::splat(0.0));
     for (x, y, pixel) in rgba_image.enumerate_pixels() {
@@ -54,7 +54,7 @@ pub fn parse_bitmap(filepath: &str) -> Film<f32> {
     println!("parsing greyscale texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::open(path).unwrap();
-    let greyscale = img.into_luma();
+    let greyscale = img.into_luma8();
     let (width, height) = greyscale.dimensions();
     let mut new_film = Film::new(width as usize, height as usize, 0.0);
     for (x, y, pixel) in greyscale.enumerate_pixels() {

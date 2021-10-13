@@ -1,7 +1,7 @@
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
-use crate::integrator::utils::{random_walk, veach_v, LightSourceType, Vertex, VertexType};
+use crate::integrator::utils::{random_walk, veach_v, LightSourceType, SurfaceVertex, VertexType};
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
@@ -94,7 +94,18 @@ impl PathTracingIntegrator {
 
                 debug_assert!(emission.0 >= 0.0);
                 // successful_light_samples += 1;
-                return reflectance * throughput * dropoff * emission * weight / light_pdf.0;
+                let v = reflectance * throughput * dropoff * emission * weight / light_pdf.0;
+                debug_assert!(
+                    v.0.is_finite(),
+                    "{:?},{:?},{:?},{:?},{:?},{:?},",
+                    reflectance,
+                    throughput,
+                    dropoff,
+                    emission,
+                    weight,
+                    light_pdf.0
+                );
+                return v;
                 // debug_assert!(
                 //     !light_contribution.0.is_nan(),
                 //     "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} ",
@@ -130,61 +141,78 @@ impl PathTracingIntegrator {
         let direction = uv_to_direction(uv);
         let local_wo = frame.to_local(&direction);
 
+        let local_dropoff = local_wo.z();
+
         let (reflectance, scatter_pdf_for_light_ray) =
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
         profile.shadow_rays += 1;
-        if let Some(mut light_hit) =
+        // TODO: add support for passthrough material, such that it doesn't fully interfere with direct illumination
+        if let Some(mut _light_hit) =
             self.world
                 .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
         {
-            light_hit.lambda = lambda;
-            // handle case where we intended to hit the world but instead hit a light
-            let material = self.world.get_material(light_hit.material);
+            return 0.0.into();
+        /*
+        light_hit.lambda = lambda;
+        // handle case where we intended to hit the world but instead hit a light
+        let material = self.world.get_material(light_hit.material);
 
-            let point_on_light = light_hit.point;
-            let light_frame = TangentFrame::from_normal(light_hit.normal);
-            let light_wi = light_frame.to_local(&-direction);
-            let dropoff = light_wi.z().abs();
-            if dropoff == 0.0 {
+        let point_on_light = light_hit.point;
+        let light_frame = TangentFrame::from_normal(light_hit.normal);
+        let light_wi = light_frame.to_local(&-direction);
+        let dropoff = light_wi.z().abs();
+        if dropoff == 0.0 {
+            return SingleEnergy::ZERO;
+        }
+        // if reflectance.0 < 0.00001 {
+        //     // if reflectance is 0 for all components, skip this light sample
+        //     continue;
+        // }
+        let emission = material.emission(
+            light_hit.lambda,
+            light_hit.uv,
+            light_hit.transport_mode,
+            light_wi,
+        );
+        if emission.0 > 0.0 {
+            let light = self.world.get_primitive(light_hit.instance_id);
+            let pdf = light.psa_pdf(
+                hit.normal * (point_on_light - hit.point).normalized(),
+                hit.point,
+                point_on_light,
+            );
+
+            if pdf.0 == 0.0 {
                 return SingleEnergy::ZERO;
             }
-            // if reflectance.0 < 0.00001 {
-            //     // if reflectance is 0 for all components, skip this light sample
-            //     continue;
-            // }
-            let emission = material.emission(
-                light_hit.lambda,
-                light_hit.uv,
-                light_hit.transport_mode,
-                light_wi,
-            );
-            if emission.0 > 0.0 {
-                let light = self.world.get_primitive(light_hit.instance_id);
-                let pdf = light.psa_pdf(
-                    hit.normal * (point_on_light - hit.point).normalized(),
-                    hit.point,
-                    point_on_light,
-                );
-
-                if pdf.0 == 0.0 {
-                    return SingleEnergy::ZERO;
-                }
-                let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-                reflectance * throughput * dropoff * emission * weight / light_pdf.0
-            } else {
-                SingleEnergy::ZERO
-            }
+            let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+            reflectance * throughput * dropoff * emission * weight / light_pdf.0
+        } else {
+            SingleEnergy::ZERO
+        } */
         } else {
             // successfully hit nothing, which is to say, hit the world
             let emission = self.world.environment.emission(uv, lambda);
 
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            reflectance * throughput * emission * weight / light_pdf.0
+            let v =
+                reflectance * local_dropoff.abs() * throughput * emission * weight / light_pdf.0;
+            debug_assert!(
+                v.0.is_finite(),
+                "{:?},{:?},{:?},{:?},{:?},{:?},",
+                reflectance,
+                local_dropoff,
+                throughput,
+                emission,
+                weight,
+                light_pdf.0
+            );
+            v
         }
     }
 
-    fn estimate_direct_illumination_with_loop(
+    pub fn estimate_direct_illumination_with_loop(
         &self,
         lambda: f32,
         hit: &HitRecord,
@@ -230,6 +258,15 @@ impl PathTracingIntegrator {
                     &mut profile,
                 );
             }
+            debug_assert!(
+                light_contribution.0.is_finite(),
+                "{:?}, {}, {:?}, {:?}, {:?}",
+                light_contribution,
+                sample_world,
+                hit.material,
+                material.get_name(),
+                wi,
+            );
         }
         light_contribution
     }
@@ -238,11 +275,11 @@ impl PathTracingIntegrator {
 impl SamplerIntegrator for PathTracingIntegrator {
     fn color(
         &self,
-        sampler: &mut Box<dyn Sampler>,
+        mut sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         profile.camera_rays += 1;
 
         let mut sum = SingleWavelength::new_from_range(sampler.draw_1d().x, self.wavelength_bounds);
@@ -254,14 +291,17 @@ impl SamplerIntegrator for PathTracingIntegrator {
             (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
         );
-        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
-        let (camera_ray, _lens_normal, pdf) =
-            camera.sample_we(film_sample, aperture_sample, sum.lambda);
-        let _camera_pdf = pdf;
 
-        let mut path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let (camera_ray, _lens_normal, throughput_and_pdf) =
+            camera.sample_we(film_sample, &mut sampler, sum.lambda);
+        let camera_pdf = throughput_and_pdf;
+        if camera_pdf.0 == 0.0 {
+            return XYZColor::BLACK;
+        }
 
-        path.push(Vertex::new(
+        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+
+        path.push(SurfaceVertex::new(
             VertexType::Camera,
             camera_ray.time,
             lambda,
@@ -271,7 +311,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             (0.0, 0.0),
             MaterialId::Camera(0),
             0,
-            SingleEnergy::ONE,
+            SingleEnergy::from(throughput_and_pdf.0),
             0.0,
             0.0,
             1.0,
@@ -280,7 +320,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             camera_ray,
             lambda,
             self.max_bounces,
-            SingleEnergy::ONE,
+            SingleEnergy::from(throughput_and_pdf.0),
             TransportMode::Importance,
             sampler,
             &self.world,
@@ -297,7 +337,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
             if let VertexType::LightSource(light_source) = vertex.vertex_type {
                 if light_source == LightSourceType::Environment {
-                    let wo = -vertex.local_wi;
+                    let wo = vertex.local_wi;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
                     sum.energy += emission * vertex.throughput;
@@ -305,7 +345,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let hit = HitRecord::from(*vertex);
                     let frame = TangentFrame::from_normal(hit.normal);
                     let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                    let maybe_dir_to_next = path
+                    let _maybe_dir_to_next = path
                         .get(index + 1)
                         .map(|v| (v.point - vertex.point).normalized());
                     let wi = frame.to_local(&dir_to_prev);
@@ -341,7 +381,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                 let hit = HitRecord::from(*vertex);
                 let frame = TangentFrame::from_normal(hit.normal);
                 let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                let maybe_dir_to_next = path
+                let _maybe_dir_to_next = path
                     .get(index + 1)
                     .map(|v| (v.point - vertex.point).normalized());
                 let wi = frame.to_local(&dir_to_prev);
@@ -395,6 +435,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
             }
         }
 
-        sum
+        XYZColor::from(sum)
     }
 }

@@ -31,6 +31,13 @@ pub trait Material: Send + Sync {
         None
     }
 
+    fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+        0
+    }
+    fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+        0
+    }
+
     // method to sample an emitted light ray with a wavelength and energy
     // can fail when the material is not emissive
     fn sample_emission(
@@ -111,12 +118,14 @@ pub trait Material: Send + Sync {
 mod diffuse_light;
 mod ggx;
 mod lambertian;
+mod passthrough;
 mod sharp_light;
 mod volumes;
 
 pub use diffuse_light::DiffuseLight;
 pub use ggx::{reflect, refract, GGX};
 pub use lambertian::Lambertian;
+pub use passthrough::PassthroughFilter;
 pub use sharp_light::SharpLight;
 pub use volumes::*;
 
@@ -155,6 +164,7 @@ impl From<MaterialId> for usize {
 pub enum MaterialEnum {
     GGX(GGX),
     Lambertian(Lambertian),
+    PassthroughFilter(PassthroughFilter),
     DiffuseLight(DiffuseLight),
     SharpLight(SharpLight),
     Isotropic(Isotropic),
@@ -189,10 +199,17 @@ impl From<Isotropic> for MaterialEnum {
     }
 }
 
+impl From<PassthroughFilter> for MaterialEnum {
+    fn from(value: PassthroughFilter) -> Self {
+        MaterialEnum::PassthroughFilter(value)
+    }
+}
+
 impl MaterialEnum {
     pub fn get_name(&self) -> &str {
         match self {
             MaterialEnum::GGX(_inner) => GGX::NAME,
+            MaterialEnum::PassthroughFilter(_inner) => PassthroughFilter::NAME,
             MaterialEnum::Lambertian(_inner) => Lambertian::NAME,
             MaterialEnum::SharpLight(_inner) => SharpLight::NAME,
             MaterialEnum::DiffuseLight(_inner) => DiffuseLight::NAME,
@@ -213,6 +230,9 @@ impl Material for MaterialEnum {
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
             MaterialEnum::GGX(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
+            MaterialEnum::PassthroughFilter(inner) => {
+                inner.generate(lambda, uv, transport_mode, s, wi)
+            }
             MaterialEnum::Lambertian(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
             MaterialEnum::SharpLight(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
             MaterialEnum::DiffuseLight(inner) => inner.generate(lambda, uv, transport_mode, s, wi),
@@ -263,6 +283,13 @@ impl Material for MaterialEnum {
                 scatter_sample,
                 wavelength_sample,
             ),
+            MaterialEnum::PassthroughFilter(inner) => inner.sample_emission(
+                point,
+                normal,
+                wavelength_range,
+                scatter_sample,
+                wavelength_sample,
+            ),
         }
     }
     fn bsdf(
@@ -279,6 +306,9 @@ impl Material for MaterialEnum {
         debug_assert!(wo != Vec3::ZERO);
         match self {
             MaterialEnum::GGX(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
+            MaterialEnum::PassthroughFilter(inner) => {
+                inner.bsdf(lambda, uv, transport_mode, wi, wo)
+            }
             MaterialEnum::Lambertian(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
             MaterialEnum::SharpLight(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
             MaterialEnum::DiffuseLight(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),
@@ -295,10 +325,35 @@ impl Material for MaterialEnum {
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
             MaterialEnum::GGX(inner) => inner.emission(lambda, uv, transport_mode, wi),
+            MaterialEnum::PassthroughFilter(inner) => {
+                inner.emission(lambda, uv, transport_mode, wi)
+            }
             MaterialEnum::Lambertian(inner) => inner.emission(lambda, uv, transport_mode, wi),
             MaterialEnum::SharpLight(inner) => inner.emission(lambda, uv, transport_mode, wi),
             MaterialEnum::DiffuseLight(inner) => inner.emission(lambda, uv, transport_mode, wi),
             MaterialEnum::Isotropic(inner) => inner.emission(lambda, uv, transport_mode, wi),
+        }
+    }
+    fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+        match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.outer_medium_id(uv),
+            MaterialEnum::Isotropic(inner) => inner.outer_medium_id(uv),
+
+            MaterialEnum::GGX(inner) => inner.outer_medium_id(uv),
+            MaterialEnum::Lambertian(inner) => inner.outer_medium_id(uv),
+            MaterialEnum::SharpLight(inner) => inner.outer_medium_id(uv),
+            MaterialEnum::DiffuseLight(inner) => inner.outer_medium_id(uv),
+        }
+    }
+    fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+        match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.inner_medium_id(uv),
+            MaterialEnum::Isotropic(inner) => inner.inner_medium_id(uv),
+
+            MaterialEnum::GGX(inner) => inner.inner_medium_id(uv),
+            MaterialEnum::Lambertian(inner) => inner.inner_medium_id(uv),
+            MaterialEnum::SharpLight(inner) => inner.inner_medium_id(uv),
+            MaterialEnum::DiffuseLight(inner) => inner.inner_medium_id(uv),
         }
     }
     fn sample_emission_spectra(
@@ -309,6 +364,9 @@ impl Material for MaterialEnum {
     ) -> Option<(f32, PDF)> {
         match self {
             MaterialEnum::GGX(inner) => {
+                inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
+            }
+            MaterialEnum::PassthroughFilter(inner) => {
                 inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample)
             }
             MaterialEnum::Lambertian(inner) => {
@@ -333,63 +391,63 @@ impl Material for MaterialEnum {
     ) -> (f32, SingleEnergy, PDF) {
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.sample_tr(lambda, time_bounds, s),
+            MaterialEnum::Isotropic(inner) => inner.sample_tr(lambda, time_bounds, s),
+
             MaterialEnum::GGX(inner) => inner.sample_tr(lambda, time_bounds, s),
             MaterialEnum::Lambertian(inner) => inner.sample_tr(lambda, time_bounds, s),
             MaterialEnum::SharpLight(inner) => inner.sample_tr(lambda, time_bounds, s),
             MaterialEnum::DiffuseLight(inner) => inner.sample_tr(lambda, time_bounds, s),
-            MaterialEnum::Isotropic(inner) => inner.sample_tr(lambda, time_bounds, s),
         }
     }
     fn sample_phase(&self, lambda: f32, wi: Vec3, s: Sample2D) -> (Vec3, PDF) {
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.sample_phase(lambda, wi, s),
+            MaterialEnum::Isotropic(inner) => inner.sample_phase(lambda, wi, s),
+
             MaterialEnum::GGX(inner) => inner.sample_phase(lambda, wi, s),
             MaterialEnum::Lambertian(inner) => inner.sample_phase(lambda, wi, s),
             MaterialEnum::SharpLight(inner) => inner.sample_phase(lambda, wi, s),
             MaterialEnum::DiffuseLight(inner) => inner.sample_phase(lambda, wi, s),
-            MaterialEnum::Isotropic(inner) => inner.sample_phase(lambda, wi, s),
         }
     }
     fn eval_phase(&self, lambda: f32, wi: Vec3, wo: Vec3) -> (SingleEnergy, PDF) {
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.eval_phase(lambda, wi, wo),
+            MaterialEnum::Isotropic(inner) => inner.eval_phase(lambda, wi, wo),
+
             MaterialEnum::GGX(inner) => inner.eval_phase(lambda, wi, wo),
             MaterialEnum::Lambertian(inner) => inner.eval_phase(lambda, wi, wo),
             MaterialEnum::SharpLight(inner) => inner.eval_phase(lambda, wi, wo),
             MaterialEnum::DiffuseLight(inner) => inner.eval_phase(lambda, wi, wo),
-            MaterialEnum::Isotropic(inner) => inner.eval_phase(lambda, wi, wo),
         }
     }
     fn tr(&self, lambda: f32, distance: f32) -> SingleEnergy {
         debug_assert!(lambda > 0.0, "{}", lambda);
         match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.tr(lambda, distance),
+            MaterialEnum::Isotropic(inner) => inner.tr(lambda, distance),
+
             MaterialEnum::GGX(inner) => inner.tr(lambda, distance),
             MaterialEnum::Lambertian(inner) => inner.tr(lambda, distance),
             MaterialEnum::SharpLight(inner) => inner.tr(lambda, distance),
             MaterialEnum::DiffuseLight(inner) => inner.tr(lambda, distance),
-            MaterialEnum::Isotropic(inner) => inner.tr(lambda, distance),
         }
     }
     fn is_medium(&self) -> bool {
         match self {
+            MaterialEnum::PassthroughFilter(inner) => inner.is_medium(),
+            MaterialEnum::Isotropic(inner) => inner.is_medium(),
+
             MaterialEnum::GGX(inner) => inner.is_medium(),
             MaterialEnum::Lambertian(inner) => inner.is_medium(),
             MaterialEnum::SharpLight(inner) => inner.is_medium(),
             MaterialEnum::DiffuseLight(inner) => inner.is_medium(),
-            MaterialEnum::Isotropic(inner) => inner.is_medium(),
         }
     }
 }
-
-// impl std::convert::Into<usize> for MaterialId {
-//     fn into(self) -> usize {
-//         usize::from(self)
-//     }
-// }
-
-// pub struct MaterialTable {
-//     pub materials: Vec<Box<dyn Material>>,
-// }
 pub type MaterialTable = Vec<MaterialEnum>;
 
 // #[cfg(test)]

@@ -248,7 +248,7 @@ y_scale = 5.0
 
 
 [[instances]]
-material_identifier = "sharp_light_xenon"
+material_identifier = "diffuse_light"
 [instances.aggregate]
 type = "Rect"
 size = [0.6, 0.6]
