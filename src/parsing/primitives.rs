@@ -12,10 +12,19 @@ use tobj;
 use std::collections::HashMap;
 
 pub fn load_obj_file(filename: &str, material_mapping: &HashMap<String, MaterialId>) -> Vec<Mesh> {
-    let data = tobj::load_obj(filename, true);
+    let data = tobj::load_obj(
+        filename,
+        &tobj::LoadOptions {
+            single_index: true,
+            triangulate: true,
+            ..Default::default()
+        },
+    );
     println!("opening file at {}", filename);
     assert!(data.is_ok(), "{:?}", data);
-    let (models, materials) = data.unwrap();
+
+    let (models, materials) = data.expect("Failed to load OBJ file");
+    let materials = materials.expect("Failed to load MTL file");
     let mut meshes = Vec::new();
     for i in 0..models.len() {
         meshes.push(parse_obj_mesh(&models, &materials, i, material_mapping));
@@ -28,10 +37,18 @@ pub fn parse_specific_obj_mesh(
     obj_id: usize,
     material_mapping: &HashMap<String, MaterialId>,
 ) -> Mesh {
-    let data = tobj::load_obj(filename, true);
+    let data = tobj::load_obj(
+        filename,
+        &tobj::LoadOptions {
+            single_index: true,
+            triangulate: true,
+            ..Default::default()
+        },
+    );
     println!("opening file at {}", filename);
     assert!(data.is_ok(), "{:?}", data);
-    let (models, materials) = data.unwrap();
+    let (models, materials) = data.expect("Failed to load OBJ file");
+    let materials = materials.expect("Failed to load MTL file");
     parse_obj_mesh(&models, &materials, obj_id, material_mapping)
 }
 
@@ -71,18 +88,18 @@ pub fn parse_obj_mesh(
         })
         .collect();
 
-    let mat_ids = vec![mesh.material_id.unwrap_or(0); mesh.num_face_indices.len()]
+    let mat_ids = vec![mesh.material_id.unwrap_or(0); mesh.face_arities.len()]
         .iter()
         .map(|idx| mesh_materials[*idx])
         .collect();
     println!(
         "Size of model[{}].num_face_indices: {}",
         obj_num,
-        mesh.num_face_indices.len()
+        mesh.face_arities.len()
     );
     let mut next_face = 0;
-    for f in 0..mesh.num_face_indices.len() {
-        let end = next_face + mesh.num_face_indices[f] as usize;
+    for f in 0..mesh.face_arities.len() {
+        let end = next_face + mesh.face_arities[f] as usize;
         let face_indices: Vec<_> = mesh.indices[next_face..end].iter().collect();
         indices.push(*face_indices[0] as usize);
         indices.push(*face_indices[1] as usize);

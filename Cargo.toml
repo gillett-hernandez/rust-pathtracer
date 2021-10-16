@@ -7,9 +7,9 @@ default-run = "main"
 
 [dependencies]
 crossbeam = "0.8.1"
-exr = "0.9.0"
+exr = "1.3.0"
 image = "0.23.12"
-minifb = "0.19.1"
+minifb = "0.19.3"
 nalgebra = "0.29.0"
 num_cpus = "1.13.0"
 ordered-float = "2.8.0"
@@ -19,9 +19,8 @@ pbr = "1.0.4"
 rand = "0.8.4"
 rayon = "1.5.0"
 serde = { version = "1.0.120", features = ["derive"] }
-tobj = "2.0.3"
+tobj = "3.2.0"
 toml = "0.5"
-
 
 math =  { git = "https://github.com/gillett-hernandez/rust_cg_math" }
 rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics" }
