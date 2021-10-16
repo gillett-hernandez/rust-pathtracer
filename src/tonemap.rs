@@ -4,7 +4,6 @@ use crate::renderer::Film;
 use math::XYZColor;
 
 extern crate exr;
-use exr::prelude::rgba_image::*;
 use nalgebra::{Matrix3, Vector3};
 use packed_simd::f32x4;
 
@@ -49,7 +48,7 @@ impl sRGB {
             exposure_adjustment / max_luminance
         );
         sRGB {
-            factor: (1.0 / max_luminance).min(1000000.0),
+            factor: (1.0 / avg_luminance).min(1000000.0).max(0.00000000001),
             exposure_adjustment,
             // gamma_adjustment,
         }
@@ -93,26 +92,15 @@ impl Tonemapper for sRGB {
     }
     fn write_to_files(&self, film: &Film<XYZColor>, exr_filename: &str, png_filename: &str) {
         let now = Instant::now();
-        // generate a color for each pixel position
-        let generate_pixels = |position: Vec2<usize>| {
-            let (_mapped, linear) = self.map(&film, (position.x() as usize, position.y() as usize));
+
+        print!("saving exr image...");
+        exr::prelude::write_rgb_file(exr_filename, film.width, film.height, |x, y| {
+            let (_mapped, linear) = self.map(&film, (x, y));
             let [r, g, b, _]: [f32; 4] = linear.into();
-            Pixel::rgb(r, g, b)
-        };
-
-        let image_info = ImageInfo::rgb(
-            (film.width, film.height), // pixel resolution
-            SampleType::F16,           // convert the generated f32 values to f16 while writing
-        );
-
-        image_info
-            .write_pixels_to_file(
-                exr_filename,
-                write_options::high(), // higher speed, but higher memory usage
-                &generate_pixels,      // pass our pixel generator
-            )
-            .unwrap();
-
+            (r, g, b)
+        })
+        .unwrap();
+        println!(" done!");
         let mut img: image::RgbImage =
             image::ImageBuffer::new(film.width as u32, film.height as u32);
 
@@ -125,8 +113,9 @@ impl Tonemapper for sRGB {
 
             *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
         }
-        println!("saving image...");
+        print!("saving image...");
         img.save(png_filename).unwrap();
+        println!(" done!");
 
         println!(
             "took {}s to tonemap and output\n",

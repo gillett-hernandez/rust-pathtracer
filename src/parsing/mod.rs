@@ -4,6 +4,7 @@ pub mod curves;
 pub mod environment;
 pub mod instance;
 pub mod material;
+pub mod medium;
 pub mod primitives;
 pub mod texture;
 
@@ -11,6 +12,8 @@ pub mod texture;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
+use math::{Transform3, Vec3};
+use medium::*;
 use primitives::*;
 use texture::*;
 
@@ -19,7 +22,7 @@ pub use curves::{
     parse_tabulated_curve_from_csv,
 };
 
-use crate::config::Config;
+use crate::{config::Config, mediums::MediumEnum};
 // use crate::curves::*;
 use crate::geometry::*;
 use crate::materials::*;
@@ -30,6 +33,7 @@ use crate::texture::*;
 use crate::world::{AcceleratorType, World};
 
 use std::collections::HashMap;
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Read;
 
@@ -43,9 +47,38 @@ pub type Point3Data = [f32; 3];
 pub struct Scene {
     pub textures: Vec<TextureStackData>,
     pub materials: Vec<NamedMaterial>,
+    pub mediums: Option<Vec<NamedMedium>>,
     pub instances: Vec<InstanceData>,
     pub environment: EnvironmentData,
     pub env_sampling_probability: Option<f32>,
+}
+
+impl From<Transform3Data> for Transform3 {
+    fn from(data: Transform3Data) -> Self {
+        println!("parsing transform data");
+        let maybe_scale = data.scale.map(|v| Transform3::from_scale(Vec3::from(v)));
+        let maybe_rotate = if let Some(rotations) = data.rotate {
+            let mut base = None;
+            for rotation in rotations {
+                let transform = Transform3::from_axis_angle(
+                    Vec3::from(rotation.axis),
+                    PI * rotation.angle / 180.0,
+                );
+                if base.is_none() {
+                    base = Some(transform);
+                } else {
+                    base = Some(transform * base.unwrap());
+                };
+            }
+            base
+        } else {
+            None
+        };
+        let maybe_translate = data
+            .translate
+            .map(|v| Transform3::from_translation(Vec3::from(v)));
+        Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
+    }
 }
 
 fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
@@ -70,11 +103,14 @@ fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
 pub fn construct_world(config: &Config) -> World {
     let scene = get_scene(&config.scene_file).expect("scene file failed to parse");
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
+    let mut medium_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut texture_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut materials: Vec<MaterialEnum> = Vec::new();
+    let mut mediums: Vec<MediumEnum> = Vec::new();
     let mut instances: Vec<Instance> = Vec::new();
     let mut textures: Vec<TexStack> = Vec::new();
     let mut material_count: usize = 0;
+    let mut medium_count: usize = 0;
     let mut texture_count: usize = 0;
     for tex in scene.textures {
         texture_count += 1;
@@ -89,7 +125,7 @@ pub fn construct_world(config: &Config) -> World {
                 material_count += 1;
                 MaterialId::Light((material_count - 1) as u16)
             }
-            MaterialData::Lambertian(_) | MaterialData::GGX(_) => {
+            _ => {
                 material_count += 1;
                 MaterialId::Material((material_count - 1) as u16)
             }
@@ -101,14 +137,39 @@ pub fn construct_world(config: &Config) -> World {
             &textures,
         ));
     }
+    if let Some(scene_mediums) = scene.mediums {
+        for medium in scene_mediums {
+            medium_count += 1;
+            let id = medium_count - 1;
+            medium_names_to_ids.insert(medium.name, id);
+            mediums.push(parse_medium(medium.data));
+        }
+    }
     for instance in scene.instances {
         match instance.aggregate {
             AggregateData::MeshBundle(data) => {
                 let meshes = load_obj_file(&data.filename, &material_names_to_ids);
+                let transform: Option<Transform3> = instance.transform.clone().map(|e| e.into());
                 for mut mesh in meshes {
                     let id = instances.len();
                     mesh.init();
-                    instances.push(Instance::new(Aggregate::Mesh(mesh), None, None, id));
+                    println!(
+                        "pushing instance of mesh from meshbundle, with material id {:?} from {:?}",
+                        instance
+                            .material_identifier
+                            .clone()
+                            .map(|s| material_names_to_ids[&s]),
+                        instance.material_identifier.clone()
+                    );
+                    instances.push(Instance::new(
+                        Aggregate::Mesh(mesh),
+                        transform,
+                        instance
+                            .material_identifier
+                            .clone()
+                            .map(|s| material_names_to_ids[&s]),
+                        id,
+                    ));
                 }
             }
             _ => {
@@ -121,6 +182,7 @@ pub fn construct_world(config: &Config) -> World {
     let world = World::new(
         instances,
         materials,
+        mediums,
         parse_environment(scene.environment),
         scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::BVH,

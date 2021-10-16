@@ -1,5 +1,5 @@
 // #![allow(unused_imports, unused_variables, unused)]
-#![feature(slice_fill, vec_remove_item, partition_point)]
+
 
 extern crate image;
 
@@ -19,6 +19,7 @@ pub mod geometry;
 pub mod hittable;
 pub mod integrator;
 pub mod materials;
+pub mod mediums;
 pub mod parsing;
 pub mod profile;
 pub mod renderer;

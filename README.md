@@ -4,9 +4,9 @@ This is a wavelength aware physically based 3D rendering engine written in Rust.
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
 
-The following is an image rendered with the BDPT integrator. It was rendered at 128 spp, 2160px by 2160px, supersampled and resized to 1080px by 1080px, with a rectangle light using a provided xenon lamp curve, and an environment map using D65. The colors of the walls use the SPD data from the cornell box website. the spheres are (left to right) lead, copper, gold, iron, platinum, with a dispersive glass sphere in front. data from https://refractiveindex.info/
+The following is an image rendered with the BDPT integrator. The light at the top appears dark because it's emitting mainly in the downward direction. The walls' color uses the spectral data from the cornell website. The gem's material information matches that of moissanite, from https://refractiveindex.info/. Color noise is from the fact that this version of the bdpt integrator didn't use HWSS, and from the fact that most of the illumination into the scene is split into very colorful caustics which increases the color variance.
 
-![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/bdpt.png?raw=true)
+![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/moissanite_gem_1080p.png?raw=true)
 
 Most, if not all of the integrators use importance sampling and MIS, and they trace using single wavelength sampling
 
@@ -25,7 +25,7 @@ In addition, much of the code emphasizes matching reality as closely as possible
   * The renderer outputs an .exr file in Linear RGB space, and a .png file in sRGB space.
     * custom exposure values for the sRGB tonemapper are supported. the default behavior is to set the brightest pixel on the screen to white.
 * Colors and Lights:
-  * Colors on the film are represented in [CIE XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space) color space. this is then color mapped to linear RGB space and sRGB space according to the [wikipedia article](https://en.wikipedia.org/wiki/SRGB)
+  * Colors on the film are represented in [CIE XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space) color space. This is then tonemapped to linear RGB space and sRGB space according to the [wikipedia article](https://en.wikipedia.org/wiki/SRGB)
   * Lights can have physically correct spectral power distribution functions, including blackbody distributions and distributions with peaks at certain frequencies
   * Colors are implemented as Spectral Response Functions, under the hood they are bounded spectral power distributions
   * in general, for lights and for colors, those spectral response functions are implemented as curves, and multiple curve types are supported. see [curves.rs](src/curves.rs) and [math/spectral.rs](src/math/spectral.rs) for more information
@@ -88,10 +88,14 @@ I am referencing [this](https://rendering-memo.blogspot.com/2016/03/bidirectiona
 
 Thanks to members of the Rendering & Lighting (offline) discord server for pointing me in the right direction in fixing some color output issues.
 
-I used [this](https://github.com/svenstaro/bvh) to implement the BVH. I modified it to use my AABB implementation and other math routines, but for the most part the algorithm is unchanged.
+I used [this](https://github.com/svenstaro/bvh) to implement the BVH, so thanks to [svenstaro](https://github.com/svenstaro). I modified it to use my AABB implementation and other math routines, but for the most part the algorithm is unchanged.
 
-I grabbed some sRGB basis functions for upsampling textures from [this](https://github.com/imallett/simple-spectral) paper/repo
+I grabbed some sRGB basis functions for upsampling textures from [this](https://github.com/imallett/simple-spectral) paper/repo. Thanks to the authors.
 
 ## Contribution
 
 Please view this as a hobby or reference implementation. If you find any issues, please feel free to log them on GitHub's issue tracker, or submit a pull request to fix them :)
+
+## Support the author
+
+If you're so inclined, buy me a coffee at my [ko-fi](https://ko-fi.com/nacly)

@@ -48,14 +48,12 @@ impl Renderer for GPUStyleRenderer {
                 .enumerate()
                 .for_each(|(film_idx, mut film)| {
                     let render_settings = config.render_settings[film_idx].clone();
-                    let light_samples = if let IntegratorKind::PT {
-                        light_samples: Some(light_samples),
-                    } = render_settings.integrator
-                    {
-                        light_samples
-                    } else {
-                        1
-                    };
+                    let light_samples =
+                        if let IntegratorKind::PT { light_samples } = render_settings.integrator {
+                            light_samples
+                        } else {
+                            1
+                        };
                     let integrator = GPUStylePTIntegrator::new(
                         render_settings.min_bounces.unwrap_or(0),
                         render_settings.max_bounces.unwrap_or(8),

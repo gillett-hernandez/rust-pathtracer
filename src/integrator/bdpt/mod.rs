@@ -23,13 +23,13 @@ pub struct BDPTIntegrator {
 impl GenericIntegrator for BDPTIntegrator {
     fn color(
         &self,
-        sampler: &mut Box<dyn Sampler>,
+        mut sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
-    ) -> SingleWavelength {
+    ) -> XYZColor {
         // setup: decide light, emit ray from light, decide camera, emit ray from camera, connect light path vertices to camera path vertices.
 
         let wavelength_sample = sampler.draw_1d();
@@ -94,7 +94,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampled.1.energy
             );
 
-            start_light_vertex = Vertex::new(
+            start_light_vertex = SurfaceVertex::new(
                 VertexType::LightSource(LightSourceType::Instance),
                 0.0,
                 sampled.1.lambda,
@@ -123,7 +123,7 @@ impl GenericIntegrator for BDPTIntegrator {
             );
             let light_g_term = 1.0;
             let directional_pdf = sampled.2;
-            start_light_vertex = Vertex::new(
+            start_light_vertex = SurfaceVertex::new(
                 VertexType::LightSource(LightSourceType::Environment),
                 0.0,
                 sampled.1.lambda,
@@ -158,19 +158,19 @@ impl GenericIntegrator for BDPTIntegrator {
             (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
             (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
         );
-        let aperture_sample = sampler.draw_2d(); // sometimes called aperture sample
+
         let (sampled_camera_ray, lens_normal, camera_pdf) =
-            camera.sample_we(film_sample, aperture_sample, lambda);
+            camera.sample_we(film_sample, &mut sampler, lambda);
         // let camera_pdf = pdf;
         camera_ray = sampled_camera_ray;
 
         let radiance = sampled.1.energy;
 
         // idea: do limited branching and store vertices in a tree format that easily allows for traversal and connections
-        let mut light_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
-        let mut eye_path: Vec<Vertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut light_path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut eye_path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
 
-        eye_path.push(Vertex::new(
+        eye_path.push(SurfaceVertex::new(
             VertexType::Camera,
             camera_ray.time,
             lambda,
@@ -186,11 +186,19 @@ impl GenericIntegrator for BDPTIntegrator {
             1.0,
         ));
         light_path.push(start_light_vertex);
+        let (sp1, tp1) = if let IntegratorKind::BDPT {
+            selected_pair: Some((s, t)),
+        } = settings.integrator
+        {
+            (s + 1, t + 1)
+        } else {
+            (self.max_bounces as usize, self.max_bounces as usize)
+        };
 
         let _additional_contribution_eye_path = random_walk(
             camera_ray,
             lambda,
-            self.max_bounces,
+            tp1 as u16,
             SingleEnergy::ONE,
             TransportMode::Importance,
             sampler,
@@ -202,7 +210,7 @@ impl GenericIntegrator for BDPTIntegrator {
         random_walk(
             light_ray,
             lambda,
-            self.max_bounces,
+            sp1 as u16,
             radiance,
             TransportMode::Radiance,
             sampler,
@@ -254,7 +262,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 match res {
                     SampleKind::Sampled((factor, g)) => {
                         if g == 0.0 || factor == SingleEnergy::ZERO {
-                            return SingleWavelength::BLACK;
+                            return XYZColor::from(SingleWavelength::BLACK);
                         }
                         let weight = if MIS_ENABLED {
                             eval_mis(
@@ -269,13 +277,16 @@ impl GenericIntegrator for BDPTIntegrator {
                         } else {
                             1.0 / ((s + t) as f32)
                         } / (sampled.3).0;
-                        return SingleWavelength::new(lambda, weight * factor / (sampled.3).0);
+                        return XYZColor::from(SingleWavelength::new(
+                            lambda,
+                            weight * factor / (sampled.3).0,
+                        ));
                     }
 
                     SampleKind::Splatted((factor, g)) => {
                         // println!("should be splatting0 {:?} and {}", factor, g);
                         if g == 0.0 || factor == SingleEnergy::ZERO {
-                            return SingleWavelength::BLACK;
+                            return XYZColor::from(SingleWavelength::BLACK);
                         }
                         let weight = if MIS_ENABLED {
                             eval_mis(
@@ -311,10 +322,10 @@ impl GenericIntegrator for BDPTIntegrator {
                                 (vert_in_scene.point - vert_on_lens.point).normalized(),
                             );
 
-                            if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                            if let Some(pixel_uv) = camera.get_pixel_for_ray(ray, lambda) {
                                 // println!("found good pixel uv at {:?}", pixel_uv);
                                 let sample = Sample::LightSample(
-                                    SingleWavelength::new(lambda, contribution),
+                                    XYZColor::from(SingleWavelength::new(lambda, contribution)),
                                     pixel_uv,
                                 );
                                 samples.push((sample, camera_id as usize));
@@ -322,11 +333,11 @@ impl GenericIntegrator for BDPTIntegrator {
                                 // println!("pixel uv was nothing");
                             }
                         }
-                        return SingleWavelength::BLACK;
+                        return XYZColor::from(SingleWavelength::BLACK);
                     }
                 }
             }
-            return SingleWavelength::BLACK;
+            return XYZColor::from(SingleWavelength::BLACK);
         }
 
         let mut sum = SingleEnergy::ZERO;
@@ -404,10 +415,10 @@ impl GenericIntegrator for BDPTIntegrator {
                             (vert_in_scene.point - vert_on_lens.point).normalized(),
                         );
 
-                        if let Some(pixel_uv) = camera.get_pixel_for_ray(ray) {
+                        if let Some(pixel_uv) = camera.get_pixel_for_ray(ray, lambda) {
                             // println!("found good pixel uv at {:?}", pixel_uv);
                             let sample = Sample::LightSample(
-                                SingleWavelength::new(lambda, contribution),
+                                XYZColor::from(SingleWavelength::new(lambda, contribution)),
                                 pixel_uv,
                             );
                             samples.push((sample, camera_id as usize));
@@ -422,6 +433,6 @@ impl GenericIntegrator for BDPTIntegrator {
             }
         }
         debug_assert!(sum.0.is_finite());
-        SingleWavelength::new(lambda, sum)
+        XYZColor::from(SingleWavelength::new(lambda, sum))
     }
 }

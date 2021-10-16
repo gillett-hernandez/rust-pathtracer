@@ -33,7 +33,7 @@ impl Default for DomainMapping {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
-pub enum Curve {
+pub enum CurveData {
     Blackbody {
         temperature: f32,
         strength: f32,
@@ -231,16 +231,16 @@ where
     Ok(curve)
 }
 
-pub fn parse_curve(curve: Curve) -> SPD {
+pub fn parse_curve(curve: CurveData) -> SPD {
     match curve {
-        Curve::Blackbody {
+        CurveData::Blackbody {
             temperature,
             strength,
         } => SPD::Blackbody {
             temperature,
             boost: strength,
         },
-        Curve::Linear {
+        CurveData::Linear {
             filename,
             domain_mapping,
             interpolation_mode,
@@ -263,8 +263,8 @@ pub fn parse_curve(curve: Curve) -> SPD {
             println!("parsed linear curve");
             spd
         }
-        Curve::Cauchy { a, b } => SPD::Cauchy { a, b },
-        Curve::TabulatedCSV {
+        CurveData::Cauchy { a, b } => SPD::Cauchy { a, b },
+        CurveData::TabulatedCSV {
             filename,
             column,
             domain_mapping,
@@ -289,12 +289,12 @@ pub fn parse_curve(curve: Curve) -> SPD {
             println!("parsed tabulated curve");
             spd
         }
-        Curve::Flat { strength } => SPD::Linear {
+        CurveData::Flat { strength } => SPD::Linear {
             signal: vec![strength],
             bounds: EXTENDED_VISIBLE_RANGE,
             mode: InterpolationMode::Linear,
         },
-        Curve::SimpleSpike {
+        CurveData::SimpleSpike {
             lambda,
             left_taper,
             right_taper,
@@ -351,17 +351,17 @@ mod tests {
 
         println!(
             "{:?}",
-            cornell_white.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+            cornell_white.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0, true)
         );
 
         println!(
             "{:?}",
-            cornell_red.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+            cornell_red.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0, true)
         );
 
         println!(
             "{:?}",
-            cornell_green.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0)
+            cornell_green.convert_to_xyz(Bounds1D::new(400.0, 700.0), 1.0, true)
         );
     }
     #[test]

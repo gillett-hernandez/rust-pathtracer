@@ -2,10 +2,10 @@ mod environment;
 
 pub use environment::EnvironmentMap;
 
-use crate::camera::Camera;
 use crate::hittable::*;
 use crate::materials::MaterialTable;
 use crate::math::*;
+use crate::{camera::Camera, mediums::MediumTable};
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
@@ -32,6 +32,7 @@ pub struct World {
     pub lights: Vec<usize>,
     pub cameras: Vec<Camera>,
     pub materials: MaterialTable,
+    pub mediums: MediumTable,
     pub environment: EnvironmentMap,
     env_sampling_probability: f32,
     radius: f32,
@@ -42,6 +43,7 @@ impl World {
     pub fn new(
         instances: Vec<Instance>,
         materials: MaterialTable,
+        mediums: MediumTable,
         environment: EnvironmentMap,
         mut env_sampling_probability: f32,
         accelerator_type: AcceleratorType,
@@ -90,6 +92,7 @@ impl World {
             lights,
             cameras: Vec::new(),
             materials,
+            mediums,
             environment,
             env_sampling_probability,
             radius,
