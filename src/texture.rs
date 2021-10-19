@@ -28,6 +28,10 @@ impl Texture4 {
         );
         (factors * eval).sum()
     }
+
+    // pub fn curve_at(&self, uv: (f32, f32)) -> CDF {
+
+    // }
 }
 #[derive(Clone)]
 pub struct Texture1 {
@@ -45,6 +49,8 @@ impl Texture1 {
         let eval = self.curve.evaluate_power(lambda);
         factor * eval
     }
+
+    // pub fn curve_at(&self, uv: (f32, f32)) -> CDF {}
 }
 #[derive(Clone)]
 pub enum Texture {
@@ -60,6 +66,8 @@ impl Texture {
             Texture::Texture4(tex) => tex.eval_at(lambda, uv),
         }
     }
+
+    // pub fn curve_at(&self, uv: (f32, f32)) -> CDF {}
 }
 
 #[derive(Clone)]
@@ -68,10 +76,48 @@ pub struct TexStack {
 }
 impl TexStack {
     pub fn eval_at(&self, lambda: f32, uv: (f32, f32)) -> f32 {
-        let mut s = 0.0;
+        let mut energy = 0.0;
         for tex in self.textures.iter() {
-            s += tex.eval_at(lambda, uv);
+            energy += tex.eval_at(lambda, uv);
         }
-        s
+        energy
+    }
+    pub fn importance_sample_at(
+        &self,
+        uv: (f32, f32),
+        sample: Sample1D,
+    ) -> (SingleWavelength, PDF) {
+        let mut spds: Vec<SPD> = Vec::new();
+        let mut cumulative_integral = 0.0;
+        let mut s = 0.0;
+        for spd in &self.textures {}
+        unimplemented!()
+    }
+    pub fn bake_importance_map(&self, width: usize, height: usize) -> Film<f32> {
+        let mut film = Film::new(width, height, 0.0f32);
+        let mut line_luminance = 0.0;
+        let mut cumulative_luminance = 0.0;
+        for y in 0..height {
+            for x in 0..width {
+                let uv = (x as f32 / width as f32, y as f32 / height as f32);
+                let mut luminance = 0.0;
+                for tex in &self.textures {
+                    luminance += match tex {
+                        Texture::Texture1(inner) => {
+                            inner.curve.cdf_integral * inner.texture.at_uv(uv)
+                        }
+                        Texture::Texture4(inner) => (f32x4::new(
+                            inner.curves[0].cdf_integral,
+                            inner.curves[1].cdf_integral,
+                            inner.curves[2].cdf_integral,
+                            inner.curves[3].cdf_integral,
+                        ) * inner.texture.at_uv(uv))
+                        .sum(),
+                    };
+                }
+                film.buffer[y * width + x] = luminance;
+            }
+        }
+        film
     }
 }

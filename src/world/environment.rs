@@ -146,7 +146,28 @@ impl EnvironmentMap {
                 texture,
                 rotation,
                 strength,
-            } => {}
+            } => {
+                // let (mut sw, wavelength_pdf) =
+                //     color.sample_power_and_pdf(wavelength_range, wavelength_sample);
+                // sw.energy *= *strength;
+                let (uv, directional_pdf) = self.sample_env_uv(direction_sample);
+                // let color = texture.eval(lambda, uv)
+                
+
+                let direction = uv_to_direction(uv);
+                let frame = TangentFrame::from_normal(direction);
+                let random_on_normal_disk = world_radius * random_in_unit_disk(position_sample);
+                let point = world_center
+                    + direction * world_radius
+                    + frame.to_world(&random_on_normal_disk);
+
+                (
+                    Ray::new(point, -direction),
+                    sw,
+                    directional_pdf,
+                    wavelength_pdf,
+                )
+            }
         }
     }
 
@@ -175,16 +196,23 @@ impl EnvironmentMap {
         sample: Sample2D,
         _lambda: f32,
     ) -> ((f32, f32), PDF) {
-        self.sample_env_uv(sample)
-        // match self {
-        //     EnvironmentMap::Constant { color, strength } => self.sample_env_uv(sample),
-        //     EnvironmentMap::Sun {
-        //         color,
-        //         strength,
-        //         angular_diameter,
-        //         sun_direction,
-        //     } => {}
-        // }
+        match self {
+            EnvironmentMap::Constant { color, strength } => self.sample_env_uv(sample),
+            EnvironmentMap::Sun {
+                color,
+                strength,
+                angular_diameter,
+                sun_direction,
+            } => self.sample_env_uv(sample),
+            EnvironmentMap::HDRi {
+                texture,
+                rotation,
+                strength,
+            } => {
+                // do stuff
+                self.sample_env_uv(sample)
+            }
+        }
 
         // however because that's unimplemented for now, lets just return `sample_env_uv`
     }
@@ -216,6 +244,11 @@ impl EnvironmentMap {
                     // 1.0.into()
                 )
             }
+            EnvironmentMap::HDRi {
+                texture,
+                rotation,
+                strength,
+            } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
         }
     }
 }
