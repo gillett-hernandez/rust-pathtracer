@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LambertianData {
-    pub color: String,
+    pub texture_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -55,8 +55,8 @@ pub enum MaterialData {
 
 pub fn parse_material(
     data: MaterialData,
-    mapping: &HashMap<String, usize>,
-    texture_stacks: &Vec<TexStack>,
+    texture_mapping: &HashMap<String, usize>,
+    textures: &Vec<TexStack>,
 ) -> MaterialEnum {
     match data {
         MaterialData::GGX(data) => {
@@ -74,10 +74,10 @@ pub fn parse_material(
         }
         MaterialData::Lambertian(data) => {
             println!("parsing Lambertian");
-            let id = mapping
-                .get(&data.color)
+            let id = texture_mapping
+                .get(&data.texture_id)
                 .expect("didn't find texture stack id for texture name");
-            MaterialEnum::Lambertian(Lambertian::new(texture_stacks[*id].clone()))
+            MaterialEnum::Lambertian(Lambertian::new(textures[*id].clone()))
         }
         MaterialData::SharpLight(data) => {
             println!("parsing SharpLight");

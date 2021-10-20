@@ -151,8 +151,10 @@ impl EnvironmentMap {
                 //     color.sample_power_and_pdf(wavelength_range, wavelength_sample);
                 // sw.energy *= *strength;
                 let (uv, directional_pdf) = self.sample_env_uv(direction_sample);
-                // let color = texture.eval(lambda, uv)
-                
+                let (mut sw, wavelength_pdf) = (
+                    SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
+                    1.0 / wavelength_range.span(),
+                );
 
                 let direction = uv_to_direction(uv);
                 let frame = TangentFrame::from_normal(direction);
@@ -165,7 +167,7 @@ impl EnvironmentMap {
                     Ray::new(point, -direction),
                     sw,
                     directional_pdf,
-                    wavelength_pdf,
+                    wavelength_pdf.into(),
                 )
             }
         }

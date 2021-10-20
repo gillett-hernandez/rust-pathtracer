@@ -183,7 +183,7 @@ pub fn construct_world(config: &Config) -> World {
         instances,
         materials,
         mediums,
-        parse_environment(scene.environment),
+        parse_environment(scene.environment, &texture_names_to_ids, &textures),
         scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::BVH,
     );

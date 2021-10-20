@@ -5,12 +5,12 @@ use crate::world::TransportMode;
 
 #[derive(Clone)]
 pub struct Lambertian {
-    pub color: TexStack,
+    pub texture: TexStack,
 }
 
 impl Lambertian {
-    pub fn new(color: TexStack) -> Lambertian {
-        Lambertian { color }
+    pub fn new(texture: TexStack) -> Lambertian {
+        Lambertian { texture }
     }
     pub const NAME: &'static str = "Lambertian";
 }
@@ -42,7 +42,7 @@ impl Material for Lambertian {
         let cosine = wo.z();
         if cosine * wi.z() > 0.0 {
             (
-                SingleEnergy::new(self.color.eval_at(lambda, uv).min(1.0) / PI),
+                SingleEnergy::new(self.texture.eval_at(lambda, uv).min(1.0) / PI),
                 (cosine / PI).into(),
             )
         } else {
