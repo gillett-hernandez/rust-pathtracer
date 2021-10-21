@@ -15,23 +15,43 @@ interpolation_mode = "Cubic"
 name = "lambertian_texture"
 [[textures.texture_stack]]
 type = "Texture4"
-filename = "data/textures/buff_Squidward.png"
+filename = "data/textures/test.png"
 [[textures.texture_stack.curves]]
+# type="SimpleSpike"
+# lambda=440.0
+# left_taper=100.0
+# right_taper=100.0
+# strength=0.55
 type = "TabulatedCSV"
 filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
 column = 1
 interpolation_mode = "Cubic"
 [[textures.texture_stack.curves]]
+# type="SimpleSpike"
+# lambda=550.0
+# left_taper=100.0
+# right_taper=100.0
+# strength=0.55
 type = "TabulatedCSV"
 filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
 column = 2
 interpolation_mode = "Cubic"
 [[textures.texture_stack.curves]]
+# type="SimpleSpike"
+# lambda=660.0
+# left_taper=100.0
+# right_taper=100.0
+# strength=0.55
 type = "TabulatedCSV"
 filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
 column = 3
 interpolation_mode = "Cubic"
 [[textures.texture_stack.curves]]
+# type="SimpleSpike"
+# lambda=700.0
+# left_taper=100.0
+# right_taper=100.0
+# strength=0.125
 type = "Flat"
 strength = 0.0
 
@@ -75,19 +95,19 @@ interpolation_mode = "Cubic"
 name = "lambertian_white"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_texture"
+texture_id = "lambertian_texture"
 
 [[materials]]
 name = "lambertian_green"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_green"
+texture_id = "lambertian_green"
 
 [[materials]]
 name = "lambertian_red"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_red"
+texture_id = "lambertian_red"
 
 [[materials]]
 name = "ggx_glass"
@@ -265,10 +285,10 @@ strength = 5.0
 
 
 [[instances]]
-material_identifier = "sharp_light_xenon"
+material_identifier = "diffuse_light_xenon"
 [instances.aggregate]
 type = "Rect"
-size = [0.7, 0.01]
+size = [0.7, 0.7]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
 two_sided = false
@@ -318,15 +338,15 @@ origin = [1.0, 0.0, 0.0]
 normal = "X"
 two_sided = true
 
-[[instances]]
-material_identifier = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Mesh"
-filename = "data/meshes/prism.obj"
-mesh_index = 0
-[instances.transform]
-scale = [0.9, 0.9, 0.9]
-translate = [0.0, 0.0, -0.1]
-[[instances.transform.rotate]]
-axis = [0.0, 0.0, 1.0]
-angle = 90
+# [[instances]]
+# material_identifier = "ggx_glass_dispersive"
+# [instances.aggregate]
+# type = "Mesh"
+# filename = "data/meshes/prism.obj"
+# mesh_index = 0
+# [instances.transform]
+# scale = [0.9, 0.9, 0.9]
+# translate = [0.0, 0.0, -0.1]
+# [[instances.transform.rotate]]
+# axis = [0.0, 0.0, 1.0]
+# angle = 90

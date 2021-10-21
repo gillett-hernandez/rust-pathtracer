@@ -201,7 +201,9 @@ impl AggregateData {
                 let filename = data.filename;
                 let mut mesh =
                     parse_specific_obj_mesh(&filename, data.mesh_index, material_mapping);
+                println!("parsed mesh, initializing mesh and mesh bvh");
                 mesh.init();
+                println!("initialized");
                 Aggregate::Mesh(mesh)
             }
             // parse_with does not handle MeshBundle

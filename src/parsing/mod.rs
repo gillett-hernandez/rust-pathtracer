@@ -100,8 +100,8 @@ fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     return Ok(scene);
 }
 
-pub fn construct_world(config: &Config) -> World {
-    let scene = get_scene(&config.scene_file).expect("scene file failed to parse");
+pub fn construct_world(scene_file: &str) -> World {
+    let scene = get_scene(scene_file).expect("scene file failed to parse");
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
     let mut medium_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut texture_names_to_ids: HashMap<String, usize> = HashMap::new();
@@ -116,6 +116,7 @@ pub fn construct_world(config: &Config) -> World {
         texture_count += 1;
         let tex_id = texture_count - 1;
         texture_names_to_ids.insert(tex.name.clone(), tex_id);
+        println!("parsing texture");
         textures.push(parse_texture_stack(tex.clone()));
     }
 
@@ -131,6 +132,7 @@ pub fn construct_world(config: &Config) -> World {
             }
         };
         material_names_to_ids.insert(material.name, id);
+        println!("parsing material");
         materials.push(parse_material(
             material.data,
             &texture_names_to_ids,
@@ -142,6 +144,7 @@ pub fn construct_world(config: &Config) -> World {
             medium_count += 1;
             let id = medium_count - 1;
             medium_names_to_ids.insert(medium.name, id);
+            println!("parsing medium");
             mediums.push(parse_medium(medium.data));
         }
     }
@@ -173,6 +176,7 @@ pub fn construct_world(config: &Config) -> World {
                 }
             }
             _ => {
+                println!("parsing instance and primitive");
                 let id = instances.len();
                 let instance = parse_instance(instance, &material_names_to_ids, id);
                 instances.push(instance);
@@ -188,4 +192,14 @@ pub fn construct_world(config: &Config) -> World {
         AcceleratorType::BVH,
     );
     world
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    #[test]
+    fn test_world() {
+        let world = construct_world("data/scenes/test_prism.toml");
+    }
 }

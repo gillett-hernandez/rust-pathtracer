@@ -44,24 +44,23 @@ filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
 
-
 [[materials]]
 name = "lambertian_white"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_white"
+texture_id = "lambertian_white"
 
 [[materials]]
 name = "lambertian_green"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_green"
+texture_id = "lambertian_green"
 
 [[materials]]
 name = "lambertian_red"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_red"
+texture_id = "lambertian_red"
 
 
 [[materials]]

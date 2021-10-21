@@ -21,6 +21,9 @@ pub enum TextureData {
         curves: [CurveData; 4],
         filename: String,
     },
+    SRGB {
+        filename: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -170,6 +173,38 @@ pub fn parse_texture(texture: TextureData) -> Texture {
                 interpolation_mode: InterpolationMode::Nearest,
             })
         }
+        TextureData::SRGB { filename } => {
+            let curves_filename = "data/curves/basis/simple-spectral-srgb-1931.csv".to_string();
+            let cdfs: [CDF; 4] = [
+                parse_curve(CurveData::TabulatedCSV {
+                    filename: curves_filename.clone(),
+                    column: 1,
+                    domain_mapping: None,
+                    interpolation_mode: InterpolationMode::Cubic,
+                })
+                .into(),
+                parse_curve(CurveData::TabulatedCSV {
+                    filename: curves_filename.clone(),
+                    column: 2,
+                    domain_mapping: None,
+                    interpolation_mode: InterpolationMode::Cubic,
+                })
+                .into(),
+                parse_curve(CurveData::TabulatedCSV {
+                    filename: curves_filename.clone(),
+                    column: 3,
+                    domain_mapping: None,
+                    interpolation_mode: InterpolationMode::Cubic,
+                })
+                .into(),
+                parse_curve(CurveData::Flat { strength: 0.0 }).into(),
+            ];
+            Texture::Texture4(Texture4 {
+                curves: cdfs,
+                texture: parse_rgba(&filename),
+                interpolation_mode: InterpolationMode::Nearest,
+            })
+        }
     }
 }
 
@@ -255,7 +290,48 @@ mod test {
     }
 
     #[test]
-    fn test_parse_texture() {}
+    fn test_parse_texture() {
+        let texture = parse_texture(TextureData::SRGB {
+            filename: "data/textures/test.png".to_string(),
+        });
+
+        println!("{}", texture.eval_at(550.0, (0.5, 0.5)));
+    }
     #[test]
-    fn test_parse_texture_stack() {}
+    fn test_parse_texture_stack() {
+        let texture = parse_texture_stack(TextureStackData {
+            name: "stack".to_string(),
+            texture_stack: vec![TextureData::Texture4 {
+                curves: [
+                    CurveData::SimpleSpike {
+                        lambda: 400.0,
+                        left_taper: 100.0,
+                        right_taper: 100.0,
+                        strength: 0.25,
+                    },
+                    CurveData::SimpleSpike {
+                        lambda: 550.0,
+                        left_taper: 100.0,
+                        right_taper: 100.0,
+                        strength: 0.25,
+                    },
+                    CurveData::SimpleSpike {
+                        lambda: 600.0,
+                        left_taper: 100.0,
+                        right_taper: 100.0,
+                        strength: 0.25,
+                    },
+                    CurveData::SimpleSpike {
+                        lambda: 700.0,
+                        left_taper: 100.0,
+                        right_taper: 100.0,
+                        strength: 0.25,
+                    },
+                ],
+                filename: "data/textures/test.png".to_string(),
+            }],
+        });
+
+        println!("{}", texture.eval_at(550.0, (0.5, 0.5)));
+    }
 }

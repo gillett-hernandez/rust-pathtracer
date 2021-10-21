@@ -11,7 +11,7 @@ use std::{thread, time::Instant};
 use win32_notification::NotificationBuilder;
 
 fn construct_scene(config: &Config) -> World {
-    construct_world(config)
+    construct_world(&config.scene_file)
 }
 
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {

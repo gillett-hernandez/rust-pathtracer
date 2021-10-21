@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_metals_and_dielectrics.toml"
+scene_file = "data/scenes/cornell_box_textured_walls.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -122,7 +122,7 @@ vfov = 5
 [[render_settings]]
 threads = 22
 filename = "PT"
-min_samples = 16
+min_samples = 128
 min_bounces = 3
 max_bounces = 8
 hwss = false
