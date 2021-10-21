@@ -132,12 +132,10 @@ pub fn parse_bitmap(filepath: &str) -> Film<f32> {
     new_film
 }
 
-pub fn select_on_film<T1, T2, F>(film: &Film<T1>, channel: usize, closure: F) -> Film<T2>
+pub fn select_on_film<T1, T2, F>(film: &Film<T1>, closure: F) -> Film<T2>
 where
     F: FnMut(&T1) -> T2,
 {
-    assert!(channel < 4);
-
     Film {
         buffer: film.buffer.iter().map(closure).collect(),
         width: film.width,

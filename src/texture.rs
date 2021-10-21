@@ -106,7 +106,12 @@ impl Texture {
         }
     }
 
-    // pub fn curve_at(&self, uv: (f32, f32)) -> CDF {}
+    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+        match self {
+            Texture::Texture1(tex) => tex.curve_at(uv),
+            Texture::Texture4(tex) => tex.curve_at(uv),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -132,31 +137,40 @@ impl TexStack {
         for spd in &self.textures {}
         unimplemented!()
     }
-    pub fn bake_importance_map(&self, width: usize, height: usize) -> Film<f32> {
-        let mut film = Film::new(width, height, 0.0f32);
-        let mut line_luminance = 0.0;
-        let mut cumulative_luminance = 0.0;
-        for y in 0..height {
-            for x in 0..width {
-                let uv = (x as f32 / width as f32, y as f32 / height as f32);
-                let mut luminance = 0.0;
-                for tex in &self.textures {
-                    luminance += match tex {
-                        Texture::Texture1(inner) => {
-                            inner.curve.cdf_integral * inner.texture.at_uv(uv)
-                        }
-                        Texture::Texture4(inner) => (f32x4::new(
-                            inner.curves[0].cdf_integral,
-                            inner.curves[1].cdf_integral,
-                            inner.curves[2].cdf_integral,
-                            inner.curves[3].cdf_integral,
-                        ) * inner.texture.at_uv(uv))
-                        .sum(),
-                    };
-                }
-                film.buffer[y * width + x] = luminance;
-            }
+
+    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+        let mut list = Vec::new();
+        let seed = 0.0;
+        for tex in &self.textures {
+            list.push((Op::Add, tex.curve_at(uv)));
         }
-        film
+        SPD::Machine { seed, list }
     }
+    // pub fn bake_importance_map(&self, width: usize, height: usize) -> Film<f32> {
+    //     let mut film = Film::new(width, height, 0.0f32);
+    //     let mut line_luminance = 0.0;
+    //     let mut cumulative_luminance = 0.0;
+    //     for y in 0..height {
+    //         for x in 0..width {
+    //             let uv = (x as f32 / width as f32, y as f32 / height as f32);
+    //             let mut luminance = 0.0;
+    //             for tex in &self.textures {
+    //                 luminance += match tex {
+    //                     Texture::Texture1(inner) => {
+    //                         inner.curve.cdf_integral * inner.texture.at_uv(uv)
+    //                     }
+    //                     Texture::Texture4(inner) => (f32x4::new(
+    //                         inner.curves[0].cdf_integral,
+    //                         inner.curves[1].cdf_integral,
+    //                         inner.curves[2].cdf_integral,
+    //                         inner.curves[3].cdf_integral,
+    //                     ) * inner.texture.at_uv(uv))
+    //                     .sum(),
+    //                 };
+    //             }
+    //             film.buffer[y * width + x] = luminance;
+    //         }
+    //     }
+    //     film
+    // }
 }

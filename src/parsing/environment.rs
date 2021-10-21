@@ -83,6 +83,7 @@ pub fn parse_environment(
                         .luminance_curve
                         .map(|e| e.into())
                         .unwrap_or_else(|| SPD::y_bar()),
+                    spectral::BOUNDED_VISIBLE_RANGE, //TODO: somehow get wavelength bounds from render settings into here. maybe re-bake the importance map if the wavelength bounds change.
                 ))
             } else {
                 None

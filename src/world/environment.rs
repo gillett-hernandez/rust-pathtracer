@@ -1,3 +1,5 @@
+use math::spectral::Op;
+
 use crate::math::*;
 use crate::texture::{TexStack, Texture1};
 
@@ -13,13 +15,33 @@ impl ImportanceMap {
         vertical_resolution: usize,
         horizontal_resolution: usize,
         luminance_curve: SPD,
+        wavelength_bounds: Bounds1D,
     ) -> Self {
         let mut data = Vec::new();
         let mut v_cdf = Vec::new();
 
         let mut total_luminance = 0.0;
+
+        let mut machine = SPD::Machine {
+            seed: 1.0,
+            list: vec![(Op::Mul, luminance_curve), (Op::Mul, SPD::Const(0.0))],
+        };
         for row in 0..vertical_resolution {
-            
+            for column in 0..horizontal_resolution {
+                let uv = (
+                    row as f32 / vertical_resolution as f32,
+                    column as f32 / horizontal_resolution as f32,
+                );
+                if let SPD::Machine { list, .. } = &mut machine {
+                    list[1].1 = texture_stack.curve_at(uv);
+                }
+                total_luminance += machine.evaluate_integral(
+                    wavelength_bounds,
+                    wavelength_bounds.span() / 400.0,
+                    false,
+                );
+            }
+            v_cdf.push(total_luminance);
         }
 
         let vertical_cdf = SPD::Linear {
