@@ -1,4 +1,4 @@
-scene_file = "data/scenes/cornell_box_textured_walls.toml"
+scene_file = "data/scenes/hdri_test.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -91,6 +91,38 @@ aperture_size = 0.02
 focal_distance = 5.0
 vfov = 27.2
 
+
+[[cameras]]
+type="SimpleCamera"
+name = "wideangle sun test camera"
+look_from = [-5, 0, 0]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.02
+focal_distance = 5.0
+vfov = 90.0
+
+
+[[cameras]]
+type="SimpleCamera"
+name = "wideangle sun test camera reverse"
+look_from = [5, 0, 0]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.02
+focal_distance = 5.0
+vfov = 90.0
+
+
+
+[[cameras]]
+type="SimpleCamera"
+name = "wideangle sun test camera side"
+look_from = [0, -5, 0]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.02
+focal_distance = 5.0
+vfov = 90.0
+
+
 [[cameras]]
 type="SimpleCamera"
 name = "caustic test camera"
@@ -126,7 +158,7 @@ min_samples = 128
 min_bounces = 3
 max_bounces = 8
 hwss = false
-camera_id = "cornell camera"
+camera_id = "sun test camera"
 exposure = 1.0
 russian_roulette = true
 only_direct = false

@@ -28,7 +28,7 @@ pub struct SunData {
 pub struct HDRIData {
     pub texture_id: String,
     pub strength: f32,
-    pub rotation: Vec<AxisAngleData>,
+    pub rotation: Option<Vec<AxisAngleData>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -62,7 +62,7 @@ pub fn parse_environment(
             .clone(),
             rotation: Transform3Data {
                 scale: None,
-                rotate: Some(data.rotation),
+                rotate: data.rotation,
                 translate: None,
             }
             .into(),

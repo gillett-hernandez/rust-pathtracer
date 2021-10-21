@@ -21,6 +21,15 @@ pub enum TextureData {
         curves: [CurveData; 4],
         filename: String,
     },
+    HDR {
+        curves: [CurveData; 4],
+        filename: String,
+        alpha_fill: Option<f32>,
+    },
+    EXR {
+        curves: [CurveData; 4],
+        filename: String,
+    },
     SRGB {
         filename: String,
     },
@@ -170,6 +179,36 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             Texture::Texture4(Texture4 {
                 curves: cdfs,
                 texture: parse_rgba(&filename),
+                interpolation_mode: InterpolationMode::Nearest,
+            })
+        }
+        TextureData::HDR {
+            curves,
+            filename,
+            alpha_fill,
+        } => {
+            let cdfs: [CDF; 4] = convert_to_array(
+                curves
+                    .iter()
+                    .map(|curve| parse_curve(curve.clone()).into())
+                    .collect(),
+            );
+            Texture::Texture4(Texture4 {
+                curves: cdfs,
+                texture: parse_hdr(&filename, alpha_fill.unwrap_or(0.0)),
+                interpolation_mode: InterpolationMode::Nearest,
+            })
+        }
+        TextureData::EXR { curves, filename } => {
+            let cdfs: [CDF; 4] = convert_to_array(
+                curves
+                    .iter()
+                    .map(|curve| parse_curve(curve.clone()).into())
+                    .collect(),
+            );
+            Texture::Texture4(Texture4 {
+                curves: cdfs,
+                texture: parse_exr(&filename),
                 interpolation_mode: InterpolationMode::Nearest,
             })
         }

@@ -53,33 +53,6 @@ pub struct Scene {
     pub env_sampling_probability: Option<f32>,
 }
 
-impl From<Transform3Data> for Transform3 {
-    fn from(data: Transform3Data) -> Self {
-        println!("parsing transform data");
-        let maybe_scale = data.scale.map(|v| Transform3::from_scale(Vec3::from(v)));
-        let maybe_rotate = if let Some(rotations) = data.rotate {
-            let mut base = None;
-            for rotation in rotations {
-                let transform = Transform3::from_axis_angle(
-                    Vec3::from(rotation.axis),
-                    PI * rotation.angle / 180.0,
-                );
-                if base.is_none() {
-                    base = Some(transform);
-                } else {
-                    base = Some(transform * base.unwrap());
-                };
-            }
-            base
-        } else {
-            None
-        };
-        let maybe_translate = data
-            .translate
-            .map(|v| Transform3::from_translation(Vec3::from(v)));
-        Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
-    }
-}
 
 fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
