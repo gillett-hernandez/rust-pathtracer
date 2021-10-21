@@ -170,7 +170,6 @@ impl EnvironmentMap {
     }
 
     // sample a ray and wavelength based on env map CDF
-    // currently disregards env CDF, since there is no env cdf.
     pub fn sample_emission(
         &self,
         world_radius: f32,

@@ -153,8 +153,8 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "PT"
-min_samples = 128
+filename = "BDPT"
+min_samples = 16
 min_bounces = 3
 max_bounces = 8
 hwss = false
