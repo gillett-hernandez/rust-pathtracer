@@ -82,7 +82,15 @@ pub fn parse_environment(
                     importance_map_data
                         .luminance_curve
                         .map(|e| e.into())
-                        .unwrap_or_else(|| SPD::y_bar()),
+                        .unwrap_or_else(|| -> SPD {
+                            SPD::Exponential {
+                                // inlined function here because rust analyzer wouldn't stop complaining about it not being found
+                                signal: vec![
+                                    (568.0, 46.9, 40.5, 0.821),
+                                    (530.9, 16.3, 31.1, 0.286),
+                                ],
+                            }
+                        }),
                     spectral::BOUNDED_VISIBLE_RANGE, //TODO: somehow get wavelength bounds from render settings into here. maybe re-bake the importance map if the wavelength bounds change.
                 ))
             } else {

@@ -131,10 +131,10 @@ impl TexStack {
         uv: (f32, f32),
         sample: Sample1D,
     ) -> (SingleWavelength, PDF) {
-        let mut spds: Vec<SPD> = Vec::new();
-        let mut cumulative_integral = 0.0;
-        let mut s = 0.0;
-        for spd in &self.textures {}
+        // let mut spds: Vec<SPD> = Vec::new();
+        // let mut cumulative_integral = 0.0;
+        // let mut s = 0.0;
+        // for spd in &self.textures {}
         unimplemented!()
     }
 

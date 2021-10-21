@@ -3,6 +3,9 @@ env_sampling_probability = 0.9
 type="HDRI"
 strength = 0.4
 texture_id = "test_hdri"
+[environment.importance_map]
+width = 512
+height = 512
 
 
 [[textures]]

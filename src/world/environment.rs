@@ -7,6 +7,7 @@ use crate::texture::{TexStack, Texture1};
 pub struct ImportanceMap {
     data: Vec<CDF>,
     vertical_cdf: CDF,
+    wavelength_bounds: Bounds1D,
 }
 
 impl ImportanceMap {
@@ -27,6 +28,9 @@ impl ImportanceMap {
             list: vec![(Op::Mul, luminance_curve), (Op::Mul, SPD::Const(0.0))],
         };
         for row in 0..vertical_resolution {
+            let mut spd = Vec::new();
+            let mut cdf = Vec::new();
+            let mut row_luminance = 0.0;
             for column in 0..horizontal_resolution {
                 let uv = (
                     row as f32 / vertical_resolution as f32,
@@ -35,13 +39,34 @@ impl ImportanceMap {
                 if let SPD::Machine { list, .. } = &mut machine {
                     list[1].1 = texture_stack.curve_at(uv);
                 }
-                total_luminance += machine.evaluate_integral(
+                let texel_luminance = machine.evaluate_integral(
                     wavelength_bounds,
                     wavelength_bounds.span() / 400.0,
                     false,
                 );
+                total_luminance += texel_luminance;
+                row_luminance += texel_luminance;
+                spd.push(texel_luminance);
+                cdf.push(row_luminance);
             }
+            data.push(CDF {
+                pdf: SPD::Linear {
+                    signal: spd,
+                    bounds: Bounds1D::new(0.0, 1.0),
+                    mode: InterpolationMode::Linear,
+                },
+                cdf: SPD::Linear {
+                    signal: cdf,
+                    bounds: Bounds1D::new(0.0, 1.0),
+                    mode: InterpolationMode::Linear,
+                },
+                cdf_integral: row_luminance,
+            });
             v_cdf.push(total_luminance);
+            println!(
+                "row done, progress = {}",
+                100.0 * row as f32 / vertical_resolution as f32
+            );
         }
 
         let vertical_cdf = SPD::Linear {
@@ -50,7 +75,11 @@ impl ImportanceMap {
             mode: InterpolationMode::Cubic,
         }
         .into();
-        Self { data, vertical_cdf }
+        Self {
+            data,
+            vertical_cdf,
+            wavelength_bounds,
+        }
     }
 }
 
@@ -199,8 +228,8 @@ impl EnvironmentMap {
             }
             EnvironmentMap::HDRi {
                 texture,
-                rotation,
-                importance_map,
+                rotation: _,
+                importance_map: _,
                 strength,
             } => {
                 // let (mut sw, wavelength_pdf) =
@@ -211,6 +240,7 @@ impl EnvironmentMap {
                     SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
                     1.0 / wavelength_range.span(),
                 );
+                sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
 
                 let direction = uv_to_direction(uv);
                 let frame = TangentFrame::from_normal(direction);
@@ -302,11 +332,44 @@ impl EnvironmentMap {
                 )
             }
             EnvironmentMap::HDRi {
-                texture,
+                texture: _,
                 rotation,
                 importance_map,
-                strength,
-            } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
+                strength: _,
+            } => {
+                if let Some(importance_map) = importance_map {
+                    let (
+                        SingleWavelength {
+                            lambda: v,
+                            energy: _,
+                        },
+                        row_pdf,
+                    ) = importance_map.vertical_cdf.sample_power_and_pdf(
+                        // cdf inverse transform sample should still work even though the wavelength bounds are 0..1
+                        importance_map.wavelength_bounds,
+                        Sample1D::new(sample.y),
+                    );
+                    let (
+                        SingleWavelength {
+                            lambda: u,
+                            energy: _,
+                        },
+                        column_pdf,
+                    ) = importance_map.data[(v * importance_map.data.len() as f32) as usize]
+                        .sample_power_and_pdf(
+                            // cdf inverse transform sample should still work even though the wavelength bounds are 0..1
+                            importance_map.wavelength_bounds,
+                            Sample1D::new(sample.x),
+                        );
+                    let local_wo = uv_to_direction((u, v));
+                    let new_wo = rotation.to_world(local_wo);
+                    let uv = direction_to_uv(new_wo);
+                    (uv, PDF::from(row_pdf * column_pdf))
+                    // ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
+                } else {
+                    ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
+                }
+            }
         }
     }
 }
