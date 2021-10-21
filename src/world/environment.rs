@@ -9,13 +9,16 @@ pub struct ImportanceMap {
 
 impl ImportanceMap {
     pub fn new(
-        texture_stack: TexStack,
+        texture_stack: &TexStack,
         vertical_resolution: usize,
         horizontal_resolution: usize,
         luminance_curve: SPD,
     ) -> Self {
         let mut data = Vec::new();
         let mut v_cdf = Vec::new();
+
+        let mut total_luminance = 0.0;
+        for row in 0..vertical_resolution {}
 
         let vertical_cdf = SPD::Linear {
             signal: v_cdf,

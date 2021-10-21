@@ -5,6 +5,7 @@ use crate::renderer::Film;
 // use std::fs::File;
 // use std::io::Read;
 
+use math::spectral::Op;
 use packed_simd::f32x4;
 
 #[derive(Clone)]
@@ -29,9 +30,42 @@ impl Texture4 {
         (factors * eval).sum()
     }
 
-    // pub fn curve_at(&self, uv: (f32, f32)) -> CDF {
-
-    // }
+    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+        let texel = self.texture.at_uv(uv);
+        SPD::Machine {
+            list: vec![
+                (
+                    Op::Add,
+                    SPD::Machine {
+                        list: vec![(Op::Mul, self.curves[0].pdf)],
+                        seed: texel.extract(0),
+                    },
+                ),
+                (
+                    Op::Add,
+                    SPD::Machine {
+                        list: vec![(Op::Mul, self.curves[1].pdf)],
+                        seed: texel.extract(1),
+                    },
+                ),
+                (
+                    Op::Add,
+                    SPD::Machine {
+                        list: vec![(Op::Mul, self.curves[2].pdf)],
+                        seed: texel.extract(2),
+                    },
+                ),
+                (
+                    Op::Add,
+                    SPD::Machine {
+                        list: vec![(Op::Mul, self.curves[3].pdf)],
+                        seed: texel.extract(3),
+                    },
+                ),
+            ],
+            seed: 0.0,
+        }
+    }
 }
 #[derive(Clone)]
 pub struct Texture1 {
@@ -50,7 +84,12 @@ impl Texture1 {
         factor * eval
     }
 
-    // pub fn curve_at(&self, uv: (f32, f32)) -> CDF {}
+    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+        SPD::Machine {
+            list: vec![(Op::Mul, self.curve.pdf)],
+            seed: self.texture.at_uv(uv),
+        }
+    }
 }
 #[derive(Clone)]
 pub enum Texture {

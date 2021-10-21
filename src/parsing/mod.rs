@@ -12,7 +12,7 @@ pub mod texture;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
-use math::{Transform3, Vec3};
+use math::Transform3;
 use medium::*;
 use primitives::*;
 use texture::*;
@@ -22,7 +22,7 @@ pub use curves::{
     parse_tabulated_curve_from_csv,
 };
 
-use crate::{config::Config, mediums::MediumEnum};
+use crate::mediums::MediumEnum;
 // use crate::curves::*;
 use crate::geometry::*;
 use crate::materials::*;
@@ -33,7 +33,6 @@ use crate::texture::*;
 use crate::world::{AcceleratorType, World};
 
 use std::collections::HashMap;
-use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Read;
 
@@ -52,7 +51,6 @@ pub struct Scene {
     pub environment: EnvironmentData,
     pub env_sampling_probability: Option<f32>,
 }
-
 
 fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.

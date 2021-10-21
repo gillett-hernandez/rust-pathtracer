@@ -6,7 +6,7 @@ use crate::math::*;
 use crate::texture::TexStack;
 use crate::world::{EnvironmentMap, ImportanceMap};
 
-use super::curves::{parse_curve, CurveData};
+use super::curves::CurveData;
 use super::instance::{AxisAngleData, Transform3Data};
 use super::Vec3Data;
 
@@ -28,7 +28,7 @@ pub struct SunData {
 pub struct ImportanceMapData {
     pub width: usize,
     pub height: usize,
-    pub luminance_curve: Option<SPD>,
+    pub luminance_curve: Option<CurveData>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -54,11 +54,11 @@ pub fn parse_environment(
 ) -> EnvironmentMap {
     match env_data {
         EnvironmentData::Constant(data) => EnvironmentMap::Constant {
-            color: parse_curve(data.color).into(),
+            color: SPD::from(data.color).into(),
             strength: data.strength,
         },
         EnvironmentData::Sun(data) => EnvironmentMap::Sun {
-            color: parse_curve(data.color).into(),
+            color: SPD::from(data.color).into(),
             strength: data.strength,
             angular_diameter: data.angular_diameter,
             sun_direction: Vec3::from(data.sun_direction).normalized(),
@@ -76,12 +76,13 @@ pub fn parse_environment(
             .clone();
             let importance_map = if let Some(importance_map_data) = data.importance_map {
                 Some(ImportanceMap::new(
-                    texture,
+                    &texture,
                     importance_map_data.height,
                     importance_map_data.width,
-                    importance_map_data.luminance_curve.unwrap_or_else(|| {
-                        SPD::y_bar();
-                    }),
+                    importance_map_data
+                        .luminance_curve
+                        .map(|e| e.into())
+                        .unwrap_or_else(|| SPD::y_bar()),
                 ))
             } else {
                 None

@@ -1,5 +1,5 @@
 use crate::math::*;
-use crate::parsing::curves::{parse_curve, CurveData};
+use crate::parsing::curves::CurveData;
 use crate::renderer::Film;
 use crate::texture::*;
 
@@ -162,7 +162,7 @@ fn convert_to_array(vec: Vec<CDF>) -> [CDF; 4] {
 pub fn parse_texture(texture: TextureData) -> Texture {
     match texture {
         TextureData::Texture1 { curve, filename } => {
-            let cdf: CDF = parse_curve(curve).into();
+            let cdf: CDF = SPD::from(curve).into();
             Texture::Texture1(Texture1 {
                 curve: cdf,
                 texture: parse_bitmap(&filename),
@@ -173,7 +173,7 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             let cdfs: [CDF; 4] = convert_to_array(
                 curves
                     .iter()
-                    .map(|curve| parse_curve(curve.clone()).into())
+                    .map(|curve| SPD::from(curve.clone()).into())
                     .collect(),
             );
             Texture::Texture4(Texture4 {
@@ -190,7 +190,7 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             let cdfs: [CDF; 4] = convert_to_array(
                 curves
                     .iter()
-                    .map(|curve| parse_curve(curve.clone()).into())
+                    .map(|curve| SPD::from(curve.clone()).into())
                     .collect(),
             );
             Texture::Texture4(Texture4 {
@@ -203,7 +203,7 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             let cdfs: [CDF; 4] = convert_to_array(
                 curves
                     .iter()
-                    .map(|curve| parse_curve(curve.clone()).into())
+                    .map(|curve| SPD::from(curve.clone()).into())
                     .collect(),
             );
             Texture::Texture4(Texture4 {
@@ -215,28 +215,28 @@ pub fn parse_texture(texture: TextureData) -> Texture {
         TextureData::SRGB { filename } => {
             let curves_filename = "data/curves/basis/simple-spectral-srgb-1931.csv".to_string();
             let cdfs: [CDF; 4] = [
-                parse_curve(CurveData::TabulatedCSV {
+                SPD::from(CurveData::TabulatedCSV {
                     filename: curves_filename.clone(),
                     column: 1,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,
                 })
                 .into(),
-                parse_curve(CurveData::TabulatedCSV {
+                SPD::from(CurveData::TabulatedCSV {
                     filename: curves_filename.clone(),
                     column: 2,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,
                 })
                 .into(),
-                parse_curve(CurveData::TabulatedCSV {
+                SPD::from(CurveData::TabulatedCSV {
                     filename: curves_filename.clone(),
                     column: 3,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,
                 })
                 .into(),
-                parse_curve(CurveData::Flat { strength: 0.0 }).into(),
+                SPD::from(CurveData::Flat { strength: 0.0 }).into(),
             ];
             Texture::Texture4(Texture4 {
                 curves: cdfs,

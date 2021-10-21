@@ -1,7 +1,7 @@
 use crate::materials::*;
-use crate::parsing::curves::{parse_curve, CurveData};
+use crate::parsing::curves::CurveData;
 use crate::texture::TexStack;
-use math::Sidedness;
+use math::{SPD, Sidedness};
 
 use serde::{Deserialize, Serialize};
 
@@ -61,8 +61,8 @@ pub fn parse_material(
     match data {
         MaterialData::GGX(data) => {
             println!("parsing GGX");
-            let eta = parse_curve(data.eta);
-            let kappa = parse_curve(data.kappa);
+            let eta = data.eta.into();
+            let kappa = data.kappa.into();
             MaterialEnum::GGX(GGX::new(
                 data.alpha,
                 eta,
@@ -82,13 +82,13 @@ pub fn parse_material(
         MaterialData::SharpLight(data) => {
             println!("parsing SharpLight");
             // let color = parse_texture_stack(data.color);
-            let color = parse_curve(data.color).into();
+            let color = SPD::from(data.color).into();
             MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
         }
         MaterialData::PassthroughFilter(data) => {
             println!("parsing PassthroughFilter");
             // let color = parse_texture_stack(data.color);
-            let color = parse_curve(data.color).into();
+            let color = SPD::from(data.color).into();
             MaterialEnum::PassthroughFilter(PassthroughFilter::new(
                 color,
                 data.outer_medium_id,
@@ -98,7 +98,7 @@ pub fn parse_material(
         MaterialData::DiffuseLight(data) => {
             println!("parsing DiffuseLight");
             // let color = parse_texture_stack(data.color);
-            let color = parse_curve(data.color).into();
+            let color = SPD::from(data.color).into();
             MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
         }
     }
