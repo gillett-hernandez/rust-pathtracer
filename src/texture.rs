@@ -37,28 +37,28 @@ impl Texture4 {
                 (
                     Op::Add,
                     SPD::Machine {
-                        list: vec![(Op::Mul, self.curves[0].pdf)],
+                        list: vec![(Op::Mul, self.curves[0].pdf.clone())],
                         seed: texel.extract(0),
                     },
                 ),
                 (
                     Op::Add,
                     SPD::Machine {
-                        list: vec![(Op::Mul, self.curves[1].pdf)],
+                        list: vec![(Op::Mul, self.curves[1].pdf.clone())],
                         seed: texel.extract(1),
                     },
                 ),
                 (
                     Op::Add,
                     SPD::Machine {
-                        list: vec![(Op::Mul, self.curves[2].pdf)],
+                        list: vec![(Op::Mul, self.curves[2].pdf.clone())],
                         seed: texel.extract(2),
                     },
                 ),
                 (
                     Op::Add,
                     SPD::Machine {
-                        list: vec![(Op::Mul, self.curves[3].pdf)],
+                        list: vec![(Op::Mul, self.curves[3].pdf.clone())],
                         seed: texel.extract(3),
                     },
                 ),
@@ -86,7 +86,7 @@ impl Texture1 {
 
     pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
         SPD::Machine {
-            list: vec![(Op::Mul, self.curve.pdf)],
+            list: vec![(Op::Mul, self.curve.pdf.clone())],
             seed: self.texture.at_uv(uv),
         }
     }

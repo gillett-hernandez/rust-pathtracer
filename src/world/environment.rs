@@ -18,7 +18,9 @@ impl ImportanceMap {
         let mut v_cdf = Vec::new();
 
         let mut total_luminance = 0.0;
-        for row in 0..vertical_resolution {}
+        for row in 0..vertical_resolution {
+            
+        }
 
         let vertical_cdf = SPD::Linear {
             signal: v_cdf,
