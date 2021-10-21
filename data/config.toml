@@ -85,11 +85,11 @@ vfov = 45.2
 [[cameras]]
 type="SimpleCamera"
 name = "sun test camera"
-look_from = [-5, 0, 0]
-look_at = [0.0, 0.0, -0.4]
+look_from = [-5, 0, 1]
+look_at = [0.0, 0.0, -0.9]
 aperture_size = 0.02
 focal_distance = 5.0
-vfov = 27.2
+vfov = 40.2
 
 
 [[cameras]]
@@ -154,7 +154,7 @@ vfov = 5
 [[render_settings]]
 threads = 22
 filename = "PT"
-min_samples = 128
+min_samples = 1024
 min_bounces = 3
 max_bounces = 8
 hwss = false

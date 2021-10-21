@@ -9,7 +9,7 @@ texture_id = "test_hdri"
 name = "test_hdri"
 [[textures.texture_stack]]
 type = "HDR"
-filename = "data/textures/test.hdr"
+filename = "data/hdri/autumn_park_8k.hdr"
 alpha_fill = 0.0
 [[textures.texture_stack.curves]]
 type = "TabulatedCSV"
@@ -282,7 +282,7 @@ material_identifier = "lambertian_white"
 [instances.aggregate]
 type = "Rect"
 size = [20, 20]
-origin = [0.0, 10.0, -1.0]
+origin = [0.0, -10.0, -1.0]
 normal = "Z"
 two_sided = true
 
