@@ -1,5 +1,31 @@
 use crate::math::*;
-use crate::texture::TexStack;
+use crate::texture::{TexStack, Texture1};
+
+#[derive(Clone)]
+pub struct ImportanceMap {
+    data: Vec<CDF>,
+    vertical_cdf: CDF,
+}
+
+impl ImportanceMap {
+    pub fn new(
+        texture_stack: TexStack,
+        vertical_resolution: usize,
+        horizontal_resolution: usize,
+        luminance_curve: SPD,
+    ) -> Self {
+        let mut data = Vec::new();
+        let mut v_cdf = Vec::new();
+
+        let vertical_cdf = SPD::Linear {
+            signal: v_cdf,
+            bounds: Bounds1D::new(0.0, 1.0),
+            mode: InterpolationMode::Cubic,
+        }
+        .into();
+        Self { data, vertical_cdf }
+    }
+}
 
 #[derive(Clone)]
 pub enum EnvironmentMap {
@@ -15,6 +41,7 @@ pub enum EnvironmentMap {
     },
     HDRi {
         texture: TexStack,
+        importance_map: Option<ImportanceMap>,
         rotation: Transform3,
         strength: f32,
     },
@@ -74,6 +101,7 @@ impl EnvironmentMap {
             EnvironmentMap::HDRi {
                 texture,
                 rotation,
+                importance_map,
                 strength,
             } => {
                 let direction = uv_to_direction(uv);
@@ -145,6 +173,7 @@ impl EnvironmentMap {
             EnvironmentMap::HDRi {
                 texture,
                 rotation,
+                importance_map,
                 strength,
             } => {
                 // let (mut sw, wavelength_pdf) =
@@ -174,8 +203,6 @@ impl EnvironmentMap {
     }
 
     pub fn sample_direction_given_wavelength(&self, sample: Sample2D, lambda: f32) -> (Vec3, PDF) {
-        // sample the env map from a specific point in the world.
-        // if self.sample_env_uv_given_wavelength ever works out, use that instead here.
         let (uv, pdf) = self.sample_env_uv_given_wavelength(sample, lambda);
         let direction = uv_to_direction(uv);
 
@@ -209,6 +236,7 @@ impl EnvironmentMap {
             EnvironmentMap::HDRi {
                 texture,
                 rotation,
+                importance_map,
                 strength,
             } => {
                 // do stuff
@@ -249,6 +277,7 @@ impl EnvironmentMap {
             EnvironmentMap::HDRi {
                 texture,
                 rotation,
+                importance_map,
                 strength,
             } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
         }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::math::*;
 use crate::texture::TexStack;
-use crate::world::EnvironmentMap;
+use crate::world::{EnvironmentMap, ImportanceMap};
 
 use super::curves::{parse_curve, CurveData};
 use super::instance::{AxisAngleData, Transform3Data};
@@ -25,10 +25,18 @@ pub struct SunData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct ImportanceMapData {
+    pub width: usize,
+    pub height: usize,
+    pub luminance_curve: Option<SPD>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct HDRIData {
     pub texture_id: String,
     pub strength: f32,
     pub rotation: Option<Vec<AxisAngleData>>,
+    pub importance_map: Option<ImportanceMapData>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -55,18 +63,35 @@ pub fn parse_environment(
             angular_diameter: data.angular_diameter,
             sun_direction: Vec3::from(data.sun_direction).normalized(),
         },
-        EnvironmentData::HDRI(data) => EnvironmentMap::HDRi {
-            texture: textures[*texture_mapping
-                .get(&data.texture_id)
-                .expect("requested texture id was not in texture mapping")]
-            .clone(),
-            rotation: Transform3Data {
+        EnvironmentData::HDRI(data) => {
+            let rotation = Transform3Data {
                 scale: None,
                 rotate: data.rotation,
                 translate: None,
             }
-            .into(),
-            strength: data.strength,
-        },
+            .into();
+            let texture = textures[*texture_mapping
+                .get(&data.texture_id)
+                .expect("requested texture id was not in texture mapping")]
+            .clone();
+            let importance_map = if let Some(importance_map_data) = data.importance_map {
+                Some(ImportanceMap::new(
+                    texture,
+                    importance_map_data.height,
+                    importance_map_data.width,
+                    importance_map_data.luminance_curve.unwrap_or_else(|| {
+                        SPD::y_bar();
+                    }),
+                ))
+            } else {
+                None
+            };
+            EnvironmentMap::HDRi {
+                texture,
+                rotation,
+                importance_map,
+                strength: data.strength,
+            }
+        }
     }
 }

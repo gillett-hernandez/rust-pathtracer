@@ -1,6 +1,6 @@
 mod environment;
 
-pub use environment::EnvironmentMap;
+pub use environment::{EnvironmentMap, ImportanceMap};
 
 use crate::hittable::*;
 use crate::materials::MaterialTable;
