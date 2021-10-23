@@ -146,7 +146,7 @@ impl Hittable for AARect {
         }
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
-        // TODO: affirm that it's fine to return 0.0 when not two sided.
+        // TODO: confirm that it's fine to return 0.0 when not two sided.
 
         let denominator = cos_o.abs() * area;
         if denominator == 0.0 {

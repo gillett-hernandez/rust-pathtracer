@@ -210,7 +210,7 @@ impl Renderer for PreviewRenderer {
                                 }
                             }
                             let srgb_tonemapper =
-                                sRGB::new(&film, render_settings_copy.exposure.unwrap_or(1.0));
+                                sRGB::new(&film, render_settings_copy.exposure.unwrap_or(1.0), false);
                             {
                                 light_buffer_ref
                                     .lock()
@@ -317,7 +317,7 @@ impl Renderer for PreviewRenderer {
                                 }
                             });
                         let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0));
+                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
                         buffer
                             .par_iter_mut()
                             .enumerate()
@@ -464,7 +464,7 @@ impl Renderer for PreviewRenderer {
                         println!("took {}s", elapsed);
                         stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0));
+                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
                         buffer
                             .par_iter_mut()
                             .enumerate()

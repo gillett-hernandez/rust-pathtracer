@@ -141,7 +141,7 @@ impl PathTracingIntegrator {
         let direction = uv_to_direction(uv);
         let local_wo = frame.to_local(&direction);
 
-        let local_dropoff = local_wo.z();
+        let local_cosine_theta = local_wo.z();
 
         let (reflectance, scatter_pdf_for_light_ray) =
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
@@ -197,12 +197,12 @@ impl PathTracingIntegrator {
 
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
             let v =
-                reflectance * local_dropoff.abs() * throughput * emission * weight / light_pdf.0;
+                reflectance * local_cosine_theta.abs() * throughput * emission * weight / light_pdf.0;
             debug_assert!(
                 v.0.is_finite(),
                 "{:?},{:?},{:?},{:?},{:?},{:?},",
                 reflectance,
-                local_dropoff,
+                local_cosine_theta,
                 throughput,
                 emission,
                 weight,

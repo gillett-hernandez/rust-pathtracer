@@ -22,7 +22,7 @@ pub struct sRGB {
 }
 
 impl sRGB {
-    pub fn new(film: &Film<XYZColor>, exposure_adjustment: f32) -> Self {
+    pub fn new(film: &Film<XYZColor>, exposure_adjustment: f32, printout: bool) -> Self {
         let mut max_luminance = 0.0;
         let mut total_luminance = 0.0;
         for y in 0..film.height {
@@ -41,12 +41,14 @@ impl sRGB {
             }
         }
         let avg_luminance = total_luminance / film.total_pixels() as f32;
-        println!(
-            "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
-            max_luminance,
-            avg_luminance,
-            exposure_adjustment / max_luminance
-        );
+        if printout {
+            println!(
+                "computed tonemapping: max luminance {}, avg luminance {}, exposure is {}",
+                max_luminance,
+                avg_luminance,
+                exposure_adjustment / max_luminance
+            );
+        }
         sRGB {
             factor: (1.0 / avg_luminance).min(1000000.0).max(0.00000000001),
             exposure_adjustment,

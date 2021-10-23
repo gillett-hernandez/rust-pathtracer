@@ -25,7 +25,7 @@ pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
-    let srgb_tonemapper = sRGB::new(film, render_settings.exposure.unwrap_or(1.0));
+    let srgb_tonemapper = sRGB::new(film, render_settings.exposure.unwrap_or(1.0), true);
     srgb_tonemapper.write_to_files(film, &exr_filename, &png_filename);
 }
 
