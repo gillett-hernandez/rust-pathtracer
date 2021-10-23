@@ -95,12 +95,12 @@ impl ImportanceMap {
                     cdf.push(row_luminance);
                 }
                 // normalize pdf (and cdf?)
-                // spd.iter_mut().for_each(|e| {
-                //     *e /= row_luminance;
-                // });
-                // cdf.iter_mut().for_each(|e| {
-                //     *e /= row_luminance;
-                // });
+                spd.iter_mut().for_each(|e| {
+                    *e /= row_luminance;
+                });
+                cdf.iter_mut().for_each(|e| {
+                    *e /= row_luminance;
+                });
                 pb.lock().add(horizontal_resolution as u64);
                 (
                     CDF {
@@ -165,7 +165,7 @@ impl ImportanceMap {
             }
         }
 
-        // v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
+        v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
         let vertical_cdf = SPD::Linear {
             signal: v_cdf,
             bounds: Bounds1D::new(0.0, 1.0),

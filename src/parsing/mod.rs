@@ -171,6 +171,6 @@ mod test {
     use super::*;
     #[test]
     fn test_world() {
-        let world = construct_world("data/scenes/test_prism.toml");
+        let _world = construct_world("data/scenes/test_prism.toml");
     }
 }
