@@ -7,6 +7,7 @@ use crate::integrator::{
 };
 use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
 use crate::profile::Profile;
+use crate::rgb_to_u32;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 use crate::{camera::Camera, config::RendererType};
@@ -32,10 +33,6 @@ impl PreviewRenderer {
         PreviewRenderer {}
     }
 }
-fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
-    ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
-}
-
 impl Renderer for PreviewRenderer {
     fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
         if let RendererType::Preview {

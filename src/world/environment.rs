@@ -1,7 +1,13 @@
 use math::spectral::Op;
 
-use crate::math::*;
 use crate::texture::{TexStack, Texture1};
+use crate::{math::*, rgb_to_u32};
+
+use minifb::{Key, Scale, Window, WindowOptions};
+use pbr::ProgressBar;
+
+use rayon::iter::ParallelIterator;
+use rayon::prelude::*;
 
 #[derive(Clone)]
 pub struct ImportanceMap {
@@ -27,6 +33,32 @@ impl ImportanceMap {
             seed: 1.0,
             list: vec![(Op::Mul, luminance_curve), (Op::Mul, SPD::Const(0.0))],
         };
+
+        let (mut window, mut buffer) = if cfg!(feature = "visualize") {
+            println!("visualize feature enabled");
+            let mut window = Window::new(
+                "Preview",
+                horizontal_resolution,
+                vertical_resolution,
+                WindowOptions {
+                    scale: Scale::X1,
+                    ..WindowOptions::default()
+                },
+            )
+            .unwrap_or_else(|e| {
+                panic!("{}", e);
+            });
+
+            window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
+            (
+                Some(window),
+                vec![0u32; horizontal_resolution * vertical_resolution],
+            )
+        } else {
+            (None, vec![])
+        };
+
+        let mut pb = ProgressBar::new((vertical_resolution * horizontal_resolution) as u64);
         for row in 0..vertical_resolution {
             let mut spd = Vec::new();
             let mut cdf = Vec::new();
@@ -49,6 +81,16 @@ impl ImportanceMap {
                 spd.push(texel_luminance);
                 cdf.push(row_luminance);
             }
+            if cfg!(feature = "visualize") {
+                for column in 0..horizontal_resolution {
+                    let rgb = (cdf[column] / row_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
+                    buffer[row * horizontal_resolution + column] = rgb_to_u32(
+                        (rgb * 256.0) as u8,
+                        (rgb * 256.0) as u8,
+                        (rgb * 256.0) as u8,
+                    );
+                }
+            }
             data.push(CDF {
                 pdf: SPD::Linear {
                     signal: spd,
@@ -63,18 +105,38 @@ impl ImportanceMap {
                 cdf_integral: row_luminance,
             });
             v_cdf.push(total_luminance);
-            println!(
-                "row done, progress = {}",
-                100.0 * row as f32 / vertical_resolution as f32
-            );
+            pb.add(horizontal_resolution as u64);
+
+            if let Some(window) = &mut window {
+                window
+                    .update_with_buffer(&buffer, horizontal_resolution, vertical_resolution)
+                    .unwrap();
+            }
         }
 
+        if let Some(window) = &mut window {
+            for row in 0..vertical_resolution {
+                let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
+                let u32 = rgb_to_u32(
+                    (rgb * 256.0) as u8,
+                    (rgb * 256.0) as u8,
+                    (rgb * 256.0) as u8,
+                );
+                buffer[row * horizontal_resolution] = u32;
+                buffer[row * horizontal_resolution + 1] = u32;
+                buffer[row * horizontal_resolution + 2] = u32;
+                window
+                    .update_with_buffer(&buffer, horizontal_resolution, vertical_resolution)
+                    .unwrap();
+            }
+        }
         let vertical_cdf = SPD::Linear {
             signal: v_cdf,
             bounds: Bounds1D::new(0.0, 1.0),
             mode: InterpolationMode::Cubic,
         }
         .into();
+
         Self {
             data,
             vertical_cdf,
@@ -282,19 +344,9 @@ impl EnvironmentMap {
         _lambda: f32,
     ) -> ((f32, f32), PDF) {
         match self {
-            EnvironmentMap::Constant { color, strength } => self.sample_env_uv(sample),
-            EnvironmentMap::Sun {
-                color,
-                strength,
-                angular_diameter,
-                sun_direction,
-            } => self.sample_env_uv(sample),
-            EnvironmentMap::HDRi {
-                texture,
-                rotation,
-                importance_map,
-                strength,
-            } => {
+            EnvironmentMap::Constant { .. } => self.sample_env_uv(sample),
+            EnvironmentMap::Sun { .. } => self.sample_env_uv(sample),
+            EnvironmentMap::HDRi { .. } => {
                 // do stuff
                 self.sample_env_uv(sample)
             }
@@ -309,15 +361,11 @@ impl EnvironmentMap {
         // CDF for this situation can be stored as the Y values of the XYZ representation, as a greyscale image potentially.
         // consider summed area table as well.
         match self {
-            EnvironmentMap::Constant {
-                color: _color,
-                strength: _strength,
-            } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
+            EnvironmentMap::Constant { .. } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
             EnvironmentMap::Sun {
-                color: _color,
-                strength: _strength,
                 angular_diameter,
                 sun_direction,
+                ..
             } => {
                 let local_wo =
                     Vec3::Z + (*angular_diameter / 2.0).sin() * random_in_unit_disk(sample);
@@ -331,10 +379,9 @@ impl EnvironmentMap {
                 )
             }
             EnvironmentMap::HDRi {
-                texture: _,
                 rotation,
                 importance_map,
-                strength: _,
+                ..
             } => {
                 if let Some(importance_map) = importance_map {
                     let (
@@ -374,7 +421,9 @@ impl EnvironmentMap {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
+    use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
+
     use super::*;
     use crate::curves;
     #[test]
@@ -453,5 +502,51 @@ mod tests {
         };
 
         env_map.sample_direction_given_wavelength(Sample2D::new_random_sample(), 500.0);
+    }
+    use crate::parsing::construct_world;
+    #[test]
+    fn test_env_importance_sampling() {
+        let world = construct_world("data/scenes/hdri_test.toml");
+        let env = &world.environment;
+        if let EnvironmentMap::HDRi {
+            importance_map: Some(importance_map),
+            texture,
+            strength,
+            ..
+        } = env
+        {
+            println!("got importance map, now do some math on it to see if it works");
+
+            let wavelength_range = BOUNDED_VISIBLE_RANGE;
+            let wavelength_sample = Sample1D::new_random_sample();
+
+            let limit = 10000;
+
+            let mut sum = 0.0;
+            let mut estimate = 0.0;
+            for _ in 0..limit {
+                // env.sample_emission(
+                //     world.get_world_radius(),
+                //     world.get_center(),
+                //     Sample2D::new_random_sample(),
+                //     Sample2D::new_random_sample(),
+                //     BOUNDED_VISIBLE_RANGE,
+                //     Sample1D::new_random_sample(),
+                // );
+                let (uv, pdf) = env.sample_env_uv(Sample2D::new_random_sample());
+
+                let (mut sw, wavelength_pdf) = (
+                    SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
+                    1.0 / wavelength_range.span(),
+                );
+
+                sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
+
+                sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
+                estimate +=
+                    y_bar(sw.lambda * 10.0) * sw.energy.0 / pdf.0 / wavelength_pdf / limit as f32;
+            }
+            println!("{} {}", sum, estimate);
+        }
     }
 }

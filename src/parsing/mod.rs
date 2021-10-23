@@ -52,7 +52,7 @@ pub struct Scene {
     pub env_sampling_probability: Option<f32>,
 }
 
-fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
+fn load_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
@@ -72,7 +72,7 @@ fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
 }
 
 pub fn construct_world(scene_file: &str) -> World {
-    let scene = get_scene(scene_file).expect("scene file failed to parse");
+    let scene = load_scene(scene_file).expect("scene file failed to parse");
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
     let mut medium_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut texture_names_to_ids: HashMap<String, usize> = HashMap::new();
