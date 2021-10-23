@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use math::spectral::Op;
+use parking_lot::Mutex;
 
 use crate::texture::{TexStack, Texture1};
 use crate::{math::*, rgb_to_u32};
@@ -59,7 +62,9 @@ impl ImportanceMap {
             (None, vec![])
         };
 
-        let mut pb = ProgressBar::new((vertical_resolution * horizontal_resolution) as u64);
+        let pb = Arc::new(Mutex::new(ProgressBar::new(
+            (vertical_resolution * horizontal_resolution) as u64,
+        )));
 
         let mut rows: Vec<(CDF, f32)> = (0..vertical_resolution)
             .into_par_iter()
@@ -88,6 +93,7 @@ impl ImportanceMap {
                     spd.push(texel_luminance);
                     cdf.push(row_luminance);
                 }
+                pb.lock().add(horizontal_resolution as u64);
                 (
                     CDF {
                         pdf: SPD::Linear {
@@ -125,7 +131,6 @@ impl ImportanceMap {
             total_luminance += row_luminance;
             data.push(cdf);
             v_cdf.push(total_luminance);
-            pb.add(horizontal_resolution as u64);
 
             if let Some(window) = &mut window {
                 window
@@ -133,6 +138,7 @@ impl ImportanceMap {
                     .unwrap();
             }
         }
+        pb.lock().finish();
 
         if let Some(window) = &mut window {
             for row in 0..vertical_resolution {

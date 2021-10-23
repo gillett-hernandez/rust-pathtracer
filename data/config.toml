@@ -168,7 +168,7 @@ only_direct = false
 type = "BDPT"
 # light_samples = 4
 # camera_samples = 4
-# selected_pair = [3,3]
+selected_pair = [2,1]
 # photon_cache_size = 1024
 [render_settings.resolution]
 width = 1080
