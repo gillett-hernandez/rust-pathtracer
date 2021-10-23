@@ -284,8 +284,8 @@ strength = 15.0
 material_identifier = "lambertian_white"
 [instances.aggregate]
 type = "Rect"
-size = [20, 20]
-origin = [0.0, -10.0, -1.0]
+size = [10, 10]
+origin = [0.0, -5.0, -1.0]
 normal = "Z"
 two_sided = true
 

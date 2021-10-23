@@ -3,10 +3,10 @@ use std::sync::Arc;
 use math::spectral::Op;
 use parking_lot::Mutex;
 
-use crate::texture::{TexStack, Texture1};
+use crate::texture::TexStack;
 use crate::{math::*, rgb_to_u32};
 
-use minifb::{Key, Scale, Window, WindowOptions};
+use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
 
 use rayon::iter::ParallelIterator;
@@ -16,7 +16,7 @@ use rayon::prelude::*;
 pub struct ImportanceMap {
     data: Vec<CDF>,
     vertical_cdf: CDF,
-    wavelength_bounds: Bounds1D,
+    // wavelength_bounds: Bounds1D,
 }
 
 impl ImportanceMap {
@@ -62,6 +62,7 @@ impl ImportanceMap {
             (None, vec![])
         };
 
+        println!("generating importance map");
         let pb = Arc::new(Mutex::new(ProgressBar::new(
             (vertical_resolution * horizontal_resolution) as u64,
         )));
@@ -93,6 +94,13 @@ impl ImportanceMap {
                     spd.push(texel_luminance);
                     cdf.push(row_luminance);
                 }
+                // normalize pdf (and cdf?)
+                // spd.iter_mut().for_each(|e| {
+                //     *e /= row_luminance;
+                // });
+                // cdf.iter_mut().for_each(|e| {
+                //     *e /= row_luminance;
+                // });
                 pb.lock().add(horizontal_resolution as u64);
                 (
                     CDF {
@@ -156,6 +164,8 @@ impl ImportanceMap {
                     .unwrap();
             }
         }
+
+        // v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
         let vertical_cdf = SPD::Linear {
             signal: v_cdf,
             bounds: Bounds1D::new(0.0, 1.0),
@@ -166,7 +176,7 @@ impl ImportanceMap {
         Self {
             data,
             vertical_cdf,
-            wavelength_bounds,
+            // wavelength_bounds,
         }
     }
 }

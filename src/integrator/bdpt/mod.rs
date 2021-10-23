@@ -248,6 +248,14 @@ impl GenericIntegrator for BDPTIntegrator {
         } = settings.integrator
         {
             if s <= light_vertex_count && t <= eye_vertex_count {
+                if s == 1
+                    && t == 1
+                    && light_path[0].vertex_type
+                        == VertexType::LightSource(LightSourceType::Environment)
+                {
+                    // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
+                    return XYZColor::from(SingleWavelength::BLACK);
+                }
                 let res = eval_unweighted_contribution(
                     &self.world,
                     &light_path,
@@ -264,6 +272,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         if g == 0.0 || factor == SingleEnergy::ZERO {
                             return XYZColor::from(SingleWavelength::BLACK);
                         }
+
                         let weight = if MIS_ENABLED {
                             eval_mis(
                                 &self.world,
@@ -288,6 +297,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         if g == 0.0 || factor == SingleEnergy::ZERO {
                             return XYZColor::from(SingleWavelength::BLACK);
                         }
+
                         let weight = if MIS_ENABLED {
                             eval_mis(
                                 &self.world,
@@ -352,6 +362,14 @@ impl GenericIntegrator for BDPTIntegrator {
                 if (s == 0 && t < 2) || (t == 0 && s < 2) || (s + t) < 2 {
                     continue;
                 }
+                if s == 1
+                    && t == 1
+                    && light_path[0].vertex_type
+                        == VertexType::LightSource(LightSourceType::Environment)
+                {
+                    // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
+                    continue;
+                }
 
                 // let mut g = 1.0;
                 let result = eval_unweighted_contribution(
@@ -374,6 +392,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 if g == 0.0 {
                     continue;
                 }
+
                 let weight = if MIS_ENABLED {
                     eval_mis(
                         &self.world,
