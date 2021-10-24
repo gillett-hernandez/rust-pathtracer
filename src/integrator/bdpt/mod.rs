@@ -129,7 +129,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampled.1.lambda,
                 Vec3::ZERO,
                 sampled.0.origin,
-                -sampled.0.direction,
+                sampled.0.direction,
                 (0.0, 0.0),
                 MaterialId::Light(0),
                 0,

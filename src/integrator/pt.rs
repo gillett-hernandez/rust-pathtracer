@@ -196,8 +196,8 @@ impl PathTracingIntegrator {
             let emission = self.world.environment.emission(uv, lambda);
 
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            let v =
-                reflectance * local_cosine_theta.abs() * throughput * emission * weight / light_pdf.0;
+            let v = reflectance * local_cosine_theta.abs() * throughput * emission * weight
+                / light_pdf.0;
             debug_assert!(
                 v.0.is_finite(),
                 "{:?},{:?},{:?},{:?},{:?},{:?},",
@@ -340,7 +340,11 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wo = vertex.local_wi;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
-                    sum.energy += emission * vertex.throughput;
+                    let nee_sa_pdf = self.world.environment.pdf_for(uv);
+                    let bsdf_sa_pdf = prev_vertex.pdf_forward;
+                    let weight = power_heuristic(bsdf_sa_pdf, nee_sa_pdf.0);
+
+                    sum.energy += weight * vertex.throughput * emission;
                 } else {
                     let hit = HitRecord::from(*vertex);
                     let frame = TangentFrame::from_normal(hit.normal);
@@ -372,7 +376,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                                 pdf,
                                 weight
                             );
-                            sum.energy += vertex.throughput * emission * weight;
+                            sum.energy += weight * vertex.throughput * emission;
                             debug_assert!(!sum.energy.is_nan());
                         }
                     }

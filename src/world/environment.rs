@@ -126,9 +126,8 @@ impl ImportanceMap {
                 for column in 0..horizontal_resolution {
                     let rgb = (cdf
                         .cdf
-                        .evaluate_power(column as f32 / horizontal_resolution as f32)
-                        / row_luminance)
-                        .clamp(0.0, 1.0 - std::f32::EPSILON);
+                        .evaluate_power(column as f32 / horizontal_resolution as f32))
+                    .clamp(0.0, 1.0 - std::f32::EPSILON);
                     buffer[row * horizontal_resolution + column] = rgb_to_u32(
                         (rgb * 256.0) as u8,
                         (rgb * 256.0) as u8,
@@ -148,9 +147,11 @@ impl ImportanceMap {
         }
         pb.lock().finish();
 
+        v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
+
         if let Some(window) = &mut window {
             for row in 0..vertical_resolution {
-                let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
+                let rgb = (v_cdf[row]).clamp(0.0, 1.0 - std::f32::EPSILON);
                 let u32 = rgb_to_u32(
                     (rgb * 256.0) as u8,
                     (rgb * 256.0) as u8,
@@ -164,15 +165,12 @@ impl ImportanceMap {
                     .unwrap();
             }
         }
-
-        v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
         let vertical_cdf = SPD::Linear {
             signal: v_cdf,
             bounds: Bounds1D::new(0.0, 1.0),
             mode: InterpolationMode::Cubic,
         }
         .into();
-
         Self {
             data,
             vertical_cdf,
@@ -335,7 +333,8 @@ impl EnvironmentMap {
                 let (uv, directional_pdf) = self.sample_env_uv(direction_sample);
                 let (mut sw, wavelength_pdf) = (
                     SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
-                    1.0 / wavelength_range.span(),
+                    // 1.0 / wavelength_range.span(),
+                    1.0,
                 );
                 sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
 
@@ -346,12 +345,54 @@ impl EnvironmentMap {
                     + direction * world_radius
                     + frame.to_world(&random_on_normal_disk);
 
+                // reverse direction because `direction` points from the origin to the point on the environment, so `-direction` points from the environment onto the scene
                 (
                     Ray::new(point, -direction),
                     sw,
                     directional_pdf,
                     wavelength_pdf.into(),
                 )
+            }
+        }
+    }
+
+    pub fn pdf_for(&self, uv: (f32, f32)) -> PDF {
+        match self {
+            EnvironmentMap::Constant { .. } => PDF::from(1.0 / 4.0 / PI),
+            EnvironmentMap::Sun {
+                angular_diameter,
+                sun_direction,
+                ..
+            } => {
+                let direction = uv_to_direction(uv);
+                let cos = *sun_direction * direction;
+                let sin = (1.0 - cos * cos).sqrt();
+                if sin.abs() < (*angular_diameter / 2.0).sin() && cos > 0.0 {
+                    // within solid angle
+                    PDF::from(1.0 / (2.0 * PI * (1.0 - angular_diameter.cos())))
+                } else {
+                    0.0.into()
+                }
+            }
+            EnvironmentMap::HDRi {
+                rotation,
+                importance_map,
+                ..
+            } => {
+                if let Some(importance_map) = importance_map {
+                    let direction = uv_to_direction(uv);
+                    let new_direction = rotation.to_local(direction);
+                    let uv = direction_to_uv(new_direction);
+                    PDF::from(
+                        importance_map.vertical_cdf.evaluate_power(uv.0)
+                            * importance_map.data[(uv.0.clamp(0.0, 1.0 - std::f32::EPSILON)
+                                * importance_map.data.len() as f32)
+                                as usize]
+                                .evaluate_power(uv.1),
+                    )
+                } else {
+                    PDF::from(1.0 / 4.0 / PI)
+                }
             }
         }
     }
@@ -410,7 +451,7 @@ impl EnvironmentMap {
                 let direction = frame.to_world(&local_wo);
                 (
                     direction_to_uv(direction.normalized()),
-                    PDF::from(1.0 / (2.0 * PI * (1.0 - *angular_diameter))),
+                    PDF::from(1.0 / (2.0 * PI * (1.0 - angular_diameter.cos()))),
                     // 1.0.into()
                 )
             }
@@ -620,8 +661,8 @@ mod test {
                 );
                 film.buffer[px + width * py] += XYZColor::from(sw) / pdf.0 / wavelength_pdf;
 
-                pb.add(1);
                 if idx % 100 == 0 {
+                    pb.add(100);
                     let srgb_tonemapper = sRGB::new(&film, 1.0, false);
                     buffer
                         .par_iter_mut()
