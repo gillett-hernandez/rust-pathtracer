@@ -423,10 +423,7 @@ impl EnvironmentMap {
         match self {
             EnvironmentMap::Constant { .. } => self.sample_env_uv(sample),
             EnvironmentMap::Sun { .. } => self.sample_env_uv(sample),
-            EnvironmentMap::HDRi { .. } => {
-                // do stuff
-                self.sample_env_uv(sample)
-            }
+            EnvironmentMap::HDRi { .. } => self.sample_env_uv(sample),
         }
 
         // however because that's unimplemented for now, lets just return `sample_env_uv`
@@ -678,7 +675,7 @@ mod test {
                     window.update_with_buffer(&buffer, width, height).unwrap();
                 }
             }
-            println!("\n\nestimate is {}", estimate);
+            println!("\n\nestimate is {}", estimate / limit as f32);
         }
     }
 }

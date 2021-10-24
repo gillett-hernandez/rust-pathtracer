@@ -163,7 +163,7 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "PT"
+filename = "PT_full"
 min_samples = 128
 min_bounces = 3
 max_bounces = 8
@@ -172,12 +172,12 @@ camera_id = "sun test camera"
 # camera_id = "wideangle sun test camera side"
 exposure = 1.0
 russian_roulette = true
-only_direct = true
+only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
 type = "PT"
-light_samples = 1
+light_samples = 4
 # camera_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024
