@@ -146,6 +146,7 @@ impl ImportanceMap {
             }
         }
         pb.lock().finish();
+        println!("");
 
         v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
 
@@ -384,7 +385,7 @@ impl EnvironmentMap {
                     let new_direction = rotation.to_local(direction);
                     let uv = direction_to_uv(new_direction);
                     PDF::from(
-                        importance_map.vertical_cdf.evaluate_power(uv.0)
+                        0.01 + importance_map.vertical_cdf.evaluate_power(uv.0)
                             * importance_map.data[(uv.0.clamp(0.0, 1.0 - std::f32::EPSILON)
                                 * importance_map.data.len() as f32)
                                 as usize]
@@ -491,7 +492,7 @@ impl EnvironmentMap {
                     let local_wo = uv_to_direction((u, v));
                     let new_wo = rotation.to_world(local_wo);
                     let uv = direction_to_uv(new_wo);
-                    (uv, PDF::from(row_pdf * column_pdf))
+                    (uv, PDF::from(row_pdf.0 * column_pdf.0 + 0.01))
                     // ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
                 } else {
                     ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
@@ -612,7 +613,7 @@ mod test {
             let mut estimate = 0.0;
             let mut pb = ProgressBar::new(limit as u64);
 
-            let width = 512;
+            let width = 1024;
             let height = 512;
             let mut window = Window::new(
                 "Preview",

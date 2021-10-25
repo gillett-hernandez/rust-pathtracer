@@ -1,4 +1,4 @@
-scene_file = "data/scenes/hdri_test.toml"
+scene_file = "data/scenes/hdri_test_2.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
@@ -86,7 +86,7 @@ vfov = 45.2
 type="SimpleCamera"
 name = "sun test camera"
 look_from = [-5, 0, 1]
-look_at = [0.0, 0.0, -0.9]
+look_at = [0.0, 0.0, -0.5]
 aperture_size = 0.02
 focal_distance = 5.0
 vfov = 40.2
@@ -163,8 +163,8 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "PT_full"
-min_samples = 128
+filename = "PT"
+min_samples = 1024
 min_bounces = 3
 max_bounces = 8
 hwss = false
