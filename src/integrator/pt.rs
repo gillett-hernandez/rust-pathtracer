@@ -340,7 +340,8 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wo = vertex.local_wi;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
-                    let nee_sa_pdf = self.world.environment.pdf_for(uv);
+                    let nee_sa_pdf =
+                        self.world.environment.pdf_for(uv) * (prev_vertex.normal * (-wo)).abs(); // * prev_vertex.local_wo.z();
                     let bsdf_sa_pdf = prev_vertex.pdf_forward;
                     let weight = power_heuristic(bsdf_sa_pdf, nee_sa_pdf.0);
 
@@ -408,7 +409,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         );
                         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
                         debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                        sum.energy += vertex.throughput * emission * weight;
+                        sum.energy += weight * vertex.throughput * emission;
                         debug_assert!(!sum.energy.is_nan());
                     }
                 }

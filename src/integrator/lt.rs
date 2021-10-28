@@ -212,7 +212,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     // let wo = -vertex.local_wi;
                     // let uv = direction_to_uv(wo);
                     // let emission = self.world.environment.emission(uv, lambda);
-                    // sum.energy += emission * beta;
+                    // sum.energy += beta * emission ;
                 } else {
                     // let hit = HitRecord::from(*vertex);
                     // let frame = TangentFrame::from_normal(hit.normal);
@@ -246,7 +246,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                     //             pdf,
                     //             weight
                     //         );
-                    //         sum.energy += beta * emission * weight;
+                    //         sum.energy += weight * beta * emission;
                     //         debug_assert!(!sum.energy.is_nan());
                     //     }
                     // }
@@ -276,7 +276,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                 //             hit_primitive.psa_pdf(prev_vertex.normal, prev_vertex.point, hit.point);
                 //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
                 //         debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                //         sum.energy += vertex.throughput * emission * weight;
+                //         sum.energy += weight * emission * vertex.throughput;
                 //         debug_assert!(!sum.energy.is_nan());
                 //     }
                 // }
