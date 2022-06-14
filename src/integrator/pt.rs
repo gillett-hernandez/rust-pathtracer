@@ -142,6 +142,10 @@ impl PathTracingIntegrator {
         let local_wo = frame.to_local(&direction);
 
         let local_cosine_theta = local_wo.z();
+        // return 0 if hemisphere doesn't match.
+        if local_cosine_theta <= 0.0 {
+            return 0.0.into();
+        }
 
         let (reflectance, scatter_pdf_for_light_ray) =
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
@@ -195,9 +199,10 @@ impl PathTracingIntegrator {
             // successfully hit nothing, which is to say, hit the world
             let emission = self.world.environment.emission(uv, lambda);
 
+            // calculate weight
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            let v = reflectance * local_cosine_theta.abs() * throughput * emission * weight
-                / light_pdf.0;
+            // include
+            let v = weight * throughput * reflectance * emission / light_pdf.0;
             debug_assert!(
                 v.0.is_finite(),
                 "{:?},{:?},{:?},{:?},{:?},{:?},",
@@ -340,10 +345,10 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wo = vertex.local_wi;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
-                    let nee_sa_pdf =
+                    let nee_psa_pdf =
                         self.world.environment.pdf_for(uv) * (prev_vertex.normal * (-wo)).abs(); // * prev_vertex.local_wo.z();
-                    let bsdf_sa_pdf = prev_vertex.pdf_forward;
-                    let weight = power_heuristic(bsdf_sa_pdf, nee_sa_pdf.0);
+                    let bsdf_psa_pdf = prev_vertex.pdf_forward;
+                    let weight = power_heuristic(bsdf_psa_pdf, nee_psa_pdf.0);
 
                     sum.energy += weight * vertex.throughput * emission;
                 } else {

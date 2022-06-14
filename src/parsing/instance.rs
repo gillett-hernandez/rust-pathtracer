@@ -32,7 +32,10 @@ pub struct Transform3Data {
 impl From<Transform3Data> for Transform3 {
     fn from(data: Transform3Data) -> Self {
         println!("parsing transform data");
-        let maybe_scale = data.scale.map(|v| Transform3::from_scale(Vec3::from(v)));
+        let maybe_scale = data.scale.map(|v| {
+            println!("parsed scale");
+            Transform3::from_scale(Vec3::from(v))
+        });
         let maybe_rotate = if let Some(rotations) = data.rotate {
             let mut base = None;
             for rotation in rotations {
@@ -40,6 +43,7 @@ impl From<Transform3Data> for Transform3 {
                     Vec3::from(rotation.axis),
                     PI * rotation.angle / 180.0,
                 );
+                println!("parsed rotate");
                 if base.is_none() {
                     base = Some(transform);
                 } else {
@@ -50,9 +54,10 @@ impl From<Transform3Data> for Transform3 {
         } else {
             None
         };
-        let maybe_translate = data
-            .translate
-            .map(|v| Transform3::from_translation(Vec3::from(v)));
+        let maybe_translate = data.translate.map(|v| {
+            println!("parsed translate");
+            Transform3::from_translation(Vec3::from(v))
+        });
         Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
     }
 }

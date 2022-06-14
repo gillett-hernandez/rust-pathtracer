@@ -21,6 +21,7 @@ pub struct DomainMapping {
     pub y_scale: Option<f32>,
 }
 impl Default for DomainMapping {
+    // default domain mapping is the identity mapping. all inputs are unchanged upon being mapped.
     fn default() -> Self {
         DomainMapping {
             x_offset: Some(0.0),

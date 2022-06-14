@@ -392,7 +392,7 @@ impl EnvironmentMap {
                                 .evaluate_power(uv.1),
                     )
                 } else {
-                    PDF::from(1.0 / 4.0 / PI)
+                    PDF::from((4.0 * PI).recip())
                 }
             }
         }

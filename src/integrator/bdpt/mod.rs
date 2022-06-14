@@ -386,10 +386,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),
                     SampleKind::Splatted((factor, g)) => (factor, g, true),
                 };
-                if factor == SingleEnergy::ZERO {
-                    continue;
-                }
-                if g == 0.0 {
+                if factor == SingleEnergy::ZERO || g == 0.0 {
                     continue;
                 }
 

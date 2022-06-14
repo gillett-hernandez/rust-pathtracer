@@ -77,6 +77,12 @@ pub fn parse_obj_mesh(
         println!("{}", mat.name);
     }
 
+    // let estimated_num_faces = if mesh.face_arities.len() > 0 {
+    //     mesh.face_arities.len()
+    // } else {
+    //     mesh.indices.len() / 3
+    // };
+
     let mesh_materials: Vec<MaterialId> = materials
         .iter()
         .map(|v| {
@@ -88,26 +94,34 @@ pub fn parse_obj_mesh(
         })
         .collect();
 
-    let mat_ids = vec![mesh.material_id.unwrap_or(0); mesh.face_arities.len()]
+    let mut next_face = 0;
+    // mesh.
+    if mesh.face_arities.len() == 0 {
+        // all faces are triangles
+        println!(
+            "no face arities, thus all are triangles. {} faces",
+            mesh.indices.len() / 3
+        );
+        indices.extend(mesh.indices.iter().map(|e| *e as usize));
+        num_faces += mesh.indices.len() / 3;
+    } else {
+        // handle non-triangle faces.
+        for f in 0..mesh.face_arities.len() {
+            let end = next_face + mesh.face_arities[f] as usize;
+            let face_indices: Vec<_> = mesh.indices[next_face..end].iter().collect();
+            indices.push(*face_indices[0] as usize);
+            indices.push(*face_indices[1] as usize);
+            indices.push(*face_indices[2] as usize);
+            // println!("    face[{}] = {:?}", f, face_indices);
+            next_face = end;
+            num_faces += 1;
+        }
+    }
+    let mat_ids = vec![mesh.material_id.unwrap_or(0); num_faces]
         .iter()
         .map(|idx| mesh_materials[*idx])
         .collect();
-    println!(
-        "Size of model[{}].num_face_indices: {}",
-        obj_num,
-        mesh.face_arities.len()
-    );
-    let mut next_face = 0;
-    for f in 0..mesh.face_arities.len() {
-        let end = next_face + mesh.face_arities[f] as usize;
-        let face_indices: Vec<_> = mesh.indices[next_face..end].iter().collect();
-        indices.push(*face_indices[0] as usize);
-        indices.push(*face_indices[1] as usize);
-        indices.push(*face_indices[2] as usize);
-        // println!("    face[{}] = {:?}", f, face_indices);
-        next_face = end;
-        num_faces += 1;
-    }
+    println!("Size of model[{}].num_face_indices: {}", obj_num, num_faces);
 
     // Normals and texture coordinates are also loaded, but not printed in this example
     println!("model[{}].vertices: {}", obj_num, mesh.positions.len() / 3);
@@ -121,13 +135,15 @@ pub fn parse_obj_mesh(
     }
     if mesh.normals.len() > 0 {
         println!("parsing normals");
-    }
-    for n in 0..mesh.normals.len() / 3 {
-        normals.push(Vec3::new(
-            mesh.normals[3 * n],
-            mesh.normals[3 * n + 1],
-            mesh.normals[3 * n + 2],
-        ))
+
+        for n in 0..mesh.normals.len() / 3 {
+            normals.push(Vec3::new(
+                mesh.normals[3 * n],
+                mesh.normals[3 * n + 1],
+                mesh.normals[3 * n + 2],
+            ))
+        }
+        println!("parsed normals, len = {}", normals.len());
     }
 
     Mesh::new(num_faces, indices, points, normals, mat_ids)

@@ -362,6 +362,9 @@ impl BVHNode {
             // In this branch the shapes lie too close together so that splitting them in a
             // sensible way is not possible. Instead we just split the list of shapes in half.
             let (child_l_indices, child_r_indices) = indices.split_at(indices.len() / 2);
+
+            // println!("h {}, {}", depth, indices.len(),);
+
             let child_l_aabb = joint_aabb_of_shapes(child_l_indices, shapes);
             let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
 
@@ -424,6 +427,12 @@ impl BVHNode {
             let child_r_indices = concatenate_vectors(r_assignments);
 
             // Proceed recursively.
+            // println!(
+            //     "buckets {}, {} {}",
+            //     depth,
+            //     child_l_indices.len(),
+            //     child_r_indices.len()
+            // );
             let child_l_index =
                 BVHNode::build(shapes, &child_l_indices, nodes, node_index, depth + 1);
             let child_r_index =

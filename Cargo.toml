@@ -7,6 +7,7 @@ default-run = "main"
 
 [features]
 visualize=[]
+notification=[]
 
 
 [dependencies]
@@ -17,8 +18,8 @@ minifb = "0.19.3"
 nalgebra = "0.29.0"
 num_cpus = "1.13.0"
 ordered-float = "2.8.0"
-packed_simd = { version = "0.3.4", package = "packed_simd_2" }
-parking_lot = "0.11.1"
+packed_simd = { version = "0.3.7", package = "packed_simd_2" }
+parking_lot = "0.12.0"
 pbr = "1.0.4"
 rand = "0.8.4"
 rayon = "1.5.0"

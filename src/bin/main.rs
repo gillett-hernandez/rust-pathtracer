@@ -7,7 +7,7 @@ use root::{config::*, renderer::SPPMRenderer};
 
 use std::time::Duration;
 use std::{thread, time::Instant};
-#[cfg(windows)]
+#[cfg(all(target_os="windows", feature="notification"))]
 use win32_notification::NotificationBuilder;
 
 fn construct_scene(config: &Config) -> World {
@@ -49,8 +49,9 @@ fn main() -> () {
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);
 
-    #[cfg(target_os = "windows")]
+    #[cfg(all(target_os="windows", feature="notification"))]
     {
+
         let notification = NotificationBuilder::new()
             .title_text("Render finished")
             .info_text(&format!("Took {} seconds", time.elapsed().as_secs()))
