@@ -290,12 +290,13 @@ pub fn random_walk(
                     vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
                     vertices.push(vertex);
                 } else {
-                    // this happens when the backside of a light is hit.
+                    // this happens when the backside of a light is hit?
                 }
                 break;
             }
         } else {
             // add a vertex when a camera ray hits the environment
+            // maybe resample the environment here?
             if trace_type == TransportMode::Importance {
                 let world_radius = world.get_world_radius();
                 let at_env = ray.direction * world_radius;

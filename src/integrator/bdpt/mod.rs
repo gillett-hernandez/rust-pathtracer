@@ -368,6 +368,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         == VertexType::LightSource(LightSourceType::Environment)
                 {
                     // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
+                    // figure out a better way to ignore the lightdisk. maybe within eval_unweighted_contribution
                     continue;
                 }
 
