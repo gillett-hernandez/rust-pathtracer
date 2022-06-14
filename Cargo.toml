@@ -6,7 +6,7 @@ edition = "2018"
 default-run = "main"
 
 [features]
-visualize=[]
+visualize_importance_map=[]
 notification=[]
 
 

@@ -351,6 +351,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let weight = power_heuristic(bsdf_psa_pdf, nee_psa_pdf.0);
 
                     sum.energy += weight * vertex.throughput * emission;
+                    debug_assert!(!sum.energy.is_nan());
                 } else {
                     let hit = HitRecord::from(*vertex);
                     let frame = TangentFrame::from_normal(hit.normal);
