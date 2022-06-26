@@ -1,5 +1,4 @@
-# scene_file = "data/scenes/trippy_glass_cube.toml"
-scene_file = "data/scenes/hdri_test_2.toml"
+default_scene_file = "data/scenes/cornell_box.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
