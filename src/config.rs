@@ -160,7 +160,7 @@ pub enum RendererType {
 #[derive(Deserialize, Clone)]
 pub struct TOMLConfig {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
-    pub scene_file: String,
+    pub default_scene_file: String,
     pub cameras: Vec<CameraSettings>,
     pub renderer: RendererType,
     pub render_settings: Vec<TOMLRenderSettings>,
@@ -179,7 +179,7 @@ impl From<TOMLConfig> for Config {
     fn from(data: TOMLConfig) -> Self {
         Config {
             env_sampling_probability: data.env_sampling_probability,
-            scene_file: data.scene_file,
+            scene_file: data.default_scene_file,
             cameras: data.cameras,
             renderer: data.renderer,
             render_settings: data

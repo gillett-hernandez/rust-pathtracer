@@ -1,4 +1,4 @@
-scene_file = "data/scenes/hdri_test.toml"
+default_scene_file = "data/scenes/cornell_box.toml"
 [renderer]
 # type="GPUStyle"
 type="Naive"
