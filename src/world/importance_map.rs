@@ -148,9 +148,11 @@ impl ImportanceMap {
             maybe_cdf.iter_mut().for_each(|e| e.push(total_luminance));
 
             if let Some(window) = &mut window {
-                window
-                    .update_with_buffer(&buffer, horizontal_resolution, vertical_resolution)
-                    .unwrap();
+                if window.is_open() {
+                    window
+                        .update_with_buffer(&buffer, horizontal_resolution, vertical_resolution)
+                        .unwrap();
+                }
             }
         }
         pb.lock().finish();
@@ -161,6 +163,9 @@ impl ImportanceMap {
         if let Some(window) = &mut window {
             let v_cdf = maybe_cdf.unwrap();
             for row in 0..vertical_resolution {
+                if !window.is_open() {
+                    break;
+                }
                 let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
                 let u32 = rgb_to_u32(
                     (rgb * 256.0) as u8,

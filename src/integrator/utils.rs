@@ -307,12 +307,13 @@ pub fn random_walk(
                     Vec3::Z,
                     Point3::from(at_env),
                     ray.direction,
+                    // delay computing uv
                     (0.0, 0.0),
                     MaterialId::Light(0),
                     0,
                     beta,
                     0.0,
-                    1.0 / (4.0 * PI),
+                    (4.0 * PI).recip(),
                     1.0,
                 );
                 debug_assert!(vertex.point.0.is_finite().all());

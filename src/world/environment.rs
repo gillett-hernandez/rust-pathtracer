@@ -51,13 +51,12 @@ impl EnvironmentMap {
 
     // evaluate env map given a uv and wavelength
     // used when a camera ray with a given wavelength intersects the environment map
-    #[allow(unused_variables)]
+
     pub fn emission(&self, uv: (f32, f32), lambda: f32) -> SingleEnergy {
         // evaluate emission at uv coordinate and wavelength
         match self {
             EnvironmentMap::Constant { color, strength } => {
                 debug_assert!(lambda > 0.0);
-                // SingleEnergy::new(self.color.evaluate_power(lambda))
                 SingleEnergy::new(color.evaluate_power(lambda) * strength)
             }
             EnvironmentMap::Sun {
@@ -102,6 +101,7 @@ impl EnvironmentMap {
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> (Ray, SingleWavelength, PDF, PDF) {
+        // unimplemented!();
         // sample env map cdf to get light ray, based on env map strength
         match self {
             EnvironmentMap::Constant { color, strength } => {
@@ -149,7 +149,12 @@ impl EnvironmentMap {
                 )
             }
             EnvironmentMap::HDR {
-                texture, strength, ..
+                // rotation is already taken into account when calling sample_env_uv, so ignore it
+                // importance map as well
+                texture,
+                strength,
+                rotation: _,
+                ..
             } => {
                 // let (mut sw, wavelength_pdf) =
                 //     color.sample_power_and_pdf(wavelength_range, wavelength_sample);
@@ -181,6 +186,7 @@ impl EnvironmentMap {
         }
     }
 
+    // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
     pub fn pdf_for(&self, uv: (f32, f32)) -> PDF {
         match self {
             EnvironmentMap::Constant { .. } => PDF::from(1.0 / 4.0 / PI),
@@ -229,7 +235,7 @@ impl EnvironmentMap {
                                 * importance_map.data.len() as f32)
                                 as usize]
                                 .evaluate_power(uv.1)
-                            / (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
+                            * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
                             + 0.001,
                     )
                 } else {
@@ -307,7 +313,13 @@ impl EnvironmentMap {
                     let local_wo = uv_to_direction(uv);
                     let new_wo = rotation.to_world(local_wo);
                     let uv = direction_to_uv(new_wo);
-                    (uv, PDF::from(row_pdf.0 * column_pdf.0))
+                    (
+                        uv,
+                        PDF::from(
+                            row_pdf.0 * column_pdf.0 * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
+                                + 0.001,
+                        ),
+                    )
                     // ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
                 } else {
                     ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))

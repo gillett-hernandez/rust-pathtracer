@@ -196,7 +196,7 @@ impl PathTracingIntegrator {
             SingleEnergy::ZERO
         } */
         } else {
-            // successfully hit nothing, which is to say, hit the world
+            // successfully world is visible along this ray
             let emission = self.world.environment.emission(uv, lambda);
 
             // calculate weight
@@ -342,14 +342,15 @@ impl SamplerIntegrator for PathTracingIntegrator {
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
             if let VertexType::LightSource(light_source) = vertex.vertex_type {
                 if light_source == LightSourceType::Environment {
-                    let wo = vertex.local_wi;
+                    // ray direction is stored in vertex.normal
+                    let wo = vertex.normal;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
-                    let nee_psa_pdf =
-                        self.world.environment.pdf_for(uv) * (prev_vertex.normal * (-wo)).abs(); // * prev_vertex.local_wo.z();
+                    let nee_psa_pdf = self.world.environment.pdf_for(uv); // * (prev_vertex.normal * (-wo)).abs(); // * prev_vertex.local_wo.z();
                     let bsdf_psa_pdf = prev_vertex.pdf_forward;
                     let weight = power_heuristic(bsdf_psa_pdf, nee_psa_pdf.0);
 
+                    profile.env_hits += 1;
                     sum.energy += weight * vertex.throughput * emission;
                     debug_assert!(!sum.energy.is_nan());
                 } else {
