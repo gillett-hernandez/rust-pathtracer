@@ -184,9 +184,9 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
 #[derive(Debug, Clone)]
 pub struct GGX {
     pub alpha: f32,
-    pub eta: SPD,
+    pub eta: Curve,
     pub eta_o: f32, // replace with SPD
-    pub kappa: SPD,
+    pub kappa: Curve,
     pub permeability: f32,
     pub outer_medium_id: usize,
 }
@@ -194,9 +194,9 @@ pub struct GGX {
 impl GGX {
     pub fn new(
         roughness: f32,
-        eta: SPD,
+        eta: Curve,
         eta_o: f32,
-        kappa: SPD,
+        kappa: Curve,
         permeability: f32,
         outer_medium_id: usize,
     ) -> Self {

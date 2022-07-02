@@ -1,7 +1,7 @@
 default_scene_file = "data/scenes/cornell_box.toml"
 [renderer]
-# type="GPUStyle"
 type="Naive"
+# type="GPUStyle"
 # type="SPPM"
 # type="Preview"
 selected_preview_film_id = 0
@@ -98,7 +98,7 @@ look_from = [-5, 0, 1]
 look_at = [0.0, 0.0, -0.5]
 aperture_size = 0.001
 focal_distance = 5.0
-vfov = 40.2
+vfov = 47.2
 
 
 [[cameras]]
@@ -172,7 +172,7 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
+filename = "PT"
 min_samples = 256
 min_bounces = 1
 max_bounces = 12
@@ -186,8 +186,8 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "BDPT"
-# light_samples = 4
+type = "PT"
+light_samples = 4
 # camera_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024
@@ -195,73 +195,3 @@ type = "BDPT"
 width = 1080
 height = 1080
 
-
-# [[render_settings]]
-# threads = 23
-# filename = "LT"
-# min_samples = 1
-# min_bounces = 1
-# max_bounces = 3
-# hwss = false
-# camera_id = "cornell camera"
-# exposure = 1.0
-# russian_roulette = true
-# only_direct = false
-# # wavelength_bounds = [380.0, 750.0]
-# # wavelength_bounds = [500.0, 510.0]
-# [render_settings.integrator]
-# type = "LT"
-# # light_samples = 2
-# camera_samples = 100
-# # selected_pair = [3,3]
-# # photon_cache_size = 1024
-# [render_settings.resolution]
-# width = 512
-# height = 512
-
-# [[render_settings]]
-# threads = 8
-# filename = "BDPT"
-# min_samples = 16
-# min_bounces = 3
-# max_bounces = 12
-# hwss = false
-# camera_id = "cornell camera"
-# exposure = 1.0
-# russian_roulette = true
-# only_direct = false
-# # wavelength_bounds = [380.0, 750.0]
-# # wavelength_bounds = [500.0, 510.0]
-# [render_settings.integrator]
-# type = "BDPT"
-# # light_samples = 2
-# # camera_samples = 25
-# # selected_pair = [3,3]
-# # photon_cache_size = 1024
-# [render_settings.resolution]
-# width = 1080
-# height = 1080
-
-
-# [[render_settings]]
-# threads = 23
-# filename = "SPPM"
-# min_samples = 16
-# min_bounces = 3
-# max_bounces = 12
-# hwss = false
-# camera_id = "cornell camera"
-# exposure = 1.0
-# russian_roulette = true
-# only_direct = false
-# # wavelength_bounds = [380.0, 750.0]
-# # wavelength_bounds = [500.0, 510.0]
-# [render_settings.integrator]
-# type = "SPPM"
-# # light_samples = 2
-# # camera_samples = 25
-# # selected_pair = [3,3]
-# photon_cache_size = 1024
-# [render_settings.resolution]
-# width = 1080
-# height = 1080

@@ -34,9 +34,9 @@ pub fn phase_hg(cos_theta: f32, g: f32) -> f32 {
 }
 #[derive(Clone)]
 pub struct HenyeyGreensteinHomogeneous {
-    pub g: SPD,       // valid range: 0.0 to 2.0. actual g == g.evaluate_power(lambda) - 1.0
-    pub sigma_t: SPD, // transmittance attenuation
-    pub sigma_s: SPD, // scattering attenuation
+    pub g: Curve, // valid range: 0.0 to 2.0. actual g == g.evaluate_power(lambda) - 1.0
+    pub sigma_t: Curve, // transmittance attenuation
+    pub sigma_s: Curve, // scattering attenuation
 }
 
 impl Medium for HenyeyGreensteinHomogeneous {

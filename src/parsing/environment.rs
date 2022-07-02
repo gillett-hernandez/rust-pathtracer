@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use math::spectral::BOUNDED_VISIBLE_RANGE;
 use serde::{Deserialize, Serialize};
 
 use crate::math::*;
@@ -54,11 +55,11 @@ pub fn parse_environment(
 ) -> EnvironmentMap {
     match env_data {
         EnvironmentData::Constant(data) => EnvironmentMap::Constant {
-            color: SPD::from(data.color).into(),
+            color: Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: data.strength,
         },
         EnvironmentData::Sun(data) => EnvironmentMap::Sun {
-            color: SPD::from(data.color).into(),
+            color: Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: data.strength,
             angular_diameter: data.angular_diameter,
             sun_direction: Vec3::from(data.sun_direction).normalized(),
@@ -75,6 +76,7 @@ pub fn parse_environment(
                 .expect("requested texture id was not in texture mapping")]
             .clone();
             let importance_map = if let Some(importance_map_data) = data.importance_map {
+                //TODO: refactor so that importance map is baked on each render (since importance sampling wavelength generally depends on camera spectral range and sensitivity)
                 Some(ImportanceMap::new(
                     &texture,
                     importance_map_data.height,
@@ -82,21 +84,13 @@ pub fn parse_environment(
                     importance_map_data
                         .luminance_curve
                         .map(|e| e.into())
-                        .unwrap_or_else(|| -> SPD {
-                            SPD::Exponential {
-                                // inlined function here because rust analyzer wouldn't stop complaining about it not being found
-                                signal: vec![
-                                    (568.0, 46.9, 40.5, 0.821),
-                                    (530.9, 16.3, 31.1, 0.286),
-                                ],
-                            }
-                        }),
-                    spectral::BOUNDED_VISIBLE_RANGE, //TODO: somehow get wavelength bounds from render settings into here. maybe re-bake the importance map if the wavelength bounds change.
+                        .unwrap_or_else(|| Curve::y_bar()),
+                    BOUNDED_VISIBLE_RANGE,
                 ))
             } else {
                 None
             };
-            EnvironmentMap::HDRi {
+            EnvironmentMap::HDR {
                 texture,
                 rotation,
                 importance_map,

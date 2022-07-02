@@ -5,9 +5,10 @@ use root::renderer::{GPUStyleRenderer, NaiveRenderer, PreviewRenderer, Renderer}
 use root::world::*;
 use root::{config::*, renderer::SPPMRenderer};
 
-use std::time::Instant;
 use structopt::StructOpt;
 
+#[cfg(all(target_os = "windows", feature = "notification"))]
+use std::time::Instant;
 #[cfg(all(target_os = "windows", feature = "notification"))]
 use win32_notification::NotificationBuilder;
 
@@ -54,10 +55,12 @@ fn main() -> () {
         .build_global()
         .unwrap();
 
+    // override scene file based on provided command line argument
     config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
     let (config, cameras) = parse_cameras_from(&config);
     let world = construct_scene(&config);
 
+    #[cfg(all(target_os = "windows", feature = "notification"))]
     let time = Instant::now();
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);

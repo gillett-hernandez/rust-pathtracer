@@ -1,5 +1,6 @@
 // use math::XYZColor;
 extern crate rust_pathtracer as root;
+use math::curves::InterpolationMode;
 use math::*;
 use root::materials::{refract, Material, GGX};
 
@@ -11,9 +12,9 @@ pub fn balance(f: f32, g: f32) -> f32 {
 
 #[derive(Clone)]
 pub enum Layer {
-    Diffuse { color: SPD },
+    Diffuse { color: Curve },
     Dielectric(GGX),
-    HGMedium { g: f32, attenuation: SPD },
+    HGMedium { g: f32, attenuation: Curve },
     None,
 }
 

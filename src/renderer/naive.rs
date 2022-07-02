@@ -511,18 +511,6 @@ impl Renderer for NaiveRenderer {
                             );
                             output_film(&render_settings, &film);
                         }
-                        Some(Integrator::HWSSPathTracing(integrator)) => {
-                            println!("rendering with hwss path tracing integrator");
-                            let (render_settings, film) = (
-                                render_settings.clone(),
-                                NaiveRenderer::render_sampled(
-                                    integrator,
-                                    render_settings,
-                                    &cameras[render_settings.camera_id],
-                                ),
-                            );
-                            output_film(&render_settings, &film);
-                        }
                         _ => {}
                     }
                 }

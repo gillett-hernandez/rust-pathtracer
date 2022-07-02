@@ -1,204 +1,23 @@
-use std::sync::Arc;
-
-use math::spectral::Op;
-use parking_lot::Mutex;
-
+use crate::math::*;
 use crate::texture::TexStack;
-use crate::{math::*, rgb_to_u32};
-
-use minifb::{Scale, Window, WindowOptions};
-use pbr::ProgressBar;
-
-use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
-
-#[derive(Clone)]
-pub struct ImportanceMap {
-    data: Vec<CDF>,
-    vertical_cdf: CDF,
-    // wavelength_bounds: Bounds1D,
-}
-
-impl ImportanceMap {
-    pub fn new(
-        texture_stack: &TexStack,
-        vertical_resolution: usize,
-        horizontal_resolution: usize,
-        luminance_curve: SPD,
-        wavelength_bounds: Bounds1D,
-    ) -> Self {
-        let num_samples_for_texel_spectra = 100;
-        let mut data = Vec::new();
-        let mut v_cdf = Vec::new();
-
-        let mut total_luminance = 0.0;
-
-        // let mut machine = SPD::Machine {
-        //     seed: 1.0,
-        //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, SPD::Const(0.0))],
-        // };
-
-        let (mut window, mut buffer, mut maybe_cdf) = if cfg!(feature = "visualize_importance_map")
-        {
-            println!("visualize feature enabled");
-            let mut window = Window::new(
-                "Preview",
-                horizontal_resolution,
-                vertical_resolution,
-                WindowOptions {
-                    scale: Scale::X1,
-                    ..WindowOptions::default()
-                },
-            )
-            .unwrap_or_else(|e| {
-                panic!("{}", e);
-            });
-
-            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-            (
-                Some(window),
-                vec![0u32; horizontal_resolution * vertical_resolution],
-                Some(Vec::new()),
-            )
-        } else {
-            (None, vec![], None)
-        };
-
-        println!("generating importance map");
-        let pb = Arc::new(Mutex::new(ProgressBar::new(
-            (vertical_resolution * horizontal_resolution) as u64,
-        )));
-
-        // construct CDF from each row
-        let mut rows: Vec<(CDF, f32)> = (0..vertical_resolution)
-            .into_par_iter()
-            .map(|row| -> (CDF, f32) {
-                let mut spd = Vec::new();
-                let mut cdf = Vec::new();
-                let mut row_luminance = 0.0;
-                for column in 0..horizontal_resolution {
-                    let uv = (
-                        row as f32 / vertical_resolution as f32,
-                        column as f32 / horizontal_resolution as f32,
-                    );
-                    let machine = SPD::Machine {
-                        seed: 1.0,
-                        list: vec![
-                            (Op::Mul, luminance_curve.clone()),
-                            (Op::Mul, texture_stack.curve_at(uv)),
-                        ],
-                    };
-                    let texel_luminance = machine.evaluate_integral(
-                        wavelength_bounds,
-                        wavelength_bounds.span() / num_samples_for_texel_spectra as f32,
-                        false,
-                    );
-                    row_luminance += texel_luminance;
-                    spd.push(texel_luminance);
-                    cdf.push(row_luminance);
-                }
-                // normalize pdf (and cdf?)
-                spd.iter_mut().for_each(|e| {
-                    *e /= row_luminance;
-                });
-                cdf.iter_mut().for_each(|e| {
-                    *e /= row_luminance;
-                });
-                pb.lock().add(horizontal_resolution as u64);
-                (
-                    CDF {
-                        pdf: SPD::Linear {
-                            signal: spd,
-                            bounds: Bounds1D::new(0.0, 1.0),
-                            mode: InterpolationMode::Linear,
-                        },
-                        cdf: SPD::Linear {
-                            signal: cdf,
-                            bounds: Bounds1D::new(0.0, 1.0),
-                            mode: InterpolationMode::Linear,
-                        },
-                        cdf_integral: 1.0,
-                    },
-                    row_luminance,
-                )
-            })
-            .collect();
-        for (row, (cdf, row_luminance)) in rows.drain(..).enumerate() {
-            // let  = rows[row];
-            if cfg!(feature = "visualize_importance_map") {
-                for column in 0..horizontal_resolution {
-                    let rgb = (cdf
-                        .cdf
-                        .evaluate_power(column as f32 / horizontal_resolution as f32))
-                    .clamp(0.0, 1.0 - std::f32::EPSILON);
-                    buffer[row * horizontal_resolution + column] = rgb_to_u32(
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
-                    );
-                }
-            }
-            total_luminance += row_luminance;
-            data.push(cdf);
-            v_cdf.push(row_luminance);
-            maybe_cdf.iter_mut().for_each(|e| e.push(total_luminance));
-
-            if let Some(window) = &mut window {
-                window
-                    .update_with_buffer(&buffer, horizontal_resolution, vertical_resolution)
-                    .unwrap();
-            }
-        }
-        pb.lock().finish();
-        println!("");
-
-        v_cdf.iter_mut().for_each(|e| *e /= total_luminance);
-
-        if let Some(window) = &mut window {
-            let v_cdf = maybe_cdf.unwrap();
-            for row in 0..vertical_resolution {
-                let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
-                let u32 = rgb_to_u32(
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
-                );
-                buffer[row * horizontal_resolution] = u32;
-                buffer[row * horizontal_resolution + 1] = u32;
-                buffer[row * horizontal_resolution + 2] = u32;
-                window
-                    .update_with_buffer(&buffer, horizontal_resolution, vertical_resolution)
-                    .unwrap();
-            }
-        }
-        let vertical_cdf = SPD::Linear {
-            signal: v_cdf,
-            bounds: Bounds1D::new(0.0, 1.0),
-            mode: InterpolationMode::Cubic,
-        }
-        .into();
-
-        Self {
-            data,
-            vertical_cdf,
-            // wavelength_bounds,
-        }
-    }
-}
+use crate::world::importance_map::ImportanceMap;
 
 #[derive(Clone)]
 pub enum EnvironmentMap {
     Constant {
-        color: CDF,
+        color: CurveWithCDF,
         strength: f32,
     },
     Sun {
-        color: CDF,
+        color: CurveWithCDF,
         strength: f32,
         angular_diameter: f32,
         sun_direction: Vec3,
     },
-    HDRi {
+    // proposal: generate importance maps for each CurveWithCDF associated with the HDR texture.
+    // select importance map and Curve randomly based on max luminance,
+    // i.e. if there's a texture with a low max luminance compared to other env textures, it should not be selected for importance sampling very often.
+    HDR {
         texture: TexStack,
         importance_map: Option<ImportanceMap>,
         rotation: Transform3,
@@ -257,11 +76,11 @@ impl EnvironmentMap {
                     SingleEnergy::ZERO
                 }
             }
-            EnvironmentMap::HDRi {
+            EnvironmentMap::HDR {
                 texture,
                 rotation,
-                importance_map,
                 strength,
+                ..
             } => {
                 let direction = uv_to_direction(uv);
                 // use to_local to transform ray direction to "uv space"
@@ -329,7 +148,7 @@ impl EnvironmentMap {
                     wavelength_pdf,
                 )
             }
-            EnvironmentMap::HDRi {
+            EnvironmentMap::HDR {
                 texture, strength, ..
             } => {
                 // let (mut sw, wavelength_pdf) =
@@ -380,7 +199,7 @@ impl EnvironmentMap {
                     0.0.into()
                 }
             }
-            EnvironmentMap::HDRi {
+            EnvironmentMap::HDR {
                 rotation,
                 importance_map,
                 ..
@@ -390,12 +209,28 @@ impl EnvironmentMap {
                     let new_direction = rotation.to_local(direction);
                     let uv = direction_to_uv(new_direction);
 
+                    // pdf returned from this branch of this function currently is not a pdf wrt solid angle,
+                    // but rather is a pdf wrt uv space [0,1) x [0,1). need to use jacobian to convert to solid angle.
+
+                    // theta(u, v) = (u - 0.5) * 2 * pi
+                    // phi(u, v) = pi * v
+
+                    // jacobian determinant is
+                    // [ 2pi , 0
+                    //  0, pi ] = 2pi^2
+
+                    // jacobian determinant from theta, phi to solid angle is just sin(phi)
+
+                    // thus the combined jacobian from uv to solid angle is 2pi^2 * sin(pi * v)
+
                     PDF::from(
-                        importance_map.vertical_cdf.evaluate_power(uv.0)
+                        importance_map.marginal_cdf.evaluate_power(uv.0)
                             * importance_map.data[(uv.0.clamp(0.0, 1.0 - std::f32::EPSILON)
                                 * importance_map.data.len() as f32)
                                 as usize]
-                                .evaluate_power(uv.1),
+                                .evaluate_power(uv.1)
+                            / (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
+                            + 0.001,
                     )
                 } else {
                     PDF::from((4.0 * PI).recip())
@@ -430,7 +265,7 @@ impl EnvironmentMap {
         match self {
             EnvironmentMap::Constant { .. } => self.sample_env_uv(sample),
             EnvironmentMap::Sun { .. } => self.sample_env_uv(sample),
-            EnvironmentMap::HDRi { .. } => self.sample_env_uv(sample),
+            EnvironmentMap::HDR { .. } => self.sample_env_uv(sample),
         }
 
         // however because that's unimplemented for now, lets just return `sample_env_uv`
@@ -459,45 +294,17 @@ impl EnvironmentMap {
                     // 1.0.into()
                 )
             }
-            EnvironmentMap::HDRi {
+            EnvironmentMap::HDR {
                 rotation,
                 importance_map,
                 ..
             } => {
                 if let Some(importance_map) = importance_map {
                     // inverse transform sample the vertical cdf
+                    let (uv, pdf) = importance_map.sample_uv(sample);
 
-                    let (
-                        SingleWavelength {
-                            lambda: u,
-                            energy: _,
-                        },
-                        row_pdf,
-                    ) = importance_map.vertical_cdf.sample_power_and_pdf(
-                        // cdf inverse transform sample should still work even though the wavelength bounds are 0..1
-                        Bounds1D::new(0.0, 1.0),
-                        Sample1D::new(sample.y),
-                    );
-
-                    // FIXME: maybe interpolate between two rows instead of effectively doing `u.floor()`
-                    // inverse transform sample the selected horizontal cdf
-                    let (
-                        SingleWavelength {
-                            lambda: v,
-                            energy: _,
-                        },
-                        column_pdf,
-                    ) = importance_map.data[(u * importance_map.data.len() as f32) as usize]
-                        .sample_power_and_pdf(
-                            // cdf inverse transform sample should still work even though the wavelength bounds are 0..1
-                            Bounds1D::new(0.0, 1.0),
-                            Sample1D::new(sample.x),
-                        );
-                    assert!(u < 1.0, "{}", u);
-                    assert!(u >= 0.0, "{}", u);
-                    assert!(v < 1.0, "{}", v);
-                    assert!(v >= 0.0, "{}", v);
-                    let local_wo = uv_to_direction((u, v));
+                    let (row_pdf, column_pdf) = pdf;
+                    let local_wo = uv_to_direction(uv);
                     let new_wo = rotation.to_world(local_wo);
                     let uv = direction_to_uv(new_wo);
                     (uv, PDF::from(row_pdf.0 * column_pdf.0))
@@ -512,14 +319,15 @@ impl EnvironmentMap {
 
 #[cfg(test)]
 mod test {
-    use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
+
+    use math::spectral::BOUNDED_VISIBLE_RANGE;
 
     use super::*;
     use crate::curves;
     #[test]
     fn test_sample_emission() {
         let env_map = EnvironmentMap::Constant {
-            color: curves::blackbody(5500.0, 40.0).into(),
+            color: curves::blackbody(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: 1.0,
         };
         let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
@@ -527,7 +335,7 @@ mod test {
             Point3::ORIGIN,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
-            curves::EXTENDED_VISIBLE_RANGE,
+            BOUNDED_VISIBLE_RANGE,
             Sample1D::new_random_sample(),
         );
         println!("{:?} {:?} {:?}", ray, sw, pdf);
@@ -546,7 +354,7 @@ mod test {
     #[test]
     fn test_sample_emission_sun() {
         let env_map = EnvironmentMap::Sun {
-            color: curves::blackbody(5500.0, 40.0).into(),
+            color: curves::blackbody(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: 1.0,
             angular_diameter: 0.1,
             sun_direction: Vec3::Z,
@@ -556,7 +364,7 @@ mod test {
             Point3::ORIGIN,
             Sample2D::new_random_sample(),
             Sample2D::new_random_sample(),
-            curves::EXTENDED_VISIBLE_RANGE,
+            BOUNDED_VISIBLE_RANGE,
             Sample1D::new_random_sample(),
         );
         println!("{:?} {:?} {:?}", ray, sw, pdf);
@@ -573,237 +381,14 @@ mod test {
     }
 
     #[test]
-    fn test_uv_to_direction_and_back() {
-        let direction = Vec3::new(1.0, 1.0, 1.0).normalized();
-        println!("{:?}", direction);
-        let uv = direction_to_uv(direction);
-        println!("{:?}", uv);
-        let direction_again = uv_to_direction(uv);
-        println!("{:?}", direction_again);
-    }
-
-    #[test]
     fn test_sample_env_map() {
         let env_map = EnvironmentMap::Sun {
-            color: curves::blackbody(5500.0, 40.0).into(),
+            color: curves::blackbody(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: 1.0,
             angular_diameter: 0.1,
             sun_direction: Vec3::Z,
         };
 
         env_map.sample_direction_given_wavelength(Sample2D::new_random_sample(), 500.0);
-    }
-    use crate::parsing::construct_world;
-    use crate::renderer::Film;
-    use crate::tonemap::{sRGB, Tonemapper};
-    #[test]
-    fn test_env_importance_sampling() {
-        let world = construct_world("data/scenes/hdri_test_2.toml");
-        let env = &world.environment;
-        if let EnvironmentMap::HDRi {
-            importance_map,
-            texture,
-            strength,
-            ..
-        } = env
-        {
-            if importance_map.is_some() {
-                println!("got importance map, now do some math on it to see if it works");
-            } else {
-                println!("testing env map without importance map, now do some math on it to see if it works");
-            }
-
-            let wavelength_range = BOUNDED_VISIBLE_RANGE;
-
-            // let mut sum = 0.0;
-            let width = 512;
-            let height = 256;
-            let limit = width * height;
-            let deterministic = true;
-            // let limit = 100000;
-            let mut estimate = 0.0;
-            let mut estimate2 = 0.0;
-            let mut pb = ProgressBar::new(limit as u64);
-
-            let mut window = Window::new(
-                "Preview",
-                width,
-                height,
-                WindowOptions {
-                    scale: Scale::X2,
-                    ..WindowOptions::default()
-                },
-            )
-            .unwrap_or_else(|e| {
-                panic!("{}", e);
-            });
-            let mut buffer = vec![0u32; limit];
-            let mut film = Film::new(width, height, XYZColor::BLACK);
-
-            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
-            for idx in 0..limit {
-                if !window.is_open() {
-                    println!("window closed, stopping test");
-                    break;
-                }
-                let x_float = (idx % width) as f32 / width as f32;
-                let y_float = (idx / width) as f32 / height as f32;
-                // env.sample_emission(
-                //     world.get_world_radius(),
-                //     world.get_center(),
-                //     Sample2D::new_random_sample(),
-                //     Sample2D::new_random_sample(),
-                //     BOUNDED_VISIBLE_RANGE,
-                //     Sample1D::new_random_sample(),
-                // );
-
-                let sample = if deterministic {
-                    Sample2D::new(x_float, y_float)
-                } else {
-                    Sample2D::new_random_sample()
-                };
-                let (uv, pdf) = env.sample_env_uv(sample);
-                let pdf_for_result = env.pdf_for(uv);
-
-                for _ in 0..4 {
-                    let wavelength_sample = if false {
-                        // pick a constant wavelength to reduce variance
-                        Sample1D::new(0.35)
-                    } else {
-                        Sample1D::new_random_sample()
-                    };
-                    let (mut sw, wavelength_pdf) = (
-                        SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
-                        1.0 / wavelength_range.span(),
-                    );
-
-                    sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
-
-                    // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
-                    estimate += y_bar(sw.lambda * 10.0) * sw.energy.0 / pdf.0 / wavelength_pdf;
-                    estimate2 +=
-                        y_bar(sw.lambda * 10.0) * sw.energy.0 / pdf_for_result.0 / wavelength_pdf;
-                    let (px, py) = (
-                        (uv.0 * width as f32) as usize,
-                        (uv.1 * height as f32) as usize,
-                    );
-
-                    film.buffer[px + width * py] += XYZColor::from(sw) / pdf.0 / wavelength_pdf;
-                }
-
-                if idx % 100 == 0 {
-                    pb.add(100);
-                    let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-                    buffer
-                        .par_iter_mut()
-                        .enumerate()
-                        .for_each(|(pixel_idx, v)| {
-                            let y: usize = pixel_idx / width;
-                            let x: usize = pixel_idx - width * y;
-                            let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                            let [r, g, b, _]: [f32; 4] = mapped.into();
-                            *v =
-                                rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                        });
-                    window.update_with_buffer(&buffer, width, height).unwrap();
-                }
-            }
-            println!(
-                "\n\nestimate is {}, estimate2 = {}",
-                estimate / limit as f32,
-                estimate2 / limit as f32
-            );
-        }
-    }
-
-    #[test]
-    fn test_env_direct_access() {
-        let world = construct_world("data/scenes/hdri_test_2.toml");
-        let env = &world.environment;
-
-        let wavelength_range = BOUNDED_VISIBLE_RANGE;
-
-        // let mut sum = 0.0;
-        let width = 512;
-        let height = 256;
-        let limit = width * height;
-        let deterministic = true;
-        let mut estimate = 0.0;
-        let mut pb = ProgressBar::new(limit as u64);
-
-        let mut window = Window::new(
-            "Preview",
-            width,
-            height,
-            WindowOptions {
-                scale: Scale::X2,
-                ..WindowOptions::default()
-            },
-        )
-        .unwrap_or_else(|e| {
-            panic!("{}", e);
-        });
-        let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
-
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
-        for idx in 0..limit {
-            if !window.is_open() {
-                println!("window closed, stopping test");
-                break;
-            }
-
-            let uv = if deterministic {
-                let u = (idx % width) as f32 / width as f32;
-                let v = (idx / width) as f32 / height as f32;
-
-                (u, v)
-            } else {
-                let s = Sample2D::new_random_sample();
-                (s.x, s.y)
-            };
-
-            for _ in 0..4 {
-                let wavelength_sample = if false {
-                    // pick a constant wavelength to reduce variance
-                    Sample1D::new(0.35)
-                } else {
-                    Sample1D::new_random_sample()
-                };
-                let (mut sw, wavelength_pdf) = (
-                    SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
-                    1.0 / wavelength_range.span(),
-                );
-
-                sw.energy.0 = env.emission(uv, sw.lambda).0;
-
-                // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
-                estimate += y_bar(sw.lambda * 10.0) * sw.energy.0 / wavelength_pdf;
-                let (px, py) = (
-                    (uv.0 * width as f32) as usize,
-                    (uv.1 * height as f32) as usize,
-                );
-                film.buffer[px + width * py] += XYZColor::from(sw) / wavelength_pdf;
-            }
-
-            if idx % 100 == 0 {
-                pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
-                window.update_with_buffer(&buffer, width, height).unwrap();
-            }
-        }
-        println!("\n\nestimate is {}", estimate / limit as f32);
     }
 }

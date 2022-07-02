@@ -1,7 +1,7 @@
 use crate::materials::*;
 use crate::parsing::curves::CurveData;
 use crate::texture::TexStack;
-use math::{SPD, Sidedness};
+use math::{spectral::BOUNDED_VISIBLE_RANGE, Curve, Sidedness};
 
 use serde::{Deserialize, Serialize};
 
@@ -82,13 +82,13 @@ pub fn parse_material(
         MaterialData::SharpLight(data) => {
             println!("parsing SharpLight");
             // let color = parse_texture_stack(data.color);
-            let color = SPD::from(data.color).into();
+            let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
         }
         MaterialData::PassthroughFilter(data) => {
             println!("parsing PassthroughFilter");
             // let color = parse_texture_stack(data.color);
-            let color = SPD::from(data.color).into();
+            let color = Curve::from(data.color);
             MaterialEnum::PassthroughFilter(PassthroughFilter::new(
                 color,
                 data.outer_medium_id,
@@ -98,7 +98,7 @@ pub fn parse_material(
         MaterialData::DiffuseLight(data) => {
             println!("parsing DiffuseLight");
             // let color = parse_texture_stack(data.color);
-            let color = SPD::from(data.color).into();
+            let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
         }
     }

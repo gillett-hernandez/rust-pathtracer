@@ -4,13 +4,13 @@ use crate::world::TransportMode;
 
 #[derive(Clone)]
 pub struct PassthroughFilter {
-    pub color: SPD,
+    pub color: Curve,
     pub outer_medium_id: usize,
     pub inner_medium_id: usize,
 }
 
 impl PassthroughFilter {
-    pub fn new(color: SPD, outer_medium_id: usize, inner_medium_id: usize) -> PassthroughFilter {
+    pub fn new(color: Curve, outer_medium_id: usize, inner_medium_id: usize) -> PassthroughFilter {
         PassthroughFilter {
             color,
             outer_medium_id,

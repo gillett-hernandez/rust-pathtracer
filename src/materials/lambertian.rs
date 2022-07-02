@@ -56,8 +56,9 @@ impl Material for Lambertian {
 
 #[cfg(test)]
 mod test {
+    use math::curves::InterpolationMode;
+    use math::spectral::BOUNDED_VISIBLE_RANGE;
     use math::*;
-    use spectral::EXTENDED_VISIBLE_RANGE;
 
     use crate::renderer::Film;
     use crate::texture::{Texture, Texture1};
@@ -65,12 +66,12 @@ mod test {
     use super::*;
     #[test]
     fn test_material() {
-        let flat = SPD::Linear {
+        let flat = Curve::Linear {
             signal: vec![1.0],
-            bounds: EXTENDED_VISIBLE_RANGE,
+            bounds: BOUNDED_VISIBLE_RANGE,
             mode: InterpolationMode::Linear,
         };
-        let cdf = CDF::from(flat);
+        let cdf = flat.to_cdf(BOUNDED_VISIBLE_RANGE, 5);
         let tex = Texture1 {
             curve: cdf,
             texture: Film::new(1, 1, 1.0),

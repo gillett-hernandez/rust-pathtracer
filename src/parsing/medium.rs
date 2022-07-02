@@ -1,7 +1,7 @@
 use crate::mediums::*;
 use crate::parsing::curves::CurveData;
 
-use math::SPD;
+use math::Curve;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -21,7 +21,7 @@ pub fn parse_medium(data: MediumData) -> MediumEnum {
     match data {
         MediumData::HG(data) => {
             println!("parsing HG");
-            let g = SPD::from(data.g).into();
+            let g = Curve::from(data.g);
             let sigma_s = data.sigma_s.into();
             let sigma_t = data.sigma_t.into();
             MediumEnum::HenyeyGreensteinHomogeneous(HenyeyGreensteinHomogeneous {

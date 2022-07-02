@@ -5,12 +5,12 @@ use crate::renderer::Film;
 // use std::fs::File;
 // use std::io::Read;
 
-use math::spectral::Op;
+use math::curves::{Curve, CurveWithCDF, InterpolationMode, Op};
 use packed_simd::f32x4;
 
 #[derive(Clone)]
 pub struct Texture4 {
-    pub curves: [CDF; 4],
+    pub curves: [CurveWithCDF; 4],
     pub texture: Film<f32x4>,
     pub interpolation_mode: InterpolationMode,
 }
@@ -30,34 +30,34 @@ impl Texture4 {
         (factors * eval).sum()
     }
 
-    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
         let texel = self.texture.at_uv(uv);
-        SPD::Machine {
+        Curve::Machine {
             list: vec![
                 (
                     Op::Add,
-                    SPD::Machine {
+                    Curve::Machine {
                         list: vec![(Op::Mul, self.curves[0].pdf.clone())],
                         seed: texel.extract(0),
                     },
                 ),
                 (
                     Op::Add,
-                    SPD::Machine {
+                    Curve::Machine {
                         list: vec![(Op::Mul, self.curves[1].pdf.clone())],
                         seed: texel.extract(1),
                     },
                 ),
                 (
                     Op::Add,
-                    SPD::Machine {
+                    Curve::Machine {
                         list: vec![(Op::Mul, self.curves[2].pdf.clone())],
                         seed: texel.extract(2),
                     },
                 ),
                 (
                     Op::Add,
-                    SPD::Machine {
+                    Curve::Machine {
                         list: vec![(Op::Mul, self.curves[3].pdf.clone())],
                         seed: texel.extract(3),
                     },
@@ -69,7 +69,7 @@ impl Texture4 {
 }
 #[derive(Clone)]
 pub struct Texture1 {
-    pub curve: CDF,
+    pub curve: CurveWithCDF,
     pub texture: Film<f32>,
     pub interpolation_mode: InterpolationMode,
 }
@@ -84,8 +84,8 @@ impl Texture1 {
         factor * eval
     }
 
-    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
-        SPD::Machine {
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+        Curve::Machine {
             list: vec![(Op::Mul, self.curve.pdf.clone())],
             seed: self.texture.at_uv(uv),
         }
@@ -106,7 +106,7 @@ impl Texture {
         }
     }
 
-    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
         match self {
             Texture::Texture1(tex) => tex.curve_at(uv),
             Texture::Texture4(tex) => tex.curve_at(uv),
@@ -138,13 +138,13 @@ impl TexStack {
     //     unimplemented!()
     // }
 
-    pub fn curve_at(&self, uv: (f32, f32)) -> SPD {
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
         let mut list = Vec::new();
         let seed = 0.0;
         for tex in &self.textures {
             list.push((Op::Add, tex.curve_at(uv)));
         }
-        SPD::Machine { seed, list }
+        Curve::Machine { seed, list }
     }
     // pub fn bake_importance_map(&self, width: usize, height: usize) -> Film<f32> {
     //     let mut film = Film::new(width, height, 0.0f32);

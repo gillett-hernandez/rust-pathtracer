@@ -3,6 +3,8 @@ use crate::parsing::curves::CurveData;
 use crate::renderer::Film;
 use crate::texture::*;
 
+use math::curves::InterpolationMode;
+use math::spectral::BOUNDED_VISIBLE_RANGE;
 use packed_simd::f32x4;
 use serde::{Deserialize, Serialize};
 
@@ -143,12 +145,12 @@ where
     }
 }
 
-fn convert_to_array(vec: Vec<CDF>) -> [CDF; 4] {
-    let mut arr: [CDF; 4] = [
-        CDF::default(),
-        CDF::default(),
-        CDF::default(),
-        CDF::default(),
+fn convert_to_array(vec: Vec<CurveWithCDF>) -> [CurveWithCDF; 4] {
+    let mut arr: [CurveWithCDF; 4] = [
+        CurveWithCDF::default(),
+        CurveWithCDF::default(),
+        CurveWithCDF::default(),
+        CurveWithCDF::default(),
     ];
     arr[0] = vec[0].clone();
     arr[1] = vec[1].clone();
@@ -160,7 +162,7 @@ fn convert_to_array(vec: Vec<CDF>) -> [CDF; 4] {
 pub fn parse_texture(texture: TextureData) -> Texture {
     match texture {
         TextureData::Texture1 { curve, filename } => {
-            let cdf: CDF = SPD::from(curve).into();
+            let cdf: CurveWithCDF = Curve::from(curve).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             Texture::Texture1(Texture1 {
                 curve: cdf,
                 texture: parse_bitmap(&filename),
@@ -168,10 +170,10 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             })
         }
         TextureData::Texture4 { curves, filename } => {
-            let cdfs: [CDF; 4] = convert_to_array(
+            let cdfs: [CurveWithCDF; 4] = convert_to_array(
                 curves
                     .iter()
-                    .map(|curve| SPD::from(curve.clone()).into())
+                    .map(|curve| Curve::from(curve.clone()).to_cdf(BOUNDED_VISIBLE_RANGE, 100))
                     .collect(),
             );
             Texture::Texture4(Texture4 {
@@ -185,10 +187,10 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             filename,
             alpha_fill,
         } => {
-            let cdfs: [CDF; 4] = convert_to_array(
+            let cdfs: [CurveWithCDF; 4] = convert_to_array(
                 curves
                     .iter()
-                    .map(|curve| SPD::from(curve.clone()).into())
+                    .map(|curve| Curve::from(curve.clone()).to_cdf(BOUNDED_VISIBLE_RANGE, 100))
                     .collect(),
             );
             Texture::Texture4(Texture4 {
@@ -198,10 +200,10 @@ pub fn parse_texture(texture: TextureData) -> Texture {
             })
         }
         TextureData::EXR { curves, filename } => {
-            let cdfs: [CDF; 4] = convert_to_array(
+            let cdfs: [CurveWithCDF; 4] = convert_to_array(
                 curves
                     .iter()
-                    .map(|curve| SPD::from(curve.clone()).into())
+                    .map(|curve| Curve::from(curve.clone()).to_cdf(BOUNDED_VISIBLE_RANGE, 100))
                     .collect(),
             );
             Texture::Texture4(Texture4 {
@@ -212,29 +214,29 @@ pub fn parse_texture(texture: TextureData) -> Texture {
         }
         TextureData::SRGB { filename } => {
             let curves_filename = "data/curves/basis/simple-spectral-srgb-1931.csv".to_string();
-            let cdfs: [CDF; 4] = [
-                SPD::from(CurveData::TabulatedCSV {
+            let cdfs: [CurveWithCDF; 4] = [
+                Curve::from(CurveData::TabulatedCSV {
                     filename: curves_filename.clone(),
                     column: 1,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,
                 })
-                .into(),
-                SPD::from(CurveData::TabulatedCSV {
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+                Curve::from(CurveData::TabulatedCSV {
                     filename: curves_filename.clone(),
                     column: 2,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,
                 })
-                .into(),
-                SPD::from(CurveData::TabulatedCSV {
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+                Curve::from(CurveData::TabulatedCSV {
                     filename: curves_filename.clone(),
                     column: 3,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,
                 })
-                .into(),
-                SPD::from(CurveData::Flat { strength: 0.0 }).into(),
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+                Curve::from(CurveData::Flat { strength: 0.0 }).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             ];
             Texture::Texture4(Texture4 {
                 curves: cdfs,
