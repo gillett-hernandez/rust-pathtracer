@@ -77,8 +77,8 @@ impl ImportanceMap {
         let mut rows: Vec<(CurveWithCDF, f32)> = (0..vertical_resolution)
             .into_par_iter()
             .map(|row| -> (CurveWithCDF, f32) {
-                let mut spd = Vec::new();
-                let mut cdf = Vec::new();
+                let mut signal = Vec::new();
+                let mut signal_cmf = Vec::new();
                 let mut row_luminance = 0.0;
                 for column in 0..horizontal_resolution {
                     let uv = (
@@ -98,28 +98,28 @@ impl ImportanceMap {
                         false,
                     );
                     row_luminance += texel_luminance;
-                    spd.push(texel_luminance);
-                    cdf.push(row_luminance);
+                    signal.push(texel_luminance);
+                    signal_cmf.push(row_luminance);
                 }
                 // normalize pdf (and cdf?)
-                spd.iter_mut().for_each(|e| {
+                signal.iter_mut().for_each(|e| {
                     *e /= row_luminance;
                 });
-                cdf.iter_mut().for_each(|e| {
+                signal_cmf.iter_mut().for_each(|e| {
                     *e /= row_luminance;
                 });
                 pb.lock().add(horizontal_resolution as u64);
                 (
                     CurveWithCDF {
                         pdf: Curve::Linear {
-                            signal: spd,
+                            signal,
                             bounds: Bounds1D::new(0.0, 1.0),
-                            mode: InterpolationMode::Linear,
+                            mode: InterpolationMode::Nearest,
                         },
                         cdf: Curve::Linear {
-                            signal: cdf,
+                            signal: signal_cmf,
                             bounds: Bounds1D::new(0.0, 1.0),
-                            mode: InterpolationMode::Linear,
+                            mode: InterpolationMode::Nearest,
                         },
                         pdf_integral: 1.0,
                     },
@@ -183,7 +183,7 @@ impl ImportanceMap {
         let marginal_cdf = Curve::Linear {
             signal: marginal_data,
             bounds: Bounds1D::new(0.0, 1.0),
-            mode: InterpolationMode::Cubic,
+            mode: InterpolationMode::Nearest,
         }
         .to_cdf(Bounds1D::new(0.0, 1.0), 100);
 
@@ -194,31 +194,26 @@ impl ImportanceMap {
         }
     }
     pub fn sample_uv(&self, sample: Sample2D) -> ((f32, f32), (PDF, PDF)) {
+        // inverse transform sample of the marginal distribution, selecting a row with a high luminance.
         let (
             SingleWavelength {
                 lambda: u,
                 energy: _,
             },
             row_pdf,
-        ) = self.marginal_cdf.sample_power_and_pdf(
-            // cdf inverse transform sample should still work even though the wavelength bounds are 0..1
-            Bounds1D::new(0.0, 1.0),
-            Sample1D::new(sample.y),
-        );
+        ) = self
+            .marginal_cdf
+            .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.y));
 
-        // FIXME: maybe interpolate between two rows instead of effectively doing `u.floor()`
-        // inverse transform sample the selected horizontal cdf
+        // inverse transform sample the selected row, finding a uv coordinate with a high luminance.
         let (
             SingleWavelength {
                 lambda: v,
                 energy: _,
             },
             column_pdf,
-        ) = self.data[(u * self.data.len() as f32) as usize].sample_power_and_pdf(
-            // cdf inverse transform sample should still work even though the wavelength bounds are 0..1
-            Bounds1D::new(0.0, 1.0),
-            Sample1D::new(sample.x),
-        );
+        ) = self.data[(u * self.data.len() as f32) as usize]
+            .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.x));
         assert!(u < 1.0, "{}", u);
         assert!(u >= 0.0, "{}", u);
         assert!(v < 1.0, "{}", v);
@@ -268,7 +263,6 @@ mod test {
         let deterministic = false;
         // let limit = 100000;
         let mut estimate = 0.0;
-        let mut estimate2 = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
         let mut window = Window::new(
@@ -344,11 +338,7 @@ mod test {
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
-        println!(
-            "\n\nestimate is {}, estimate2 = {}",
-            estimate / limit as f32,
-            estimate2 / limit as f32
-        );
+        println!("\n\nestimate is {}", estimate / limit as f32);
     }
 
     #[test]
@@ -575,5 +565,141 @@ mod test {
             }
         }
         println!("\n\nestimate is {}", estimate / limit as f32);
+    }
+
+    #[test]
+    fn test_2d_importance_sampling() {
+        // func is e^(-x^2-y^2)
+        let func = |x: f32, y: f32| (-((x).powi(2) + (y).powi(2))).exp();
+        let sample_transform = |x: f32| 4.0 * (x - 0.5);
+
+        let resolution = 100;
+        let bounds = Bounds1D::new(0.0, 1.0);
+
+        let mut marginal_distribution_data = Vec::new();
+        let mut cdfs = Vec::new();
+        for y_i in 0..resolution {
+            let y_f = y_i as f32 / resolution as f32;
+            let row_cdf = Curve::from_function(
+                |x| func(sample_transform(x), sample_transform(y_f)),
+                resolution,
+                bounds,
+                InterpolationMode::Nearest,
+            )
+            .to_cdf(bounds, resolution);
+
+            marginal_distribution_data.push(row_cdf.pdf_integral);
+            println!("{:?}", row_cdf.pdf_integral);
+            cdfs.push(row_cdf);
+        }
+
+        // let total = marginal_distribution_data.iter().sum::<f32>();
+        // marginal_distribution_data
+        //     .iter_mut()
+        //     .for_each(|e| *e /= total);
+
+        let importance_map = ImportanceMap {
+            data: cdfs,
+            marginal_cdf: Curve::Linear {
+                signal: marginal_distribution_data,
+                bounds,
+                mode: InterpolationMode::Nearest,
+            }
+            .to_cdf(bounds, resolution),
+        };
+
+        let width = 256;
+        let height = 256;
+        let limit = width * height;
+        let deterministic = false;
+        // let limit = 100000;
+        let mut estimate = 0.0;
+        let mut pb = ProgressBar::new(limit as u64);
+
+        let mut window = Window::new(
+            "Preview",
+            width,
+            height,
+            WindowOptions {
+                scale: Scale::X2,
+                ..WindowOptions::default()
+            },
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
+        let mut buffer = vec![0u32; limit];
+        let mut film = Film::new(width, height, XYZColor::BLACK);
+
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
+        for idx in 0..limit {
+            if !window.is_open() {
+                println!("window closed, stopping test");
+                break;
+            }
+
+            let sample = Sample2D::new_random_sample();
+            let x_float = ((idx % width) as f32 + sample.x) / width as f32;
+            let y_float = ((idx / width) as f32 + sample.y) / height as f32;
+
+            let sample = if deterministic {
+                Sample2D::new(x_float, y_float)
+            } else {
+                sample
+            };
+
+            // let uv = (sample.x, sample.y);
+            // let pdf = 1.0;
+
+            let (uv, pdf) = importance_map.sample_uv(sample);
+            // println!("{} {}", uv.0, uv.1);
+            let pdf = (pdf.0 * pdf.1).0;
+            // let uv = (uv.0 / 4.0 + 0.5, uv.1 / 4.0 + 0.5);
+
+            // estimate of env map luminance will have unacceptable bias depending on the actual size of the env map texture.
+            // need to downsample to retain size information in importance map so that the pdf can be adjusted.
+
+            let (mut sw, _) = (
+                SingleWavelength::new_from_range(0.5, BOUNDED_VISIBLE_RANGE),
+                1.0,
+            );
+
+            sw.energy.0 = func(sample_transform(uv.0), sample_transform(uv.1));
+
+            // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
+            estimate += sw.energy.0 / pdf / limit as f32;
+            let (px, py) = (
+                (uv.0 * width as f32) as usize,
+                (uv.1 * height as f32) as usize,
+            );
+
+            // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
+            film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy.0 / pdf;
+
+            if idx % 100 == 0 {
+                println!("{}", estimate * limit as f32 / idx as f32);
+                pb.add(100);
+                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
+                buffer
+                    .par_iter_mut()
+                    .enumerate()
+                    .for_each(|(pixel_idx, v)| {
+                        let y: usize = pixel_idx / width;
+                        let x: usize = pixel_idx - width * y;
+                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
+                        let [r, g, b, _]: [f32; 4] = mapped.into();
+                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    });
+                window.update_with_buffer(&buffer, width, height).unwrap();
+            }
+        }
+        let true_value = 3.11227031972f64;
+        println!(
+            "\n\nestimate is {}, true value is {}, error factor is {}",
+            estimate,
+            true_value,
+            true_value as f32 / estimate
+        );
     }
 }

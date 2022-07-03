@@ -172,22 +172,22 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "BDPT"
+filename = "PT"
 min_samples = 256
-min_bounces = 1
-max_bounces = 6
+min_bounces = 3
+max_bounces = 16
 hwss = false
 # camera_id = "cube camera"
 camera_id = "sun test camera"
 # camera_id = "wideangle sun test camera side"
-exposure = 1.0
+exposure = 0.3
 russian_roulette = false
 only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "BDPT"
-# light_samples = 4
+type = "PT"
+light_samples = 4
 # camera_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024

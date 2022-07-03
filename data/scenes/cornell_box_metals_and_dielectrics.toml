@@ -1,13 +1,65 @@
 
-env_sampling_probability = 0.1
+env_sampling_probability = 0.9
+# [environment]
+# type="Constant"
+# strength = 0.0000
+# [environment.color]
+# type = "TabulatedCSV"
+# filename = "data/curves/csv/D65.csv"
+# column = 1
+# interpolation_mode = "Cubic"
+
 [environment]
-type="Constant"
-strength = 0.0000
-[environment.color]
+type="HDRI"
+strength =0.4
+texture_id = "test_hdri"
+[[environment.rotation]]
+axis=[0, 0, 1]
+angle=140
+[environment.importance_map]
+# width = 2048
+# height = 2048
+width = 512
+height = 512
+
+# env_sampling_probability = 0.9
+# [environment]
+# type="Sun"
+# strength = 0.4
+# angular_diameter = 0.0565
+# sun_direction = [1.0, 0.0, 1.0]
+# [environment.color]
+# type = "TabulatedCSV"
+# filename = "data/curves/csv/D65.csv"
+# column = 1
+# interpolation_mode = "Cubic"
+
+
+[[textures]]
+name = "test_hdri"
+[[textures.texture_stack]]
+type = "HDR"
+filename = "data/hdri/moonlit_golf_2k.hdr"
+# filename = "data/hdri/machine_shop_03_4k.hdr"
+alpha_fill = 0.0
+[[textures.texture_stack.curves]]
 type = "TabulatedCSV"
-filename = "data/curves/csv/D65.csv"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
 column = 1
 interpolation_mode = "Cubic"
+[[textures.texture_stack.curves]]
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 2
+interpolation_mode = "Cubic"
+[[textures.texture_stack.curves]]
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 3
+interpolation_mode = "Cubic"
+[[textures.texture_stack.curves]]
+type = "Flat"
+strength = 0.0
 
 
 
