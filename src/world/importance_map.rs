@@ -78,6 +78,7 @@ impl ImportanceMap {
             .into_par_iter()
             .map(|row| -> (CurveWithCDF, f32) {
                 let mut signal = Vec::new();
+                // cumulative mass function, discrete equivalent of the CDF.
                 let mut signal_cmf = Vec::new();
                 let mut row_luminance = 0.0;
                 for column in 0..horizontal_resolution {
