@@ -40,7 +40,7 @@ impl From<Transform3Data> for Transform3 {
             let mut base = None;
             for rotation in rotations {
                 let transform = Transform3::from_axis_angle(
-                    Vec3::from(rotation.axis),
+                    Vec3::from(rotation.axis).normalized(),
                     PI * rotation.angle / 180.0,
                 );
                 println!("parsed rotate");

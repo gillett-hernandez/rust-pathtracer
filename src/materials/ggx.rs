@@ -440,6 +440,7 @@ impl Material for GGX {
         let eta_inner = self.eta.evaluate_power(lambda);
         debug_assert!(eta_inner.is_finite(), "{}", lambda);
         // let eta_rel = self.eta_rel(eta_inner, wi);
+        // only enable metal effects if permeability is 0
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {

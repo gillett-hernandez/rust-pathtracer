@@ -64,6 +64,7 @@ impl AABB {
             scaled_t1.replace(3, f32::NEG_INFINITY).max_element(),
         ))
 
+        // old code without simd.
         // let tmin: f32x4 = f32x4::splat(t0);
         // let tmax: f32x4 = f32x4::splat(t1);
         // assert that the absolute value of all the components of direction are greater than 0

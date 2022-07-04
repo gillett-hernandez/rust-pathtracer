@@ -89,6 +89,7 @@ impl Hittable for Instance {
         );
         debug_assert!(!t1.is_nan());
         if let Some(transform) = self.transform {
+            //TODO: figure out if t0, t1 need to be transformed based on the scale of the transform
             if let Some(hit) = self.aggregate.hit(
                 Ray {
                     origin: transform.to_local(r.origin),
