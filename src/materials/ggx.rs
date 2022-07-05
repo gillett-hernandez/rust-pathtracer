@@ -103,7 +103,7 @@ fn ggx_lambda(alpha: f32, w: Vec3) -> f32 {
         return 0.0;
     }
     let a2 = alpha * alpha;
-    let w2 = Vec3::from_raw(w.0 * w.0);
+    let w2 = Vec3(w.0 * w.0);
     let c = 1.0 + (a2 * w2.x() + a2 * w2.y()) / w2.z(); // replace a2 with Vec2 for anistropy
     c.sqrt() * 0.5 - 0.5
 }

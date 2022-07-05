@@ -99,7 +99,7 @@ interpolation_mode = "Cubic"
 name = "lambertian_white"
 [materials.data]
 type = "Lambertian"
-texture_id = "lambertian_texture"
+texture_id = "lambertian_white"
 
 [[materials]]
 name = "lambertian_green"
