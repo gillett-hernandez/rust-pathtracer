@@ -46,6 +46,10 @@ name = "clm_test"
 path = "src/bin/clm_test.rs"
 
 [[bin]]
+name = "medium_test"
+path = "src/bin/medium_test.rs"
+
+[[bin]]
 name = "main"
 path = "src/bin/main.rs"
 
