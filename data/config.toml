@@ -1,9 +1,9 @@
 default_scene_file = "data/scenes/cornell_box.toml"
 [renderer]
 type="Naive"
+# type="Preview"
 # type="GPUStyle"
 # type="SPPM"
-# type="Preview"
 selected_preview_film_id = 0
 
 [[cameras]]
@@ -172,10 +172,10 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "PT"
+filename = "BDPT"
 min_samples = 128
 min_bounces = 3
-max_bounces = 8
+max_bounces = 16
 hwss = false
 # camera_id = "cube camera"
 # camera_id = "sun test camera"
@@ -187,8 +187,8 @@ only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
-type = "PT"
-light_samples = 4
+type = "BDPT"
+# light_samples = 4
 # camera_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024

@@ -571,7 +571,7 @@ mod test {
     #[test]
     fn test_2d_importance_sampling() {
         // func is e^(-x^2-y^2)
-        let func = |x: f32, y: f32| (-((x).powi(2) + (y).powi(2))).exp();
+        let func = |x: f32, y: f32| (-(x * x + y * y)).exp();
         let sample_transform = |x: f32| 4.0 * (x - 0.5);
 
         let resolution = 100;
@@ -585,7 +585,7 @@ mod test {
                 |x| func(sample_transform(x), sample_transform(y_f)),
                 resolution,
                 bounds,
-                InterpolationMode::Nearest,
+                InterpolationMode::Linear,
             )
             .to_cdf(bounds, resolution);
 
@@ -604,13 +604,13 @@ mod test {
             marginal_cdf: Curve::Linear {
                 signal: marginal_distribution_data,
                 bounds,
-                mode: InterpolationMode::Nearest,
+                mode: InterpolationMode::Linear,
             }
             .to_cdf(bounds, resolution),
         };
 
-        let width = 256;
-        let height = 256;
+        let width = 512;
+        let height = 512;
         let limit = width * height;
         let deterministic = false;
         // let limit = 100000;

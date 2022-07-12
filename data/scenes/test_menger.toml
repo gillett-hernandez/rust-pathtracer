@@ -134,7 +134,7 @@ name = "ggx_glass_dispersive"
 type = "GGX"
 eta_o = 1.0004
 permeability = 1.0
-alpha = 0.4
+alpha = 0.004
 [materials.data.eta]
 type = "Cauchy"
 a = 1.45
@@ -289,13 +289,13 @@ strength = 5.0
 
 
 [[instances]]
-material_identifier = "diffuse_light_xenon"
+material_identifier = "sharp_light_xenon"
 [instances.aggregate]
 type = "Rect"
 size = [0.7, 0.5]
 origin = [0.0, 0.0, 0.9]
 normal = "Z"
-two_sided = true
+two_sided = false
 
 [[instances]]
 material_identifier = "lambertian_white"
@@ -343,7 +343,7 @@ normal = "X"
 two_sided = true
 
 [[instances]]
-material_identifier = "lambertian_white"
+material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Mesh"
 filename = "data/meshes/menger_sponge.obj"
