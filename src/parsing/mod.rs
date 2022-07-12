@@ -12,7 +12,7 @@ pub mod texture;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
-use math::{Transform3, Vec3};
+use math::Transform3;
 use medium::*;
 use primitives::*;
 use texture::*;
@@ -22,7 +22,7 @@ pub use curves::{
     parse_tabulated_curve_from_csv,
 };
 
-use crate::{config::Config, mediums::MediumEnum};
+use crate::mediums::MediumEnum;
 // use crate::curves::*;
 use crate::geometry::*;
 use crate::materials::*;
@@ -33,7 +33,6 @@ use crate::texture::*;
 use crate::world::{AcceleratorType, World};
 
 use std::collections::HashMap;
-use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Read;
 
@@ -53,35 +52,7 @@ pub struct Scene {
     pub env_sampling_probability: Option<f32>,
 }
 
-impl From<Transform3Data> for Transform3 {
-    fn from(data: Transform3Data) -> Self {
-        println!("parsing transform data");
-        let maybe_scale = data.scale.map(|v| Transform3::from_scale(Vec3::from(v)));
-        let maybe_rotate = if let Some(rotations) = data.rotate {
-            let mut base = None;
-            for rotation in rotations {
-                let transform = Transform3::from_axis_angle(
-                    Vec3::from(rotation.axis),
-                    PI * rotation.angle / 180.0,
-                );
-                if base.is_none() {
-                    base = Some(transform);
-                } else {
-                    base = Some(transform * base.unwrap());
-                };
-            }
-            base
-        } else {
-            None
-        };
-        let maybe_translate = data
-            .translate
-            .map(|v| Transform3::from_translation(Vec3::from(v)));
-        Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
-    }
-}
-
-fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
+fn load_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
@@ -100,8 +71,8 @@ fn get_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     return Ok(scene);
 }
 
-pub fn construct_world(config: &Config) -> World {
-    let scene = get_scene(&config.scene_file).expect("scene file failed to parse");
+pub fn construct_world(scene_file: &str) -> World {
+    let scene = load_scene(scene_file).expect("scene file failed to parse");
     let mut material_names_to_ids: HashMap<String, MaterialId> = HashMap::new();
     let mut medium_names_to_ids: HashMap<String, usize> = HashMap::new();
     let mut texture_names_to_ids: HashMap<String, usize> = HashMap::new();
@@ -116,6 +87,7 @@ pub fn construct_world(config: &Config) -> World {
         texture_count += 1;
         let tex_id = texture_count - 1;
         texture_names_to_ids.insert(tex.name.clone(), tex_id);
+        println!("parsing texture");
         textures.push(parse_texture_stack(tex.clone()));
     }
 
@@ -131,6 +103,7 @@ pub fn construct_world(config: &Config) -> World {
             }
         };
         material_names_to_ids.insert(material.name, id);
+        println!("parsing material");
         materials.push(parse_material(
             material.data,
             &texture_names_to_ids,
@@ -142,6 +115,7 @@ pub fn construct_world(config: &Config) -> World {
             medium_count += 1;
             let id = medium_count - 1;
             medium_names_to_ids.insert(medium.name, id);
+            println!("parsing medium");
             mediums.push(parse_medium(medium.data));
         }
     }
@@ -173,6 +147,7 @@ pub fn construct_world(config: &Config) -> World {
                 }
             }
             _ => {
+                println!("parsing instance and primitive");
                 let id = instances.len();
                 let instance = parse_instance(instance, &material_names_to_ids, id);
                 instances.push(instance);
@@ -183,9 +158,19 @@ pub fn construct_world(config: &Config) -> World {
         instances,
         materials,
         mediums,
-        parse_environment(scene.environment),
+        parse_environment(scene.environment, &texture_names_to_ids, &textures),
         scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::BVH,
     );
     world
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    #[test]
+    fn test_world() {
+        let _world = construct_world("data/scenes/test_prism.toml");
+    }
 }

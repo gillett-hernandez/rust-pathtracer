@@ -141,7 +141,11 @@ impl PathTracingIntegrator {
         let direction = uv_to_direction(uv);
         let local_wo = frame.to_local(&direction);
 
-        let local_dropoff = local_wo.z();
+        let local_cosine_theta = local_wo.z();
+        // return 0 if hemisphere doesn't match.
+        if local_cosine_theta <= 0.0 {
+            return 0.0.into();
+        }
 
         let (reflectance, scatter_pdf_for_light_ray) =
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
@@ -192,17 +196,18 @@ impl PathTracingIntegrator {
             SingleEnergy::ZERO
         } */
         } else {
-            // successfully hit nothing, which is to say, hit the world
+            // successfully world is visible along this ray
             let emission = self.world.environment.emission(uv, lambda);
 
+            // calculate weight
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            let v =
-                reflectance * local_dropoff.abs() * throughput * emission * weight / light_pdf.0;
+            // include
+            let v = weight * throughput * reflectance * emission / light_pdf.0;
             debug_assert!(
                 v.0.is_finite(),
                 "{:?},{:?},{:?},{:?},{:?},{:?},",
                 reflectance,
-                local_dropoff,
+                local_cosine_theta,
                 throughput,
                 emission,
                 weight,
@@ -312,7 +317,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             MaterialId::Camera(0),
             0,
             SingleEnergy::from(throughput_and_pdf.0),
-            0.0,
+            1.0,
             0.0,
             1.0,
         ));
@@ -337,10 +342,17 @@ impl SamplerIntegrator for PathTracingIntegrator {
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
             if let VertexType::LightSource(light_source) = vertex.vertex_type {
                 if light_source == LightSourceType::Environment {
-                    let wo = vertex.local_wi;
+                    // ray direction is stored in vertex.normal
+                    let wo = vertex.normal;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
-                    sum.energy += emission * vertex.throughput;
+                    let nee_psa_pdf = self.world.environment.pdf_for(uv); // * (prev_vertex.normal * (-wo)).abs(); // * prev_vertex.local_wo.z();
+                    let bsdf_psa_pdf = prev_vertex.pdf_forward;
+                    let weight = power_heuristic(bsdf_psa_pdf, nee_psa_pdf.0);
+
+                    profile.env_hits += 1;
+                    sum.energy += weight * vertex.throughput * emission;
+                    debug_assert!(!sum.energy.is_nan());
                 } else {
                     let hit = HitRecord::from(*vertex);
                     let frame = TangentFrame::from_normal(hit.normal);
@@ -372,7 +384,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                                 pdf,
                                 weight
                             );
-                            sum.energy += vertex.throughput * emission * weight;
+                            sum.energy += weight * vertex.throughput * emission;
                             debug_assert!(!sum.energy.is_nan());
                         }
                     }
@@ -404,7 +416,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         );
                         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
                         debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                        sum.energy += vertex.throughput * emission * weight;
+                        sum.energy += weight * vertex.throughput * emission;
                         debug_assert!(!sum.energy.is_nan());
                     }
                 }

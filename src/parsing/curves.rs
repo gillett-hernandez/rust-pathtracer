@@ -2,7 +2,7 @@ extern crate serde;
 
 use crate::curves::*;
 use crate::math::*;
-use math::spectral::InterpolationMode;
+use math::curves::InterpolationMode;
 
 use std::error::Error;
 use std::fs::File;
@@ -21,6 +21,7 @@ pub struct DomainMapping {
     pub y_scale: Option<f32>,
 }
 impl Default for DomainMapping {
+    // default domain mapping is the identity mapping. all inputs are unchanged upon being mapped.
     fn default() -> Self {
         DomainMapping {
             x_offset: Some(0.0),
@@ -64,7 +65,7 @@ pub enum CurveData {
     },
 }
 
-pub fn spectra(filename: &str, strength: f32) -> SPD {
+pub fn spectra(filename: &str, strength: f32) -> Curve {
     // defaults to cubic interpolation mode
     load_linear(filename, |x| x, |y| strength * y, InterpolationMode::Cubic)
         .expect(&format!("failed parsing spectra file {}", filename))
@@ -76,7 +77,7 @@ pub fn parse_tabulated_curve_from_csv<F1, F2>(
     interpolation_mode: InterpolationMode,
     domain_func: F1,
     image_func: F2,
-) -> Result<SPD, Box<dyn Error>>
+) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
     F2: Clone + Copy + Fn(f32) -> f32,
@@ -103,7 +104,7 @@ where
             _ => {}
         }
     }
-    Ok(SPD::Tabulated {
+    Ok(Curve::Tabulated {
         signal,
         mode: interpolation_mode,
     })
@@ -114,7 +115,7 @@ pub fn parse_linear<F1, F2>(
     interpolation_mode: InterpolationMode,
     domain_func: F1,
     image_func: F2,
-) -> Result<SPD, Box<dyn Error>>
+) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
     F2: Clone + Copy + Fn(f32) -> f32,
@@ -139,14 +140,14 @@ where
 
     println!("{}", end_x);
 
-    Ok(SPD::Linear {
+    Ok(Curve::Linear {
         signal: values,
         bounds: Bounds1D::new(domain_func(start_x), domain_func(end_x)),
         mode: interpolation_mode,
     })
 }
 
-pub fn load_ior_and_kappa<F>(filename: &str, func: F) -> Result<(SPD, SPD), Box<dyn Error>>
+pub fn load_ior_and_kappa<F>(filename: &str, func: F) -> Result<(Curve, Curve), Box<dyn Error>>
 where
     F: Clone + Copy + Fn(f32) -> f32,
 {
@@ -160,7 +161,7 @@ pub fn load_csv<F1, F2>(
     interpolation_mode: InterpolationMode,
     domain_func: F1,
     image_func: F2,
-) -> Result<SPD, Box<dyn Error>>
+) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
     F2: Clone + Copy + Fn(f32) -> f32,
@@ -186,7 +187,7 @@ pub fn load_multiple_csv_rows<F1, F2>(
     interpolation_mode: InterpolationMode,
     domain_func: F1,
     image_func: F2,
-) -> Result<Vec<SPD>, Box<dyn Error>>
+) -> Result<Vec<Curve>, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
     F2: Clone + Copy + Fn(f32) -> f32,
@@ -196,7 +197,7 @@ where
     let mut buf = String::new();
     file.read_to_string(&mut buf)?;
 
-    let mut curves: Vec<SPD> = Vec::new();
+    let mut curves: Vec<Curve> = Vec::new();
     for column in 1..=num_columns {
         let curve = parse_tabulated_curve_from_csv(
             buf.as_ref(),
@@ -216,7 +217,7 @@ pub fn load_linear<F1, F2>(
     domain_func: F1,
     image_func: F2,
     interpolation_mode: InterpolationMode,
-) -> Result<SPD, Box<dyn Error>>
+) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
     F2: Clone + Copy + Fn(f32) -> f32,
@@ -231,77 +232,79 @@ where
     Ok(curve)
 }
 
-pub fn parse_curve(curve: CurveData) -> SPD {
-    match curve {
-        CurveData::Blackbody {
-            temperature,
-            strength,
-        } => SPD::Blackbody {
-            temperature,
-            boost: strength,
-        },
-        CurveData::Linear {
-            filename,
-            domain_mapping,
-            interpolation_mode,
-        } => {
-            let domain_mapping = domain_mapping.unwrap_or_default();
-            println!("attempting to parse and load linear file at {:?}", filename);
-            let spd = load_linear(
-                &filename,
-                |x| {
-                    (x - domain_mapping.x_offset.unwrap_or(0.0))
-                        * domain_mapping.x_scale.unwrap_or(1.0)
-                },
-                |y| {
-                    (y - domain_mapping.y_offset.unwrap_or(0.0))
-                        * domain_mapping.y_scale.unwrap_or(1.0)
-                },
+impl From<CurveData> for Curve {
+    fn from(curve: CurveData) -> Self {
+        match curve {
+            CurveData::Blackbody {
+                temperature,
+                strength,
+            } => Curve::Blackbody {
+                temperature,
+                boost: strength,
+            },
+            CurveData::Linear {
+                filename,
+                domain_mapping,
                 interpolation_mode,
-            );
-            let spd = spd.expect("loading linear data failed");
-            println!("parsed linear curve");
-            spd
-        }
-        CurveData::Cauchy { a, b } => SPD::Cauchy { a, b },
-        CurveData::TabulatedCSV {
-            filename,
-            column,
-            domain_mapping,
-            interpolation_mode,
-        } => {
-            let domain_mapping = domain_mapping.unwrap_or_default();
-            println!("attempting to parse and load csv at file {:?}", filename);
-            let spd = load_csv(
-                &filename,
+            } => {
+                let domain_mapping = domain_mapping.unwrap_or_default();
+                println!("attempting to parse and load linear file at {:?}", filename);
+                let spd = load_linear(
+                    &filename,
+                    |x| {
+                        (x - domain_mapping.x_offset.unwrap_or(0.0))
+                            * domain_mapping.x_scale.unwrap_or(1.0)
+                    },
+                    |y| {
+                        (y - domain_mapping.y_offset.unwrap_or(0.0))
+                            * domain_mapping.y_scale.unwrap_or(1.0)
+                    },
+                    interpolation_mode,
+                );
+                let spd = spd.expect("loading linear data failed");
+                println!("parsed linear curve");
+                spd
+            }
+            CurveData::Cauchy { a, b } => Curve::Cauchy { a, b },
+            CurveData::TabulatedCSV {
+                filename,
                 column,
+                domain_mapping,
                 interpolation_mode,
-                |x| {
-                    (x - domain_mapping.x_offset.unwrap_or(0.0))
-                        * domain_mapping.x_scale.unwrap_or(1.0)
-                },
-                |y| {
-                    (y - domain_mapping.y_offset.unwrap_or(0.0))
-                        * domain_mapping.y_scale.unwrap_or(1.0)
-                },
-            );
-            let spd = spd.expect("loading tabulated data failed");
-            println!("parsed tabulated curve");
-            spd
+            } => {
+                let domain_mapping = domain_mapping.unwrap_or_default();
+                println!("attempting to parse and load csv at file {:?}", filename);
+                let spd = load_csv(
+                    &filename,
+                    column,
+                    interpolation_mode,
+                    |x| {
+                        (x - domain_mapping.x_offset.unwrap_or(0.0))
+                            * domain_mapping.x_scale.unwrap_or(1.0)
+                    },
+                    |y| {
+                        (y - domain_mapping.y_offset.unwrap_or(0.0))
+                            * domain_mapping.y_scale.unwrap_or(1.0)
+                    },
+                );
+                let spd = spd.expect("loading tabulated data failed");
+                println!("parsed tabulated curve");
+                spd
+            }
+            CurveData::Flat { strength } => Curve::Linear {
+                signal: vec![strength],
+                bounds: EXTENDED_VISIBLE_RANGE,
+                mode: InterpolationMode::Linear,
+            },
+            CurveData::SimpleSpike {
+                lambda,
+                left_taper,
+                right_taper,
+                strength,
+            } => Curve::Exponential {
+                signal: vec![(lambda, left_taper, right_taper, strength)],
+            },
         }
-        CurveData::Flat { strength } => SPD::Linear {
-            signal: vec![strength],
-            bounds: EXTENDED_VISIBLE_RANGE,
-            mode: InterpolationMode::Linear,
-        },
-        CurveData::SimpleSpike {
-            lambda,
-            left_taper,
-            right_taper,
-            strength,
-        } => SPD::Exponential {
-            signal: vec![(lambda, left_taper, right_taper, strength)],
-        },
     }
 }
 

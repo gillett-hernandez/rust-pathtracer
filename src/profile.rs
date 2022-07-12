@@ -4,6 +4,7 @@ pub struct Profile {
     pub shadow_rays: usize, // all rays used to test visibility
     pub light_rays: usize,  // all rays from or to lights
     pub camera_rays: usize, // all rays from or to the camera
+    pub env_hits: usize,
 }
 
 impl Profile {
@@ -12,12 +13,14 @@ impl Profile {
         shadow_rays: usize,
         light_rays: usize,
         camera_rays: usize,
+        env_hits: usize,
     ) -> Self {
         Profile {
             bounce_rays,
             shadow_rays,
             light_rays,
             camera_rays,
+            env_hits,
         }
     }
     pub fn combine(&self, other: Self) -> Self {
@@ -26,6 +29,7 @@ impl Profile {
             self.shadow_rays + other.shadow_rays,
             self.light_rays + other.light_rays,
             self.camera_rays + other.camera_rays,
+            self.env_hits + other.env_hits,
         )
     }
 
@@ -35,6 +39,7 @@ impl Profile {
             shadow_rays,
             light_rays,
             camera_rays,
+            env_hits,
         } = self;
         let sum = bounce_rays + shadow_rays + light_rays + camera_rays;
         println!(
@@ -60,6 +65,11 @@ impl Profile {
             camera_rays,
             camera_rays as f32 / elapsed,
             camera_rays as f32 / elapsed / (threads as f32)
+        );
+        println!(
+            "{} total env hits, {} per second",
+            env_hits,
+            env_hits as f32 / elapsed,
         );
         println!(
             "{} total rays at {} per second and {} per second per thread",

@@ -23,6 +23,10 @@ pub struct SPPMRenderer {}
 
 impl SPPMRenderer {
     pub fn new() -> SPPMRenderer {
+        // TODO rework this, and make something that actually gives a valid render.
+        // implement passes over wavelength rather than doing wavelength mollification.
+        // importance sample wavelength from an inverse transform sample of <randomly selected light spectra> x <camera luminance curve>
+        unimplemented!();
         SPPMRenderer {}
     }
 

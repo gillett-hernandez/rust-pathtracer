@@ -1,13 +1,52 @@
-env_sampling_probability = 0.0
+env_sampling_probability = 0.5
 [environment]
-type="Constant"
-strength = 0.0000
-[environment.color]
+type="HDRI"
+strength =0.4
+texture_id = "test_hdri"
+[environment.importance_map]
+# width = 2048
+# height = 2048
+width = 512
+height = 512
+
+# env_sampling_probability = 0.9
+# [environment]
+# type="Sun"
+# strength = 0.4
+# angular_diameter = 0.0565
+# sun_direction = [1.0, 0.0, 1.0]
+# [environment.color]
+# type = "TabulatedCSV"
+# filename = "data/curves/csv/D65.csv"
+# column = 1
+# interpolation_mode = "Cubic"
+
+
+[[textures]]
+name = "test_hdri"
+[[textures.texture_stack]]
+type = "HDR"
+filename = "data/hdri/moonlit_golf_2k.hdr"
+# filename = "data/hdri/machine_shop_03_4k.hdr"
+alpha_fill = 0.0
+[[textures.texture_stack.curves]]
 type = "TabulatedCSV"
-filename = "data/curves/csv/D65.csv"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
 column = 1
 interpolation_mode = "Cubic"
-
+[[textures.texture_stack.curves]]
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 2
+interpolation_mode = "Cubic"
+[[textures.texture_stack.curves]]
+type = "TabulatedCSV"
+filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
+column = 3
+interpolation_mode = "Cubic"
+[[textures.texture_stack.curves]]
+type = "Flat"
+strength = 0.0
 
 [[textures]]
 name = "lambertian_white"
@@ -41,7 +80,6 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
-
 
 
 [[materials]]
@@ -87,7 +125,7 @@ permeability = 1.0
 alpha = 0.0004
 [materials.data.eta]
 type = "Cauchy"
-a = 1.45
+a = 1.4
 b = 50000.0
 [materials.data.kappa]
 type = "Flat"
@@ -114,7 +152,7 @@ name = "ggx_gold"
 type = "GGX"
 eta_o = 1.0004
 permeability = 0.0
-alpha = 0.01
+alpha = 0.004
 [materials.data.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
@@ -131,27 +169,12 @@ interpolation_mode = "Cubic"
 x_scale = 1000.0
 
 [[materials]]
-name = "ggx_flat"
-[materials.data]
-type = "GGX"
-eta_o = 1.0004
-permeability = 0.0
-alpha = 0.01
-[materials.data.eta]
-type = "Flat"
-strength = 1.4
-[materials.data.kappa]
-type = "Flat"
-strength = 1.4
-
-
-[[materials]]
 name = "ggx_copper"
 [materials.data]
 type = "GGX"
 eta_o = 1.0004
 permeability = 0.0
-alpha = 0.01
+alpha = 0.002
 [materials.data.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/copper-mcpeak.csv"
@@ -180,6 +203,31 @@ interpolation_mode = "Cubic"
 y_scale = 5.0
 
 [[materials]]
+name = "diffuse_light_xenon"
+[materials.data]
+type = "DiffuseLight"
+sidedness = "Reverse"
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
+name = "sharp_light_xenon"
+[materials.data]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+[materials.data.color]
+type = "Linear"
+filename = "data/curves/spectra/xenon_lamp.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
+
+[[materials]]
 name = "diffuse_light_warm"
 [materials.data]
 type = "DiffuseLight"
@@ -190,47 +238,11 @@ temperature = 3000.0
 strength = 5.0
 
 [[materials]]
-name = "diffuse_light"
-[materials.data]
-type = "DiffuseLight"
-sidedness = "Dual"
-[materials.data.color]
-type = "Blackbody"
-temperature = 5000.0
-strength = 5.0
-
-[[materials]]
-name = "sharp_light_fluorescent"
-[materials.data]
-type = "SharpLight"
-sidedness = "Reverse"
-sharpness = 30.0
-[materials.data.color]
-type = "Linear"
-filename = "data/curves/spectra/fluorescent.spectra"
-interpolation_mode = "Cubic"
-[materials.data.color.domain_mapping]
-y_scale = 5.0
-
-[[materials]]
-name = "sharp_light_xenon"
-[materials.data]
-type = "SharpLight"
-sidedness = "Reverse"
-sharpness = 30.0
-[materials.data.color]
-type = "Linear"
-filename = "data/curves/spectra/xenon_lamp.spectra"
-interpolation_mode = "Cubic"
-[materials.data.color.domain_mapping]
-y_scale = 5.0
-
-[[materials]]
 name = "sharp_light_warm"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 30.0
+sharpness = 4.0
 [materials.data.color]
 type = "Blackbody"
 temperature = 3000.0
@@ -241,55 +253,43 @@ name = "sharp_light"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 30.0
+sharpness = 4.0
 [materials.data.color]
 type = "Blackbody"
-temperature = 5500.0
+temperature = 5000.0
 strength = 5.0
 
 [[materials]]
-name = "sharp_light_flat"
+name = "sharp_light_fluorescent"
 [materials.data]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 80.0
+sharpness = 4.0
 [materials.data.color]
-type = "Flat"
-strength = 1.0
+type = "Linear"
+filename = "data/curves/spectra/fluorescent.spectra"
+interpolation_mode = "Cubic"
+[materials.data.color.domain_mapping]
+y_scale = 5.0
 
 [[materials]]
-name = "diffuse_light_flat"
+name = "diffuse_light"
 [materials.data]
 type = "DiffuseLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 [materials.data.color]
-type = "Flat"
-strength = 1.0
+type = "Blackbody"
+temperature = 5000.0
+strength = 0.1
 
 
 
 
+
+
+# light above
 [[instances]]
-material_identifier = "sharp_light"
-# material_identifier = "diffuse_light_fluorescent"
-# material_identifier = "diffuse_light_warm"
-# material_identifier = "diffuse_light"
-# material_identifier = "sharp_light_fluorescent"
-# material_identifier = "sharp_light_xenon"
-# material_identifier = "sharp_light_warm"
-# material_identifier = "sharp_light"
-# material_identifier = "sharp_light_flat"
-# material_identifier = "diffuse_light_flat"
-[instances.aggregate]
-type = "Rect"
-size = [0.4, 0.001]
-origin = [0.0, 0.8, 0.9]
-normal = "Z"
-two_sided = false
-
-# ceiling
-[[instances]]
-material_identifier = "lambertian_white"
+material_identifier = "diffuse_light"
 [instances.aggregate]
 type = "Rect"
 size = [2, 2]
@@ -297,60 +297,72 @@ origin = [0.0, 0.0, 1.0]
 normal = "Z"
 two_sided = true
 
-# floor
+
+# floor on side
 [[instances]]
-# material_identifier = "lambertian_white"
-material_identifier = "ggx_copper"
-# material_identifier = "ggx_gold"
-# material_identifier = "ggx_flat"
+material_identifier = "lambertian_white"
 [instances.aggregate]
 type = "Rect"
-size = [2, 2]
-origin = [0.0, 0.0, -1.0]
+size = [20, 20]
+origin = [0.0, 10.0, -1.0]
 normal = "Z"
 two_sided = true
 
-# right wall
-[[instances]]
-material_identifier = "lambertian_white"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, 1.0, 0.0]
-normal = "Y"
-two_sided = true
-
-# left wall
-[[instances]]
-# material_identifier = "lambertian_green"
-material_identifier = "lambertian_white"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, -1.0, 0.0]
-normal = "Y"
-two_sided = true
-
-# back wall
-[[instances]]
-material_identifier = "lambertian_white"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [1.0, 0.0, 0.0]
-normal = "X"
-two_sided = true
-
-
+# spheres on floor, on left
 [[instances]]
 material_identifier = "ggx_glass_dispersive"
 [instances.aggregate]
-type = "Mesh"
-filename = "data/meshes/prism.obj"
-mesh_index = 0
-[instances.transform]
-scale = [3.0, 3.0, 3.0]
-translate = [0.2, 0.0, -0.1]
-[[instances.transform.rotate]]
-axis = [0.0, 0.0, 1.0]
-angle = 90
+type = "Sphere"
+radius = 0.2
+origin = [-0.6, 0.3, -0.8]
+
+[[instances]]
+material_identifier = "ggx_gold"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [-0.6, 0.8, -0.8]
+
+[[instances]]
+material_identifier = "ggx_copper"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.6, 0.3, -0.8]
+
+[[instances]]
+material_identifier = "lambertian_red"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.6, 0.8, -0.8]
+
+
+# spheres on floor, on right
+[[instances]]
+material_identifier = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [-0.6, -0.3, -0.8]
+
+[[instances]]
+material_identifier = "ggx_gold"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [-0.6, -0.8, -0.8]
+
+[[instances]]
+material_identifier = "ggx_copper"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.6, -0.3, -0.8]
+
+[[instances]]
+material_identifier = "lambertian_red"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.2
+origin = [0.6, -0.8, -0.8]

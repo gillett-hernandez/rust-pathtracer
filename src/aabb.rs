@@ -1,5 +1,5 @@
 use crate::math::*;
-use packed_simd::f32x4;
+use packed_simd::{f32x4, m32x4};
 
 use std::ops::Mul;
 
@@ -16,8 +16,8 @@ pub struct AABB {
 impl AABB {
     pub fn new(min: Point3, max: Point3) -> Self {
         AABB {
-            min: Point3::from_raw(min.0.min(max.0)),
-            max: Point3::from_raw(min.0.max(max.0)),
+            min: Point3(min.0.min(max.0)),
+            max: Point3(min.0.max(max.0)),
         }
     }
     // empty AABB contains nothing.
@@ -64,6 +64,7 @@ impl AABB {
             scaled_t1.replace(3, f32::NEG_INFINITY).max_element(),
         ))
 
+        // old code without simd.
         // let tmin: f32x4 = f32x4::splat(t0);
         // let tmax: f32x4 = f32x4::splat(t1);
         // assert that the absolute value of all the components of direction are greater than 0
@@ -108,25 +109,25 @@ impl AABB {
         // tmax = tmax.min(t1);
     }
     pub fn expand(mut self, other: &AABB) -> AABB {
-        self.min = Point3::from_raw(self.min.0.min(other.min.0));
-        self.max = Point3::from_raw(self.max.0.max(other.max.0));
+        self.min = Point3(self.min.0.min(other.min.0));
+        self.max = Point3(self.max.0.max(other.max.0));
         self
     }
 
     pub fn expand_mut(&mut self, other: &AABB) {
-        self.min = Point3::from_raw(self.min.0.min(other.min.0));
-        self.max = Point3::from_raw(self.max.0.max(other.max.0));
+        self.min = Point3(self.min.0.min(other.min.0));
+        self.max = Point3(self.max.0.max(other.max.0));
     }
 
     pub fn grow(mut self, other: &Point3) -> AABB {
-        self.min = Point3::from_raw(self.min.0.min(other.0));
-        self.max = Point3::from_raw(self.max.0.max(other.0));
+        self.min = Point3(self.min.0.min(other.0));
+        self.max = Point3(self.max.0.max(other.0));
         self
     }
 
     pub fn grow_mut(&mut self, other: &Point3) {
-        self.min = Point3::from_raw(self.min.0.min(other.0));
-        self.max = Point3::from_raw(self.max.0.max(other.0));
+        self.min = Point3(self.min.0.min(other.0));
+        self.max = Point3(self.max.0.max(other.0));
     }
     pub fn size(&self) -> Vec3 {
         self.max - self.min
@@ -165,7 +166,19 @@ impl Default for AABB {
 impl Mul<AABB> for Matrix4x4 {
     type Output = AABB;
     fn mul(self, rhs: AABB) -> Self::Output {
-        AABB::new(self * rhs.min, self * rhs.max)
+        // need to transform all 8 corner points and make a bounding box surrounding all of them.
+        // all 8 corner points can be reconstructed by this procedure:
+        let mut min = f32x4::splat(f32::INFINITY).replace(3, 1.0);
+        let mut max = f32x4::splat(-f32::INFINITY).replace(3, 1.0);
+
+        for index in 0..8 {
+            let (xb, yb, zb) = (index & 1 == 0, (index >> 1) & 1 == 0, (index >> 2) & 1 == 0);
+            let candidate =
+                (self * Point3(m32x4::new(xb, yb, zb, false).select(rhs.min.0, rhs.max.0))).0;
+            min = min.min(candidate);
+            max = max.max(candidate);
+        }
+        AABB::new_raw(Point3(min), Point3(max))
     }
 }
 

@@ -2,6 +2,7 @@ target/
 Cargo.lock
 *.png
 *.exr
+*.hdr
 output/*
 .vscode/*
 data/meshes/*

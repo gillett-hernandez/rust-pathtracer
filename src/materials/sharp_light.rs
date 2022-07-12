@@ -5,13 +5,13 @@ use crate::world::TransportMode;
 #[derive(Clone, Debug)]
 pub struct SharpLight {
     // pub color: Box<dyn SpectralPowerDistribution>,
-    pub color: CDF,
+    pub color: CurveWithCDF,
     pub sharpness: f32,
     pub sidedness: Sidedness,
 }
 
 impl SharpLight {
-    pub fn new(color: CDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+    pub fn new(color: CurveWithCDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
         SharpLight {
             color,
             sharpness: 1.0 + sharpness,

@@ -163,6 +163,8 @@ impl Hittable for MeshTriangleRef {
         let dp02 = p0 - p2;
         let dp12 = p1 - p2;
         let geometric_normal = dp02.cross(dp12).normalized();
+        // shading normal effectively causes smooth shading too, even if the shading normals match the geometric normals.
+
         let shading_normal = if self.normals.len() > 0 {
             let (n0, n1, n2) = (
                 self.normals[self.indices[3 * self.idx + 0]],

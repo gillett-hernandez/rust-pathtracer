@@ -1,6 +1,8 @@
 mod environment;
+mod importance_map;
 
 pub use environment::EnvironmentMap;
+pub use importance_map::ImportanceMap;
 
 use crate::hittable::*;
 use crate::materials::MaterialTable;

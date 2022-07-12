@@ -1,4 +1,4 @@
-# Kagayaki
+# Rust Pathtracer (placeholder name)
 
 This is a wavelength aware physically based 3D rendering engine written in Rust. The main focus is in implementing concepts in a concise and readable manner, however there are some performance optimizations. This project uses `packed_simd` in much of the code where possible.
 

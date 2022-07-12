@@ -5,11 +5,12 @@ use crate::renderer::Film;
 // use std::fs::File;
 // use std::io::Read;
 
+use math::curves::{Curve, CurveWithCDF, InterpolationMode, Op};
 use packed_simd::f32x4;
 
 #[derive(Clone)]
 pub struct Texture4 {
-    pub curves: [CDF; 4],
+    pub curves: [CurveWithCDF; 4],
     pub texture: Film<f32x4>,
     pub interpolation_mode: InterpolationMode,
 }
@@ -28,10 +29,47 @@ impl Texture4 {
         );
         (factors * eval).sum()
     }
+
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+        let texel = self.texture.at_uv(uv);
+        Curve::Machine {
+            list: vec![
+                (
+                    Op::Add,
+                    Curve::Machine {
+                        list: vec![(Op::Mul, self.curves[0].pdf.clone())],
+                        seed: texel.extract(0),
+                    },
+                ),
+                (
+                    Op::Add,
+                    Curve::Machine {
+                        list: vec![(Op::Mul, self.curves[1].pdf.clone())],
+                        seed: texel.extract(1),
+                    },
+                ),
+                (
+                    Op::Add,
+                    Curve::Machine {
+                        list: vec![(Op::Mul, self.curves[2].pdf.clone())],
+                        seed: texel.extract(2),
+                    },
+                ),
+                (
+                    Op::Add,
+                    Curve::Machine {
+                        list: vec![(Op::Mul, self.curves[3].pdf.clone())],
+                        seed: texel.extract(3),
+                    },
+                ),
+            ],
+            seed: 0.0,
+        }
+    }
 }
 #[derive(Clone)]
 pub struct Texture1 {
-    pub curve: CDF,
+    pub curve: CurveWithCDF,
     pub texture: Film<f32>,
     pub interpolation_mode: InterpolationMode,
 }
@@ -44,6 +82,13 @@ impl Texture1 {
         let factor = self.texture.at_uv(uv);
         let eval = self.curve.evaluate_power(lambda);
         factor * eval
+    }
+
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+        Curve::Machine {
+            list: vec![(Op::Mul, self.curve.pdf.clone())],
+            seed: self.texture.at_uv(uv),
+        }
     }
 }
 #[derive(Clone)]
@@ -60,6 +105,13 @@ impl Texture {
             Texture::Texture4(tex) => tex.eval_at(lambda, uv),
         }
     }
+
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+        match self {
+            Texture::Texture1(tex) => tex.curve_at(uv),
+            Texture::Texture4(tex) => tex.curve_at(uv),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -68,10 +120,57 @@ pub struct TexStack {
 }
 impl TexStack {
     pub fn eval_at(&self, lambda: f32, uv: (f32, f32)) -> f32 {
-        let mut s = 0.0;
+        let mut energy = 0.0;
         for tex in self.textures.iter() {
-            s += tex.eval_at(lambda, uv);
+            energy += tex.eval_at(lambda, uv);
         }
-        s
+        energy
     }
+    // pub fn importance_sample_at(
+    //     &self,
+    //     uv: (f32, f32),
+    //     sample: Sample1D,
+    // ) -> (SingleWavelength, PDF) {
+    //     // let mut spds: Vec<SPD> = Vec::new();
+    //     // let mut cumulative_integral = 0.0;
+    //     // let mut s = 0.0;
+    //     // for spd in &self.textures {}
+    //     unimplemented!()
+    // }
+
+    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+        let mut list = Vec::new();
+        let seed = 0.0;
+        for tex in &self.textures {
+            list.push((Op::Add, tex.curve_at(uv)));
+        }
+        Curve::Machine { seed, list }
+    }
+    // pub fn bake_importance_map(&self, width: usize, height: usize) -> Film<f32> {
+    //     let mut film = Film::new(width, height, 0.0f32);
+    //     let mut line_luminance = 0.0;
+    //     let mut cumulative_luminance = 0.0;
+    //     for y in 0..height {
+    //         for x in 0..width {
+    //             let uv = (x as f32 / width as f32, y as f32 / height as f32);
+    //             let mut luminance = 0.0;
+    //             for tex in &self.textures {
+    //                 luminance += match tex {
+    //                     Texture::Texture1(inner) => {
+    //                         inner.curve.cdf_integral * inner.texture.at_uv(uv)
+    //                     }
+    //                     Texture::Texture4(inner) => (f32x4::new(
+    //                         inner.curves[0].cdf_integral,
+    //                         inner.curves[1].cdf_integral,
+    //                         inner.curves[2].cdf_integral,
+    //                         inner.curves[3].cdf_integral,
+    //                     ) * inner.texture.at_uv(uv))
+    //                     .sum(),
+    //                 };
+    //             }
+    //             film.buffer[y * width + x] = luminance;
+    //         }
+    //     }
+    //     film
+    // }
 }

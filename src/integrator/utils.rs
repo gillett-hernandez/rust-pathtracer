@@ -167,7 +167,7 @@ pub fn random_walk(
                 trace_type.into(),
                 hit.time,
                 hit.lambda,
-                -ray.direction,
+                -ray.direction, // TODO: change how this struct member is named, since this clearly isn't actually the local_wi
                 hit.point,
                 hit.normal,
                 hit.uv,
@@ -290,29 +290,30 @@ pub fn random_walk(
                     vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
                     vertices.push(vertex);
                 } else {
-                    // this happens when the backside of a light is hit.
+                    // this happens when the backside of a light is hit?
                 }
                 break;
             }
         } else {
             // add a vertex when a camera ray hits the environment
+            // maybe resample the environment here?
             if trace_type == TransportMode::Importance {
-                let ray_direction = ray.direction;
                 let world_radius = world.get_world_radius();
-                let at_env = ray_direction * world_radius;
+                let at_env = ray.direction * world_radius;
                 let vertex = SurfaceVertex::new(
                     VertexType::LightSource(LightSourceType::Environment),
                     ray.time,
                     lambda,
-                    ray.direction,
+                    Vec3::Z,
                     Point3::from(at_env),
                     ray.direction,
+                    // delay computing uv
                     (0.0, 0.0),
                     MaterialId::Light(0),
                     0,
                     beta,
                     0.0,
-                    1.0 / (4.0 * PI),
+                    (4.0 * PI).recip(),
                     1.0,
                 );
                 debug_assert!(vertex.point.0.is_finite().all());

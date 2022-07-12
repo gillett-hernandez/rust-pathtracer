@@ -7,6 +7,7 @@ use crate::integrator::{
 };
 use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
 use crate::profile::Profile;
+use crate::rgb_to_u32;
 use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
 use crate::{camera::Camera, config::RendererType};
@@ -32,10 +33,6 @@ impl PreviewRenderer {
         PreviewRenderer {}
     }
 }
-fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
-    ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
-}
-
 impl Renderer for PreviewRenderer {
     fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
         if let RendererType::Preview {
@@ -213,7 +210,7 @@ impl Renderer for PreviewRenderer {
                                 }
                             }
                             let srgb_tonemapper =
-                                sRGB::new(&film, render_settings_copy.exposure.unwrap_or(1.0));
+                                sRGB::new(&film, render_settings_copy.exposure.unwrap_or(1.0), false);
                             {
                                 light_buffer_ref
                                     .lock()
@@ -320,7 +317,7 @@ impl Renderer for PreviewRenderer {
                                 }
                             });
                         let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0));
+                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
                         buffer
                             .par_iter_mut()
                             .enumerate()
@@ -467,7 +464,7 @@ impl Renderer for PreviewRenderer {
                         println!("took {}s", elapsed);
                         stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0));
+                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
                         buffer
                             .par_iter_mut()
                             .enumerate()

@@ -89,6 +89,7 @@ impl Hittable for Instance {
         );
         debug_assert!(!t1.is_nan());
         if let Some(transform) = self.transform {
+            //TODO: figure out if t0, t1 need to be transformed based on the scale of the transform
             if let Some(hit) = self.aggregate.hit(
                 Ray {
                     origin: transform.to_local(r.origin),
@@ -207,15 +208,24 @@ mod tests {
 
         let transform = Transform3::from_stack(
             Some(Transform3::from_scale(Vec3::new(3.0, 3.0, 3.0))),
-            Some(Transform3::from_axis_angle(Vec3::Z, 1.0)),
-            Some(Transform3::from_translation(Vec3::new(1.0, 1.0, 1.0))),
+            Some(
+                Transform3::from_axis_angle(Vec3::new(1.0, 0.0, 0.0), 1.0)
+                    * Transform3::from_axis_angle(Vec3::new(0.0, 1.0, 0.0), 1.0),
+            ),
+            Some(Transform3::from_translation(Vec3::new(0.0, 0.0, 0.0))),
         );
 
         let aggregate1 = Aggregate::from(sphere);
         let aggregate2 = Aggregate::from(aarect);
+        println!("{:?}", aggregate2.aabb());
 
         let instance1 = Instance::new(aggregate1, Some(transform), Some(0.into()), 0);
         let instance2 = Instance::new(aggregate2, Some(transform), Some(0.into()), 0);
+        println!("{:?}", instance2.aabb());
+        println!(
+            "{:?}",
+            instance2.transform.unwrap().to_world(Point3::ORIGIN)
+        );
 
         let test_ray = Ray::new(Point3::ORIGIN + 10.0 * Vec3::Z, -Vec3::Z);
 

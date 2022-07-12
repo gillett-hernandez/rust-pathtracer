@@ -5,13 +5,24 @@ use root::renderer::{GPUStyleRenderer, NaiveRenderer, PreviewRenderer, Renderer}
 use root::world::*;
 use root::{config::*, renderer::SPPMRenderer};
 
-use std::time::Duration;
-use std::{thread, time::Instant};
-#[cfg(windows)]
+use structopt::StructOpt;
+
+#[cfg(all(target_os = "windows", feature = "notification"))]
+use std::time::Instant;
+#[cfg(all(target_os = "windows", feature = "notification"))]
 use win32_notification::NotificationBuilder;
 
+#[derive(Debug, StructOpt)]
+#[structopt(rename_all = "kebab-case")]
+struct Opt {
+    #[structopt(long)]
+    pub scene_file: Option<String>,
+    #[structopt(long, default_value = "data/config.toml")]
+    pub config_file: String,
+}
+
 fn construct_scene(config: &Config) -> World {
-    construct_world(config)
+    construct_world(&config.scene_file)
 }
 
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
@@ -24,7 +35,9 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
 }
 
 fn main() -> () {
-    let config: TOMLConfig = match get_settings("data/config.toml".to_string()) {
+    let opts = Opt::from_args();
+
+    let mut config: TOMLConfig = match get_settings(opts.config_file) {
         Ok(expr) => expr,
         Err(v) => {
             println!("{:?}", "couldn't read config.toml");
@@ -42,14 +55,17 @@ fn main() -> () {
         .build_global()
         .unwrap();
 
+    // override scene file based on provided command line argument
+    config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
     let (config, cameras) = parse_cameras_from(&config);
     let world = construct_scene(&config);
 
+    #[cfg(all(target_os = "windows", feature = "notification"))]
     let time = Instant::now();
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
     renderer.render(world, cameras, &config);
 
-    #[cfg(target_os = "windows")]
+    #[cfg(all(target_os = "windows", feature = "notification"))]
     {
         let notification = NotificationBuilder::new()
             .title_text("Render finished")

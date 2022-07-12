@@ -42,36 +42,41 @@ filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
 
+[[textures]]
+name = "lambertian_white_2"
+[[textures.texture_stack]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+[textures.texture_stack.curve]
+type = "Flat"
+strength = 1.0
+interpolation_mode = "Linear"
+
+
 
 [[materials]]
 name = "lambertian_white"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_white"
+texture_id = "lambertian_white"
 
 [[materials]]
 name = "lambertian_green"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_green"
+texture_id = "lambertian_green"
 
 [[materials]]
 name = "lambertian_red"
 [materials.data]
 type = "Lambertian"
-color = "lambertian_red"
-
-
+texture_id = "lambertian_red"
 
 [[materials]]
 name = "lambertian_white_2"
 [materials.data]
 type = "Lambertian"
-[materials.data.color]
-type = "Flat"
-strength = 1.0
-interpolation_mode = "Linear"
-
+texture_id = "lambertian_white_2"
 
 [[materials]]
 name = "ggx_glass"
