@@ -574,6 +574,9 @@ mod test {
         let func = |x: f32, y: f32| (-(x * x + y * y)).exp();
         let sample_transform = |x: f32| 4.0 * (x - 0.5);
 
+        // jacobian comes from the sample transform. offsets don't affect the jacobian, but scaling factors do.
+        let sample_jacobian = 16.0;
+
         let resolution = 100;
         let bounds = Bounds1D::new(0.0, 1.0);
 
@@ -655,7 +658,7 @@ mod test {
 
             let (uv, pdf) = importance_map.sample_uv(sample);
             // println!("{} {}", uv.0, uv.1);
-            let pdf = (pdf.0 * pdf.1).0;
+            let pdf = (pdf.0 * pdf.1).0 / sample_jacobian;
             // let uv = (uv.0 / 4.0 + 0.5, uv.1 / 4.0 + 0.5);
 
             // estimate of env map luminance will have unacceptable bias depending on the actual size of the env map texture.
@@ -679,6 +682,7 @@ mod test {
             film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy.0 / pdf;
 
             if idx % 100 == 0 {
+                println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
                 let srgb_tonemapper = sRGB::new(&film, 1.0, false);
@@ -696,11 +700,11 @@ mod test {
             }
         }
         let true_value = 3.11227031972f64;
+        let err = (estimate - true_value as f32).abs() / estimate;
         println!(
             "\n\nestimate is {}, true value is {}, error factor is {}",
-            estimate,
-            true_value,
-            true_value as f32 / estimate
+            estimate, true_value, err
         );
+        assert!(err < 0.0001);
     }
 }
