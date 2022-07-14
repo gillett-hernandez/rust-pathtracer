@@ -37,9 +37,9 @@ impl ImportanceMap {
 
         let mut total_luminance = 0.0;
 
-        // let mut machine = SPD::Machine {
+        // let mut machine = Curve::Machine {
         //     seed: 1.0,
-        //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, SPD::Const(0.0))],
+        //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, Curve::Const(0.0))],
         // };
 
         let (mut window, mut buffer, mut maybe_cdf) = if cfg!(feature = "visualize_importance_map")

@@ -185,7 +185,7 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
 pub struct GGX {
     pub alpha: f32,
     pub eta: Curve,
-    pub eta_o: f32, // replace with SPD
+    pub eta_o: f32, // replace with Curve
     pub kappa: Curve,
     pub permeability: f32,
     pub outer_medium_id: usize,

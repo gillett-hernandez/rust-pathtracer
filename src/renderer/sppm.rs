@@ -91,7 +91,7 @@ impl SPPMRenderer {
                     let mut temp_color = XYZColor::BLACK;
                     // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                     let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                    // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                    // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
 
                     let sample = sampler.draw_2d();
 

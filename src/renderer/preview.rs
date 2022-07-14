@@ -209,8 +209,11 @@ impl Renderer for PreviewRenderer {
                                     _ => {}
                                 }
                             }
-                            let srgb_tonemapper =
-                                sRGB::new(&film, render_settings_copy.exposure.unwrap_or(1.0), false);
+                            let srgb_tonemapper = sRGB::new(
+                                &film,
+                                render_settings_copy.exposure.unwrap_or(1.0),
+                                false,
+                            );
                             {
                                 light_buffer_ref
                                     .lock()
@@ -277,7 +280,7 @@ impl Renderer for PreviewRenderer {
                                 let mut sampler: Box<dyn Sampler> =
                                     Box::new(StratifiedSampler::new(20, 20, 10));
                                 // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                                // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
                                 let mut local_additional_splats: Vec<(Sample, CameraId)> =
                                     Vec::new();
                                 // use with capacity to preallocate
@@ -316,8 +319,11 @@ impl Renderer for PreviewRenderer {
                                     tx1.send(splat).unwrap();
                                 }
                             });
-                        let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
+                        let srgb_tonemapper = sRGB::new(
+                            &films[film_idx],
+                            render_settings.exposure.unwrap_or(1.0),
+                            false,
+                        );
                         buffer
                             .par_iter_mut()
                             .enumerate()
@@ -421,7 +427,7 @@ impl Renderer for PreviewRenderer {
                                 let mut temp_color = XYZColor::BLACK;
                                 // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                                 let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                                // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
 
                                 let sample = sampler.draw_2d();
 
@@ -463,8 +469,11 @@ impl Renderer for PreviewRenderer {
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
                         println!("took {}s", elapsed);
                         stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
-                        let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
+                        let srgb_tonemapper = sRGB::new(
+                            &films[film_idx],
+                            render_settings.exposure.unwrap_or(1.0),
+                            false,
+                        );
                         buffer
                             .par_iter_mut()
                             .enumerate()

@@ -26,7 +26,7 @@ pub enum EnvironmentMap {
 }
 
 impl EnvironmentMap {
-    // pub const fn new(color: SPD, strength: f32) -> Self {
+    // pub const fn new(color: Curve, strength: f32) -> Self {
     //     EnvironmentMap { color, strength }
     // }
 

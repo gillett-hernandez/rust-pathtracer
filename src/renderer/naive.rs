@@ -88,7 +88,7 @@ impl NaiveRenderer {
                 let mut temp_color = XYZColor::BLACK;
                 // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                 let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
                 for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
 
@@ -296,7 +296,7 @@ impl NaiveRenderer {
                             let mut sampler: Box<dyn Sampler> =
                                 Box::new(StratifiedSampler::new(20, 20, 10));
                             // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                            // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                            // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
                             let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
                             // use with capacity to preallocate
                             for s in 0..settings.min_samples {

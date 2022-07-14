@@ -30,7 +30,7 @@ In addition, much of the code emphasizes matching reality as closely as possible
   * Colors are implemented as Spectral Response Functions, under the hood they are bounded spectral power distributions
   * in general, for lights and for colors, those spectral response functions are implemented as curves, and multiple curve types are supported. see [curves.rs](src/curves.rs) and [math/spectral.rs](src/math/spectral.rs) for more information
 * Metals and Dielectrics are wavelength-dependent:
-  * Dielectrics use a curve (struct SPD) to represent their varying index of refraction with respect to wavelength.
+  * Dielectrics use a curve (struct Curve) to represent their varying index of refraction with respect to wavelength.
     * This allows for physically correct Dispersion. The curve used is typically a curve matching the first two terms of [Cauchy's equation](https://en.wikipedia.org/wiki/Cauchy%27s_equation).
   * Metals use multiple curves to represent their varying index of refraction and extinction coefficient with respect to wavelength.
     * This allows for physically correct color and reflectance behavior so that Gold, Copper, and other metals can be represented and traced accurately.

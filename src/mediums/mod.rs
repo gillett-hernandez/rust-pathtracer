@@ -2,8 +2,18 @@ use crate::math::*;
 
 use std::marker::{Send, Sync};
 
+mod hg;
+mod rayleigh;
+
+// exporting for use in parsing
+pub use hg::HenyeyGreensteinHomogeneous;
+pub use rayleigh::Rayleigh;
+
 pub trait Medium {
+    // phase function. analogous to the bsdf
     fn p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32;
+    // sample phase function, once scattering has been determined using `sample`, sample_p allows the exit direction to be determined
+    // analogous to sampling the bsdf
     fn sample_p(
         &self,
         lambda: f32,
@@ -11,140 +21,63 @@ pub trait Medium {
         wi: Vec3,
         sample: Sample2D,
     ) -> (Vec3, f32);
+    // sample transmittance, i.e. determine how far a ray reaches through this medium
+    // if the medium is not homogeneous, the uvw for each point along the ray would be required and some source for the density would also be required, i.e. an openvdb implementation
+    // TODO: implement some Point3 -> UVW trait method on potentially a new trait, such that nonhomogeneous mediums can be implemented
     fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool);
+    // evaluate transmittance along two points.
     fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32;
+    // evaluate emission at some uvw. assuming homogeneity, uvw can be discarded.
     fn emission(&self, _lambda: f32, _wo: Vec3, _uvw: (f32, f32, f32)) -> SingleEnergy {
         0.0.into()
     }
+    // sample emission to exit the material for use in bdpt. again, assuming homogeneity, uvw can be ignored.
     fn sample_emission(&self, _lambda: f32, _uvw: (f32, f32, f32)) -> (Vec3, SingleEnergy) {
         (Vec3::ZERO, 0.0.into())
-    }
-}
-
-pub fn phase_hg(cos_theta: f32, g: f32) -> f32 {
-    let denom = 1.0 + g * g + 2.0 * g * cos_theta;
-    debug_assert!(
-        denom > 0.0,
-        "1.0 + {:?} + {:?} == {:?}",
-        g * g,
-        2.0 * g * cos_theta,
-        denom
-    );
-    (1.0 - g * g) / (denom * denom.sqrt() * 2.0 * std::f32::consts::TAU)
-}
-#[derive(Clone)]
-pub struct HenyeyGreensteinHomogeneous {
-    pub g: Curve, // valid range: 0.0 to 2.0. actual g == g.evaluate_power(lambda) - 1.0
-    pub sigma_t: Curve, // transmittance attenuation
-    pub sigma_s: Curve, // scattering attenuation
-}
-
-impl Medium for HenyeyGreensteinHomogeneous {
-    fn p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
-        let cos_theta = wi * wo;
-
-        let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
-        let phase = phase_hg(cos_theta, g);
-        let sigma_s = self.sigma_s.evaluate_power(lambda);
-
-        let v = sigma_s * phase;
-        debug_assert!(
-            v.is_finite(),
-            "{:?}, {:?}, {:?}, {:?}",
-            sigma_s,
-            phase,
-            g,
-            cos_theta
-        );
-        v
-    }
-    fn sample_p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, f32) {
-        // just do isomorphic as a test
-        let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
-        let cos_theta = if g.abs() < 0.001 {
-            1.0 - 2.0 * s.x
-        } else {
-            let sqr = (1.0 - g * g) / (1.0 + g - 2.0 * g * s.x);
-            -(1.0 + g * g - sqr * sqr) / (2.0 * g)
-        };
-        // println!("{} {}", cos_theta, g);
-
-        let sin_theta = (0.0f32).max(1.0 - cos_theta * cos_theta).sqrt();
-        let phi = std::f32::consts::TAU * s.y;
-        let frame = TangentFrame::from_normal(wi);
-        let (sin_phi, cos_phi) = phi.sin_cos();
-        let wo = Vec3::new(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-        let phase = phase_hg(cos_theta, g);
-        let sigma_s = self.sigma_s.evaluate_power(lambda);
-        let v = sigma_s * phase;
-        debug_assert!(
-            v.is_finite(),
-            "{:?}, {:?}, {:?}, {:?}",
-            sigma_s,
-            phase,
-            g,
-            cos_theta
-        );
-
-        (frame.to_world(&wo), v)
-    }
-    fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool) {
-        let sigma_t = self.sigma_t.evaluate_power(lambda);
-        let dist = -(1.0 - s.x).ln() / sigma_t;
-        let t = dist.min(ray.tmax);
-        let sampled_medium = t < ray.tmax;
-
-        let point = ray.point_at_parameter(t);
-        let tr = self.tr(lambda, ray.origin, point);
-        // could add HWSS here.
-        let density = if sampled_medium { sigma_t * tr } else { tr };
-        let pdf = density;
-        if sampled_medium {
-            (point, tr * self.sigma_s.evaluate_power(lambda) / pdf, true)
-        } else {
-            (point, tr / pdf, false)
-        }
-    }
-    fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32 {
-        let sigma_t = self.sigma_t.evaluate_power(lambda);
-        (-sigma_t * (p1 - p0).norm()).exp()
     }
 }
 
 #[derive(Clone)]
 pub enum MediumEnum {
     HenyeyGreensteinHomogeneous(HenyeyGreensteinHomogeneous),
+    Rayleigh(Rayleigh),
 }
 
 impl Medium for MediumEnum {
     fn p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
         match self {
             MediumEnum::HenyeyGreensteinHomogeneous(inner) => inner.p(lambda, uvw, wi, wo),
+            MediumEnum::Rayleigh(inner) => inner.p(lambda, uvw, wi, wo),
         }
     }
     fn sample_p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, f32) {
         match self {
             MediumEnum::HenyeyGreensteinHomogeneous(inner) => inner.sample_p(lambda, uvw, wi, s),
+            MediumEnum::Rayleigh(inner) => inner.sample_p(lambda, uvw, wi, s),
         }
     }
     fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool) {
         match self {
             MediumEnum::HenyeyGreensteinHomogeneous(inner) => inner.sample(lambda, ray, s),
+            MediumEnum::Rayleigh(inner) => inner.sample(lambda, ray, s),
         }
     }
     fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32 {
         match self {
             MediumEnum::HenyeyGreensteinHomogeneous(inner) => inner.tr(lambda, p0, p1),
+            MediumEnum::Rayleigh(inner) => inner.tr(lambda, p0, p1),
         }
     }
     fn emission(&self, lambda: f32, wo: Vec3, uvw: (f32, f32, f32)) -> SingleEnergy {
         match self {
             MediumEnum::HenyeyGreensteinHomogeneous(inner) => inner.emission(lambda, wo, uvw),
+            MediumEnum::Rayleigh(inner) => inner.emission(lambda, wo, uvw),
         }
     }
     fn sample_emission(&self, lambda: f32, uvw: (f32, f32, f32)) -> (Vec3, SingleEnergy) {
         match self {
             MediumEnum::HenyeyGreensteinHomogeneous(inner) => inner.sample_emission(lambda, uvw),
+            MediumEnum::Rayleigh(inner) => inner.sample_emission(lambda, uvw),
         }
     }
 }
