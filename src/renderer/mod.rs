@@ -1,16 +1,16 @@
 extern crate pbr;
 
 mod film;
-mod gpu_style;
+
 mod naive;
 mod preview;
-mod sppm;
+// mod sppm;
 
 pub use film::Film;
-pub use gpu_style::GPUStyleRenderer;
+
 pub use naive::NaiveRenderer;
 pub use preview::PreviewRenderer;
-pub use sppm::SPPMRenderer;
+// pub use sppm::SPPMRenderer;
 
 use crate::camera::Camera;
 

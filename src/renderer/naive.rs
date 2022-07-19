@@ -469,12 +469,12 @@ impl Renderer for NaiveRenderer {
                     bundled_cameras.push(copied_camera);
                     sampled_renders.push((IntegratorType::PathTracing, updated_render_settings));
                 }
-                IntegratorType::SPPM => {
-                    let mut updated_render_settings = render_settings.clone();
-                    updated_render_settings.camera_id = camera_id;
-                    bundled_cameras.push(copied_camera);
-                    sampled_renders.push((IntegratorType::SPPM, updated_render_settings));
-                }
+                // IntegratorType::SPPM => {
+                //     let mut updated_render_settings = render_settings.clone();
+                //     updated_render_settings.camera_id = camera_id;
+                //     bundled_cameras.push(copied_camera);
+                //     sampled_renders.push((IntegratorType::SPPM, updated_render_settings));
+                // }
                 t if splatting_renders_and_cameras.contains_key(&t) => {
                     // then determine new camera id
                     let list = splatting_renders_and_cameras.get_mut(&t).unwrap();
@@ -514,30 +514,30 @@ impl Renderer for NaiveRenderer {
                         _ => {}
                     }
                 }
-                IntegratorType::SPPM => {
-                    world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
-                    let arc_world = Arc::new(world.clone());
-                    match Integrator::from_settings_and_world(
-                        arc_world.clone(),
-                        IntegratorType::SPPM,
-                        &bundled_cameras,
-                        render_settings,
-                    ) {
-                        Some(Integrator::SPPM(integrator)) => {
-                            println!("rendering with sppm integrator");
-                            let (render_settings, film) = (
-                                render_settings.clone(),
-                                NaiveRenderer::render_sampled(
-                                    integrator,
-                                    render_settings,
-                                    &cameras[render_settings.camera_id],
-                                ),
-                            );
-                            output_film(&render_settings, &film);
-                        }
-                        _ => {}
-                    }
-                }
+                // IntegratorType::SPPM => {
+                //     world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
+                //     let arc_world = Arc::new(world.clone());
+                //     match Integrator::from_settings_and_world(
+                //         arc_world.clone(),
+                //         IntegratorType::SPPM,
+                //         &bundled_cameras,
+                //         render_settings,
+                //     ) {
+                //         Some(Integrator::SPPM(integrator)) => {
+                //             println!("rendering with sppm integrator");
+                //             let (render_settings, film) = (
+                //                 render_settings.clone(),
+                //                 NaiveRenderer::render_sampled(
+                //                     integrator,
+                //                     render_settings,
+                //                     &cameras[render_settings.camera_id],
+                //                 ),
+                //             );
+                //             output_film(&render_settings, &film);
+                //         }
+                //         _ => {}
+                //     }
+                // }
                 _ => {}
             }
         }

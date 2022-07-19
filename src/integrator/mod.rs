@@ -1,8 +1,7 @@
 mod bdpt;
-pub mod gpu_style;
 mod lt;
 mod pt;
-mod sppm;
+// mod sppm;
 pub mod utils;
 
 pub use crate::camera::{Camera, CameraId};
@@ -16,7 +15,7 @@ use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
 pub use pt::PathTracingIntegrator;
-pub use sppm::SPPMIntegrator;
+// pub use sppm::SPPMIntegrator;
 
 use std::hash::Hash;
 use std::sync::Arc;
@@ -28,7 +27,7 @@ pub enum IntegratorType {
     PathTracing,
     LightTracing,
     BDPT,
-    SPPM,
+    // SPPM,
     MLT,
 }
 
@@ -39,7 +38,6 @@ impl IntegratorType {
             "LT" => IntegratorType::LightTracing,
             "BDPT" => IntegratorType::BDPT,
             "MLT" => IntegratorType::MLT,
-            "SPPM" => IntegratorType::SPPM,
             _ => IntegratorType::PathTracing,
         }
     }
@@ -48,7 +46,6 @@ impl IntegratorType {
 impl From<IntegratorKind> for IntegratorType {
     fn from(data: IntegratorKind) -> Self {
         match data {
-            IntegratorKind::SPPM { .. } => IntegratorType::SPPM,
             IntegratorKind::PT { .. } => IntegratorType::PathTracing,
             IntegratorKind::LT { .. } => IntegratorType::LightTracing,
             IntegratorKind::BDPT { .. } => IntegratorType::BDPT,
@@ -60,7 +57,7 @@ pub enum Integrator {
     PathTracing(PathTracingIntegrator),
     LightTracing(LightTracingIntegrator),
     BDPT(BDPTIntegrator),
-    SPPM(SPPMIntegrator),
+    // SPPM(SPPMIntegrator),
 }
 
 impl Integrator {
@@ -82,15 +79,15 @@ impl Integrator {
                 world,
                 wavelength_bounds: bounds,
             })),
-            IntegratorType::SPPM => Some(Integrator::SPPM(SPPMIntegrator {
-                max_bounces: settings.max_bounces.unwrap(),
-                world,
-                russian_roulette: settings.russian_roulette.unwrap_or(false),
-                camera_samples: settings.min_samples,
-                wavelength_bounds: bounds,
-                photon_map: None,
-                last_lambda: 0.0,
-            })),
+            // IntegratorType::SPPM => Some(Integrator::SPPM(SPPMIntegrator {
+            //     max_bounces: settings.max_bounces.unwrap(),
+            //     world,
+            //     russian_roulette: settings.russian_roulette.unwrap_or(false),
+            //     camera_samples: settings.min_samples,
+            //     wavelength_bounds: bounds,
+            //     photon_map: None,
+            //     last_lambda: 0.0,
+            // })),
             IntegratorType::PathTracing { .. } | _ => {
                 Some(Integrator::PathTracing(PathTracingIntegrator {
                     min_bounces: settings.min_bounces.unwrap_or(4),

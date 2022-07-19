@@ -77,9 +77,9 @@ pub enum IntegratorKind {
     LT {
         camera_samples: u16,
     },
-    SPPM {
-        photon_cache_size: usize,
-    },
+    // SPPM {
+    //     photon_cache_size: usize,
+    // },
 }
 
 #[derive(Deserialize, Clone)]
@@ -143,18 +143,10 @@ impl From<TOMLRenderSettings> for RenderSettings {
 #[serde(tag = "type")]
 pub enum RendererType {
     Naive,
-    GPUStyle {
-        tile_width: usize,
-        tile_height: usize,
-    },
-    /* Tiled {
-        tile_width: usize,
-        tile_height: usize,
-    }, */
     Preview {
         selected_preview_film_id: usize,
     },
-    SPPM,
+    // SPPM,
 }
 
 #[derive(Deserialize, Clone)]
