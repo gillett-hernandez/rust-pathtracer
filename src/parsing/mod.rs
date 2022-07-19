@@ -58,7 +58,7 @@ fn load_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
     let mut input = String::new();
     File::open(filepath)
         .and_then(|mut f| f.read_to_string(&mut input))
-        .unwrap();
+        .expect(&format!("{}", filepath).to_owned());
     // uncomment the following line to print out the raw contents
     // println!("{:?}", input);
     let scene: Scene = toml::from_str(&input)?;

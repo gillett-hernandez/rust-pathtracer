@@ -85,22 +85,23 @@ pub fn parse_material(
             let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
         }
-        MaterialData::PassthroughFilter(data) => {
-            println!("parsing PassthroughFilter");
-            // let color = parse_texture_stack(data.color);
-            let color = Curve::from(data.color);
-            MaterialEnum::PassthroughFilter(PassthroughFilter::new(
-                color,
-                data.outer_medium_id,
-                data.inner_medium_id,
-            ))
-        }
+        // MaterialData::PassthroughFilter(data) => {
+        //     println!("parsing PassthroughFilter");
+        //     // let color = parse_texture_stack(data.color);
+        //     let color = Curve::from(data.color);
+        //     MaterialEnum::PassthroughFilter(PassthroughFilter::new(
+        //         color,
+        //         data.outer_medium_id,
+        //         data.inner_medium_id,
+        //     ))
+        // }
         MaterialData::DiffuseLight(data) => {
             println!("parsing DiffuseLight");
             // let color = parse_texture_stack(data.color);
             let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
         }
+        _ => panic!(),
     }
 }
 
