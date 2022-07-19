@@ -1,10 +1,6 @@
 use crate::math::*;
 use crate::renderer::Film;
 
-// use std::error::Error;
-// use std::fs::File;
-// use std::io::Read;
-
 use math::curves::{Curve, CurveWithCDF, InterpolationMode, Op};
 use packed_simd::f32x4;
 

@@ -143,9 +143,7 @@ impl From<TOMLRenderSettings> for RenderSettings {
 #[serde(tag = "type")]
 pub enum RendererType {
     Naive,
-    Preview {
-        selected_preview_film_id: usize,
-    },
+    Preview { selected_preview_film_id: usize },
     // SPPM,
 }
 
@@ -206,7 +204,7 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
                     Camera::ProjectiveCamera(ProjectiveCamera::new(
                         Point3::from(cam.look_from),
                         Point3::from(cam.look_at),
-                        Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
+                        Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])).normalized(),
                         cam.vfov,
                         cam.focal_distance.unwrap_or(10.0),
                         cam.aperture_size.unwrap_or(0.0),
@@ -227,7 +225,7 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
                     Camera::RealisticCamera(RealisticCamera::new(
                         Point3::from(cam.look_from),
                         Point3::from(cam.look_at),
-                        Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])),
+                        Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])).normalized(),
                         cam.focal_adjustment.unwrap_or(0.0),
                         cam.sensor_size.unwrap_or(35.0),
                         cam.fstop.unwrap_or(2.0),
