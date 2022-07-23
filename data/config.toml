@@ -3,10 +3,6 @@ default_scene_file = "data/scenes/cornell_box.toml"
 type="Naive"
 # type="Preview"
 # selected_preview_film_id = 0
-# type="SPPM"
-# type="GPUStyle"
-# tile_width = 40
-# tile_height = 40
 
 [[cameras]]
 type="SimpleCamera"
@@ -96,11 +92,11 @@ vfov = 45.2
 [[cameras]]
 type="SimpleCamera"
 name = "sun test camera"
-look_from = [-5, 0, 1]
-look_at = [0.0, 0.0, -0.5]
+look_from = [-5.0, 0.0, 0.4]
+look_at = [0.0, 0.0, -0.7]
 aperture_size = 0.001
 focal_distance = 5.0
-vfov = 47.2
+vfov = 16.2
 
 
 [[cameras]]
@@ -180,10 +176,10 @@ min_bounces = 3
 max_bounces = 16
 hwss = false
 # camera_id = "cube camera"
-# camera_id = "sun test camera"
-camera_id = "cornell camera"
+camera_id = "sun test camera"
+# camera_id = "cornell camera"
 # camera_id = "wideangle sun test camera side"
-exposure = 0.3
+exposure = 1.0
 russian_roulette = true
 only_direct = false
 # wavelength_bounds = [380.0, 750.0]
@@ -195,6 +191,6 @@ light_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024
 [render_settings.resolution]
-width = 1080
-height = 1080
+width = 3840
+height = 2160
 

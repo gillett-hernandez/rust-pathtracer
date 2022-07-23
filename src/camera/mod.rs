@@ -88,36 +88,3 @@ impl Camera {
 
 unsafe impl Send for Camera {}
 unsafe impl Sync for Camera {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_debug() {
-        let look_from = Point3::new(-5.0, 0.0, 0.0);
-        let _look_at = Point3::ZERO;
-
-        let origin = look_from;
-        let lens_radius = 0.01;
-        let u = Vec3::new(0.0, 1.0, 0.0);
-        let v = Vec3::new(0.0, 0.0, -1.0);
-        let w = Vec3::new(-1.0, 0.0, 0.0);
-        let focus_dist = 5.0;
-        let half_width = 0.5;
-        let half_height = 0.3;
-        let rd: Vec3 = lens_radius * random_in_unit_disk(Sample2D::new_random_sample());
-        let offset = u * rd.x() + v * rd.y();
-        let _ray_origin: Point3 = origin + offset;
-        // println!("{:?}", ;
-        let s = 0.3;
-        let t = 0.7;
-        let u_halfwidth_focus_dist = u * half_width * focus_dist;
-        let v_halfheight_focus_dist = v * half_height * focus_dist;
-        let _ray_direction = (u_halfwidth_focus_dist * (s * 2.0 - 1.0)
-            + v_halfheight_focus_dist * (t * 2.0 - 1.0)
-            - w * focus_dist
-            - offset)
-            .normalized();
-        // let un_normalized = Vec3::new()
-    }
-}

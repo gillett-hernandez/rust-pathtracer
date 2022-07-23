@@ -50,7 +50,7 @@ impl sRGB {
             );
         }
         sRGB {
-            factor: (1.0 / avg_luminance).min(1000000.0).max(0.00000000001),
+            factor: (1.0 / avg_luminance).clamp(0.00000000001, 1000000.0),
             exposure_adjustment,
             // gamma_adjustment,
         }

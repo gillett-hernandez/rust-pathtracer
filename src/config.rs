@@ -199,6 +199,7 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
         let (name, camera): (String, Camera) = match camera_config {
             CameraSettings::SimpleCamera(cam) => {
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
+
                 (
                     cam.name.clone(),
                     Camera::ProjectiveCamera(ProjectiveCamera::new(
@@ -249,7 +250,11 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
         .zip(settings.render_settings.iter())
     {
         let cam_id = cameras.len();
-        let camera = camera_map[&toml_settings.camera_id].clone();
+        let camera = camera_map[&toml_settings.camera_id]
+            .clone()
+            .with_aspect_ratio(
+                render_settings.resolution.width as f32 / render_settings.resolution.height as f32,
+            );
         render_settings.camera_id = cam_id;
         cameras.push(camera);
     }

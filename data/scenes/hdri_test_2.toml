@@ -1,7 +1,7 @@
 env_sampling_probability = 0.5
 [environment]
 type="HDRI"
-strength =0.4
+strength =0.01
 texture_id = "test_hdri"
 [environment.importance_map]
 # width = 2048
@@ -280,7 +280,7 @@ sidedness = "Dual"
 [materials.data.color]
 type = "Blackbody"
 temperature = 5000.0
-strength = 0.1
+strength = 1.0
 
 
 

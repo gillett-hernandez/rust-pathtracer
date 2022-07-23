@@ -115,8 +115,8 @@ impl RealisticCamera {
         s: f32,
         t: f32,
     ) -> (Ray, f32) {
-        // circular aperture/lens
         let _time: f32 = self.t0 + random() * (self.t1 - self.t0);
+
         // crop sensor to match aspect ratio
         let (x_factor, y_factor) = if self.aspect_ratio > 1.0 {
             // x larger than y
@@ -150,6 +150,9 @@ impl RealisticCamera {
 
             _attempts += 1;
             // do actual tracing through lens for film sample
+
+            // using bladed aperture, though other apertures are possible and should be configurable through this camera's configuration
+            // TODO: implement above (configuration of aperture through camera config)
             let trace_result =
                 self.assembly
                     .trace_forward(self.lens_zoom, &Input { ray, lambda }, 1.0, |e| {
