@@ -21,9 +21,11 @@ pub struct sRGB {
     // pub gamma_adjustment: f32,
 }
 
+// https://en.wikipedia.org/wiki/SRGB#From_CIE_XYZ_to_sRGB
 impl sRGB {
     pub fn new(film: &Film<XYZColor>, exposure_adjustment: f32, printout: bool) -> Self {
         let mut max_luminance = 0.0;
+        let mut max_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
         for y in 0..film.height {
             for x in 0..film.width {
@@ -37,6 +39,7 @@ impl sRGB {
                 if lum > max_luminance {
                     // println!("max lum {} at ({}, {})", max_luminance, x, y);
                     max_luminance = lum;
+                    max_lum_xy = (x, y);
                 }
             }
         }
@@ -47,6 +50,10 @@ impl sRGB {
                 max_luminance,
                 avg_luminance,
                 exposure_adjustment / max_luminance
+            );
+            println!(
+                "max luminance occurred at {}, {}",
+                max_lum_xy.0, max_lum_xy.1
             );
         }
         sRGB {
