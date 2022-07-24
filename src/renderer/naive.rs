@@ -83,12 +83,11 @@ impl NaiveRenderer {
                 let y: usize = pixel_index / width;
                 let x: usize = pixel_index - width * y;
                 // gen ray for pixel x, y
-                // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                // let mut temp_color = RGBColor::BLACK;
+
                 let mut temp_color = XYZColor::BLACK;
                 // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                 let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+
                 for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
 
@@ -98,7 +97,7 @@ impl NaiveRenderer {
                     );
                     temp_color +=
                         integrator.color(&mut sampler, (camera_uv, 0), s as usize, &mut profile);
-                    // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
+
                     debug_assert!(
                         temp_color.0.is_finite().all(),
                         "{:?} resulted in {:?}",
@@ -108,16 +107,9 @@ impl NaiveRenderer {
                 }
 
                 clone2.fetch_add(1, Ordering::Relaxed);
-                // if pixel_index % output_divisor == 0 {
-                //     let stdout = std::io::stdout();
-                //     let mut handle = stdout.lock();
-                //     handle.write_all(b".").unwrap();
-                //     std::io::stdout().flush().expect("some error message")
-                // }
-                // pb.inc();
-                // unsafe {
+
                 *pixel_ref = temp_color / (settings.min_samples as f32);
-                // }
+               
                 profile
             })
             .reduce(|| Profile::default(), |a, b| a.combine(b));

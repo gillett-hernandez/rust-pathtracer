@@ -209,8 +209,11 @@ impl Renderer for PreviewRenderer {
                                     _ => {}
                                 }
                             }
-                            let srgb_tonemapper =
-                                sRGB::new(&film, render_settings_copy.exposure.unwrap_or(1.0), false);
+                            let srgb_tonemapper = sRGB::new(
+                                &film,
+                                render_settings_copy.exposure.unwrap_or(1.0),
+                                false,
+                            );
                             {
                                 light_buffer_ref
                                     .lock()
@@ -316,8 +319,11 @@ impl Renderer for PreviewRenderer {
                                     tx1.send(splat).unwrap();
                                 }
                             });
-                        let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
+                        let srgb_tonemapper = sRGB::new(
+                            &films[film_idx],
+                            render_settings.exposure.unwrap_or(1.0),
+                            false,
+                        );
                         buffer
                             .par_iter_mut()
                             .enumerate()
@@ -416,12 +422,10 @@ impl Renderer for PreviewRenderer {
                                 let y: usize = pixel_index / width;
                                 let x: usize = pixel_index - width * y;
                                 // gen ray for pixel x, y
-                                // let r: Ray = Ray::new(Point3::ZERO, Vec3::X);
-                                // let mut temp_color = RGBColor::BLACK;
+
                                 let mut temp_color = XYZColor::BLACK;
                                 // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                                 let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
 
                                 let sample = sampler.draw_2d();
 
@@ -437,7 +441,7 @@ impl Renderer for PreviewRenderer {
                                     s as usize,
                                     &mut profile,
                                 ));
-                                // temp_color += RGBColor::from(integrator.color(&mut sampler, r));
+
                                 debug_assert!(
                                     temp_color.0.is_finite().all(),
                                     "{:?} resulted in {:?}",
@@ -446,16 +450,9 @@ impl Renderer for PreviewRenderer {
                                 );
 
                                 clone2.fetch_add(1, Ordering::Relaxed);
-                                // if pixel_index % output_divisor == 0 {
-                                //     let stdout = std::io::stdout();
-                                //     let mut handle = stdout.lock();
-                                //     handle.write_all(b".").unwrap();
-                                //     std::io::stdout().flush().expect("some error message")
-                                // }
-                                // pb.inc();
-                                // unsafe {
+
                                 *pixel_ref += temp_color;
-                                // }
+
                                 profile
                             })
                             .reduce(|| Profile::default(), |a, b| a.combine(b));
@@ -463,8 +460,11 @@ impl Renderer for PreviewRenderer {
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
                         println!("took {}s", elapsed);
                         stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
-                        let srgb_tonemapper =
-                            sRGB::new(&films[film_idx], render_settings.exposure.unwrap_or(1.0), false);
+                        let srgb_tonemapper = sRGB::new(
+                            &films[film_idx],
+                            render_settings.exposure.unwrap_or(1.0),
+                            false,
+                        );
                         buffer
                             .par_iter_mut()
                             .enumerate()
