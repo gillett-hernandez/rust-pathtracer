@@ -177,27 +177,25 @@ pub fn eval_unweighted_contribution(
                     emission
                 }
             }
+        } else if last_lightpath_vertex.vertex_type
+            == VertexType::LightSource(LightSourceType::Environment)
+        {
+            SingleEnergy::ZERO
         } else {
-            if last_lightpath_vertex.vertex_type
-                == VertexType::LightSource(LightSourceType::Environment)
-            {
-                SingleEnergy::ZERO
-            } else {
-                let second_to_last_lightpath_vertex = light_path[s - 2];
-                let wi =
-                    (second_to_last_lightpath_vertex.point - last_lightpath_vertex.point).normalized();
-                let hit_material = world.get_material(last_lightpath_vertex.material_id);
-                let hit: HitRecord = last_lightpath_vertex.into();
-                hit_material
-                    .bsdf(
-                        hit.lambda,
-                        hit.uv,
-                        hit.transport_mode,
-                        llpv_frame.to_local(&wi).normalized(),
-                        llpv_local_dir_to_lepv,
-                    )
-                    .0
-            }
+            let second_to_last_lightpath_vertex = light_path[s - 2];
+            let wi =
+                (second_to_last_lightpath_vertex.point - last_lightpath_vertex.point).normalized();
+            let hit_material = world.get_material(last_lightpath_vertex.material_id);
+            let hit: HitRecord = last_lightpath_vertex.into();
+            hit_material
+                .bsdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    llpv_frame.to_local(&wi).normalized(),
+                    llpv_local_dir_to_lepv,
+                )
+                .0
         };
 
         if fsl == SingleEnergy::ZERO {
@@ -227,28 +225,26 @@ pub fn eval_unweighted_contribution(
             } else {
                 SingleEnergy(0.0)
             }
+        } else if last_eyepath_vertex.vertex_type
+            == VertexType::LightSource(LightSourceType::Environment)
+        {
+            SingleEnergy::ZERO
         } else {
-            if last_eyepath_vertex.vertex_type
-                == VertexType::LightSource(LightSourceType::Environment)
-            {
-                SingleEnergy::ZERO
-            } else {
-                let second_to_last_eyepath_vertex = eye_path[t - 2];
-                let wi = (second_to_last_eyepath_vertex.point - last_eyepath_vertex.point).normalized();
-                // let wo = -light_to_eye;
-                let hit_material = world.get_material(last_eyepath_vertex.material_id);
-                let hit: HitRecord = last_eyepath_vertex.into();
-                let reflectance = hit_material
-                    .bsdf(
-                        hit.lambda,
-                        hit.uv,
-                        hit.transport_mode,
-                        lepv_frame.to_local(&wi).normalized(),
-                        lepv_local_dir_to_llpv,
-                    )
-                    .0;
-                reflectance
-            }
+            let second_to_last_eyepath_vertex = eye_path[t - 2];
+            let wi = (second_to_last_eyepath_vertex.point - last_eyepath_vertex.point).normalized();
+            // let wo = -light_to_eye;
+            let hit_material = world.get_material(last_eyepath_vertex.material_id);
+            let hit: HitRecord = last_eyepath_vertex.into();
+            let reflectance = hit_material
+                .bsdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    lepv_frame.to_local(&wi).normalized(),
+                    lepv_local_dir_to_llpv,
+                )
+                .0;
+            reflectance
         };
 
         if fse == SingleEnergy::ZERO {

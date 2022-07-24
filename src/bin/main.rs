@@ -32,7 +32,7 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     }
 }
 
-fn main() -> () {
+fn main() {
     let opts = Opt::from_args();
 
     let mut config: TOMLConfig = match get_settings(opts.config_file) {

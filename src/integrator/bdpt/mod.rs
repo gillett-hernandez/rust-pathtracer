@@ -23,7 +23,7 @@ pub struct BDPTIntegrator {
 impl GenericIntegrator for BDPTIntegrator {
     fn color(
         &self,
-        mut sampler: &mut Box<dyn Sampler>,
+        sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
@@ -151,7 +151,6 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled.3
         );
 
-        let camera_ray;
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id);
         let film_sample = Sample2D::new(
@@ -160,9 +159,9 @@ impl GenericIntegrator for BDPTIntegrator {
         );
 
         let (sampled_camera_ray, lens_normal, camera_pdf) =
-            camera.sample_we(film_sample, &mut sampler, lambda);
+            camera.sample_we(film_sample, sampler, lambda);
         // let camera_pdf = pdf;
-        camera_ray = sampled_camera_ray;
+        let camera_ray = sampled_camera_ray;
 
         let radiance = sampled.1.energy;
 
@@ -264,7 +263,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
-                    &mut profile,
+                    profile,
                 );
 
                 match res {

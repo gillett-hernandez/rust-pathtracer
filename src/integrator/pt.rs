@@ -156,7 +156,7 @@ impl PathTracingIntegrator {
             self.world
                 .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
         {
-            return 0.0.into();
+            0.0.into()
         /*
         light_hit.lambda = lambda;
         // handle case where we intended to hit the world but instead hit a light
@@ -226,11 +226,11 @@ impl PathTracingIntegrator {
         material: &MaterialEnum,
         throughput: SingleEnergy,
         sampler: &mut Box<dyn Sampler>,
-        mut profile: &mut Profile,
+        profile: &mut Profile,
     ) -> SingleEnergy {
         let mut light_contribution = SingleEnergy::ZERO;
         let env_sampling_probability = self.world.get_env_sampling_probability();
-        if self.world.lights.len() == 0 && env_sampling_probability == 0.0 {
+        if self.world.lights.is_empty() && env_sampling_probability == 0.0 {
             return SingleEnergy::ZERO;
         }
         for _i in 0..self.light_samples {
@@ -249,18 +249,18 @@ impl PathTracingIntegrator {
                     material,
                     throughput,
                     sampler.draw_2d(),
-                    &mut profile,
+                    profile,
                 );
             } else {
                 light_contribution += self.estimate_direct_illumination(
-                    &hit,
-                    &frame,
+                    hit,
+                    frame,
                     wi,
                     material,
                     throughput,
                     light_pick_sample,
                     sampler.draw_2d(),
-                    &mut profile,
+                    profile,
                 );
             }
             debug_assert!(
@@ -280,7 +280,7 @@ impl PathTracingIntegrator {
 impl SamplerIntegrator for PathTracingIntegrator {
     fn color(
         &self,
-        mut sampler: &mut Box<dyn Sampler>,
+        sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         mut profile: &mut Profile,
@@ -298,7 +298,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
         );
 
         let (camera_ray, _lens_normal, throughput_and_pdf) =
-            camera.sample_we(film_sample, &mut sampler, sum.lambda);
+            camera.sample_we(film_sample, sampler, sum.lambda);
         let camera_pdf = throughput_and_pdf;
         if camera_pdf.0 == 0.0 {
             return XYZColor::BLACK;
@@ -331,7 +331,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             &self.world,
             &mut path,
             self.min_bounces,
-            &mut profile,
+            profile,
         );
 
         for (index, vertex) in path.iter().enumerate() {

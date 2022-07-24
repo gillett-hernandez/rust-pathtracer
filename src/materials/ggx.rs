@@ -292,81 +292,79 @@ impl GGX {
                 glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
             }
             debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
-        } else {
-            if self.permeability > 0.0 {
-                let eta_rel = self.eta_rel(eta_inner, wi);
+        } else if self.permeability > 0.0 {
+            let eta_rel = self.eta_rel(eta_inner, wi);
 
-                let ggxg = ggx_g(self.alpha, wi, wo);
-                debug_assert!(
-                    wi.0.is_finite().all() && wo.0.is_finite().all(),
-                    "{:?} {:?} {:?} {:?}",
-                    wi,
-                    wo,
-                    ggxg,
-                    cos_i
-                );
-                let mut wh = (wi + eta_rel * wo).normalized();
-                // normal invert mark
-                if wh.z() < 0.0 {
-                    wh = -wh;
-                }
-
-                let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
-                let ndotv = wi * wh;
-                let ndotl = wo * wh;
-
-                let sqrt_denom = ndotv + eta_rel * ndotl;
-                let eta_rel2 = eta_rel * eta_rel;
-                let mut dwh_dwo1 = ndotl / (sqrt_denom * sqrt_denom); // dwh_dwo w/o etas
-                let dwh_dwo2 = eta_rel2 * dwh_dwo1; // dwh_dwo w/etas
-                match transport_mode {
-                    // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
-                    // in importance_mode, it is scaled by eta^2.
-                    TransportMode::Importance => dwh_dwo1 = dwh_dwo2,
-                    _ => {}
-                };
-                debug_assert!(
-                    wh.0.is_finite().all(),
-                    "{:?} {:?} {:?} {:?}",
-                    eta_rel,
-                    ndotv,
-                    ndotl,
-                    sqrt_denom
-                );
-                let ggxd = ggx_d(self.alpha, wh);
-                let weight = ggxd * ggxg * ndotv * dwh_dwo1 / g;
-                transmission_pdf = (ggxd * partial * dwh_dwo2).abs();
-
-                let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
-                transmission.0 = self.permeability * inv_reflectance * weight.abs();
-                // println!("{:?}, {:?}, {:?}", eta_inner, kappa, ndotv);
-                // println!(
-                //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
-                //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo1, g
-                // );
-
-                // println!(
-                //     "transmission_pdf = {:?} = {:?}*{:?}*{:?}",
-                //     transmission_pdf, ggxd, partial, dwh_dwo1
-                // );
-
-                debug_assert!(
-                    !transmission.is_nan(),
-                    "transmission was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
-                    self,
-                    lambda,
-                    wi,
-                    wo
-                );
-                debug_assert!(
-                    !transmission_pdf.is_nan(),
-                    "pdf was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
-                    self,
-                    lambda,
-                    wi,
-                    wo
-                );
+            let ggxg = ggx_g(self.alpha, wi, wo);
+            debug_assert!(
+                wi.0.is_finite().all() && wo.0.is_finite().all(),
+                "{:?} {:?} {:?} {:?}",
+                wi,
+                wo,
+                ggxg,
+                cos_i
+            );
+            let mut wh = (wi + eta_rel * wo).normalized();
+            // normal invert mark
+            if wh.z() < 0.0 {
+                wh = -wh;
             }
+
+            let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
+            let ndotv = wi * wh;
+            let ndotl = wo * wh;
+
+            let sqrt_denom = ndotv + eta_rel * ndotl;
+            let eta_rel2 = eta_rel * eta_rel;
+            let mut dwh_dwo1 = ndotl / (sqrt_denom * sqrt_denom); // dwh_dwo w/o etas
+            let dwh_dwo2 = eta_rel2 * dwh_dwo1; // dwh_dwo w/etas
+            match transport_mode {
+                // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
+                // in importance_mode, it is scaled by eta^2.
+                TransportMode::Importance => dwh_dwo1 = dwh_dwo2,
+                _ => {}
+            };
+            debug_assert!(
+                wh.0.is_finite().all(),
+                "{:?} {:?} {:?} {:?}",
+                eta_rel,
+                ndotv,
+                ndotl,
+                sqrt_denom
+            );
+            let ggxd = ggx_d(self.alpha, wh);
+            let weight = ggxd * ggxg * ndotv * dwh_dwo1 / g;
+            transmission_pdf = (ggxd * partial * dwh_dwo2).abs();
+
+            let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
+            transmission.0 = self.permeability * inv_reflectance * weight.abs();
+            // println!("{:?}, {:?}, {:?}", eta_inner, kappa, ndotv);
+            // println!(
+            //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
+            //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo1, g
+            // );
+
+            // println!(
+            //     "transmission_pdf = {:?} = {:?}*{:?}*{:?}",
+            //     transmission_pdf, ggxd, partial, dwh_dwo1
+            // );
+
+            debug_assert!(
+                !transmission.is_nan(),
+                "transmission was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
+                self,
+                lambda,
+                wi,
+                wo
+            );
+            debug_assert!(
+                !transmission_pdf.is_nan(),
+                "pdf was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
+                self,
+                lambda,
+                wi,
+                wo
+            );
         }
 
         let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);

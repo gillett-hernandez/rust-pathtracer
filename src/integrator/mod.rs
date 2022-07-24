@@ -64,7 +64,7 @@ impl Integrator {
     pub fn from_settings_and_world(
         world: Arc<World>,
         integrator_type: IntegratorType,
-        _cameras: &Vec<Camera>,
+        _cameras: &[Camera],
         settings: &RenderSettings,
     ) -> Option<Self> {
         let (lower, upper) = settings
@@ -88,17 +88,32 @@ impl Integrator {
             //     photon_map: None,
             //     last_lambda: 0.0,
             // })),
-            IntegratorType::PathTracing { .. } | _ => {
+            IntegratorType::PathTracing { .. } => {
+                let light_samples =
+                    if let IntegratorKind::PT { light_samples } = settings.integrator {
+                        light_samples
+                    } else {
+                        4
+                    };
                 Some(Integrator::PathTracing(PathTracingIntegrator {
                     min_bounces: settings.min_bounces.unwrap_or(4),
                     max_bounces: settings.max_bounces.unwrap(),
                     world,
                     russian_roulette: settings.russian_roulette.unwrap_or(true),
-                    light_samples: 4,
+                    light_samples,
                     only_direct: settings.only_direct.unwrap_or(false),
                     wavelength_bounds: bounds,
                 }))
             }
+            _ => Some(Integrator::PathTracing(PathTracingIntegrator {
+                min_bounces: settings.min_bounces.unwrap_or(4),
+                max_bounces: settings.max_bounces.unwrap(),
+                world,
+                russian_roulette: settings.russian_roulette.unwrap_or(true),
+                light_samples: 4,
+                only_direct: settings.only_direct.unwrap_or(false),
+                wavelength_bounds: bounds,
+            })),
         }
     }
 }

@@ -85,7 +85,7 @@ impl World {
             "world radius is {:?} meters, world center is at {:?}",
             radius, center
         );
-        if lights.len() == 0 {
+        if lights.is_empty() {
             println!("the world had no lights, so force-setting env_sampling_probability to 1.0");
             env_sampling_probability = 1.0;
         }

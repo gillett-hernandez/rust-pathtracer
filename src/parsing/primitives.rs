@@ -96,7 +96,7 @@ pub fn parse_obj_mesh(
 
     let mut next_face = 0;
     // mesh.
-    if mesh.face_arities.len() == 0 {
+    if mesh.face_arities.is_empty() {
         // all faces are triangles
         println!(
             "no face arities, thus all are triangles. {} faces",

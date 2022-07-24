@@ -109,7 +109,7 @@ impl NaiveRenderer {
                 clone2.fetch_add(1, Ordering::Relaxed);
 
                 *pixel_ref = temp_color / (settings.min_samples as f32);
-               
+
                 profile
             })
             .reduce(|| Profile::default(), |a, b| a.combine(b));
@@ -396,8 +396,8 @@ impl NaiveRenderer {
             i += 1;
         }
 
-        let mut i = 0;
-        for light_film in light_films.lock().unwrap().iter() {
+        // let mut i = 0;
+        for (i, light_film) in light_films.lock().unwrap().iter().enumerate() {
             let mut render_settings = films[i].0.clone();
             let new_filename = format!(
                 "{}{}",
@@ -413,14 +413,9 @@ impl NaiveRenderer {
                 "added light film to films vec, films vec length is now {}",
                 films.len()
             );
-            i += 1;
         }
 
-        // let (_left, right): (Vec<RenderSettings>, Vec<Film<XYZColor>>) =
-        //     films.iter().cloned().unzip();
 
-        // let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-        // println!("\ntook {}s to merge films\n", elapsed,);
         films
     }
 }
@@ -538,7 +533,7 @@ impl Renderer for NaiveRenderer {
 
         for integrator_type in splatting_renders_and_cameras.keys() {
             if let Some(l) = splatting_renders_and_cameras.get(integrator_type) {
-                if l.len() == 0 {
+                if l.is_empty() {
                     continue;
                 }
             }

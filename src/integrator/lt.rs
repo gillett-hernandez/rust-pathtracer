@@ -48,7 +48,7 @@ fn evaluate_direct_importance(
         // generate point on camera, then see if it can be connected to.
         // println!("hit {:?}", &hit);
         profile.shadow_rays += 1;
-        if veach_v(&world, point_on_lens, hit.point) {
+        if veach_v(world, point_on_lens, hit.point) {
             let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
 
             // correctly connected.
@@ -91,7 +91,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         _settings: &RenderSettings,
         _camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
-        mut samples: &mut Vec<(Sample, CameraId)>,
+        samples: &mut Vec<(Sample, CameraId)>,
         mut profile: &mut Profile,
     ) -> XYZColor {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
@@ -293,8 +293,8 @@ impl GenericIntegrator for LightTracingIntegrator {
                             wi,
                             &hit,
                             &frame,
-                            &mut samples,
-                            &mut profile,
+                            samples,
+                            profile,
                         );
                     }
                 }
