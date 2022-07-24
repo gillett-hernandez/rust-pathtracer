@@ -56,8 +56,11 @@ impl sRGB {
                 max_lum_xy.0, max_lum_xy.1
             );
         }
+        // set max Y to 1.0 by tracking the maximum luminance.
+        // FIXME remove outliers or otherwise fix the fact that the image can
+        // be mostly black with only a few small points of light.
         sRGB {
-            factor: (1.0 / avg_luminance).clamp(0.00000000001, 1000000.0),
+            factor: (1.0 / max_luminance).clamp(0.00000000001, 1000000.0),
             exposure_adjustment,
             // gamma_adjustment,
         }

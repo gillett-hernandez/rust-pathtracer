@@ -26,8 +26,8 @@ height = 1024
 name = "test_hdri"
 [[textures.texture_stack]]
 type = "HDR"
-# filename = "data/hdri/moonlit_golf_2k.hdr"
-filename = "data/hdri/kiara_1_dawn_8k.hdr"
+filename = "data/hdri/moonlit_golf_8k.hdr"
+# filename = "data/hdri/kiara_1_dawn_8k.hdr"
 # filename = "data/hdri/machine_shop_03_4k.hdr"
 alpha_fill = 0.0
 [[textures.texture_stack.curves]]
