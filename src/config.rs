@@ -220,7 +220,6 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
                 camera_file.read_to_string(&mut camera_spec).unwrap();
                 let (interfaces, _n0, _n1) = parse_lenses_from(&camera_spec);
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
-                println!("{}", "reached camera constructor");
                 (
                     cam.name.clone(),
                     Camera::RealisticCamera(RealisticCamera::new(
@@ -242,7 +241,6 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
             }
         };
         camera_map.insert(name, camera);
-        println!("{}", "reached camera insertion");
     }
     for (render_settings, toml_settings) in config
         .render_settings
@@ -258,7 +256,6 @@ pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
         render_settings.camera_id = cam_id;
         cameras.push(camera);
     }
-    println!("{}", "reached camera return");
     (config, cameras)
 }
 
@@ -269,8 +266,6 @@ pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
     File::open(&filepath)
         .and_then(|mut f| f.read_to_string(&mut input))
         .unwrap();
-    // uncomment the following line to print out the raw contents
-    // println!("{:?}", input);
     let num_cpus = num_cpus::get();
     let mut settings: TOMLConfig = toml::from_str(&input)?;
     for render_settings in settings.render_settings.iter_mut() {

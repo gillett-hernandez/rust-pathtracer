@@ -20,7 +20,7 @@ pub enum MediumData {
 pub fn parse_medium(data: MediumData) -> MediumEnum {
     match data {
         MediumData::HG(data) => {
-            println!("parsing HG");
+            info!("parsing HG");
             let g = Curve::from(data.g);
             let sigma_s = data.sigma_s.into();
             let sigma_t = data.sigma_t.into();

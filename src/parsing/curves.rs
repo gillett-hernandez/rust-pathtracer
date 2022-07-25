@@ -97,7 +97,7 @@ where
                 if let (Ok(new_x), Ok(new_y)) = (a2, b2) {
                     signal.push((domain_func(new_x), range_func(new_y)));
                 } else {
-                    println!("skipped csv line {:?} {:?}", a, b);
+                    info!("skipped csv line {:?} {:?}", a, b);
                     continue;
                 }
             }
@@ -128,7 +128,10 @@ where
         start_x.trim().parse::<f32>()?,
         step_size.trim().parse::<f32>()?,
     );
-    println!("{} {} ", start_x, step_size);
+    info!(
+        "parsing linear, (start_x, step_size) = ({}, {}) ",
+        start_x, step_size
+    );
 
     let mut values: Vec<f32> = Vec::new();
     for line in lines {
@@ -138,7 +141,7 @@ where
 
     let end_x = start_x + step_size * (values.len() as f32);
 
-    println!("{}", end_x);
+    info!("end x = {}", end_x);
 
     Ok(Curve::Linear {
         signal: values,
@@ -248,8 +251,8 @@ impl From<CurveData> for Curve {
                 interpolation_mode,
             } => {
                 let domain_mapping = domain_mapping.unwrap_or_default();
-                println!("attempting to parse and load linear file at {:?}", filename);
-                let spd = load_linear(
+                info!("attempting to parse and load linear file at {:?}", filename);
+                let maybe_curve = load_linear(
                     &filename,
                     |x| {
                         (x - domain_mapping.x_offset.unwrap_or(0.0))
@@ -261,9 +264,9 @@ impl From<CurveData> for Curve {
                     },
                     interpolation_mode,
                 );
-                let spd = spd.expect("loading linear data failed");
-                println!("parsed linear curve");
-                spd
+                let curve = maybe_curve.expect("loading linear data failed");
+                info!("parsed linear curve");
+                curve
             }
             CurveData::Cauchy { a, b } => Curve::Cauchy { a, b },
             CurveData::TabulatedCSV {
@@ -273,8 +276,8 @@ impl From<CurveData> for Curve {
                 interpolation_mode,
             } => {
                 let domain_mapping = domain_mapping.unwrap_or_default();
-                println!("attempting to parse and load csv at file {:?}", filename);
-                let spd = load_csv(
+                info!("attempting to parse and load csv at file {:?}", filename);
+                let maybe_curve = load_csv(
                     &filename,
                     column,
                     interpolation_mode,
@@ -287,9 +290,9 @@ impl From<CurveData> for Curve {
                             * domain_mapping.y_scale.unwrap_or(1.0)
                     },
                 );
-                let spd = spd.expect("loading tabulated data failed");
-                println!("parsed tabulated curve");
-                spd
+                let curve = maybe_curve.expect("loading tabulated data failed");
+                info!("parsed tabulated curve");
+                curve
             }
             CurveData::Flat { strength } => Curve::Linear {
                 signal: vec![strength],

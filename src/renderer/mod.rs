@@ -47,7 +47,7 @@ pub fn parse_wavelength_bounds(config: &Vec<RenderSettings>, default: Bounds1D) 
         Some(bounds) => bounds,
         None => default,
     };
-    println!("parsed wavelength bounds to be {:?}", result);
+    info!("parsed wavelength bounds to be {:?}", result);
     result
 }
 

@@ -171,7 +171,7 @@ vfov = 5
 [[render_settings]]
 threads = 22
 filename = "PT"
-min_samples = 128
+min_samples = 10
 min_bounces = 3
 max_bounces = 16
 hwss = false
@@ -179,7 +179,7 @@ hwss = false
 camera_id = "sun test camera"
 # camera_id = "cornell camera"
 # camera_id = "wideangle sun test camera side"
-exposure = 1.0
+exposure = 0.18
 russian_roulette = true
 only_direct = false
 # wavelength_bounds = [380.0, 750.0]
@@ -191,6 +191,6 @@ light_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024
 [render_settings.resolution]
-width = 3840
-height = 2160
+width = 1920
+height = 1080
 

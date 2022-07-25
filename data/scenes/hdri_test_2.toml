@@ -1,7 +1,7 @@
 env_sampling_probability = 0.5
 [environment]
 type="HDRI"
-strength =0.01
+strength =1.0
 texture_id = "test_hdri"
 [environment.importance_map]
 # width = 2048
@@ -26,9 +26,9 @@ height = 1024
 name = "test_hdri"
 [[textures.texture_stack]]
 type = "HDR"
-filename = "data/hdri/moonlit_golf_8k.hdr"
+# filename = "data/hdri/moonlit_golf_8k.hdr"
 # filename = "data/hdri/kiara_1_dawn_8k.hdr"
-# filename = "data/hdri/machine_shop_03_4k.hdr"
+filename = "data/hdri/machine_shop_03_4k.hdr"
 alpha_fill = 0.0
 [[textures.texture_stack.curves]]
 type = "TabulatedCSV"

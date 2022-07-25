@@ -1,3 +1,5 @@
+use log_once::warn_once;
+
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
 use crate::math::*;
@@ -97,7 +99,7 @@ impl Hittable for Sphere {
         );
         let pdf = area_pdf * direction.norm_squared() / (normal * direction.normalized()).abs();
         if !pdf.0.is_finite() {
-            println!(
+            warn_once!(
                 "pdf was {:?}, direction: {:?}, normal: {:?}",
                 pdf, direction, normal
             );

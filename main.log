@@ -1,0 +1,123 @@
+12:04:20 [INFO] aspect ratio on instantiation of ProjectiveCamera = 1
+12:04:20 [INFO] parsing texture test_hdri
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/basis/simple-spectral-srgb-1931.csv"
+12:04:20 [INFO] skipped csv line "lambda" " r"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/basis/simple-spectral-srgb-1931.csv"
+12:04:20 [INFO] skipped csv line "lambda" " g"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/basis/simple-spectral-srgb-1931.csv"
+12:04:20 [INFO] skipped csv line "lambda" " b\r"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] parsing hdr texture at data/hdri/machine_shop_03_4k.hdr
+12:04:20 [INFO] parsing texture lambertian_white
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/cornell.csv"
+12:04:20 [INFO] skipped csv line "wavelength" "white"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] parsing greyscale texture at data/textures/single_pixel.png
+12:04:20 [INFO] parsing texture lambertian_green
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/cornell.csv"
+12:04:20 [INFO] skipped csv line "wavelength" "green"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] parsing greyscale texture at data/textures/single_pixel.png
+12:04:20 [INFO] parsing texture lambertian_red
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/cornell.csv"
+12:04:20 [INFO] skipped csv line "wavelength" "red\r"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] parsing greyscale texture at data/textures/single_pixel.png
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing Lambertian
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing Lambertian
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing Lambertian
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing GGX
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing GGX
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing GGX
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing GGX
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/gold.csv"
+12:04:20 [INFO] skipped csv line "wl" "n"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/gold.csv"
+12:04:20 [INFO] skipped csv line "wl" "k\r"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing GGX
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/copper-mcpeak.csv"
+12:04:20 [INFO] skipped csv line "wl" "n\r"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] attempting to parse and load csv at file "data/curves/csv/copper-mcpeak.csv"
+12:04:20 [INFO] parsed tabulated curve
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing DiffuseLight
+12:04:20 [INFO] attempting to parse and load linear file at "data/curves/spectra/fluorescent.spectra"
+12:04:20 [INFO] parsing linear, (start_x, step_size) = (390, 1) 
+12:04:20 [INFO] end x = 781
+12:04:20 [INFO] parsed linear curve
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing DiffuseLight
+12:04:20 [INFO] attempting to parse and load linear file at "data/curves/spectra/xenon_lamp.spectra"
+12:04:20 [INFO] parsing linear, (start_x, step_size) = (370, 1) 
+12:04:20 [INFO] end x = 791
+12:04:20 [INFO] parsed linear curve
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing SharpLight
+12:04:20 [INFO] attempting to parse and load linear file at "data/curves/spectra/xenon_lamp.spectra"
+12:04:20 [INFO] parsing linear, (start_x, step_size) = (370, 1) 
+12:04:20 [INFO] end x = 791
+12:04:20 [INFO] parsed linear curve
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing DiffuseLight
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing SharpLight
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing SharpLight
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing SharpLight
+12:04:20 [INFO] attempting to parse and load linear file at "data/curves/spectra/fluorescent.spectra"
+12:04:20 [INFO] parsing linear, (start_x, step_size) = (390, 1) 
+12:04:20 [INFO] end x = 781
+12:04:20 [INFO] parsed linear curve
+12:04:20 [INFO] parsing material
+12:04:20 [INFO] parsing DiffuseLight
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed rect data
+12:04:20 [INFO] parsed instance, assigned material id Some(Light(15)) from "diffuse_light", and instance id 0
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed rect data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(0)) from "lambertian_white", and instance id 1
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(4)) from "ggx_glass_dispersive", and instance id 2
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(6)) from "ggx_gold", and instance id 3
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(7)) from "ggx_copper", and instance id 4
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(2)) from "lambertian_red", and instance id 5
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(4)) from "ggx_glass_dispersive", and instance id 6
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(6)) from "ggx_gold", and instance id 7
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(7)) from "ggx_copper", and instance id 8
+12:04:20 [INFO] parsing instance and primitive
+12:04:20 [INFO] parsed sphere data
+12:04:20 [INFO] parsed instance, assigned material id Some(Material(2)) from "lambertian_red", and instance id 9
+12:04:20 [INFO] parsing transform data
+12:04:21 [INFO] adding light with mat id Light(15) and instance id 0 to lights list
+12:04:21 [INFO] building bvh
+12:04:21 [INFO] world radius is 14.534449 meters, world center is at Point3(f32x4(0.0, 9.5, 0.0, 1.0))
+12:04:28 [WARN] clamping min_luminance to avoid taking log(0) == NEG_INFINITY
+12:04:28 [INFO] max luminance occurred at 1626, 608, is 0.18730551
+12:04:28 [INFO] min luminance occurred at 1464, 651, is 0.001

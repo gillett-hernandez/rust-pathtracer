@@ -20,7 +20,7 @@ pub fn load_obj_file(filename: &str, material_mapping: &HashMap<String, Material
             ..Default::default()
         },
     );
-    println!("opening file at {}", filename);
+    info!("opening file at {}", filename);
     assert!(data.is_ok(), "{:?}", data);
 
     let (models, materials) = data.expect("Failed to load OBJ file");
@@ -45,7 +45,7 @@ pub fn parse_specific_obj_mesh(
             ..Default::default()
         },
     );
-    println!("opening file at {}", filename);
+    info!("opening file at {}", filename);
     assert!(data.is_ok(), "{:?}", data);
     let (models, materials) = data.expect("Failed to load OBJ file");
     let materials = materials.expect("Failed to load MTL file");
@@ -58,8 +58,8 @@ pub fn parse_obj_mesh(
     obj_num: usize,
     material_mapping: &HashMap<String, MaterialId>,
 ) -> Mesh {
-    println!("# of models: {}", models.len());
-    println!("# of materials: {}", materials.len());
+    info!("# of models: {}", models.len());
+    info!("# of materials: {}", materials.len());
     let mut points = Vec::new();
     let mut normals = Vec::new();
     let mut indices = Vec::new();
@@ -67,14 +67,14 @@ pub fn parse_obj_mesh(
     // for (i, m) in models.iter().enumerate() {
     let model = &models[obj_num];
     let mesh = &model.mesh;
-    println!("model[{}].name = \'{}\'", obj_num, model.name);
-    println!(
+    info!("model[{}].name = \'{}\'", obj_num, model.name);
+    info!(
         "model[{}].mesh.material_id = {:?}",
         obj_num, mesh.material_id
     );
 
     for mat in materials.iter() {
-        println!("{}", mat.name);
+        info!("{}", mat.name);
     }
 
     // let estimated_num_faces = if mesh.face_arities.len() > 0 {
@@ -98,7 +98,7 @@ pub fn parse_obj_mesh(
     // mesh.
     if mesh.face_arities.is_empty() {
         // all faces are triangles
-        println!(
+        info!(
             "no face arities, thus all are triangles. {} faces",
             mesh.indices.len() / 3
         );
@@ -121,10 +121,10 @@ pub fn parse_obj_mesh(
         .iter()
         .map(|idx| mesh_materials[*idx])
         .collect();
-    println!("Size of model[{}].num_face_indices: {}", obj_num, num_faces);
+    info!("Size of model[{}].num_face_indices: {}", obj_num, num_faces);
 
     // Normals and texture coordinates are also loaded, but not printed in this example
-    println!("model[{}].vertices: {}", obj_num, mesh.positions.len() / 3);
+    info!("model[{}].vertices: {}", obj_num, mesh.positions.len() / 3);
     assert!(mesh.positions.len() % 3 == 0);
     for v in 0..mesh.positions.len() / 3 {
         points.push(Point3::new(
@@ -134,7 +134,7 @@ pub fn parse_obj_mesh(
         ))
     }
     if mesh.normals.len() > 0 {
-        println!("parsing normals");
+        info!("parsing normals");
 
         for n in 0..mesh.normals.len() / 3 {
             normals.push(Vec3::new(
@@ -143,7 +143,7 @@ pub fn parse_obj_mesh(
                 mesh.normals[3 * n + 2],
             ))
         }
-        println!("parsed normals, len = {}", normals.len());
+        info!("parsed normals, len = {}", normals.len());
     }
 
     Mesh::new(num_faces, indices, points, normals, mat_ids)
@@ -196,11 +196,11 @@ impl AggregateData {
         // put mesh parsing here?
         match self {
             AggregateData::Disk(data) => {
-                println!("parsed disk data");
+                info!("parsed disk data");
                 Aggregate::Disk(Disk::new(data.radius, data.origin.into(), data.two_sided))
             }
             AggregateData::Rect(data) => {
-                println!("parsed rect data");
+                info!("parsed rect data");
                 Aggregate::AARect(AARect::new(
                     data.size,
                     data.origin.into(),
@@ -209,17 +209,17 @@ impl AggregateData {
                 ))
             }
             AggregateData::Sphere(data) => {
-                println!("parsed sphere data");
+                info!("parsed sphere data");
                 Aggregate::Sphere(Sphere::new(data.radius, data.origin.into()))
             }
             AggregateData::Mesh(data) => {
-                println!("parsed Mesh data");
+                info!("parsed Mesh data");
                 let filename = data.filename;
                 let mut mesh =
                     parse_specific_obj_mesh(&filename, data.mesh_index, material_mapping);
-                println!("parsed mesh, initializing mesh and mesh bvh");
+                info!("parsed mesh, initializing mesh and mesh bvh");
                 mesh.init();
-                println!("initialized");
+                info!("initialized");
                 Aggregate::Mesh(mesh)
             }
             // parse_with does not handle MeshBundle

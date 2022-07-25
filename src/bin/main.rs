@@ -1,9 +1,19 @@
 extern crate rust_pathtracer as root;
 
+use log::LevelFilter;
 use root::config::*;
 use root::parsing::construct_world;
 use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
+
+#[macro_use]
+extern crate log;
+extern crate simplelog;
+
+// use simplelog::*;
+use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
+
+use std::fs::File;
 
 use structopt::StructOpt;
 
@@ -43,6 +53,22 @@ fn main() {
             return;
         }
     };
+
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Warn,
+            simplelog::Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Info,
+            simplelog::Config::default(),
+            File::create("main.log").unwrap(),
+        ),
+    ])
+    .unwrap();
+
     let threads = config
         .render_settings
         .iter()

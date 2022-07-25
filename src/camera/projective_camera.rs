@@ -39,11 +39,13 @@ impl ProjectiveCamera {
         let theta: f32 = vertical_fov.to_radians();
         let half_height = (theta / 2.0).tan();
         let half_width = 1.0 * half_height;
-        #[cfg(test)]
-        {
-            let aspect_ratio = half_width / half_height;
-            println!("{}", aspect_ratio);
-        }
+
+        let aspect_ratio = half_width / half_height;
+        info!(
+            "aspect ratio on instantiation of ProjectiveCamera = {}",
+            aspect_ratio
+        );
+
         let w = -direction;
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
@@ -60,7 +62,7 @@ impl ProjectiveCamera {
         .inverse();
 
         if lens_radius == 0.0 {
-            println!("Warn: lens radius is 0");
+            warn!("Warn: lens radius is 0.0");
         }
 
         ProjectiveCamera {
@@ -137,22 +139,24 @@ impl ProjectiveCamera {
 
         let (plane_width, plane_height) = (self.horizontal.norm(), self.vertical.norm());
 
-        #[cfg(test)]
-        println!(
-            "{:?} {} {} {}",
-            point_on_focal_plane,
-            plane_width / 2.0,
-            plane_height / 2.0,
-            plane_width / plane_height
-        );
-
         let (u, v) = (
             point_on_focal_plane.x() / plane_width + 0.5,
             point_on_focal_plane.y() / plane_height + 0.5,
         );
 
         #[cfg(test)]
-        println!("{} {}", u, v);
+        {
+            // for helping when debugging.
+            // FIXME? remove entire block?
+            println!(
+                "{:?} {} {} {}",
+                point_on_focal_plane,
+                plane_width / 2.0,
+                plane_height / 2.0,
+                plane_width / plane_height
+            );
+            println!("{} {}", u, v);
+        }
 
         if u < 0.0 || u >= 1.0 || v < 0.0 || v >= 1.0 {
             None

@@ -31,9 +31,9 @@ pub struct Transform3Data {
 
 impl From<Transform3Data> for Transform3 {
     fn from(data: Transform3Data) -> Self {
-        println!("parsing transform data");
+        info!("parsing transform data");
         let maybe_scale = data.scale.map(|v| {
-            println!("parsed scale");
+            info!("parsed scale");
             Transform3::from_scale(Vec3::from(v))
         });
         let maybe_rotate = if let Some(rotations) = data.rotate {
@@ -43,7 +43,7 @@ impl From<Transform3Data> for Transform3 {
                     Vec3::from(rotation.axis).normalized(),
                     PI * rotation.angle / 180.0,
                 );
-                println!("parsed rotate");
+                info!("parsed rotate");
                 if base.is_none() {
                     base = Some(transform);
                 } else {
@@ -55,7 +55,7 @@ impl From<Transform3Data> for Transform3 {
             None
         };
         let maybe_translate = data.translate.map(|v| {
-            println!("parsed translate");
+            info!("parsed translate");
             Transform3::from_translation(Vec3::from(v))
         });
         Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
@@ -84,7 +84,7 @@ pub fn parse_instance(
             .get(&v)
             .expect("material mapping did not contain material name")
     });
-    println!(
+    info!(
         "parsed instance, assigned material id {:?} from {:?}, and instance id {}",
         material_id,
         instance_data

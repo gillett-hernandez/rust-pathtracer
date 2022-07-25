@@ -53,7 +53,7 @@ pub struct Scene {
 }
 
 fn load_scene(filepath: &str) -> Result<Scene, toml::de::Error> {
-    // will return None in the case that it can't read the settings file for whatever reason.
+    // will return Err in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
     File::open(filepath)
@@ -87,7 +87,8 @@ pub fn construct_world(scene_file: &str) -> World {
         texture_count += 1;
         let tex_id = texture_count - 1;
         texture_names_to_ids.insert(tex.name.clone(), tex_id);
-        println!("parsing texture");
+
+        info!("parsing texture {}", tex.name.clone());
         textures.push(parse_texture_stack(tex.clone()));
     }
 
@@ -103,7 +104,7 @@ pub fn construct_world(scene_file: &str) -> World {
             }
         };
         material_names_to_ids.insert(material.name, id);
-        println!("parsing material");
+        info!("parsing material");
         materials.push(parse_material(
             material.data,
             &texture_names_to_ids,
@@ -115,7 +116,7 @@ pub fn construct_world(scene_file: &str) -> World {
             medium_count += 1;
             let id = medium_count - 1;
             medium_names_to_ids.insert(medium.name, id);
-            println!("parsing medium");
+            info!("parsing medium");
             mediums.push(parse_medium(medium.data));
         }
     }
@@ -127,7 +128,7 @@ pub fn construct_world(scene_file: &str) -> World {
                 for mut mesh in meshes {
                     let id = instances.len();
                     mesh.init();
-                    println!(
+                    info!(
                         "pushing instance of mesh from meshbundle, with material id {:?} from {:?}",
                         instance
                             .material_identifier
@@ -147,7 +148,7 @@ pub fn construct_world(scene_file: &str) -> World {
                 }
             }
             _ => {
-                println!("parsing instance and primitive");
+                info!("parsing instance and primitive");
                 let id = instances.len();
                 let instance = parse_instance(instance, &material_names_to_ids, id);
                 instances.push(instance);

@@ -415,7 +415,6 @@ impl NaiveRenderer {
             );
         }
 
-
         films
     }
 }
@@ -487,7 +486,7 @@ impl Renderer for NaiveRenderer {
                         render_settings,
                     ) {
                         Some(Integrator::PathTracing(integrator)) => {
-                            println!("rendering with path tracing integrator");
+                            println!("rendering with PathTracing integrator");
                             let (render_settings, film) = (
                                 render_settings.clone(),
                                 NaiveRenderer::render_sampled(
@@ -561,7 +560,7 @@ impl Renderer for NaiveRenderer {
                         wavelength_bounds,
                     };
 
-                    println!("rendering with bidirectional path tracing integrator");
+                    println!("rendering with BDPT integrator");
                     let render_splatted_result = NaiveRenderer::render_splatted(
                         integrator,
                         bundled_settings.clone(),
@@ -618,7 +617,7 @@ impl Renderer for NaiveRenderer {
                         wavelength_bounds,
                     };
 
-                    println!("rendering with light tracing integrator");
+                    println!("rendering with LightTracing integrator");
                     let render_splatted_result = NaiveRenderer::render_splatted(
                         integrator,
                         bundled_settings.clone(),

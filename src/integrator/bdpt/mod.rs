@@ -58,12 +58,10 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampler.draw_2d(),
                 wavelength_sample,
             );
-            sampled = if let Some(data) = maybe_sampled {
-                data
-            } else {
-                println!("failed to sample, material is {:?}", material.get_name());
-                panic!();
-            };
+            sampled = maybe_sampled.expect(&format!(
+                "failed to sample, material is {:?}",
+                material.get_name()
+            ));
 
             let directional_pdf = sampled.2;
             // if delta light, the pdf_forward is only directional_pdf

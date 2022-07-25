@@ -44,7 +44,7 @@ impl RealisticCamera {
         wavelength_bins: usize,
         solver_heat: f32,
     ) -> RealisticCamera {
-        println!("{}", "constructing realistic camera");
+        info!("{}", "constructing realistic camera");
         let direction = (look_at - look_from).normalized();
         let mut assembly = LensAssembly::new(&interfaces);
         let mut aperture_radius = assembly.lenses[assembly.aperture_index].housing_radius;
@@ -64,7 +64,7 @@ impl RealisticCamera {
             Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
         )
         .inverse();
-        println!("{}", "creating cache");
+        info!("{}", "creating cache");
         let sampler = RadialSampler::new(
             SQRT_2 * sensor_size / 2.0, // diagonal.
             radial_bins,
@@ -77,7 +77,7 @@ impl RealisticCamera {
             solver_heat,
             sensor_size,
         );
-        println!("{}", "finished cache");
+        info!("{}", "finished cache");
 
         RealisticCamera {
             origin: look_from,

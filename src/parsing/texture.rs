@@ -44,7 +44,7 @@ pub struct TextureStackData {
 }
 
 pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
-    println!("parsing rgba texture at {}", filepath);
+    info!("parsing rgba texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::open(path).unwrap();
     let rgba_image = img.into_rgba8();
@@ -67,7 +67,7 @@ pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
 }
 
 pub fn parse_exr(filepath: &str) -> Film<f32x4> {
-    println!("parsing exr texture at {}", filepath);
+    info!("parsing exr texture at {}", filepath);
     let rgba_image = exr::prelude::read_first_rgba_layer_from_file(
         filepath,
         |resolution, _| {
@@ -97,7 +97,7 @@ pub fn parse_exr(filepath: &str) -> Film<f32x4> {
 }
 
 pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Film<f32x4> {
-    println!("parsing hdr texture at {}", filepath);
+    info!("parsing hdr texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::codecs::hdr::HdrDecoder::new(BufReader::new(
         File::open(path).expect("couldn't open hdr file"),
@@ -121,7 +121,7 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Film<f32x4> {
 }
 
 pub fn parse_bitmap(filepath: &str) -> Film<f32> {
-    println!("parsing greyscale texture at {}", filepath);
+    info!("parsing greyscale texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::open(path).unwrap();
     let greyscale = img.into_luma8();

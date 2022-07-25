@@ -56,7 +56,7 @@ impl World {
                 Aggregate::Mesh(mesh) => {
                     for tri in (&mesh).triangles.as_ref().unwrap() {
                         if let MaterialId::Light(id) = tri.get_material_id() {
-                            println!(
+                            info!(
                             "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                             id, instance.instance_id
                         );
@@ -66,7 +66,7 @@ impl World {
                 }
                 _ => {
                     if let MaterialId::Light(id) = instance.get_material_id() {
-                        println!(
+                        info!(
                         "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                         id, instance.instance_id
                     );
@@ -81,12 +81,12 @@ impl World {
         let span = world_aabb.max - world_aabb.min;
         let center: Point3 = world_aabb.min + span / 2.0;
         let radius = span.norm() / 2.0;
-        println!(
+        info!(
             "world radius is {:?} meters, world center is at {:?}",
             radius, center
         );
         if lights.is_empty() {
-            println!("the world had no lights, so force-setting env_sampling_probability to 1.0");
+            warn!("the world had no lights, so force-setting env_sampling_probability to 1.0");
             env_sampling_probability = 1.0;
         }
         let world = World {
@@ -101,8 +101,8 @@ impl World {
             center,
         };
         if env_sampling_probability == 1.0 || env_sampling_probability == 0.0 {
-            println!(
-                "warning! env sampling probability is at an extrema of {}",
+            warn!(
+                "env sampling probability is at an extrema of {}",
                 env_sampling_probability
             );
         }

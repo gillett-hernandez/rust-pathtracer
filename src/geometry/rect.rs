@@ -1,3 +1,5 @@
+use log_once::warn_once;
+
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
 use crate::math::*;
@@ -130,7 +132,7 @@ impl Hittable for AARect {
         }
         let pdf = area_pdf * direction.norm_squared() / cos_i.abs();
         if !pdf.0.is_finite() {
-            // println!("pdf was inf, {:?}", direction);
+            warn_once!("pdf was inf, {:?}", direction);
             (direction.normalized(), 0.0.into())
         } else {
             (direction.normalized(), pdf)
@@ -146,7 +148,6 @@ impl Hittable for AARect {
         }
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
-        // TODO: confirm that it's fine to return 0.0 when not two sided.
 
         let denominator = cos_o.abs() * area;
         if denominator == 0.0 {

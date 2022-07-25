@@ -60,7 +60,7 @@ pub fn parse_material(
 ) -> MaterialEnum {
     match data {
         MaterialData::GGX(data) => {
-            println!("parsing GGX");
+            info!("parsing GGX");
             let eta = data.eta.into();
             let kappa = data.kappa.into();
             MaterialEnum::GGX(GGX::new(
@@ -73,14 +73,14 @@ pub fn parse_material(
             ))
         }
         MaterialData::Lambertian(data) => {
-            println!("parsing Lambertian");
+            info!("parsing Lambertian");
             let id = texture_mapping
                 .get(&data.texture_id)
                 .expect("didn't find texture stack id for texture name");
             MaterialEnum::Lambertian(Lambertian::new(textures[*id].clone()))
         }
         MaterialData::SharpLight(data) => {
-            println!("parsing SharpLight");
+            info!("parsing SharpLight");
             // let color = parse_texture_stack(data.color);
             let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
@@ -96,7 +96,7 @@ pub fn parse_material(
         //     ))
         // }
         MaterialData::DiffuseLight(data) => {
-            println!("parsing DiffuseLight");
+            info!("parsing DiffuseLight");
             // let color = parse_texture_stack(data.color);
             let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
             MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
