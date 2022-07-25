@@ -8,5 +8,5 @@ output/*
 data/meshes/*
 *.obj
 *.mtl
-
+*.log
 *.zip
