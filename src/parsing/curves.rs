@@ -76,7 +76,7 @@ pub fn parse_tabulated_curve_from_csv<F1, F2>(
     column: usize,
     interpolation_mode: InterpolationMode,
     domain_func: F1,
-    image_func: F2,
+    range_func: F2,
 ) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
@@ -95,7 +95,7 @@ where
             (Some(a), Some(b)) => {
                 let (a2, b2) = (a.trim().parse::<f32>(), b.trim().parse::<f32>());
                 if let (Ok(new_x), Ok(new_y)) = (a2, b2) {
-                    signal.push((domain_func(new_x), image_func(new_y)));
+                    signal.push((domain_func(new_x), range_func(new_y)));
                 } else {
                     println!("skipped csv line {:?} {:?}", a, b);
                     continue;
@@ -114,7 +114,7 @@ pub fn parse_linear<F1, F2>(
     data: &str,
     interpolation_mode: InterpolationMode,
     domain_func: F1,
-    image_func: F2,
+    range_func: F2,
 ) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
@@ -133,7 +133,7 @@ where
     let mut values: Vec<f32> = Vec::new();
     for line in lines {
         let value = line.trim().parse::<f32>()?;
-        values.push(image_func(value));
+        values.push(range_func(value));
     }
 
     let end_x = start_x + step_size * (values.len() as f32);
@@ -160,7 +160,7 @@ pub fn load_csv<F1, F2>(
     selected_column: usize,
     interpolation_mode: InterpolationMode,
     domain_func: F1,
-    image_func: F2,
+    range_func: F2,
 ) -> Result<Curve, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
@@ -176,7 +176,7 @@ where
         selected_column,
         interpolation_mode,
         domain_func,
-        image_func,
+        range_func,
     )?;
     Ok(curve)
 }
@@ -186,7 +186,7 @@ pub fn load_multiple_csv_rows<F1, F2>(
     num_columns: usize,
     interpolation_mode: InterpolationMode,
     domain_func: F1,
-    image_func: F2,
+    range_func: F2,
 ) -> Result<Vec<Curve>, Box<dyn Error>>
 where
     F1: Clone + Copy + Fn(f32) -> f32,
@@ -204,7 +204,7 @@ where
             column,
             interpolation_mode,
             domain_func,
-            image_func,
+            range_func,
         )?;
         curves.push(curve);
     }
@@ -215,7 +215,7 @@ where
 pub fn load_linear<F1, F2>(
     filename: &str,
     domain_func: F1,
-    image_func: F2,
+    range_func: F2,
     interpolation_mode: InterpolationMode,
 ) -> Result<Curve, Box<dyn Error>>
 where
@@ -227,7 +227,7 @@ where
     let mut buf = String::new();
     file.read_to_string(&mut buf)?;
 
-    let curve = parse_linear(&buf, interpolation_mode, domain_func, image_func)?;
+    let curve = parse_linear(&buf, interpolation_mode, domain_func, range_func)?;
     // let kappa = parse_tabulated_curve_from_csv(buf.as_ref(), 2, InterpolationMode::Cubic, func)?;
     Ok(curve)
 }
