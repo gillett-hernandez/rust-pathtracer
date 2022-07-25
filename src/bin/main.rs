@@ -43,17 +43,6 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
 }
 
 fn main() {
-    let opts = Opt::from_args();
-
-    let mut config: TOMLConfig = match get_settings(opts.config_file) {
-        Ok(expr) => expr,
-        Err(v) => {
-            println!("{:?}", "couldn't read config.toml");
-            println!("{:?}", v);
-            return;
-        }
-    };
-
     CombinedLogger::init(vec![
         TermLogger::new(
             LevelFilter::Warn,
@@ -68,6 +57,16 @@ fn main() {
         ),
     ])
     .unwrap();
+
+    let opts = Opt::from_args();
+    let mut config: TOMLConfig = match get_settings(opts.config_file) {
+        Ok(expr) => expr,
+        Err(v) => {
+            error!("couldn't read config.toml, {:?}", v);
+
+            return;
+        }
+    };
 
     let threads = config
         .render_settings
