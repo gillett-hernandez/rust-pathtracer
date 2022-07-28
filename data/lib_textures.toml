@@ -1,56 +1,46 @@
 [[moonlit_golf_8k]]
 type = "HDR"
 filename = "data/hdri/moonlit_golf_8k.hdr"
-# filename = "data/hdri/kiara_1_dawn_8k.hdr"
-# filename = "data/hdri/machine_shop_03_4k.hdr"
 alpha_fill = 0.0
-[[moonlit_golf_8k.curves]]
-type = "TabulatedCSV"
-filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
-column = 1
-interpolation_mode = "Cubic"
-[[moonlit_golf_8k.curves]]
-type = "TabulatedCSV"
-filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
-column = 2
-interpolation_mode = "Cubic"
-[[moonlit_golf_8k.curves]]
-type = "TabulatedCSV"
-filename = "data/curves/basis/simple-spectral-srgb-1931.csv"
-column = 3
-interpolation_mode = "Cubic"
-[[moonlit_golf_8k.curves]]
-type = "Flat"
-strength = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
 
+
+[[machine_shop_4k]]
+type = "HDR"
+filename = "data/hdri/machine_shop_03_4k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[kiara_dawn_8k]]
+type = "HDR"
+filename = "data/hdri/kiara_1_dawn_8k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
 
 [[lambertian_white]]
 type = "Texture1"
 filename = "data/textures/single_pixel.png"
-[lambertian_white.curve]
-type = "TabulatedCSV"
-filename = "data/curves/csv/cornell.csv"
-column = 1
-interpolation_mode = "Cubic"
-
-
+curve = "cornell_white"
 
 [[lambertian_green]]
 type = "Texture1"
 filename = "data/textures/single_pixel.png"
-[lambertian_green.curve]
-type = "TabulatedCSV"
-filename = "data/curves/csv/cornell.csv"
-column = 2
-interpolation_mode = "Cubic"
-
-
+curve = "cornell_green"
 
 [[lambertian_red]]
 type = "Texture1"
 filename = "data/textures/single_pixel.png"
-[lambertian_red.curve]
-type = "TabulatedCSV"
-filename = "data/curves/csv/cornell.csv"
-column = 3
-interpolation_mode = "Cubic"
+curve = "cornell_red"
+
+# layered colored cloud texture
+[[test_texture]]
+type = "Texture4"
+filename = "data/textures/test.png"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_one"]
+
+
+[[test_texture_2]]
+type = "Texture1"
+filename = "data/textures/test.bmp"
+curve = "cornell_white"

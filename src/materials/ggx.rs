@@ -696,7 +696,6 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let flat_one = curves::cie_e(1.0);
 
         let flat_one = curves::cie_e(1.0);
         let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);

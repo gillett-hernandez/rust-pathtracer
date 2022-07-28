@@ -11,17 +11,17 @@ use crate::world::{EnvironmentMap, ImportanceMap};
 
 use super::curves::CurveData;
 use super::instance::{AxisAngleData, Transform3Data};
-use super::Vec3Data;
+use super::{CurveDataOrReference, Vec3Data};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ConstantData {
-    pub color: CurveData,
+    pub color: CurveDataOrReference,
     pub strength: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SunData {
-    pub color: CurveData,
+    pub color: CurveDataOrReference,
     pub strength: f32,
     pub angular_diameter: f32,
     pub sun_direction: Vec3Data,
@@ -52,16 +52,31 @@ pub enum EnvironmentData {
 
 pub fn parse_environment(
     env_data: EnvironmentData,
+    curves: &HashMap<String, Curve>,
     textures: &HashMap<String, TexStack>,
     error_color: &Curve,
 ) -> Option<EnvironmentMap> {
     match env_data {
         EnvironmentData::Constant(data) => EnvironmentMap::Constant {
-            color: Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+            color: data
+                .color
+                .resolve(curves)
+                .unwrap_or_else(|| {
+                    error!("failed to resolve curve, falling back to error color");
+                    error_color.clone()
+                })
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: data.strength,
         },
         EnvironmentData::Sun(data) => EnvironmentMap::Sun {
-            color: Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+            color: data
+                .color
+                .resolve(curves)
+                .unwrap_or_else(|| {
+                    error!("failed to resolve curve, falling back to error color");
+                    error_color.clone()
+                })
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: data.strength,
             angular_diameter: data.angular_diameter,
             sun_direction: Vec3::from(data.sun_direction).normalized(),

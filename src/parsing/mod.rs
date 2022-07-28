@@ -199,7 +199,7 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
     }
 
     // parse enviroment
-    let environment = parse_environment(scene.environment, &textures_map, &mauve);
+    let environment = parse_environment(scene.environment, &curves, &textures_map, &mauve);
     if environment.is_none() {
         error!("failed to parse environment");
         // TODO: change to return Err once an Errors enum exists
@@ -229,7 +229,9 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
     }
 
     // add mauve material to indicate errors.
+    // completely black for reflection, emits mauve color
     let mauve = MaterialEnum::DiffuseLight(DiffuseLight::new(
+        crate::curves::cie_e(0.0),
         mauve
             .clone()
             .to_cdf(math::spectral::EXTENDED_VISIBLE_RANGE, 20),
@@ -365,8 +367,31 @@ mod test {
     }
 
     #[test]
+    fn test_parsing_textures_lib() {
+        let textures = MaybeTextureLib::Path(String::from("data/lib_textures.toml"))
+            .resolve()
+            .unwrap();
+
+        for (name, _data) in &textures {
+            println!("{}", name);
+        }
+    }
+
+    #[test]
+    fn test_parsing_curves_lib() {
+        let curves = MaybeCurvesLib::Path(String::from("data/lib_curves.toml"))
+            .resolve()
+            .unwrap();
+
+        for (name, _data) in &curves {
+            println!("{}", name);
+        }
+    }
+
+    #[test]
     fn test_parsing_complex_scene() {
         let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        println!("constructed world");
         for mat in &world.materials {
             let name = match mat {
                 MaterialEnum::DiffuseLight(_) => "diffuse_light",

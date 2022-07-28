@@ -1,10 +1,7 @@
-env_sampling_probability = 0.5
-
 curves = "data/lib_curves.toml"
-
 textures = "data/lib_textures.toml"
-
 materials = "data/lib_materials.toml"
+env_sampling_probability = 0.5
 
 
 [environment]

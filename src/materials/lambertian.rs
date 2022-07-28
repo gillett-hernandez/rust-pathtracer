@@ -39,11 +39,10 @@ impl Material for Lambertian {
         wi: Vec3,
         wo: Vec3,
     ) -> (SingleEnergy, PDF) {
-        let cosine = wo.z();
-        if cosine * wi.z() > 0.0 {
+        if wo.z() * wi.z() > 0.0 {
             (
                 SingleEnergy::new(self.texture.eval_at(lambda, uv).min(1.0) / PI),
-                (cosine / PI).into(),
+                (wo.z() / PI).into(),
             )
         } else {
             (0.0.into(), 0.0.into())

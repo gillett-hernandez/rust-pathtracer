@@ -31,6 +31,8 @@ struct Opt {
     pub scene_file: Option<String>,
     #[structopt(long, default_value = "data/config.toml")]
     pub config_file: String,
+    #[structopt(short = "n", long)]
+    pub dry_run: bool,
 }
 
 fn construct_scene(config: &Config) -> Result<World, Box<dyn Error>> {
@@ -95,10 +97,17 @@ fn main() {
     #[cfg(all(target_os = "windows", feature = "notification"))]
     let time = Instant::now();
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
-    renderer.render(world.unwrap(), cameras, &config);
+
+    if !opts.dry_run {
+        renderer.render(world.unwrap(), cameras, &config);
+    }
 
     #[cfg(all(target_os = "windows", feature = "notification"))]
     {
+        if opts.dry_run {
+            // don't send notification if it's a dry run, since no rendering occurred
+            return;
+        }
         let notification = NotificationBuilder::new()
             .title_text("Render finished")
             .info_text(&format!("Took {} seconds", time.elapsed().as_secs()))

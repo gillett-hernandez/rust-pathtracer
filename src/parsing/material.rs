@@ -25,13 +25,15 @@ pub struct GGXData {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DiffuseLightData {
-    pub color: CurveDataOrReference,
+    pub bounce_color: CurveDataOrReference,
+    pub emit_color: CurveDataOrReference,
     pub sidedness: Sidedness,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SharpLightData {
-    pub color: CurveDataOrReference,
+    pub bounce_color: CurveDataOrReference,
+    pub emit_color: CurveDataOrReference,
     pub sidedness: Sidedness,
     pub sharpness: f32,
 }
@@ -92,12 +94,14 @@ impl MaterialData {
             MaterialData::SharpLight(data) => {
                 info!("parsing SharpLight");
                 // let color = parse_texture_stack(data.color);
-                let color = data
-                    .color
+                let emit_color = data
+                    .emit_color
                     .resolve(curve_mapping)?
                     .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+                let bounce_color = data.bounce_color.resolve(curve_mapping)?;
                 Some(MaterialEnum::SharpLight(SharpLight::new(
-                    color,
+                    bounce_color,
+                    emit_color,
                     data.sharpness,
                     data.sidedness,
                 )))
@@ -115,12 +119,14 @@ impl MaterialData {
             MaterialData::DiffuseLight(data) => {
                 info!("parsing DiffuseLight");
                 // let color = parse_texture_stack(data.color);
-                let color = data
-                    .color
+                let emit_color = data
+                    .emit_color
                     .resolve(curve_mapping)?
                     .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+                let bounce_color = data.bounce_color.resolve(curve_mapping)?;
                 Some(MaterialEnum::DiffuseLight(DiffuseLight::new(
-                    color,
+                    bounce_color,
+                    emit_color,
                     data.sidedness,
                 )))
             }
