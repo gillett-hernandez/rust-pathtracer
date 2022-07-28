@@ -14,7 +14,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DomainMapping {
     pub x_offset: Option<f32>,
     pub x_scale: Option<f32>,
@@ -33,7 +33,7 @@ impl Default for DomainMapping {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum CurveData {
     Blackbody {
@@ -312,7 +312,7 @@ impl From<CurveData> for Curve {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum CurveDataOrReference {
     Literal(CurveData),
@@ -321,8 +321,14 @@ pub enum CurveDataOrReference {
 impl CurveDataOrReference {
     pub fn resolve(&self, curves_mapping: &HashMap<String, Curve>) -> Option<Curve> {
         match self {
-            Self::Literal(inner) => Some(inner.clone().into()),
-            Self::Reference(name) => curves_mapping.get(name).cloned(),
+            Self::Literal(inner) => {
+                info!("resolving curve literal");
+                Some(inner.clone().into())
+            }
+            Self::Reference(name) => {
+                info!("resolving curve {}", name);
+                curves_mapping.get(name).cloned()
+            }
         }
     }
 }

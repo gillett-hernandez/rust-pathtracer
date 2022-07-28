@@ -54,76 +54,78 @@ pub enum MaterialData {
     SharpLight(SharpLightData),
 }
 
-pub fn parse_material(
-    data: MaterialData,
-    curve_mapping: &HashMap<String, Curve>,
-    texture_mapping: &HashMap<String, TexStack>,
-) -> Option<MaterialEnum> {
-    match data {
-        MaterialData::GGX(data) => {
-            info!("parsing GGX");
-            if let (Some(eta), Some(eta_o), Some(kappa)) = (
-                data.eta.resolve(curve_mapping),
-                data.eta_o.resolve(curve_mapping),
-                data.kappa.resolve(curve_mapping),
-            ) {
-                Some(MaterialEnum::GGX(GGX::new(
-                    data.alpha,
-                    eta,
-                    eta_o,
-                    kappa,
-                    data.permeability,
-                    data.outer_medium_id.unwrap_or(0),
-                )))
-            } else {
-                warn!("failed to resolve one of eta, eta_o, or kappa");
-                None
+impl MaterialData {
+    pub fn resolve(
+        self,
+        curve_mapping: &HashMap<String, Curve>,
+        texture_mapping: &HashMap<String, TexStack>,
+    ) -> Option<MaterialEnum> {
+        match self {
+            MaterialData::GGX(data) => {
+                info!("parsing GGX");
+                if let (Some(eta), Some(eta_o), Some(kappa)) = (
+                    data.eta.resolve(curve_mapping),
+                    data.eta_o.resolve(curve_mapping),
+                    data.kappa.resolve(curve_mapping),
+                ) {
+                    Some(MaterialEnum::GGX(GGX::new(
+                        data.alpha,
+                        eta,
+                        eta_o,
+                        kappa,
+                        data.permeability,
+                        data.outer_medium_id.unwrap_or(0),
+                    )))
+                } else {
+                    warn!("failed to resolve one of eta, eta_o, or kappa");
+                    None
+                }
             }
+            MaterialData::Lambertian(data) => {
+                info!("parsing Lambertian");
+                let texture = texture_mapping
+                    .get(&data.texture_id)
+                    .expect("didn't find texture stack id for texture name")
+                    .clone();
+                Some(MaterialEnum::Lambertian(Lambertian::new(texture)))
+            }
+            MaterialData::SharpLight(data) => {
+                info!("parsing SharpLight");
+                // let color = parse_texture_stack(data.color);
+                let color = data
+                    .color
+                    .resolve(curve_mapping)?
+                    .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+                Some(MaterialEnum::SharpLight(SharpLight::new(
+                    color,
+                    data.sharpness,
+                    data.sidedness,
+                )))
+            }
+            // MaterialData::PassthroughFilter(data) => {
+            //     println!("parsing PassthroughFilter");
+            //     // let color = parse_texture_stack(data.color);
+            //     let color = Curve::from(data.color);
+            //     MaterialEnum::PassthroughFilter(PassthroughFilter::new(
+            //         color,
+            //         data.outer_medium_id,
+            //         data.inner_medium_id,
+            //     ))
+            // }
+            MaterialData::DiffuseLight(data) => {
+                info!("parsing DiffuseLight");
+                // let color = parse_texture_stack(data.color);
+                let color = data
+                    .color
+                    .resolve(curve_mapping)?
+                    .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+                Some(MaterialEnum::DiffuseLight(DiffuseLight::new(
+                    color,
+                    data.sidedness,
+                )))
+            }
+            _ => panic!(),
         }
-        MaterialData::Lambertian(data) => {
-            info!("parsing Lambertian");
-            let texture = texture_mapping
-                .get(&data.texture_id)
-                .expect("didn't find texture stack id for texture name")
-                .clone();
-            Some(MaterialEnum::Lambertian(Lambertian::new(texture)))
-        }
-        MaterialData::SharpLight(data) => {
-            info!("parsing SharpLight");
-            // let color = parse_texture_stack(data.color);
-            let color = data
-                .color
-                .resolve(curve_mapping)?
-                .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
-            Some(MaterialEnum::SharpLight(SharpLight::new(
-                color,
-                data.sharpness,
-                data.sidedness,
-            )))
-        }
-        // MaterialData::PassthroughFilter(data) => {
-        //     println!("parsing PassthroughFilter");
-        //     // let color = parse_texture_stack(data.color);
-        //     let color = Curve::from(data.color);
-        //     MaterialEnum::PassthroughFilter(PassthroughFilter::new(
-        //         color,
-        //         data.outer_medium_id,
-        //         data.inner_medium_id,
-        //     ))
-        // }
-        MaterialData::DiffuseLight(data) => {
-            info!("parsing DiffuseLight");
-            // let color = parse_texture_stack(data.color);
-            let color = data
-                .color
-                .resolve(curve_mapping)?
-                .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
-            Some(MaterialEnum::DiffuseLight(DiffuseLight::new(
-                color,
-                data.sidedness,
-            )))
-        }
-        _ => panic!(),
     }
 }
 

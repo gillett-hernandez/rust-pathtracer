@@ -3,3 +3,12 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/D65.csv"
 column = 1
 interpolation_mode = "Cubic"
+
+[flat_zero]
+type = "Flat"
+strength = 0.0
+
+[air_ior]
+type = "Cauchy"
+a = 1.0002724293
+b = 1.64748969205

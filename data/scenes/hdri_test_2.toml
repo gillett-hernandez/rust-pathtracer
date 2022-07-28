@@ -16,7 +16,6 @@ width = 1024
 height = 1024
 
 
-
 # light above
 [[instances]]
 material_name = "diffuse_light"

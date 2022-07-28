@@ -12,21 +12,22 @@ texture_id = "lambertian_red"
 
 [ggx_glass]
 type = "GGX"
-eta_o = 1.0004
 permeability = 1.0
 alpha = 0.0004
 kappa = "flat_zero"
+eta_o = "air_ior"
 [ggx_glass.eta]
 type = "Cauchy"
 a = 1.4
 b = 4500.0
 
+
 [ggx_glass_dispersive]
 type = "GGX"
-eta_o = 1.0004
 permeability = 1.0
 alpha = 0.0004
 kappa = "flat_zero"
+eta_o = "air_ior"
 [ggx_glass_dispersive.eta]
 type = "Cauchy"
 a = 1.4
@@ -34,10 +35,10 @@ b = 50000.0
 
 [ggx_moissanite]
 type = "GGX"
-eta_o = 1.0004
 permeability = 1.0
 alpha = 0.0004
 kappa = "flat_zero"
+eta_o = "air_ior"
 [ggx_moissanite.eta]
 type = "Cauchy"
 a = 2.4
@@ -45,9 +46,9 @@ b = 34000.0
 
 [ggx_gold]
 type = "GGX"
-eta_o = 1.0004
 permeability = 0.0
 alpha = 0.004
+eta_o = "air_ior"
 [ggx_gold.eta]
 type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
@@ -60,12 +61,12 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/gold.csv"
 column = 2
 interpolation_mode = "Cubic"
-[materials.kappa.domain_mapping]
+[ggx_gold.kappa.domain_mapping]
 x_scale = 1000.0
 
 [ggx_copper]
 type = "GGX"
-eta_o = 1.0004
+eta_o = "air_ior"
 permeability = 0.0
 alpha = 0.002
 [ggx_copper.eta]
@@ -86,11 +87,11 @@ x_scale = 1000.0
 [diffuse_light_fluorescent]
 type = "DiffuseLight"
 sidedness = "Reverse"
-[ggx_copper.color]
+[diffuse_light_fluorescent.color]
 type = "Linear"
 filename = "data/curves/spectra/fluorescent.spectra"
 interpolation_mode = "Cubic"
-[ggx_copper.color.domain_mapping]
+[diffuse_light_fluorescent.color.domain_mapping]
 y_scale = 5.0
 
 [diffuse_light_xenon]
@@ -150,6 +151,7 @@ filename = "data/curves/spectra/fluorescent.spectra"
 interpolation_mode = "Cubic"
 [sharp_light_fluorescent.color.domain_mapping]
 y_scale = 5.0
+
 
 [diffuse_light]
 type = "DiffuseLight"

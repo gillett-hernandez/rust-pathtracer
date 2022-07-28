@@ -4,7 +4,6 @@ use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
 
-use crate::parsing::environment::ImportanceMapData;
 use crate::texture::TexStack;
 use crate::{math::*, rgb_to_u32};
 
@@ -39,6 +38,10 @@ pub enum ImportanceMap {
 
 impl ImportanceMap {
     pub fn bake_in_place(&mut self, texture: &TexStack, wavelength_bounds: Bounds1D) -> bool {
+        warn!(
+            "baking importance map with wavelength_bounds {:?}",
+            wavelength_bounds
+        );
         match self {
             Self::Baked {
                 luminance_curve,

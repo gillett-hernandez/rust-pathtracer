@@ -26,11 +26,6 @@ use crate::geometry::*;
 
 use crate::materials::*;
 use crate::mediums::MediumEnum;
-use crate::world::EnvironmentMap;
-// use crate::texture::*;
-// use crate::math::spectral::BOUNDED_VISIBLE_RANGE;
-// use crate::math::*;
-// use crate::world::EnvironmentMap;
 use crate::world::World;
 
 use std::collections::HashMap;
@@ -127,11 +122,12 @@ fn load_arbitrary<T>(filepath: PathBuf) -> Result<T, Box<dyn Error>>
 where
     T: DeserializeOwned,
 {
+    info!("loading file at {}", &filepath.to_string_lossy());
     let mut input = String::new();
 
     File::open(filepath.clone())
         .and_then(|mut f| f.read_to_string(&mut input))
-        .expect(&format!("{}", filepath.to_string_lossy()).to_owned());
+        .expect("failed to load file");
 
     let data: T = toml::from_str(&input)?;
     return Ok(data);
@@ -215,7 +211,7 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
     match scene.materials.resolve() {
         Ok(materials_data) => {
             for (name, data) in materials_data {
-                if let Some(parsed) = parse_material(data, &curves, &textures_map) {
+                if let Some(parsed) = data.resolve(&curves, &textures_map) {
                     if materials_map.insert(name.clone(), parsed).is_none() {
                         info!("inserted new material {}", &name);
                     } else {
@@ -347,6 +343,26 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_parsing_materials_lib() {
+        let materials = MaybeMaterialLib::Path(String::from("data/lib_materials.toml"))
+            .resolve()
+            .unwrap();
+
+        for (name, data) in &materials {
+            println!("{}", name);
+            match data {
+                MaterialData::DiffuseLight(_) => {}
+                MaterialData::SharpLight(_) => {}
+                MaterialData::Lambertian(_) => {}
+                MaterialData::GGX(inner) => {
+                    println!("{:?}", inner.eta);
+                }
+                _ => {}
+            }
+        }
+    }
 
     #[test]
     fn test_parsing_complex_scene() {
