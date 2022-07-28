@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::mediums::*;
-use crate::parsing::curves::CurveData;
 
 use math::Curve;
 use serde::{Deserialize, Serialize};

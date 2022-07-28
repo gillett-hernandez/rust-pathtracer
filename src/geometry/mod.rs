@@ -13,50 +13,33 @@ pub use sphere::Sphere;
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
 use crate::math::*;
 
-#[derive(Clone, Debug)]
-pub enum Aggregate {
-    AARect(AARect),
-    Sphere(Sphere),
-    Disk(Disk),
-    Mesh(Mesh),
-    Triangle(MeshTriangleRef),
-}
-
-impl From<Sphere> for Aggregate {
-    fn from(data: Sphere) -> Self {
-        Aggregate::Sphere(data)
-    }
-}
-
-impl From<Disk> for Aggregate {
-    fn from(data: Disk) -> Self {
-        Aggregate::Disk(data)
-    }
-}
-
-impl From<AARect> for Aggregate {
-    fn from(data: AARect) -> Self {
-        Aggregate::AARect(data)
-    }
-}
-
-impl From<MeshTriangleRef> for Aggregate {
-    fn from(data: MeshTriangleRef) -> Self {
-        Aggregate::Triangle(data)
-    }
-}
-
-impl HasBoundingBox for Aggregate {
-    fn aabb(&self) -> AABB {
-        match self {
-            Aggregate::Sphere(inner) => inner.aabb(),
-            Aggregate::AARect(inner) => inner.aabb(),
-            Aggregate::Disk(inner) => inner.aabb(),
-            Aggregate::Mesh(inner) => inner.aabb(),
-            Aggregate::Triangle(inner) => inner.aabb(),
+macro_rules! generate_aggregate {
+    ($($e:ident),+) => {
+        #[derive(Clone, Debug)]
+        pub enum Aggregate {
+            $(
+                $e($e),
+            )+
         }
-    }
-}
+        $(
+            impl From<$e> for Aggregate {
+                fn from(data: $e) -> Self {
+                    Aggregate::$e(data)
+                }
+            }
+        )+
+
+
+        impl HasBoundingBox for Aggregate {
+            fn aabb(&self) -> AABB {
+                match self {
+                    $(
+                        Self::$e(inner) => inner.aabb(),
+                    )+
+                }
+            }
+        }
+
 
 impl Hittable for Aggregate {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
@@ -66,21 +49,17 @@ impl Hittable for Aggregate {
         debug_assert!(!t1.is_nan(), "{:?} {:?} {:?}", r, t0, t1);
 
         match self {
-            Aggregate::Sphere(inner) => inner.hit(r, t0, t1),
-            Aggregate::Disk(inner) => inner.hit(r, t0, t1),
-            Aggregate::AARect(inner) => inner.hit(r, t0, t1),
-            Aggregate::Mesh(inner) => inner.hit(r, t0, t1),
-            Aggregate::Triangle(inner) => inner.hit(r, t0, t1),
+            $(
+                Self::$e(inner) => inner.hit(r, t0, t1),
+            )+
         }
     }
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
         debug_assert!(from.0.is_finite().all());
         let pair = match self {
-            Aggregate::Sphere(inner) => inner.sample(s, from),
-            Aggregate::Disk(inner) => inner.sample(s, from),
-            Aggregate::AARect(inner) => inner.sample(s, from),
-            Aggregate::Mesh(inner) => inner.sample(s, from),
-            Aggregate::Triangle(inner) => inner.sample(s, from),
+            $(
+                Self::$e(inner) => inner.sample(s, from),
+            )+
         };
         debug_assert!((pair.0).0.is_finite().all(), "{:?} {:?}", self, pair.0);
         debug_assert!((pair.1).0.is_finite());
@@ -88,11 +67,9 @@ impl Hittable for Aggregate {
     }
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         let triplet = match self {
-            Aggregate::Sphere(inner) => inner.sample_surface(s),
-            Aggregate::Disk(inner) => inner.sample_surface(s),
-            Aggregate::AARect(inner) => inner.sample_surface(s),
-            Aggregate::Mesh(inner) => inner.sample_surface(s),
-            Aggregate::Triangle(inner) => inner.sample_surface(s),
+            $(
+                Self::$e(inner) => inner.sample_surface(s),
+            )+
         };
         debug_assert!((triplet.0).0.is_finite().all());
         debug_assert!((triplet.1).0.is_finite().all());
@@ -104,11 +81,9 @@ impl Hittable for Aggregate {
         debug_assert!(from.0.is_finite().all());
         debug_assert!(to.0.is_finite().all());
         let pdf = match self {
-            Aggregate::Sphere(inner) => inner.psa_pdf(cos_o, from, to),
-            Aggregate::Disk(inner) => inner.psa_pdf(cos_o, from, to),
-            Aggregate::AARect(inner) => inner.psa_pdf(cos_o, from, to),
-            Aggregate::Mesh(inner) => inner.psa_pdf(cos_o, from, to),
-            Aggregate::Triangle(inner) => inner.psa_pdf(cos_o, from, to),
+            $(
+                Self::$e(inner) => inner.psa_pdf(cos_o, from, to),
+            )+
         };
         debug_assert!(
             pdf.0.is_finite(),
@@ -123,13 +98,18 @@ impl Hittable for Aggregate {
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         let res = match self {
-            Aggregate::Sphere(inner) => inner.surface_area(transform),
-            Aggregate::Disk(inner) => inner.surface_area(transform),
-            Aggregate::AARect(inner) => inner.surface_area(transform),
-            Aggregate::Mesh(inner) => inner.surface_area(transform),
-            Aggregate::Triangle(inner) => inner.surface_area(transform),
+            $(
+                Self::$e(inner) => inner.surface_area(transform),
+            )+
         };
         debug_assert!(res.is_finite());
         res
     }
 }
+
+    };
+}
+
+type Triangle = MeshTriangleRef;
+
+generate_aggregate! {AARect, Sphere, Disk, Mesh, Triangle}

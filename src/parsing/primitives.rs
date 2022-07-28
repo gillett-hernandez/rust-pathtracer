@@ -193,7 +193,6 @@ pub enum AggregateData {
 
 impl AggregateData {
     pub fn parse_with(self, material_mapping: &HashMap<String, MaterialId>) -> Aggregate {
-        // put mesh parsing here?
         match self {
             AggregateData::Disk(data) => {
                 info!("parsed disk data");
@@ -219,7 +218,7 @@ impl AggregateData {
                     parse_specific_obj_mesh(&filename, data.mesh_index, material_mapping);
                 info!("parsed mesh, initializing mesh and mesh bvh");
                 mesh.init();
-                info!("initialized");
+                info!("initialized mesh and mesh bvh");
                 Aggregate::Mesh(mesh)
             }
             // parse_with does not handle MeshBundle

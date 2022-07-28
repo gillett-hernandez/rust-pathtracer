@@ -4,6 +4,7 @@ use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
 
+use crate::parsing::environment::ImportanceMapData;
 use crate::texture::TexStack;
 use crate::{math::*, rgb_to_u32};
 
@@ -15,16 +16,54 @@ use rayon::prelude::*;
 
 // equirectangular importance map.
 // maybe refactor this to another submodule under or separate from src/world so that more importance map types can be defined.
+// also, refactor this importance map type so that it can properly sample from the curves that make up texstack
+// would change memory usage complexity from O(n*m) to O(k*n*m) where k is the number of channels in the texstack
+// which is 4 for every tex4, 1 for every tex1, etc.
 
 #[derive(Clone)]
-pub struct ImportanceMap {
-    pub data: Vec<CurveWithCDF>,
-    pub marginal_cdf: CurveWithCDF,
-    // wavelength_bounds: Bounds1D,
+pub enum ImportanceMap {
+    Baked {
+        luminance_curve: Curve,
+        vertical_resolution: usize,
+        horizontal_resolution: usize,
+        data: Vec<CurveWithCDF>,
+        marginal_cdf: CurveWithCDF,
+    },
+    Unbaked {
+        luminance_curve: Curve,
+        vertical_resolution: usize,
+        horizontal_resolution: usize,
+    },
+    Empty,
 }
 
 impl ImportanceMap {
-    pub fn new(
+    pub fn bake_in_place(&mut self, texture: &TexStack, wavelength_bounds: Bounds1D) -> bool {
+        match self {
+            Self::Baked {
+                luminance_curve,
+                vertical_resolution,
+                horizontal_resolution,
+                ..
+            }
+            | Self::Unbaked {
+                luminance_curve,
+                vertical_resolution,
+                horizontal_resolution,
+            } => {
+                *self = Self::bake_raw(
+                    texture,
+                    *vertical_resolution,
+                    *horizontal_resolution,
+                    luminance_curve.clone(),
+                    wavelength_bounds,
+                );
+                true
+            }
+            _ => false,
+        }
+    }
+    pub fn bake_raw(
         texture_stack: &TexStack,
         vertical_resolution: usize,
         horizontal_resolution: usize,
@@ -188,38 +227,46 @@ impl ImportanceMap {
         }
         .to_cdf(Bounds1D::new(0.0, 1.0), 100);
 
-        Self {
+        Self::Baked {
             data,
             marginal_cdf,
-            // wavelength_bounds,
+            horizontal_resolution,
+            vertical_resolution,
+            luminance_curve,
         }
     }
     pub fn sample_uv(&self, sample: Sample2D) -> ((f32, f32), (PDF, PDF)) {
-        // inverse transform sample of the marginal distribution, selecting a row with a high luminance.
-        let (
-            SingleWavelength {
-                lambda: u,
-                energy: _,
-            },
-            row_pdf,
-        ) = self
-            .marginal_cdf
-            .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.y));
+        match self {
+            Self::Baked {
+                data, marginal_cdf, ..
+            } => {
+                // inverse transform sample of the marginal distribution, selecting a row with a high luminance.
+                let (
+                    SingleWavelength {
+                        lambda: u,
+                        energy: _,
+                    },
+                    row_pdf,
+                ) = marginal_cdf
+                    .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.y));
 
-        // inverse transform sample the selected row, finding a uv coordinate with a high luminance.
-        let (
-            SingleWavelength {
-                lambda: v,
-                energy: _,
-            },
-            column_pdf,
-        ) = self.data[(u * self.data.len() as f32) as usize]
-            .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.x));
-        assert!(u < 1.0, "{}", u);
-        assert!(u >= 0.0, "{}", u);
-        assert!(v < 1.0, "{}", v);
-        assert!(v >= 0.0, "{}", v);
-        ((u, v), (row_pdf, column_pdf))
+                // inverse transform sample the selected row, finding a uv coordinate with a high luminance.
+                let (
+                    SingleWavelength {
+                        lambda: v,
+                        energy: _,
+                    },
+                    column_pdf,
+                ) = data[(u * data.len() as f32) as usize]
+                    .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.x));
+                assert!(u < 1.0, "{}", u);
+                assert!(u >= 0.0, "{}", u);
+                assert!(v < 1.0, "{}", v);
+                assert!(v >= 0.0, "{}", v);
+                ((u, v), (row_pdf, column_pdf))
+            }
+            _ => panic!("used unbaked importance map"),
+        }
     }
 }
 
@@ -257,7 +304,8 @@ mod test {
                 interpolation_mode: InterpolationMode::Nearest,
             })],
         };
-        let map = ImportanceMap::new(&texture, 1024, 1024, Curve::y_bar(), BOUNDED_VISIBLE_RANGE);
+        let map =
+            ImportanceMap::bake_raw(&texture, 1024, 1024, Curve::y_bar(), BOUNDED_VISIBLE_RANGE);
 
         // let mut sum = 0.0;
         let width = 512;
@@ -346,7 +394,17 @@ mod test {
 
     #[test]
     fn test_env_importance_sampling() {
-        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let mut world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+
+        if let EnvironmentMap::HDR {
+            importance_map,
+            texture,
+            ..
+        } = &mut world.environment
+        {
+            importance_map.bake_in_place(texture, BOUNDED_VISIBLE_RANGE);
+        }
+
         let env = &world.environment;
         if let EnvironmentMap::HDR {
             importance_map,
@@ -355,7 +413,7 @@ mod test {
             ..
         } = env
         {
-            if importance_map.is_some() {
+            if matches!(importance_map, ImportanceMap::Baked { .. }) {
                 println!("got importance map, now do some math on it to see if it works");
             } else {
                 println!("testing env map without importance map, now do some math on it to see if it works");
@@ -604,7 +662,7 @@ mod test {
         //     .iter_mut()
         //     .for_each(|e| *e /= total);
 
-        let importance_map = ImportanceMap {
+        let importance_map = ImportanceMap::Baked {
             data: cdfs,
             marginal_cdf: Curve::Linear {
                 signal: marginal_distribution_data,
@@ -612,6 +670,9 @@ mod test {
                 mode: InterpolationMode::Linear,
             }
             .to_cdf(bounds, resolution),
+            vertical_resolution: resolution,
+            horizontal_resolution: resolution,
+            luminance_curve: crate::curves::cie_e(1.0),
         };
 
         let width = 512;

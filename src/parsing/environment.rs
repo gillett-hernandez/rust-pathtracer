@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use math::curves::InterpolationMode;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
 use serde::{Deserialize, Serialize};
 
 use crate::math::*;
-use crate::texture::TexStack;
+use crate::renderer::Film;
+use crate::texture::{TexStack, Texture, Texture1};
 use crate::world::{EnvironmentMap, ImportanceMap};
 
 use super::curves::CurveData;
@@ -51,7 +53,8 @@ pub enum EnvironmentData {
 pub fn parse_environment(
     env_data: EnvironmentData,
     textures: &HashMap<String, TexStack>,
-) -> EnvironmentMap {
+    error_color: &Curve,
+) -> Option<EnvironmentMap> {
     match env_data {
         EnvironmentData::Constant(data) => EnvironmentMap::Constant {
             color: Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
@@ -72,23 +75,30 @@ pub fn parse_environment(
             .into();
             let texture = textures
                 .get(&data.texture_name)
-                .expect("requested texture id was not in texture mapping")
+                .cloned()
+                .unwrap_or_else(|| {
+                    warn!("importance map texture not found, using mauve texture");
+                    TexStack {
+                        textures: vec![Texture::Texture1(Texture1 {
+                            curve: error_color.to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+                            texture: Film::new(1, 1, 1.0),
+                            interpolation_mode: InterpolationMode::Linear,
+                        })],
+                    }
+                })
                 .clone();
-            let importance_map = if let Some(importance_map_data) = data.importance_map {
-                //TODO: refactor so that importance map is baked on each render (since importance sampling wavelength generally depends on camera spectral range and sensitivity)
-                Some(ImportanceMap::new(
-                    &texture,
-                    importance_map_data.height,
-                    importance_map_data.width,
-                    importance_map_data
+            let importance_map = match data.importance_map {
+                Some(data) => ImportanceMap::Unbaked {
+                    horizontal_resolution: data.width,
+                    vertical_resolution: data.height,
+                    luminance_curve: data
                         .luminance_curve
                         .map(|e| e.into())
-                        .unwrap_or_else(|| Curve::y_bar()),
-                    BOUNDED_VISIBLE_RANGE,
-                ))
-            } else {
-                None
+                        .unwrap_or_else(Curve::y_bar),
+                },
+                None => ImportanceMap::Empty,
             };
+
             EnvironmentMap::HDR {
                 texture,
                 rotation,
@@ -97,4 +107,5 @@ pub fn parse_environment(
             }
         }
     }
+    .into()
 }

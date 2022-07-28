@@ -29,7 +29,10 @@ pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
     srgb_tonemapper.write_to_files(film, &exr_filename, &png_filename);
 }
 
-pub fn parse_wavelength_bounds(config: &Vec<RenderSettings>, default: Bounds1D) -> Bounds1D {
+pub fn calculate_widest_wavelength_bounds(
+    config: &Vec<RenderSettings>,
+    default: Bounds1D,
+) -> Bounds1D {
     let mut wavelength_bounds: Option<Bounds1D> = None;
     for settings in config.iter() {
         if let Some((lower, upper)) = settings.wavelength_bounds {

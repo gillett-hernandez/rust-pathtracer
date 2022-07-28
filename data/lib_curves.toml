@@ -1,0 +1,5 @@
+[D65]
+type = "TabulatedCSV"
+filename = "data/curves/csv/D65.csv"
+column = 1
+interpolation_mode = "Cubic"

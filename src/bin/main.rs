@@ -15,7 +15,7 @@ use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogg
 
 use std::error::Error;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use structopt::StructOpt;
 

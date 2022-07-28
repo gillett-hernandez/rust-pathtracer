@@ -191,7 +191,9 @@ pub fn random_walk(
                 break;
             } else {
                 // if directly hit a light while tracing a camera path.
-                if let MaterialId::Light(_light_id) = hit.material {}
+                if let MaterialId::Light(_light_id) = hit.material {
+                    // TODO: handle this
+                }
             }
 
             let material = world.get_material(hit.material);
@@ -484,7 +486,9 @@ pub fn random_walk_hero(
                 break;
             } else {
                 // if directly hit a light while tracing a camera path.
-                if let MaterialId::Light(_light_id) = hit.material {}
+                if let MaterialId::Light(_light_id) = hit.material {
+                    // TODO: handle this
+                }
             }
 
             let material = world.get_material(hit.material);
@@ -878,7 +882,9 @@ pub fn random_walk_medium_hero(
                         break;
                     } else {
                         // if directly hit a light while tracing a camera path.
-                        if let MaterialId::Light(_light_id) = hit.material {}
+                        if let MaterialId::Light(_light_id) = hit.material {
+                            // TODO: handle this
+                        }
                     }
 
                     let material = world.get_material(hit.material);

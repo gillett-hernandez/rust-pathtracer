@@ -66,7 +66,7 @@ impl From<Transform3Data> for Transform3 {
 pub struct InstanceData {
     pub aggregate: AggregateData,
     pub transform: Option<Transform3Data>,
-    pub material_identifier: Option<String>,
+    pub material_name: Option<String>,
 }
 
 pub fn parse_instance(
@@ -79,17 +79,28 @@ pub fn parse_instance(
         .transform
         .map(|transform_data| transform_data.into());
 
-    let material_id = instance_data.material_identifier.clone().map(|v| {
-        *materials_mapping
-            .get(&v)
-            .expect("material mapping did not contain material name")
-    });
+    if instance_data.material_name.is_none() {
+        error!("material name on instance {} was none", instance_id);
+    } else {
+        if !materials_mapping.contains_key(&instance_data.material_name.clone().unwrap()) {
+            error!(
+                "material not found in mapping, instance {}, material name {}",
+                instance_id,
+                &instance_data.material_name.clone().unwrap()
+            );
+        }
+    }
+
+    let material_id = instance_data
+        .material_name
+        .clone()
+        .map(|v| materials_mapping.get(&v).cloned())
+        .flatten();
+
     info!(
         "parsed instance, assigned material id {:?} from {:?}, and instance id {}",
         material_id,
-        instance_data
-            .material_identifier
-            .unwrap_or("None".to_string()),
+        instance_data.material_name.unwrap_or("None".to_string()),
         instance_id
     );
     Instance::new(aggregate, transform, material_id, instance_id)

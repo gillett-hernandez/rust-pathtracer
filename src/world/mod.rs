@@ -50,6 +50,8 @@ impl World {
         mut env_sampling_probability: f32,
         accelerator_type: AcceleratorType,
     ) -> Self {
+        // TODO: add light accelerator data structure, to prevent sampling very distant (and small) lights when there are lights closer by
+
         let mut lights = Vec::new();
         for instance in instances.iter() {
             match &instance.aggregate {

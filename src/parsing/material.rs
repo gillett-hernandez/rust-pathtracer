@@ -1,5 +1,4 @@
 use crate::materials::*;
-use crate::parsing::curves::CurveData;
 use crate::texture::TexStack;
 use math::{spectral::BOUNDED_VISIBLE_RANGE, Curve, Sidedness};
 
