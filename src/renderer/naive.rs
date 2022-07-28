@@ -11,8 +11,8 @@ use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
 use crate::profile::Profile;
 use crate::world::{EnvironmentMap, World};
 
-use math::Bounds1D;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use math::Bounds1D;
 
 use std::collections::HashMap;
 // use std::io::Write;
@@ -567,6 +567,14 @@ impl Renderer for NaiveRenderer {
                     let wavelength_bounds =
                         calculate_widest_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
                     world.assign_cameras(bundled_cameras.clone(), true);
+                    if let EnvironmentMap::HDR {
+                        texture,
+                        importance_map,
+                        ..
+                    } = &mut world.environment
+                    {
+                        importance_map.bake_in_place(texture, wavelength_bounds);
+                    }
                     let arc_world = Arc::new(world.clone());
                     let integrator = BDPTIntegrator {
                         max_bounces,
@@ -622,6 +630,14 @@ impl Renderer for NaiveRenderer {
                     let wavelength_bounds =
                         calculate_widest_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
                     world.assign_cameras(bundled_cameras.clone(), true);
+                    if let EnvironmentMap::HDR {
+                        texture,
+                        importance_map,
+                        ..
+                    } = &mut world.environment
+                    {
+                        importance_map.bake_in_place(texture, wavelength_bounds);
+                    }
                     let arc_world = Arc::new(world.clone());
                     let integrator = LightTracingIntegrator {
                         max_bounces,
