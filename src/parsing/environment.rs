@@ -34,7 +34,7 @@ pub struct ImportanceMapData {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HDRIData {
-    pub texture_id: String,
+    pub texture_name: String,
     pub strength: f32,
     pub rotation: Option<Vec<AxisAngleData>>,
     pub importance_map: Option<ImportanceMapData>,
@@ -50,8 +50,7 @@ pub enum EnvironmentData {
 
 pub fn parse_environment(
     env_data: EnvironmentData,
-    texture_mapping: &HashMap<String, usize>,
-    textures: &Vec<TexStack>,
+    textures: &HashMap<String, TexStack>,
 ) -> EnvironmentMap {
     match env_data {
         EnvironmentData::Constant(data) => EnvironmentMap::Constant {
@@ -71,10 +70,10 @@ pub fn parse_environment(
                 translate: None,
             }
             .into();
-            let texture = textures[*texture_mapping
-                .get(&data.texture_id)
-                .expect("requested texture id was not in texture mapping")]
-            .clone();
+            let texture = textures
+                .get(&data.texture_name)
+                .expect("requested texture id was not in texture mapping")
+                .clone();
             let importance_map = if let Some(importance_map_data) = data.importance_map {
                 //TODO: refactor so that importance map is baked on each render (since importance sampling wavelength generally depends on camera spectral range and sensitivity)
                 Some(ImportanceMap::new(

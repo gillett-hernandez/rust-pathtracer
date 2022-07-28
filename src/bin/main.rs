@@ -13,12 +13,14 @@ extern crate simplelog;
 // use simplelog::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 
+use std::error::Error;
 use std::fs::File;
+use std::path::{Path, PathBuf};
 
 use structopt::StructOpt;
 
 #[cfg(all(target_os = "windows", feature = "notification"))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 #[cfg(all(target_os = "windows", feature = "notification"))]
 use win32_notification::NotificationBuilder;
 
@@ -31,8 +33,8 @@ struct Opt {
     pub config_file: String,
 }
 
-fn construct_scene(config: &Config) -> World {
-    construct_world(&config.scene_file)
+fn construct_scene(config: &Config) -> Result<World, Box<dyn Error>> {
+    construct_world(PathBuf::from(config.scene_file.clone()))
 }
 
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
@@ -82,11 +84,18 @@ fn main() {
     config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
     let (config, cameras) = parse_cameras_from(&config);
     let world = construct_scene(&config);
+    if world.is_err() {
+        error!(
+            "fatal error parsing world, aborting. error is {:?}",
+            world.err().unwrap()
+        );
+        return;
+    }
 
     #[cfg(all(target_os = "windows", feature = "notification"))]
     let time = Instant::now();
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
-    renderer.render(world, cameras, &config);
+    renderer.render(world.unwrap(), cameras, &config);
 
     #[cfg(all(target_os = "windows", feature = "notification"))]
     {
@@ -97,7 +106,7 @@ fn main() {
             .expect("Could not create notification");
 
         notification.show().expect("Failed to show notification");
-        thread::sleep(Duration::from_secs(3));
+        std::thread::sleep(Duration::from_secs(3));
         notification
             .delete()
             .expect("Failed to delete notification");

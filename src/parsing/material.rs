@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
+use super::CurveDataOrReference;
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LambertianData {
     pub texture_id: String,
@@ -15,29 +17,29 @@ pub struct LambertianData {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GGXData {
     pub alpha: f32,
-    pub eta_o: f32,
-    pub eta: CurveData,
-    pub kappa: CurveData,
+    pub eta: CurveDataOrReference,
+    pub eta_o: CurveDataOrReference,
+    pub kappa: CurveDataOrReference,
     pub permeability: f32,
     pub outer_medium_id: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DiffuseLightData {
-    pub color: CurveData,
+    pub color: CurveDataOrReference,
     pub sidedness: Sidedness,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SharpLightData {
-    pub color: CurveData,
+    pub color: CurveDataOrReference,
     pub sidedness: Sidedness,
     pub sharpness: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PassthroughFilterData {
-    pub color: CurveData,
+    pub color: CurveDataOrReference,
     pub outer_medium_id: usize,
     pub inner_medium_id: usize,
 }
@@ -55,35 +57,50 @@ pub enum MaterialData {
 
 pub fn parse_material(
     data: MaterialData,
-    texture_mapping: &HashMap<String, usize>,
-    textures: &Vec<TexStack>,
-) -> MaterialEnum {
+    curve_mapping: &HashMap<String, Curve>,
+    texture_mapping: &HashMap<String, TexStack>,
+) -> Option<MaterialEnum> {
     match data {
         MaterialData::GGX(data) => {
             info!("parsing GGX");
-            let eta = data.eta.into();
-            let kappa = data.kappa.into();
-            MaterialEnum::GGX(GGX::new(
-                data.alpha,
-                eta,
-                data.eta_o,
-                kappa,
-                data.permeability,
-                data.outer_medium_id.unwrap_or(0),
-            ))
+            if let (Some(eta), Some(eta_o), Some(kappa)) = (
+                data.eta.resolve(curve_mapping),
+                data.eta_o.resolve(curve_mapping),
+                data.kappa.resolve(curve_mapping),
+            ) {
+                Some(MaterialEnum::GGX(GGX::new(
+                    data.alpha,
+                    eta,
+                    eta_o,
+                    kappa,
+                    data.permeability,
+                    data.outer_medium_id.unwrap_or(0),
+                )))
+            } else {
+                warn!("failed to resolve one of eta, eta_o, or kappa");
+                None
+            }
         }
         MaterialData::Lambertian(data) => {
             info!("parsing Lambertian");
-            let id = texture_mapping
+            let texture = texture_mapping
                 .get(&data.texture_id)
-                .expect("didn't find texture stack id for texture name");
-            MaterialEnum::Lambertian(Lambertian::new(textures[*id].clone()))
+                .expect("didn't find texture stack id for texture name")
+                .clone();
+            Some(MaterialEnum::Lambertian(Lambertian::new(texture)))
         }
         MaterialData::SharpLight(data) => {
             info!("parsing SharpLight");
             // let color = parse_texture_stack(data.color);
-            let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
-            MaterialEnum::SharpLight(SharpLight::new(color, data.sharpness, data.sidedness))
+            let color = data
+                .color
+                .resolve(curve_mapping)?
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+            Some(MaterialEnum::SharpLight(SharpLight::new(
+                color,
+                data.sharpness,
+                data.sidedness,
+            )))
         }
         // MaterialData::PassthroughFilter(data) => {
         //     println!("parsing PassthroughFilter");
@@ -98,15 +115,22 @@ pub fn parse_material(
         MaterialData::DiffuseLight(data) => {
             info!("parsing DiffuseLight");
             // let color = parse_texture_stack(data.color);
-            let color = Curve::from(data.color).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
-            MaterialEnum::DiffuseLight(DiffuseLight::new(color, data.sidedness))
+            let color = data
+                .color
+                .resolve(curve_mapping)?
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+            Some(MaterialEnum::DiffuseLight(DiffuseLight::new(
+                color,
+                data.sidedness,
+            )))
         }
         _ => panic!(),
     }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct NamedMaterial {
-    pub data: MaterialData,
-    pub name: String,
+#[serde(untagged)]
+pub enum MaybeMaterialLiteral {
+    Literal(MaterialData),
+    Named(String),
 }

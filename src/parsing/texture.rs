@@ -8,28 +8,32 @@ use math::spectral::BOUNDED_VISIBLE_RANGE;
 use packed_simd::f32x4;
 use serde::{Deserialize, Serialize};
 
+use std::collections::HashMap;
+use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+
+use super::CurveDataOrReference;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum TextureData {
     Texture1 {
-        curve: CurveData,
+        curve: CurveDataOrReference,
         filename: String,
     },
     Texture4 {
-        curves: [CurveData; 4],
+        curves: [CurveDataOrReference; 4],
         filename: String,
     },
     HDR {
-        curves: [CurveData; 4],
+        curves: [CurveDataOrReference; 4],
         filename: String,
         alpha_fill: Option<f32>,
     },
     EXR {
-        curves: [CurveData; 4],
+        curves: [CurveDataOrReference; 4],
         filename: String,
     },
     SRGB {
@@ -38,10 +42,7 @@ pub enum TextureData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct TextureStackData {
-    pub name: String,
-    pub texture_stack: Vec<TextureData>,
-}
+pub struct TextureStackData(pub Vec<TextureData>);
 
 pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
     info!("parsing rgba texture at {}", filepath);
@@ -159,58 +160,82 @@ fn convert_to_array(vec: Vec<CurveWithCDF>) -> [CurveWithCDF; 4] {
     arr
 }
 
-pub fn parse_texture(texture: TextureData) -> Texture {
+fn parse_curves(
+    curves: &[CurveDataOrReference; 4],
+    curves_data: &HashMap<String, Curve>,
+) -> Option<Vec<CurveWithCDF>> {
+    let maybe_curves: Vec<Option<CurveWithCDF>> = curves
+        .iter()
+        .map(|curve| {
+            curve
+                .resolve(curves_data)
+                .map(|some| some.to_cdf(BOUNDED_VISIBLE_RANGE, 100))
+        })
+        .collect();
+    if let Some((index, _)) = maybe_curves.iter().enumerate().find(|e| e.1.is_none()) {
+        error!(
+            "failed to parse the requisite number of curves, curve name {}",
+            match &curves[index] {
+                CurveDataOrReference::Reference(name) => {
+                    name
+                }
+                _ => {
+                    unreachable!()
+                }
+            }
+        );
+        None
+    } else {
+        Some(maybe_curves.into_iter().map(|e| e.unwrap()).collect::<_>())
+    }
+}
+
+pub fn parse_texture(
+    texture: TextureData,
+    curves_data: &HashMap<String, Curve>,
+) -> Option<Texture> {
     match texture {
         TextureData::Texture1 { curve, filename } => {
-            let cdf: CurveWithCDF = Curve::from(curve).to_cdf(BOUNDED_VISIBLE_RANGE, 100);
-            Texture::Texture1(Texture1 {
+            let cdf: CurveWithCDF = curve
+                .resolve(curves_data)?
+                .to_cdf(BOUNDED_VISIBLE_RANGE, 100);
+            Some(Texture::Texture1(Texture1 {
                 curve: cdf,
                 texture: parse_bitmap(&filename),
                 interpolation_mode: InterpolationMode::Nearest,
-            })
+            }))
         }
         TextureData::Texture4 { curves, filename } => {
-            let cdfs: [CurveWithCDF; 4] = convert_to_array(
-                curves
-                    .iter()
-                    .map(|curve| Curve::from(curve.clone()).to_cdf(BOUNDED_VISIBLE_RANGE, 100))
-                    .collect(),
-            );
-            Texture::Texture4(Texture4 {
+            let curves = parse_curves(&curves, curves_data)?;
+            let cdfs: [CurveWithCDF; 4] = convert_to_array(curves);
+            Some(Texture::Texture4(Texture4 {
                 curves: cdfs,
                 texture: parse_rgba(&filename),
                 interpolation_mode: InterpolationMode::Nearest,
-            })
+            }))
         }
         TextureData::HDR {
             curves,
             filename,
             alpha_fill,
         } => {
-            let cdfs: [CurveWithCDF; 4] = convert_to_array(
-                curves
-                    .iter()
-                    .map(|curve| Curve::from(curve.clone()).to_cdf(BOUNDED_VISIBLE_RANGE, 100))
-                    .collect(),
-            );
-            Texture::Texture4(Texture4 {
+            let curves = parse_curves(&curves, curves_data)?;
+            let cdfs: [CurveWithCDF; 4] = convert_to_array(curves);
+
+            Some(Texture::Texture4(Texture4 {
                 curves: cdfs,
                 texture: parse_hdr(&filename, alpha_fill.unwrap_or(0.0)),
                 interpolation_mode: InterpolationMode::Nearest,
-            })
+            }))
         }
         TextureData::EXR { curves, filename } => {
-            let cdfs: [CurveWithCDF; 4] = convert_to_array(
-                curves
-                    .iter()
-                    .map(|curve| Curve::from(curve.clone()).to_cdf(BOUNDED_VISIBLE_RANGE, 100))
-                    .collect(),
-            );
-            Texture::Texture4(Texture4 {
+            let curves = parse_curves(&curves, curves_data)?;
+            let cdfs: [CurveWithCDF; 4] = convert_to_array(curves);
+            Some(Texture::Texture4(Texture4 {
                 curves: cdfs,
                 texture: parse_exr(&filename),
                 interpolation_mode: InterpolationMode::Nearest,
-            })
+            }))
         }
         TextureData::SRGB { filename } => {
             let curves_filename = "data/curves/basis/simple-spectral-srgb-1931.csv".to_string();
@@ -238,21 +263,24 @@ pub fn parse_texture(texture: TextureData) -> Texture {
                 .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
                 Curve::from(CurveData::Flat { strength: 0.0 }).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             ];
-            Texture::Texture4(Texture4 {
+            Some(Texture::Texture4(Texture4 {
                 curves: cdfs,
                 texture: parse_rgba(&filename),
                 interpolation_mode: InterpolationMode::Nearest,
-            })
+            }))
         }
     }
 }
 
-pub fn parse_texture_stack(tex_stack: TextureStackData) -> TexStack {
+pub fn parse_texture_stack(
+    tex_stack: TextureStackData,
+    curves_data: &HashMap<String, Curve>,
+) -> Option<TexStack> {
     let mut textures = Vec::new();
-    for v in tex_stack.texture_stack.iter() {
-        textures.push(parse_texture(v.clone()));
+    for v in tex_stack.0.iter() {
+        textures.push(parse_texture(v.clone(), curves_data)?);
     }
-    TexStack { textures }
+    TexStack { textures }.into()
 }
 
 #[cfg(test)]
@@ -330,46 +358,57 @@ mod test {
 
     #[test]
     fn test_parse_texture() {
-        let texture = parse_texture(TextureData::SRGB {
-            filename: "data/textures/test.png".to_string(),
-        });
+        let map = HashMap::new();
+        let texture = parse_texture(
+            TextureData::SRGB {
+                filename: "data/textures/test.png".to_string(),
+            },
+            &map,
+        )
+        .unwrap();
 
         println!("{}", texture.eval_at(550.0, (0.5, 0.5)));
     }
     #[test]
     fn test_parse_texture_stack() {
-        let texture = parse_texture_stack(TextureStackData {
-            name: "stack".to_string(),
-            texture_stack: vec![TextureData::Texture4 {
+        let map = HashMap::new();
+        let texture = parse_texture_stack(
+            TextureStackData(vec![TextureData::Texture4 {
                 curves: [
                     CurveData::SimpleSpike {
                         lambda: 400.0,
                         left_taper: 100.0,
                         right_taper: 100.0,
                         strength: 0.25,
-                    },
+                    }
+                    .into(),
                     CurveData::SimpleSpike {
                         lambda: 550.0,
                         left_taper: 100.0,
                         right_taper: 100.0,
                         strength: 0.25,
-                    },
+                    }
+                    .into(),
                     CurveData::SimpleSpike {
                         lambda: 600.0,
                         left_taper: 100.0,
                         right_taper: 100.0,
                         strength: 0.25,
-                    },
+                    }
+                    .into(),
                     CurveData::SimpleSpike {
                         lambda: 700.0,
                         left_taper: 100.0,
                         right_taper: 100.0,
                         strength: 0.25,
-                    },
+                    }
+                    .into(),
                 ],
                 filename: "data/textures/test.png".to_string(),
-            }],
-        });
+            }]),
+            &map,
+        )
+        .unwrap();
 
         println!("{}", texture.eval_at(550.0, (0.5, 0.5)));
     }

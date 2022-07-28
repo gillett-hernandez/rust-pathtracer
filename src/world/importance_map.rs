@@ -225,6 +225,8 @@ impl ImportanceMap {
 
 #[cfg(test)]
 mod test {
+    use std::path::PathBuf;
+
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
@@ -344,7 +346,7 @@ mod test {
 
     #[test]
     fn test_env_importance_sampling() {
-        let world = construct_world("data/scenes/hdri_test_2.toml");
+        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
         let env = &world.environment;
         if let EnvironmentMap::HDR {
             importance_map,
@@ -478,7 +480,7 @@ mod test {
 
     #[test]
     fn test_env_direct_access() {
-        let world = construct_world("data/scenes/hdri_test_2.toml");
+        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
         let env = &world.environment;
 
         let wavelength_range = BOUNDED_VISIBLE_RANGE;

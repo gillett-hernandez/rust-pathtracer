@@ -185,7 +185,7 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
 pub struct GGX {
     pub alpha: f32,
     pub eta: Curve,
-    pub eta_o: f32, // replace with SPD
+    pub eta_o: Curve,
     pub kappa: Curve,
     pub permeability: f32,
     pub outer_medium_id: usize,
@@ -195,7 +195,7 @@ impl GGX {
     pub fn new(
         roughness: f32,
         eta: Curve,
-        eta_o: f32,
+        eta_o: Curve,
         kappa: Curve,
         permeability: f32,
         outer_medium_id: usize,
@@ -211,37 +211,43 @@ impl GGX {
         }
     }
 
-    fn reflectance(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
+    fn reflectance(&self, eta_outer: f32, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
         if self.permeability > 0.0 {
-            fresnel_dielectric(self.eta_o, eta_inner, cos_theta_i)
+            fresnel_dielectric(eta_outer, eta_inner, cos_theta_i)
         // if cos_theta_i >= 0.0 {
-        // fresnel_dielectric(eta_inner, self.eta_o, cos_theta_i)
+        // fresnel_dielectric(eta_inner, eta_outer, cos_theta_i)
         // } else {
         // }
         } else {
-            fresnel_conductor(self.eta_o, eta_inner, kappa, cos_theta_i)
-            // fresnel_conductor(eta_inner, self.eta_o, kappa, cos_theta_i)
+            fresnel_conductor(eta_outer, eta_inner, kappa, cos_theta_i)
+            // fresnel_conductor(eta_inner, eta_outer, kappa, cos_theta_i)
             // if cos_theta_i >= 0.0 {
             // } else {
             // }
         }
     }
 
-    fn reflectance_probability(&self, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
+    fn reflectance_probability(
+        &self,
+        eta_outer: f32,
+        eta_inner: f32,
+        kappa: f32,
+        cos_theta_i: f32,
+    ) -> f32 {
         if self.permeability > 0.0 {
             // fresnel_dielectric(self.eta_o, eta_i, wi.z())
-            (self.permeability * self.reflectance(eta_inner, kappa, cos_theta_i) + 1.0
+            (self.permeability * self.reflectance(eta_outer, eta_inner, kappa, cos_theta_i) + 1.0
                 - self.permeability)
                 .clamp(0.0, 1.0)
         } else {
             1.0
         }
     }
-    fn eta_rel(&self, eta_inner: f32, wi: Vec3) -> f32 {
+    fn eta_rel(&self, eta_outer: f32, eta_inner: f32, wi: Vec3) -> f32 {
         if wi.z() < 0.0 {
-            self.eta_o / eta_inner
+            eta_outer / eta_inner
         } else {
-            eta_inner / self.eta_o
+            eta_inner / eta_outer
         }
     }
 }
@@ -270,6 +276,7 @@ impl GGX {
         let mut glossy_pdf = 0.0;
         let mut transmission_pdf = 0.0;
         let eta_inner = self.eta.evaluate_power(lambda);
+        let eta_outer = self.eta_o.evaluate_power(lambda);
         let kappa = if self.permeability > 0.0 {
             0.0
         } else {
@@ -283,7 +290,7 @@ impl GGX {
             }
 
             let ndotv = wi * wh;
-            let refl = self.reflectance(eta_inner, kappa, ndotv);
+            let refl = self.reflectance(eta_outer, eta_inner, kappa, ndotv);
             debug_assert!(wh.0.is_finite().all());
             glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
             if ndotv.abs() == 0.0 {
@@ -293,7 +300,7 @@ impl GGX {
             }
             debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
         } else if self.permeability > 0.0 {
-            let eta_rel = self.eta_rel(eta_inner, wi);
+            let eta_rel = self.eta_rel(eta_outer, eta_inner, wi);
 
             let ggxg = ggx_g(self.alpha, wi, wo);
             debug_assert!(
@@ -336,7 +343,7 @@ impl GGX {
             let weight = ggxd * ggxg * ndotv * dwh_dwo1 / g;
             transmission_pdf = (ggxd * partial * dwh_dwo2).abs();
 
-            let inv_reflectance = 1.0 - self.reflectance(eta_inner, kappa, ndotv);
+            let inv_reflectance = 1.0 - self.reflectance(eta_outer, eta_inner, kappa, ndotv);
             transmission.0 = self.permeability * inv_reflectance * weight.abs();
             // println!("{:?}, {:?}, {:?}", eta_inner, kappa, ndotv);
             // println!(
@@ -367,7 +374,7 @@ impl GGX {
             );
         }
 
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, cos_i);
+        let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, cos_i);
         // println!("glossy: {:?}, transmission: {:?}", glossy, transmission);
         // println!(
         //     "glossy_pdf: {:?}, transmission_pdf: {:?}, refl_prob: {:?}",
@@ -436,6 +443,7 @@ impl Material for GGX {
         // }
         debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         let eta_inner = self.eta.evaluate_power(lambda);
+        let eta_outer = self.eta_o.evaluate_power(lambda);
         debug_assert!(eta_inner.is_finite(), "{}", lambda);
         // let eta_rel = self.eta_rel(eta_inner, wi);
         // only enable metal effects if permeability is 0
@@ -445,7 +453,7 @@ impl Material for GGX {
             self.kappa.evaluate_power(lambda)
         };
         let wh = sample_wh(self.alpha, wi, sample).normalized();
-        let refl_prob = self.reflectance_probability(eta_inner, kappa, wh * wi);
+        let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, wh * wi);
         debug_assert!(sample.x.is_finite(), "{}", refl_prob);
         debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wh * wi);
         if refl_prob == 1.0 || sample.x < refl_prob {
@@ -460,7 +468,7 @@ impl Material for GGX {
             // sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
             // transmission
 
-            let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
+            let eta_rel = 1.0 / self.eta_rel(eta_outer, eta_inner, wi);
 
             let mut wo = refract(wi, wh, eta_rel);
             if wo.is_none() {
@@ -521,7 +529,8 @@ mod tests {
     fn test_ggx_functions() {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
+        let flat_one = curves::cie_e(1.0);
+        let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
 
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
 
@@ -654,7 +663,8 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.01, glass, 1.0, flat_zero, 1.0, 0);
+        let flat_one = curves::cie_e(1.0);
+        let ggx_glass = GGX::new(0.01, glass, flat_one, flat_zero, 1.0, 0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
@@ -666,7 +676,8 @@ mod tests {
 
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
+        let flat_one = curves::cie_e(1.0);
+        let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
 
         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
@@ -685,7 +696,10 @@ mod tests {
 
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
+        let flat_one = curves::cie_e(1.0);
+
+        let flat_one = curves::cie_e(1.0);
+        let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
 
         let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
         println!("{:?} {:?}", f, pdf);
@@ -696,7 +710,8 @@ mod tests {
         let visible_bounds = BOUNDED_VISIBLE_RANGE;
         let glass = curves::cauchy(1.45, 3540.0);
         let flat_zero = curves::void();
-        let ggx_glass = GGX::new(0.1, glass, 1.0, flat_zero, 1.0, 0);
+        let flat_one = curves::cie_e(1.0);
+        let ggx_glass = GGX::new(0.1, glass, flat_one, flat_zero, 1.0, 0);
         let n = 10000000;
         let sum: f32 = (0..n)
             .into_par_iter()

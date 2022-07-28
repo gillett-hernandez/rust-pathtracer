@@ -171,7 +171,7 @@ vfov = 5
 [[render_settings]]
 threads = 22
 filename = "PT"
-min_samples = 10
+min_samples = 256
 min_bounces = 3
 max_bounces = 16
 hwss = false
@@ -186,11 +186,11 @@ only_direct = false
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]
 type = "PT"
-light_samples = 4
+light_samples = 6
 # camera_samples = 4
 # selected_pair = [1,1]
 # photon_cache_size = 1024
 [render_settings.resolution]
-width = 1920
-height = 1080
+width = 3840
+height = 2160
 

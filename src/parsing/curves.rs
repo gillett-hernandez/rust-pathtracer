@@ -4,6 +4,7 @@ use crate::curves::*;
 use crate::math::*;
 use math::curves::InterpolationMode;
 
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -308,6 +309,27 @@ impl From<CurveData> for Curve {
                 signal: vec![(lambda, left_taper, right_taper, strength)],
             },
         }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum CurveDataOrReference {
+    Literal(CurveData),
+    Reference(String),
+}
+impl CurveDataOrReference {
+    pub fn resolve(&self, curves_mapping: &HashMap<String, Curve>) -> Option<Curve> {
+        match self {
+            Self::Literal(inner) => Some(inner.clone().into()),
+            Self::Reference(name) => curves_mapping.get(name).cloned(),
+        }
+    }
+}
+
+impl From<CurveData> for CurveDataOrReference {
+    fn from(data: CurveData) -> Self {
+        CurveDataOrReference::Literal(data)
     }
 }
 

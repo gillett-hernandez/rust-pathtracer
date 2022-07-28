@@ -339,7 +339,8 @@ fn main() {
 
     let glass = curves::cauchy(1.5, 10000.0);
     let flat_zero = curves::void();
-    let _ggx_glass = GGX::new(0.00001, glass, 1.0, flat_zero, 1.0, 0);
+    let flat_one = curves::cie_e(1.0);
+    let _ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
 
     let cornell_colors = load_multiple_csv_rows(
         "data/curves/csv/cornell.csv",
