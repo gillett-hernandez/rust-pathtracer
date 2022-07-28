@@ -364,9 +364,8 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wi = vertex.local_wi;
                     let material = self.world.get_material(vertex.material_id);
 
-
                     // bug with specific special conditions
-                    // when vertex.normal is 
+
                     let emission =
                         material.emission(vertex.lambda, vertex.uv, TransportMode::Importance, wi);
 

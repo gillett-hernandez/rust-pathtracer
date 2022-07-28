@@ -38,7 +38,7 @@ impl Material for DiffuseLight {
         if wo.z() * wi.z() > 0.0 {
             (
                 SingleEnergy::new(self.bounce_color.evaluate_clamped(lambda) / PI),
-                (wo.z() / PI).into(),
+                (wo.z().abs() / PI).into(),
             )
         } else {
             (0.0.into(), 0.0.into())
@@ -50,10 +50,12 @@ impl Material for DiffuseLight {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         s: Sample2D,
-        _wi: Vec3,
+        wi: Vec3,
     ) -> Option<Vec3> {
         // bounce, copy from lambertian
-        Some(random_cosine_direction(s))
+
+        let d = random_cosine_direction(s) * wi.z().signum();
+        Some(d)
     }
     fn sample_emission(
         &self,

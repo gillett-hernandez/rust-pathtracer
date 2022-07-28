@@ -196,7 +196,7 @@ bounce_color = "flat_78"
 
 [diffuse_light_cornell_accurate]
 type = "DiffuseLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 emit_color = "cornell_light_accurate"
 bounce_color = "flat_78"
 

@@ -13,10 +13,10 @@ color = "flat_zero"
 material_name = "diffuse_light_cornell_accurate"
 [instances.aggregate]
 type = "Rect"
-size = [0.13, 0.105]
+size = [0.105, 0.13]
 origin = [0.278, 0.2795, 0.5487]
 normal = "Z"
-two_sided = true
+two_sided = false
 
 
 [[instances]]

@@ -22,9 +22,10 @@ impl Material for Lambertian {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         s: Sample2D,
-        _wi: Vec3,
+        wi: Vec3,
     ) -> Option<Vec3> {
-        Some(random_cosine_direction(s))
+        let d = random_cosine_direction(s) * wi.z().signum();
+        Some(d)
     }
     // don't implement sample_emission, since the default implementation is what we want.
     // though perhaps it would be a good idea to panic if a the integrator tries to sample the emission of a lambertian
@@ -42,7 +43,7 @@ impl Material for Lambertian {
         if wo.z() * wi.z() > 0.0 {
             (
                 SingleEnergy::new(self.texture.eval_at(lambda, uv).min(1.0) / PI),
-                (wo.z() / PI).into(),
+                (wo.z().abs() / PI).into(),
             )
         } else {
             (0.0.into(), 0.0.into())

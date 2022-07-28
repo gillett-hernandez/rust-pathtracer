@@ -243,15 +243,12 @@ pub fn random_walk(
             if let Some(wo) = maybe_wo {
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
                 let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
-                let cos_i = wo.z().abs();
-                let cos_o = wi.z().abs();
+                let cos_o = wo.z().abs();
+                let cos_i = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
-                // if emission.0 > 0.0 {
-
-                // }
 
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
-                if pdf.0 < 0.00000001 || pdf.is_nan() {
+                if pdf.is_nan() {
                     break;
                 }
                 let rr_continue_prob = if bounce >= russian_roulette_start_index {
@@ -263,8 +260,8 @@ pub fn random_walk(
                 if russian_roulette_sample.x > rr_continue_prob {
                     break;
                 }
-                beta *= f * cos_i.abs() / (rr_continue_prob * pdf.0);
-                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_i;
+                beta *= f * cos_o.abs() / (rr_continue_prob * pdf.0);
+                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
 
                 // consider handling delta distributions differently here, if deltas are ever added.
                 // eval pdf in reverse direction
@@ -273,7 +270,7 @@ pub fn random_walk(
                         .bsdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
                         .1
                          .0
-                    / cos_o;
+                    / cos_i;
 
                 debug_assert!(
                     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
@@ -304,7 +301,7 @@ pub fn random_walk(
                 // let beta_before_hit = beta;
                 // last_bsdf_pdf = pdf;
 
-                debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_i, pdf);
+                debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_o, pdf);
 
                 // add normal to avoid self intersection
                 // also convert wo back to world space when spawning the new ray

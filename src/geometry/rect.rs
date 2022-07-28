@@ -86,11 +86,9 @@ impl Hittable for AARect {
             return None;
         }
         let mut hit_normal = Vec3::from_axis(self.normal);
-        // TODO: verify this, that we want to reverse the normal if the rect is two_sided and it intersected the opposite side
-        // r.direction * hit.normal > 0 would imply that the normal and ray direction are roughly in the same hemisphere
-        // which for this case (two sided) is no good,
-        // thus swap hit normal since we're two sided
-        if r.direction * hit_normal > 0.0 && self.two_sided {
+
+        // if two sided, and the ray direction and normal 
+        if self.two_sided && r.direction * hit_normal > 0.0 {
             hit_normal = -hit_normal;
         }
         let uv = (
