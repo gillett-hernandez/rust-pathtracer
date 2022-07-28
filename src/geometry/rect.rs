@@ -68,6 +68,7 @@ impl Hittable for AARect {
         let tmp_o = vec_shuffle(r.origin - self.origin, &self.normal);
         let tmp_d = vec_shuffle(r.direction, &self.normal);
         if tmp_d.z() == 0.0 {
+            // parallel ray, will never intersect
             return None;
         }
         let t = (-tmp_o.z()) / tmp_d.z();
@@ -85,6 +86,10 @@ impl Hittable for AARect {
             return None;
         }
         let mut hit_normal = Vec3::from_axis(self.normal);
+        // TODO: verify this, that we want to reverse the normal if the rect is two_sided and it intersected the opposite side
+        // r.direction * hit.normal > 0 would imply that the normal and ray direction are roughly in the same hemisphere
+        // which for this case (two sided) is no good,
+        // thus swap hit normal since we're two sided
         if r.direction * hit_normal > 0.0 && self.two_sided {
             hit_normal = -hit_normal;
         }

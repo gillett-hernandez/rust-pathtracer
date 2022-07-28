@@ -180,8 +180,8 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "cornell_render_accurate"
-min_samples = 128
+filename = "cornell_test"
+min_samples = 1
 min_bounces = 3
 max_bounces = 8
 hwss = false
@@ -189,9 +189,9 @@ hwss = false
 # camera_id = "sun test camera"
 camera_id = "cornell camera"
 # camera_id = "wideangle sun test camera side"
-exposure = 0.18
+exposure = 0.03
 russian_roulette = true
-only_direct = false
+only_direct = true
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.integrator]

@@ -1,3 +1,5 @@
+use log_once::warn_once;
+
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
@@ -304,7 +306,12 @@ impl SamplerIntegrator for PathTracingIntegrator {
             return XYZColor::BLACK;
         }
 
-        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let max_bounces = if self.only_direct {
+            1
+        } else {
+            self.max_bounces
+        };
+        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + max_bounces as usize);
 
         path.push(SurfaceVertex::new(
             VertexType::Camera,
@@ -317,14 +324,14 @@ impl SamplerIntegrator for PathTracingIntegrator {
             MaterialId::Camera(0),
             0,
             SingleEnergy::from(throughput_and_pdf.0),
-            1.0,
+            100.0,
             0.0,
             1.0,
         ));
         let _ = random_walk(
             camera_ray,
             lambda,
-            self.max_bounces,
+            max_bounces,
             SingleEnergy::from(throughput_and_pdf.0),
             TransportMode::Importance,
             sampler,
@@ -333,11 +340,9 @@ impl SamplerIntegrator for PathTracingIntegrator {
             self.min_bounces,
             profile,
         );
+        // sum.energy += additional_contribution.unwrap_or(0.0.into());
 
-        for (index, vertex) in path.iter().enumerate() {
-            if index == 0 {
-                continue;
-            }
+        for (index, vertex) in path.iter().enumerate().skip(1) {
             let prev_vertex = path[index - 1];
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
             if let VertexType::LightSource(light_source) = vertex.vertex_type {
@@ -354,30 +359,34 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     sum.energy += weight * vertex.throughput * emission;
                     debug_assert!(!sum.energy.is_nan());
                 } else {
-                    let hit = HitRecord::from(*vertex);
-                    let frame = TangentFrame::from_normal(hit.normal);
-                    let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                    let _maybe_dir_to_next = path
-                        .get(index + 1)
-                        .map(|v| (v.point - vertex.point).normalized());
-                    let wi = frame.to_local(&dir_to_prev);
+                    // let hit = HitRecord::from(*vertex);
+
+                    let wi = vertex.local_wi;
                     let material = self.world.get_material(vertex.material_id);
 
-                    let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
+
+                    // bug with specific special conditions
+                    // when vertex.normal is 
+                    let emission =
+                        material.emission(vertex.lambda, vertex.uv, TransportMode::Importance, wi);
 
                     if emission.0 > 0.0 {
-                        if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
+                        if self.light_samples == 0
+                            || matches!(prev_vertex.vertex_type, VertexType::Camera)
+                        {
                             sum.energy += vertex.throughput * emission;
                             debug_assert!(!sum.energy.is_nan());
                         } else {
-                            let hit_primitive = self.world.get_primitive(hit.instance_id);
-                            // // println!("{:?}", hit);
+                            let hit_primitive = self.world.get_primitive(vertex.instance_id);
+
                             let pdf = hit_primitive.psa_pdf(
-                                prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
+                                prev_vertex.normal
+                                    * (vertex.point - prev_vertex.point).normalized(),
                                 prev_vertex.point,
-                                hit.point,
+                                vertex.point,
                             );
                             let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+
                             debug_assert!(
                                 !pdf.is_nan() && !weight.is_nan(),
                                 "{:?}, {}",
@@ -385,6 +394,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                                 weight
                             );
                             sum.energy += weight * vertex.throughput * emission;
+
                             debug_assert!(!sum.energy.is_nan());
                         }
                     }
@@ -441,9 +451,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         self.light_samples
                     );
                 }
-            }
-            if self.only_direct {
-                break;
             }
         }
 

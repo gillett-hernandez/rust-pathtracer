@@ -127,7 +127,6 @@ impl Material for DiffuseLight {
         }
     }
 
-    // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
         &self,
         _lambda: f32,

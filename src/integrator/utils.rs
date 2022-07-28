@@ -1,4 +1,4 @@
-use crate::hittable::HitRecord;
+use crate::hittable::{HitRecord, Hittable};
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
 use crate::mediums::Medium;
@@ -159,15 +159,19 @@ pub fn random_walk(
     // let mut last_bsdf_pdf = PDF::from(0.0);
     let mut additional_contribution = SingleEnergy::ZERO;
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
+    let mut last_vertex: Option<SurfaceVertex> = None;
     for bounce in 0..bounce_limit {
-        if let Some(mut hit) = world.hit(ray, 0.01, ray.tmax) {
+        if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
             hit.lambda = lambda;
             hit.transport_mode = trace_type;
+
+            let frame = TangentFrame::from_normal(hit.normal);
+            let wi = frame.to_local(&-ray.direction).normalized();
             let mut vertex = SurfaceVertex::new(
                 trace_type.into(),
                 hit.time,
                 hit.lambda,
-                -ray.direction, // TODO: change how this struct member is named, since this clearly isn't actually the local_wi
+                wi,
                 hit.point,
                 hit.normal,
                 hit.uv,
@@ -179,24 +183,51 @@ pub fn random_walk(
                 1.0,
             );
 
-            let frame = TangentFrame::from_normal(hit.normal);
-            let wi = frame.to_local(&-ray.direction).normalized();
-
-            if let MaterialId::Camera(_camera_id) = hit.material {
-                if trace_type == TransportMode::Radiance {
-                    // if hit camera directly while tracing a light path
+            let material = world.get_material(hit.material);
+            let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
+            match (hit.material, last_vertex, trace_type) {
+                (MaterialId::Camera(_camera_id), _, TransportMode::Radiance) => {
                     vertex.vertex_type = VertexType::Camera;
                     vertices.push(vertex);
+                    break;
                 }
-                break;
-            } else {
                 // if directly hit a light while tracing a camera path.
-                if let MaterialId::Light(_light_id) = hit.material {
-                    // TODO: handle this
-                }
-            }
+                (MaterialId::Light(_light_id), None, TransportMode::Importance) => {
+                    vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
 
-            let material = world.get_material(hit.material);
+                    // if emission.0 > 0.0 {
+                    //     additional_contribution += vertex.throughput * emission;
+                    // }
+                }
+                (MaterialId::Light(_light_id), Some(prev_vertex), TransportMode::Importance) => {
+                    vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
+
+                    // if emission.0 > 0.0 {
+                    //     if prev_vertex.pdf_forward == 0.0 {
+                    //         additional_contribution += vertex.throughput * emission;
+                    //     } else {
+                    //         let hit_primitive = world.get_primitive(hit.instance_id);
+                    //         assert!(world.instance_is_light(hit_primitive.instance_id));
+
+                    //         let pdf = hit_primitive.psa_pdf(
+                    //             prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
+                    //             prev_vertex.point,
+                    //             hit.point,
+                    //         );
+                    //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                    //         debug_assert!(
+                    //             !pdf.is_nan() && !weight.is_nan(),
+                    //             "{:?}, {}",
+                    //             pdf,
+                    //             weight
+                    //         );
+                    //         additional_contribution += weight * vertex.throughput * emission;
+                    //         debug_assert!(!additional_contribution.is_nan());
+                    //     }
+                    // }
+                }
+                _ => {}
+            }
 
             // consider accumulating emission in some other form for trace_type == TransportMode::Importance situations, as mentioned in veach.
             let maybe_wo: Option<Vec3> = material.generate(
@@ -206,9 +237,6 @@ pub fn random_walk(
                 sampler.draw_2d(),
                 wi,
             );
-
-            // what to do in this situation, where there is a wo and there's also emission?
-            let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
 
             // wo is generated in tangent space.
 
@@ -270,6 +298,7 @@ pub fn random_walk(
                 //     rr_continue_prob,
                 // );
 
+                last_vertex = Some(vertex);
                 vertices.push(vertex);
 
                 // let beta_before_hit = beta;
@@ -285,20 +314,19 @@ pub fn random_walk(
                 );
             } else {
                 // hit a surface and didn't bounce.
+
                 if emission.0 > 0.0 {
                     vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
                     vertex.pdf_forward = 0.0;
                     vertex.pdf_backward = 1.0;
                     vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
                     vertices.push(vertex);
-                } else {
-                    // this happens when the backside of a light is hit?
                 }
                 break;
             }
         } else {
             // add a vertex when a camera ray hits the environment
-            // maybe resample the environment here?
+            // TODO: maybe resample the environment here?
             if trace_type == TransportMode::Importance {
                 let world_radius = world.get_world_radius();
                 let at_env = ray.direction * world_radius;
