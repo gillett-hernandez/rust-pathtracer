@@ -6,7 +6,9 @@ The purpose is to help me become more familiar with Rust and with general Light 
 
 The following is an image rendered with the BDPT integrator. The light at the top appears dark because it's emitting mainly in the downward direction. The walls' color uses the spectral data from the cornell website. The gem's material information matches that of moissanite, from https://refractiveindex.info/. Color noise is from the fact that this version of the bdpt integrator didn't use HWSS, and from the fact that most of the illumination into the scene is split into very colorful caustics which increases the color variance.
 
-![render](https://github.com/gillett-hernandez/rust-pathtracer/blob/master/showcase/moissanite_gem_1080p.png?raw=true)
+![render](./showcase/moissanite_gem_1080p.png)
+
+See [this](./showcase.md) for some more renders and details
 
 Most, if not all of the integrators use importance sampling and MIS, and they trace using single wavelength sampling
 
@@ -76,6 +78,7 @@ That should theoretically cause images to converge faster, though the feature is
 * [x] implement light tracing
 * [x] implement BDPT
 * [x] refactor bsdf trait methods to reduce duplication
+* [ ] simd based HWSS. WIP on a local branch.
 * [ ] basic mediums
 * [ ] implement real units for radiance and camera importance
 * [ ] research image reconstruction theory and implement proper pixel filtering
