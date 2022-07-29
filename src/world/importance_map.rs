@@ -281,10 +281,11 @@ mod test {
 
     use super::*;
     use crate::renderer::Film;
-    use crate::tonemap::{sRGB, Tonemapper};
+    use crate::tonemap::{Clamp, Converter, Tonemapper};
+
     use crate::world::environment::*;
     use crate::{
-        parsing::construct_world,
+        parsing::{construct_world, parse_tonemapper},
         texture::{Texture, Texture1},
     };
 
@@ -334,6 +335,10 @@ mod test {
         let mut buffer = vec![0u32; limit];
         let mut film = Film::new(width, height, XYZColor::BLACK);
 
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Clamp::new(0.0);
+
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
         for idx in 0..limit {
@@ -378,15 +383,20 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
+
                 buffer
                     .par_iter_mut()
                     .enumerate()
                     .for_each(|(pixel_idx, v)| {
                         let y: usize = pixel_idx / width;
                         let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
+
+                        let [r, g, b, _]: [f32; 4] = converter
+                            .transfer_function(
+                                tonemapper.map(&film, (x as usize, y as usize)),
+                                false,
+                            )
+                            .into();
                         *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
                     });
                 window.update_with_buffer(&buffer, width, height).unwrap();
@@ -448,6 +458,9 @@ mod test {
             });
             let mut buffer = vec![0u32; limit];
             let mut film = Film::new(width, height, XYZColor::BLACK);
+            let converter = Converter::sRGB;
+
+            let mut tonemapper = Clamp::new(0.0);
 
             window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -510,15 +523,18 @@ mod test {
 
                 if idx % 100 == 0 {
                     pb.add(100);
-                    let srgb_tonemapper = sRGB::new(&film, 1.0, false);
                     buffer
                         .par_iter_mut()
                         .enumerate()
                         .for_each(|(pixel_idx, v)| {
                             let y: usize = pixel_idx / width;
                             let x: usize = pixel_idx - width * y;
-                            let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                            let [r, g, b, _]: [f32; 4] = mapped.into();
+                            let [r, g, b, _]: [f32; 4] = converter
+                                .transfer_function(
+                                    tonemapper.map(&film, (x as usize, y as usize)),
+                                    false,
+                                )
+                                .into();
                             *v =
                                 rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
                         });
@@ -530,9 +546,10 @@ mod test {
                 estimate / limit as f32,
                 estimate2 / limit as f32
             );
-            let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-            srgb_tonemapper.write_to_files(
+
+            converter.write_to_files(
                 &film,
+                Box::new(tonemapper),
                 "env_map_sampling_test.exr",
                 "env_map_sampling_test.png",
             );
@@ -568,6 +585,9 @@ mod test {
         });
         let mut buffer = vec![0u32; limit];
         let mut film = Film::new(width, height, XYZColor::BLACK);
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Clamp::new(0.0);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -614,15 +634,18 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
                 buffer
                     .par_iter_mut()
                     .enumerate()
                     .for_each(|(pixel_idx, v)| {
                         let y: usize = pixel_idx / width;
                         let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
+                        let [r, g, b, _]: [f32; 4] = converter
+                            .transfer_function(
+                                tonemapper.map(&film, (x as usize, y as usize)),
+                                false,
+                            )
+                            .into();
                         *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
                     });
                 window.update_with_buffer(&buffer, width, height).unwrap();
@@ -700,6 +723,9 @@ mod test {
         });
         let mut buffer = vec![0u32; limit];
         let mut film = Film::new(width, height, XYZColor::BLACK);
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Clamp::new(0.0);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -751,15 +777,18 @@ mod test {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
                 buffer
                     .par_iter_mut()
                     .enumerate()
                     .for_each(|(pixel_idx, v)| {
                         let y: usize = pixel_idx / width;
                         let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
+                        let [r, g, b, _]: [f32; 4] = converter
+                            .transfer_function(
+                                tonemapper.map(&film, (x as usize, y as usize)),
+                                false,
+                            )
+                            .into();
                         *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
                     });
                 window.update_with_buffer(&buffer, width, height).unwrap();

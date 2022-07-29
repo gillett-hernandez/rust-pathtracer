@@ -5,8 +5,8 @@ mod pt;
 pub mod utils;
 
 pub use crate::camera::{Camera, CameraId};
-use crate::config::IntegratorKind;
-use crate::config::RenderSettings;
+use crate::parsing::config::{IntegratorKind, RenderSettings};
+
 use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;

@@ -1,23 +1,21 @@
 use super::{output_film, Film, Renderer};
 
-use crate::config::{Config, IntegratorKind, RenderSettings, Resolution};
+use crate::parsing::config::{Config, IntegratorKind, RenderSettings, RendererType, Resolution};
 // use crate::integrator::*;
+use crate::camera::Camera;
 use crate::integrator::{
     CameraId, GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator,
 };
 use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
+use crate::parsing::parse_tonemapper;
 use crate::profile::Profile;
 use crate::rgb_to_u32;
-use crate::tonemap::{sRGB, Tonemapper};
 use crate::world::World;
-use crate::{camera::Camera, config::RendererType};
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-
-// use crossbeam::channel::unbounded;
 
 use crossbeam::channel::unbounded;
 use pbr::ProgressBar;
@@ -49,6 +47,7 @@ impl Renderer for PreviewRenderer {
 
             let film_idx = selected_preview_film_id;
             let render_settings = config.render_settings[film_idx].clone();
+            let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
 
             world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
             let arc_world = Arc::new(world.clone());
@@ -154,11 +153,14 @@ impl Renderer for PreviewRenderer {
                     let light_buffer = Arc::new(Mutex::new(vec![0u32; width * height]));
                     let light_buffer_ref = Arc::clone(&light_buffer);
                     let render_settings_copy = render_settings.clone();
+
                     let splatting_thread = thread::spawn(move || {
                         let film = &mut light_film_ref.lock().unwrap();
                         let mut local_total_splats = total_splats_ref.lock().unwrap();
                         let mut local_stop_splatting = false;
                         let mut remaining_iterations = 10;
+                        let (mut tonemapper2, converter) =
+                            parse_tonemapper(render_settings_copy.tonemap_settings);
 
                         loop {
                             // let mut samples: Vec<(Sample, u8)> = rx.try_iter().collect();
@@ -209,12 +211,8 @@ impl Renderer for PreviewRenderer {
                                     _ => {}
                                 }
                             }
-                            let srgb_tonemapper = sRGB::new(
-                                &film,
-                                render_settings_copy.exposure.unwrap_or(1.0),
-                                false,
-                            );
                             {
+                                tonemapper2.initialize(film);
                                 light_buffer_ref
                                     .lock()
                                     .unwrap()
@@ -223,8 +221,12 @@ impl Renderer for PreviewRenderer {
                                     .for_each(|(pixel_idx, v)| {
                                         let y: usize = pixel_idx / width;
                                         let x: usize = pixel_idx - width * y;
-                                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                                        let [r, g, b, _]: [f32; 4] = mapped.into();
+                                        let [r, g, b, _]: [f32; 4] = converter
+                                            .transfer_function(
+                                                tonemapper2.map(&film, (x as usize, y as usize)),
+                                                false,
+                                            )
+                                            .into();
                                         *v = rgb_to_u32(
                                             (255.0 * r) as u8,
                                             (255.0 * g) as u8,
@@ -319,20 +321,19 @@ impl Renderer for PreviewRenderer {
                                     tx1.send(splat).unwrap();
                                 }
                             });
-                        let srgb_tonemapper = sRGB::new(
-                            &films[film_idx],
-                            render_settings.exposure.unwrap_or(1.0),
-                            false,
-                        );
+                        tonemapper.initialize(&films[film_idx]);
                         buffer
                             .par_iter_mut()
                             .enumerate()
                             .for_each(|(pixel_idx, v)| {
                                 let y: usize = pixel_idx / width;
                                 let x: usize = pixel_idx - width * y;
-                                let (mapped, _linear) =
-                                    srgb_tonemapper.map(&films[film_idx], (x, y));
-                                let [r, g, b, _]: [f32; 4] = mapped.into();
+                                let [r, g, b, _]: [f32; 4] = converter
+                                    .transfer_function(
+                                        tonemapper.map(&films[film_idx], (x as usize, y as usize)),
+                                        false,
+                                    )
+                                    .into();
                                 *v = rgb_to_u32(
                                     (255.0 * r) as u8,
                                     (255.0 * g) as u8,
@@ -460,20 +461,19 @@ impl Renderer for PreviewRenderer {
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
                         println!("took {}s", elapsed);
                         stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
-                        let srgb_tonemapper = sRGB::new(
-                            &films[film_idx],
-                            render_settings.exposure.unwrap_or(0.18),
-                            false,
-                        );
+                        tonemapper.initialize(&films[film_idx]);
                         buffer
                             .par_iter_mut()
                             .enumerate()
                             .for_each(|(pixel_idx, v)| {
                                 let y: usize = pixel_idx / width;
                                 let x: usize = pixel_idx - width * y;
-                                let (mapped, _linear) =
-                                    srgb_tonemapper.map(&films[film_idx], (x, y));
-                                let [r, g, b, _]: [f32; 4] = mapped.into();
+                                let [r, g, b, _]: [f32; 4] = converter
+                                    .transfer_function(
+                                        tonemapper.map(&films[film_idx], (x as usize, y as usize)),
+                                        false,
+                                    )
+                                    .into();
                                 *v = rgb_to_u32(
                                     (255.0 * r) as u8,
                                     (255.0 * g) as u8,

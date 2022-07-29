@@ -14,7 +14,7 @@ pub use math;
 pub mod aabb;
 pub mod accelerator;
 pub mod camera;
-pub mod config;
+
 pub mod curves;
 pub mod geometry;
 pub mod hittable;

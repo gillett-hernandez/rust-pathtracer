@@ -1,7 +1,7 @@
 extern crate rust_pathtracer as root;
 
 use log::LevelFilter;
-use root::config::*;
+use root::parsing::config::*;
 use root::parsing::construct_world;
 use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;

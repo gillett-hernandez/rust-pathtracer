@@ -2,12 +2,12 @@ use super::{calculate_widest_wavelength_bounds, output_film, Film, Renderer};
 
 use crate::camera::{Camera, CameraId};
 
-use crate::config::{Config, IntegratorKind, RenderSettings};
 use crate::integrator::{
     BDPTIntegrator, GenericIntegrator, Integrator, IntegratorType, LightTracingIntegrator, Sample,
     SamplerIntegrator,
 };
 use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
+use crate::parsing::config::{Config, IntegratorKind, RenderSettings};
 use crate::profile::Profile;
 use crate::world::{EnvironmentMap, World};
 

@@ -3,12 +3,12 @@ pub mod utils;
 use utils::*;
 
 // use crate::aabb::HasBoundingBox;
-use crate::config::RenderSettings;
 use crate::hittable::Hittable;
 use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::*;
 use crate::math::*;
+use crate::parsing::config::RenderSettings;
 use crate::world::TransportMode;
 use crate::world::World;
 // use std::f32::INFINITY;

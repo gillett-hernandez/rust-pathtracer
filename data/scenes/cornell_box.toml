@@ -10,7 +10,7 @@ color = "flat_zero"
 
 
 [[instances]]
-material_name = "diffuse_light_cornell_accurate"
+material_name = "diffuse_light_cornell"
 [instances.aggregate]
 type = "Rect"
 size = [0.105, 0.13]

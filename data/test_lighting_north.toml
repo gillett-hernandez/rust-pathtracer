@@ -1,4 +1,4 @@
-default_scene_file = "data/scenes/white_furnace.toml"
+default_scene_file = "data/scenes/test_lighting_north.toml"
 [renderer]
 type="Naive"
 # type = "Preview"
@@ -16,10 +16,10 @@ vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "test_whitefurnace_pt"
+filename = "test_lighting_north_pt"
 min_samples = 128
 min_bounces = 1
-max_bounces = 8
+max_bounces = 4
 hwss = false
 camera_id = "camera"
 russian_roulette = false

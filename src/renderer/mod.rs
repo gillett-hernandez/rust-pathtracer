@@ -14,9 +14,9 @@ pub use preview::PreviewRenderer;
 
 use crate::camera::Camera;
 
-use crate::config::{Config, RenderSettings};
 use crate::math::{Bounds1D, XYZColor};
-use crate::tonemap::{sRGB, Tonemapper};
+use crate::parsing::config::{Config, RenderSettings};
+use crate::parsing::parse_tonemapper;
 use crate::world::World;
 
 pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
@@ -25,8 +25,16 @@ pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
-    let srgb_tonemapper = sRGB::new(film, render_settings.exposure.unwrap_or(1.0), true);
-    srgb_tonemapper.write_to_files(film, &exr_filename, &png_filename);
+    let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
+    tonemapper.initialize(film);
+
+    match converter.write_to_files(film, tonemapper, &exr_filename, &png_filename) {
+        Err(_) => {
+            error!("failed to write files for some reason");
+            panic!();
+        }
+        Ok(_) => {}
+    }
 }
 
 pub fn calculate_widest_wavelength_bounds(

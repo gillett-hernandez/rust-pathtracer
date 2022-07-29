@@ -3,6 +3,7 @@ extern crate serde;
 
 use crate::camera::{Camera, ProjectiveCamera, RealisticCamera};
 use crate::math::{Point3, Vec3};
+use crate::parsing::tonemap::TonemapSettings;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -92,12 +93,12 @@ pub struct RenderSettings {
     pub hwss: bool,
     pub threads: Option<u16>,
     pub min_samples: u16,
-    pub exposure: Option<f32>,
     pub max_samples: Option<u16>,
     pub camera_id: usize,
     pub russian_roulette: Option<bool>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
+    pub tonemap_settings: TonemapSettings,
 }
 
 #[derive(Deserialize, Clone)]
@@ -116,6 +117,7 @@ pub struct TOMLRenderSettings {
     pub russian_roulette: Option<bool>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
+    pub tonemap_settings: TonemapSettings,
 }
 
 impl From<TOMLRenderSettings> for RenderSettings {
@@ -129,12 +131,12 @@ impl From<TOMLRenderSettings> for RenderSettings {
             threads: data.threads,
             hwss: data.hwss,
             min_samples: data.min_samples,
-            exposure: data.exposure,
             max_samples: data.max_samples,
             camera_id: 0,
             russian_roulette: data.russian_roulette,
             only_direct: data.only_direct,
             wavelength_bounds: data.wavelength_bounds,
+            tonemap_settings: data.tonemap_settings,
         }
     }
 }
@@ -182,6 +184,8 @@ impl From<TOMLConfig> for Config {
 }
 
 pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
+    // this function is necessary because different render settings change the aspect ratio of the camera,
+    // even if they're using the "same" camera
     let mut cameras: Vec<Camera> = Vec::new();
     let mut camera_map: HashMap<String, Camera> = HashMap::new();
     let mut config = Config::from(settings.clone());

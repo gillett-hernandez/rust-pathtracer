@@ -1,5 +1,6 @@
 extern crate serde;
 
+pub mod config;
 pub mod curves;
 pub mod environment;
 pub mod instance;
@@ -7,6 +8,7 @@ pub mod material;
 pub mod medium;
 pub mod primitives;
 pub mod texture;
+pub mod tonemap;
 
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
@@ -15,6 +17,7 @@ use math::Transform3;
 use medium::*;
 use serde::de::DeserializeOwned;
 use texture::*;
+pub use tonemap::parse_tonemapper;
 
 pub use curves::{
     load_csv, load_ior_and_kappa, load_linear, load_multiple_csv_rows,

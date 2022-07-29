@@ -8,10 +8,7 @@ type="Sun"
 strength = 1.0
 angular_diameter = 0.0565
 sun_direction = [0.0, 0.0, 1.0]
-[environment.color]
-type = "Flat"
-strength = 1.0
-interpolation_mode = "Linear"
+color = "D65"
 
 
 
@@ -19,5 +16,5 @@ interpolation_mode = "Linear"
 material_name = "lambertian_white"
 [instances.aggregate]
 type = "Sphere"
-radius = 0.2
+radius = 1.0
 origin = [0.0, 0.0, 0.0]

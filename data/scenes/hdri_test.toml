@@ -5,7 +5,7 @@ materials = "data/lib_materials.toml"
 env_sampling_probability = 0.9
 [environment]
 type="HDRI"
-strength = 0.4
+strength = 1.0
 texture_name = "machine_shop_4k"
 [environment.importance_map]
 # width = 2048
@@ -14,84 +14,10 @@ width = 1024
 height = 1024
 
 
-
-
-# light above
-[[instances]]
-material_name = "diffuse_light"
-[instances.aggregate]
-type = "Rect"
-size = [2, 2]
-origin = [0.0, 0.0, 1.0]
-normal = "Z"
-two_sided = true
-
-# floor on side
 [[instances]]
 material_name = "lambertian_white"
 [instances.aggregate]
-type = "Rect"
-size = [10, 10]
-origin = [0.0, -5.0, -1.0]
-normal = "Z"
-two_sided = true
-
-# spheres on floor, on left
-[[instances]]
-material_name = "ggx_glass_dispersive"
-[instances.aggregate]
 type = "Sphere"
-radius = 0.2
-origin = [-0.6, 0.3, -0.8]
-
-[[instances]]
-material_name = "ggx_gold"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [-0.6, 0.8, -0.8]
-
-[[instances]]
-material_name = "ggx_copper"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.6, 0.3, -0.8]
-
-[[instances]]
-material_name = "lambertian_red"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.6, 0.8, -0.8]
-
-
-# spheres on floor, on right
-[[instances]]
-material_name = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [-0.6, -0.3, -0.8]
-
-[[instances]]
-material_name = "ggx_gold"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [-0.6, -0.8, -0.8]
-
-[[instances]]
-material_name = "ggx_copper"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.6, -0.3, -0.8]
-
-[[instances]]
-material_name = "lambertian_red"
-[instances.aggregate]
-type = "Sphere"
-radius = 0.2
-origin = [0.6, -0.8, -0.8]
+radius = 1.0
+origin = [0.0, 0.0, 0.0]
 

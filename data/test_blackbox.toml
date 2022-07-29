@@ -26,6 +26,9 @@ hwss = false
 camera_id = "camera"
 russian_roulette = true
 only_direct = true
+[render_settings.tonemap_settings]
+type = "Clamp"
+exposure = 0.0
 [render_settings.integrator]
 type = "PT"
 light_samples = 6
@@ -45,6 +48,9 @@ hwss = false
 camera_id = "camera"
 russian_roulette = true
 only_direct = false
+[render_settings.tonemap_settings]
+type = "Clamp"
+exposure = 0.0
 [render_settings.integrator]
 type = "PT"
 light_samples = 6
