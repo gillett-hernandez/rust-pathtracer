@@ -42,6 +42,16 @@ vfov = 35.4
 
 
 [[cameras]]
+type="SimpleCamera"
+name = "blackbox camera"
+look_from = [0.5, 0.0, 0.0]
+look_at = [0, 0, 0]
+aperture_size = 0.001
+focal_distance = 0.5
+vfov = 70.4
+
+
+[[cameras]]
 type="RealisticCamera"
 name = "petzval kodak"
 lens_spec = "data/cameras/petzval_kodak.txt"
@@ -180,14 +190,15 @@ vfov = 5
 
 [[render_settings]]
 threads = 22
-filename = "cornell_test"
-min_samples = 256
+filename = "light_leakage_test"
+min_samples = 8
 min_bounces = 2
 max_bounces = 6
 hwss = false
 # camera_id = "cube camera"
 # camera_id = "sun test camera"
-camera_id = "cornell camera"
+camera_id = "blackbox camera"
+# camera_id = "cornell camera"
 # camera_id = "wideangle sun test camera side"
 exposure = 0.01
 russian_roulette = true

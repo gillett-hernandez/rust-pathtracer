@@ -353,7 +353,13 @@ impl SamplerIntegrator for PathTracingIntegrator {
 
                     profile.env_hits += 1;
                     sum.energy += weight * vertex.throughput * emission;
-                    debug_assert!(!sum.energy.is_nan());
+                    debug_assert!(
+                        !sum.energy.is_nan(),
+                        "{:?} {:?} {:?}",
+                        weight,
+                        vertex.throughput,
+                        emission
+                    );
                 } else {
                     // let hit = HitRecord::from(*vertex);
 

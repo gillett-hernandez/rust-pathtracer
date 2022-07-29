@@ -462,7 +462,7 @@ impl Renderer for PreviewRenderer {
                         stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         let srgb_tonemapper = sRGB::new(
                             &films[film_idx],
-                            render_settings.exposure.unwrap_or(1.0),
+                            render_settings.exposure.unwrap_or(0.18),
                             false,
                         );
                         buffer

@@ -11,11 +11,9 @@ strength = 1.0
 interpolation_mode = "Linear"
 
 
-
-
 [[instances]]
-material_name = "lambertian_white_2"
+material_name = "ggx_glass_rough"
 [instances.aggregate]
 type = "Sphere"
-radius = 0.2
+radius = 1.0
 origin = [0.0, 0.0, 0.0]

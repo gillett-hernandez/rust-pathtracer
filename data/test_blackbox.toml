@@ -2,8 +2,9 @@
 # additionally the environment should be some bright color.
 # this is to test light leakage
 
-env_sampling_probability = 0.99
-env_strength = 10.0
+default_scene_file = "data/scenes/test_blackbox.toml"
+[renderer]
+type="Naive"
 
 
 [[cameras]]
@@ -18,7 +19,7 @@ vfov = 90
 [[render_settings]]
 threads = 22
 filename = "test_blackbox_pt_di"
-min_samples = 256
+min_samples = 16
 min_bounces = 3
 max_bounces = 16
 hwss = false
@@ -37,7 +38,7 @@ height = 1024
 [[render_settings]]
 threads = 22
 filename = "test_blackbox_pt"
-min_samples = 256
+min_samples = 16
 min_bounces = 3
 max_bounces = 16
 hwss = false

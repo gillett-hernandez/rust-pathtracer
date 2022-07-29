@@ -1,4 +1,4 @@
-use crate::hittable::{HitRecord};
+use crate::hittable::HitRecord;
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
 use crate::mediums::Medium;
@@ -159,7 +159,7 @@ pub fn random_walk(
     // let mut last_bsdf_pdf = PDF::from(0.0);
     let mut additional_contribution = SingleEnergy::ZERO;
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
-    let mut last_vertex: Option<SurfaceVertex> = None;
+    // let mut last_vertex: Option<SurfaceVertex> = None;
     for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
             hit.lambda = lambda;
@@ -185,22 +185,18 @@ pub fn random_walk(
 
             let material = world.get_material(hit.material);
             let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
-            match (hit.material, last_vertex, trace_type) {
-                (MaterialId::Camera(_camera_id), _, TransportMode::Radiance) => {
+            match (hit.material, trace_type) {
+                (MaterialId::Camera(_camera_id), TransportMode::Radiance) => {
                     vertex.vertex_type = VertexType::Camera;
                     vertices.push(vertex);
                     break;
                 }
                 // if directly hit a light while tracing a camera path.
-                (MaterialId::Light(_light_id), _, TransportMode::Importance) => {
+                (MaterialId::Light(_light_id), TransportMode::Importance) => {
                     vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
                 }
 
                 // TODO: think about sampling lights when doing LT. theoretically it should be possible and not unphysical
-
-                // if emission.0 > 0.0 {
-                //     additional_contribution += vertex.throughput * emission;
-                // }
                 _ => {}
             }
 
@@ -225,6 +221,8 @@ pub fn random_walk(
                 if pdf.is_nan() {
                     break;
                 }
+
+                // TODO: confirm whether russian roulette is solely based on f/pdf or if it can take into account beta.
                 let rr_continue_prob = if bounce >= russian_roulette_start_index {
                     (f.0 / pdf.0).min(1.0)
                 } else {
@@ -235,6 +233,9 @@ pub fn random_walk(
                     break;
                 }
                 beta *= f * cos_o.abs() / (rr_continue_prob * pdf.0);
+                if pdf.0 == 0.0 {
+                    beta.0 = 0.0;
+                }
                 vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
 
                 // consider handling delta distributions differently here, if deltas are ever added.
@@ -247,25 +248,28 @@ pub fn random_walk(
                          .0
                     / cos_i;
 
-                debug_assert!(
-                    vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
-                    "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                    material.get_name(),
-                    vertex,
-                    wi,
-                    wo,
-                    cos_o,
-                    cos_i,
-                    rr_continue_prob,
-                );
+                // debug_assert!(
+                //     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
+                //     "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
+                //     material.get_name(),
+                //     vertex,
+                //     wi,
+                //     wo,
+                //     cos_o,
+                //     cos_i,
+                //     rr_continue_prob,
+                // );
 
-                last_vertex = Some(vertex);
+                // last_vertex = Some(vertex);
                 vertices.push(vertex);
 
                 // let beta_before_hit = beta;
                 // last_bsdf_pdf = pdf;
 
                 debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_o, pdf);
+                if beta.0 == 0.0 {
+                    break;
+                }
 
                 // add normal to avoid self intersection
                 // also convert wo back to world space when spawning the new ray
