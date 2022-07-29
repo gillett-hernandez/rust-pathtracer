@@ -1,4 +1,4 @@
-use crate::hittable::{HitRecord, Hittable};
+use crate::hittable::{HitRecord};
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
 use crate::mediums::Medium;
@@ -192,40 +192,15 @@ pub fn random_walk(
                     break;
                 }
                 // if directly hit a light while tracing a camera path.
-                (MaterialId::Light(_light_id), None, TransportMode::Importance) => {
+                (MaterialId::Light(_light_id), _, TransportMode::Importance) => {
                     vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
-
-                    // if emission.0 > 0.0 {
-                    //     additional_contribution += vertex.throughput * emission;
-                    // }
                 }
-                (MaterialId::Light(_light_id), Some(prev_vertex), TransportMode::Importance) => {
-                    vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
 
-                    // if emission.0 > 0.0 {
-                    //     if prev_vertex.pdf_forward == 0.0 {
-                    //         additional_contribution += vertex.throughput * emission;
-                    //     } else {
-                    //         let hit_primitive = world.get_primitive(hit.instance_id);
-                    //         assert!(world.instance_is_light(hit_primitive.instance_id));
+                // TODO: think about sampling lights when doing LT. theoretically it should be possible and not unphysical
 
-                    //         let pdf = hit_primitive.psa_pdf(
-                    //             prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
-                    //             prev_vertex.point,
-                    //             hit.point,
-                    //         );
-                    //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
-                    //         debug_assert!(
-                    //             !pdf.is_nan() && !weight.is_nan(),
-                    //             "{:?}, {}",
-                    //             pdf,
-                    //             weight
-                    //         );
-                    //         additional_contribution += weight * vertex.throughput * emission;
-                    //         debug_assert!(!additional_contribution.is_nan());
-                    //     }
-                    // }
-                }
+                // if emission.0 > 0.0 {
+                //     additional_contribution += vertex.throughput * emission;
+                // }
                 _ => {}
             }
 
@@ -241,7 +216,6 @@ pub fn random_walk(
             // wo is generated in tangent space.
 
             if let Some(wo) = maybe_wo {
-                // NOTE! cos_i and cos_o seem to have somewhat reversed names.
                 let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
                 let cos_o = wo.z().abs();
                 let cos_i = wi.z().abs();
@@ -264,6 +238,7 @@ pub fn random_walk(
                 vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
 
                 // consider handling delta distributions differently here, if deltas are ever added.
+
                 // eval pdf in reverse direction
                 vertex.pdf_backward = rr_continue_prob
                     * material
@@ -283,17 +258,6 @@ pub fn random_walk(
                     cos_i,
                     rr_continue_prob,
                 );
-                // debug_assert!(
-                //     vertex.pdf_backward >= 0.0 && vertex.pdf_backward.is_finite(),
-                //     "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                //     material.get_name(),
-                //     vertex,
-                //     wi,
-                //     wo,
-                //     cos_o,
-                //     cos_i,
-                //     rr_continue_prob,
-                // );
 
                 last_vertex = Some(vertex);
                 vertices.push(vertex);

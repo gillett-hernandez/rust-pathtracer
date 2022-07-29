@@ -1,14 +1,10 @@
-use log_once::warn_once;
-
-use crate::world::World;
-// use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::{random_walk, veach_v, LightSourceType, SurfaceVertex, VertexType};
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
 use crate::world::TransportMode;
-// use crate::world::EnvironmentMap;
+use crate::world::World;
 
 use std::f32::INFINITY;
 use std::sync::Arc;
