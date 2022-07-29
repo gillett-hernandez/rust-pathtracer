@@ -4,7 +4,7 @@ This is a wavelength aware physically based 3D rendering engine written in Rust.
 
 The purpose is to help me become more familiar with Rust and with general Light Transport algorithms. However if it helps the reader learn more about these concepts, that would be great.
 
-The following is an image rendered with the BDPT integrator. The light at the top appears dark because it's emitting mainly in the downward direction. The walls' color uses the spectral data from the cornell website. The gem's material information matches that of moissanite, from https://refractiveindex.info/. Color noise is from the fact that this version of the bdpt integrator didn't use HWSS, and from the fact that most of the illumination into the scene is split into very colorful caustics which increases the color variance.
+The following is an image rendered with the BDPT integrator. The light at the top appears dark because it's emitting mainly in the downward direction. The walls' color uses the spectral data from the cornell website. The gem's material information matches that of moissanite, from [refractiveindex.info](https://refractiveindex.info). The color noise is from the fact that this version of the bdpt integrator doesn't use HWSS, and from the fact that most of the illumination into the scene is split into very colorful caustics which overall increase color variance.
 
 ![render](./showcase/moissanite_gem_1080p.png)
 
@@ -30,21 +30,19 @@ In addition, much of the code emphasizes matching reality as closely as possible
   * Colors on the film are represented in [CIE XYZ](https://en.wikipedia.org/wiki/CIE_1931_color_space) color space. This is then tonemapped to linear RGB space and sRGB space according to the [wikipedia article](https://en.wikipedia.org/wiki/SRGB)
   * Lights can have physically correct spectral power distribution functions, including blackbody distributions and distributions with peaks at certain frequencies
   * Colors are implemented as Spectral Response Functions, under the hood they are bounded spectral power distributions
-  * in general, for lights and for colors, those spectral response functions are implemented as curves, and multiple curve types are supported. see [curves.rs](src/curves.rs) and [math/spectral.rs](src/math/spectral.rs) for more information
+  * in general, for lights and for colors, those spectral response functions are implemented as curves, and multiple curve types are supported. see [curves.rs](src/curves.rs) and [math/spectral.rs](src/math/spectral.rs) for more information. See also [rust_cg_math](https://github.com/gillett-hernandez/rust_cg_math)
 * Metals and Dielectrics are wavelength-dependent:
-  * Dielectrics use a curve (struct SPD) to represent their varying index of refraction with respect to wavelength.
+  * Dielectrics use a curve to represent their varying index of refraction with respect to wavelength.
     * This allows for physically correct Dispersion. The curve used is typically a curve matching the first two terms of [Cauchy's equation](https://en.wikipedia.org/wiki/Cauchy%27s_equation).
-  * Metals use multiple curves to represent their varying index of refraction and extinction coefficient with respect to wavelength.
+  * Metals use multiple curves to represent their index of refraction and extinction coefficient with respect to wavelength.
     * This allows for physically correct color and reflectance behavior so that Gold, Copper, and other metals can be represented and traced accurately.
-
 
 However, there are some concepts that I'm still unfamiliar with or that I'm working on that aren't properly implemented yet. that includes the following:
 
 * Image reconstruction theory and pixel filtering. this seems to be very important for Light tracing, but less important for normal Path tracing.
 * Real physical units for Radiance and for Camera importance.
 
-
-## Installing and running:
+## Installing and running
 
 Requirements are Rust nightly.
 
@@ -54,24 +52,18 @@ to change render settings, modify the provided file at data/config.toml
 
 it comes preloaded with many options and most are commented out.
 
-## Experimental implementations:
-
-The World generally is able to represent the camera's lens in the scene, and allow for light to intersect the camera lens. While typically this is done with one camera at a time, for the LT and BDPT integrators I've taken the liberty of trying to implement it so that multiple cameras can be in the scene at once and each can potentially be sampled randomly, and if light happens to intersect *any* camera, the contribution will be recorded to that camera's film. This is batched so that all the films that use the Light Tracing integrator will all have their cameras in the scene at once, and the same for Bidirectional Path Tracing.
-
-That should theoretically cause images to converge faster, though the feature is still a WIP and may be changed or deprecated in the future. Renders using the Path tracing integrator will be unaffected, and their cameras will not physically exist in the World.
-
 ## To Do: an incomplete list
 
 * [x] implement basic config file to reduce unnecessary recompilations. Done, at [config.rs](src/config.rs), data files at [data/config.toml](data/config.toml)
 * [x] add simple random walk abstraction. Done, at [integrator/bdpt/helpers.rs](src/integrator/bdpt/helpers.rs)
 * [x] implement glossy and transmissive bsdfs. Done, implemented GGX, at [materials/ggx.rs](src/materials/ggx.rs)
 * [x] add common color spectral reflectance functions. Done, implemented at [curves.rs](src/curves.rs)
-* [x] implement correct XYZ to sRGB tonemapping. Done, at [tonemap.rs](src/tonemap.rs)
+* [x] implement correct XYZ to sRGB conversion. Done, at [tonemap.rs](src/tonemap.rs)
 * [x] implement parsing CSV files as curves and using them as ior and kappa values. Done, at [parsing.rs](src/parsing.rs)
-* [x] implement instances. Somewhat done, still more to do. at [geometry/mod.rs] and [math/transform.rs](src/math/transform.rs)
+* [x] implement instances. Somewhat done, still more to do. at [geometry/mod.rs](src/geometry/mod.rs)
 * [x] implement basic accelerator. Done, at [accelerator.rs](src/accelerator.rs)
-* [x] implement environment sampling. Somewhat done, still more to do. at [world.rs](src/world.rs)
-* [x] implement light emission sampling to generate rays from lights. Done, part of the material trait at [material.rs](src/material.rs)
+* [x] implement environment sampling. Mostly done, still more to do (proper pdfs when generating rays from the environment). at [world.rs](src/world/mod.rs) and [environment.rs](src/world/environment.rs)
+* [x] implement light emission sampling to generate rays from lights. Done, part of the material trait at [material.rs](src/materials/mod.rs)
 * [x] implement BVH
 * [x] implement spectral power distribution importance sampling. requires computing the CDF of curves.
 * [x] implement scene parser to reduce compilations even more
@@ -79,7 +71,7 @@ That should theoretically cause images to converge faster, though the feature is
 * [x] implement BDPT
 * [x] refactor bsdf trait methods to reduce duplication
 * [ ] simd based HWSS. WIP on a local branch.
-* [ ] basic mediums
+* [ ] basic mediums. WIP on a local branch.
 * [ ] implement real units for radiance and camera importance
 * [ ] research image reconstruction theory and implement proper pixel filtering
 
