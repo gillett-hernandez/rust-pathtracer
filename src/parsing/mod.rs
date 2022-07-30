@@ -165,6 +165,8 @@ fn load_scene(filepath: PathBuf) -> Result<SceneData, Box<dyn Error>> {
 
 pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
     // parse scene from disk
+    // FIXME this function does not (yet) analyze the actual usage of curves or textures, and greedily parses everything provided.
+
     let scene = if let Ok(scene) = load_scene(scene_file) {
         scene
     } else {

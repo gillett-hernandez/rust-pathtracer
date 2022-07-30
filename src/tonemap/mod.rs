@@ -13,8 +13,8 @@ mod reinhard0;
 mod reinhard1;
 
 pub use clamp::Clamp;
-pub use reinhard0::Reinhard0;
-pub use reinhard1::Reinhard1;
+pub use reinhard0::{Reinhard0, Reinhard0x3};
+pub use reinhard1::{Reinhard1, Reinhard1x3};
 
 // https://en.wikipedia.org/wiki/SRGB#From_CIE_XYZ_to_sRGB
 const XYZ_TO_SRGB_LINEAR: Matrix3<f32> = Matrix3::new(
