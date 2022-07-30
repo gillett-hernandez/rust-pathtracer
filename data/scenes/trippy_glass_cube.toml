@@ -1,6 +1,7 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 1.0
 [environment]
@@ -71,8 +72,8 @@ two_sided = true
 # skip specifying material identifier and it defaults to the one from the .obj file itself
 # material_name = "ggx_glass_dispersive"
 [instances.aggregate]
-type = "MeshBundle"
-filename = "data/meshes/trippy_glass_cube.obj"
+type = "Mesh"
+name = "warped_cube"
 [instances.transform]
 scale = [0.7, 0.7, 0.7]
 translate = [0.0, 0.0, -0.3]

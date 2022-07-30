@@ -1,6 +1,7 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
 
 [environment]
 type="Constant"
@@ -85,8 +86,7 @@ two_sided = true
 material_name = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Mesh"
-filename = "data/meshes/prism.obj"
-mesh_index = 0
+name = "prism"
 [instances.transform]
 scale = [3.0, 3.0, 3.0]
 translate = [0.2, 0.0, -0.1]

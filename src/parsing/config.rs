@@ -1,6 +1,3 @@
-extern crate num_cpus;
-extern crate serde;
-
 use crate::camera::{Camera, ProjectiveCamera, RealisticCamera};
 use crate::math::{Point3, Vec3};
 use crate::parsing::tonemap::TonemapSettings;

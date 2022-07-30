@@ -1,8 +1,5 @@
 default_scene_file = "data/scenes/cornell_box.toml"
-[renderer]
-type="Naive"
-# type="Preview"
-# selected_preview_film_id = 0
+
 
 [[cameras]]
 type="SimpleCamera"
@@ -25,6 +22,15 @@ vfov = 27.4
 [[cameras]]
 type="SimpleCamera"
 name = "cornell camera"
+look_from = [ -5.0, 0.0, 0.0]
+look_at = [0.0, 0.0, 0.0]
+aperture_size = 0.03
+focal_distance = 5.0
+vfov = 37.8
+
+[[cameras]]
+type="SimpleCamera"
+name = "true cornell camera"
 look_from = [ -0.8, 0.278, 0.273]
 look_at = [0.0, 0.278, 0.273]
 aperture_size = 0.01
@@ -150,14 +156,12 @@ focal_distance = 5.0
 vfov = 90.0
 
 
-
 # [[cameras]]
 # type="PanoramaCamera"
 # name = "panorama"
 # look_from = [0, 0, 1]
 # horizontal_span = [-180, 180]
 # vertical_span = [-90, 90]
-
 
 
 [[cameras]]
@@ -167,7 +171,7 @@ look_from = [18, 5, 3]
 look_at = [0.0, 0.0, -0.4]
 aperture_size = 0.03
 focal_distance = 25.0
-vfov = 45.2
+vfov = 70.2
 
 [[cameras]]
 type="SimpleCamera"
@@ -187,18 +191,24 @@ aperture_size = 0.03
 focal_distance = 1.0
 vfov = 5
 
+[renderer]
+type="Naive"
+# type="Preview"
+# selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "PT"
+filename = "sun_test,only_luminance"
 min_samples = 256
 min_bounces = 2
 max_bounces = 8
 hwss = false
-# camera_id = "cube camera"
-# camera_id = "sun test camera"
+# camera_id = "caustic test camera"
+camera_id = "sun test camera"
 # camera_id = "blackbox camera"
-camera_id = "cornell camera"
+# camera_id = "closeup camera"
+# camera_id = "cornell camera"
+# camera_id = "true cornell camera"
 # camera_id = "wideangle sun test camera side"
 russian_roulette = true
 only_direct = false
@@ -207,15 +217,16 @@ only_direct = false
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
-key_value = 0.90
-white_point = 2.0
-luminance_only = false
+key_value = 0.01
+white_point = 1.0
+luminance_only = true
 [render_settings.integrator]
+# type = "BDPT"
 type = "PT"
 light_samples = 4
 # camera_samples = 4
 # selected_pair = [1,1]
 [render_settings.resolution]
-width = 1080
+width = 1920
 height = 1080
 

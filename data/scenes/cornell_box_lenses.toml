@@ -1,6 +1,7 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.01
 [environment]
@@ -69,8 +70,7 @@ two_sided = true
 material_name = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Mesh"
-filename = "data/meshes/lenses.obj"
-mesh_index = 0
+name = "lens_assembly"
 [instances.transform]
 scale = [2.0, 2.0, 2.0]
 # [[instances.transform.rotate]]

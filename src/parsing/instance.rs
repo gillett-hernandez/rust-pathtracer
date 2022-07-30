@@ -1,6 +1,3 @@
-extern crate num_cpus;
-extern crate serde;
-
 use crate::geometry::*;
 use crate::materials::MaterialId;
 use crate::parsing::primitives::*;
@@ -72,9 +69,10 @@ pub struct InstanceData {
 pub fn parse_instance(
     instance_data: InstanceData,
     materials_mapping: &HashMap<String, MaterialId>,
+    mesh_map: &HashMap<String, Mesh>,
     instance_id: usize,
 ) -> Instance {
-    let aggregate: Aggregate = instance_data.aggregate.parse_with(materials_mapping);
+    let aggregate: Aggregate = instance_data.aggregate.parse_with(mesh_map);
     let transform: Option<Transform3> = instance_data
         .transform
         .map(|transform_data| transform_data.into());

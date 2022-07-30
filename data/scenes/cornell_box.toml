@@ -1,6 +1,7 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
@@ -23,5 +24,5 @@ two_sided = false
 # skip specifying material identifier and it defaults to the one from the .obj file itself
 # material_name = "lambertian_white"
 [instances.aggregate]
-type = "MeshBundle"
-filename = "data/meshes/cornell_box.obj"
+type = "Mesh"
+name = "cornell_box"

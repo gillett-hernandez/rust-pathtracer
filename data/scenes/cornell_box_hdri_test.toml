@@ -1,12 +1,13 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 1.0
 [environment]
 type="HDRI"
 strength =1.0
-texture_id = "machine_shop_4k"
+texture_name = "machine_shop_4k"
 # [environment.importance_map]
 # # width = 2048
 # # height = 2048

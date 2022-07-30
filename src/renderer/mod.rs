@@ -1,4 +1,3 @@
-extern crate pbr;
 
 mod film;
 

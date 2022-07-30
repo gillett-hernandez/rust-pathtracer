@@ -4,7 +4,6 @@ filename = "data/hdri/moonlit_golf_8k.hdr"
 alpha_fill = 0.0
 curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
 
-
 [[machine_shop_4k]]
 type = "HDR"
 filename = "data/hdri/machine_shop_03_4k.hdr"

@@ -1,6 +1,7 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
@@ -72,8 +73,8 @@ material_name = "ggx_moissanite"
 scale = [0.5, 0.5, 0.5]
 translate = [0.0, 0.0, -0.7]
 [instances.aggregate]
-type = "MeshBundle"
-filename = "data/meshes/brilliant_diamond.obj"
+type = "Mesh"
+name = "brilliant_diamond"
 
 # [[instances]]
 # material_name = "ggx_glass_dispersive"

@@ -32,6 +32,7 @@ toml = "0.5"
 math =  { git = "https://github.com/gillett-hernandez/rust_cg_math" }
 rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics" }
 structopt = "0.3.26"
+paste = "1.0.7"
 
 [target.'cfg(windows)'.dependencies]
 win32_notification = "0.1.0"

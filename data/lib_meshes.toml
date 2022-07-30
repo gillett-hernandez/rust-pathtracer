@@ -1,0 +1,26 @@
+[cornell_box]
+filename = "data/meshes/cornell_box.obj"
+
+[prism]
+filename = "data/meshes/prism.obj"
+mesh_index = 0
+
+[caustic_test_obj]
+filename = "data/meshes/caustic_test.obj"
+
+[brilliant_diamond]
+filename = "data/meshes/brilliant_diamond.obj"
+
+[lens_assembly]
+filename = "data/meshes/lenses.obj"
+mesh_index = 0
+
+[menger_sponge]
+filename = "data/meshes/menger_sponge.obj"
+mesh_index = 0
+
+[tower]
+filename = "data/meshes/tower.obj"
+
+[warped_cube]
+filename = "data/meshes/trippy_glass_cube.obj"

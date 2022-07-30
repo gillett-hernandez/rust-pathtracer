@@ -1,11 +1,13 @@
-#![feature(result_option_inspect)]
+#![feature(result_option_inspect, backtrace)]
+
 #[macro_use]
 extern crate log;
-
-extern crate image;
-
 #[macro_use]
 extern crate packed_simd;
+#[macro_use]
+extern crate paste;
+
+extern crate image;
 
 extern crate minifb;
 

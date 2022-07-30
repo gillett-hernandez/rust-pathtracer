@@ -1,11 +1,12 @@
 curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
-env_sampling_probability = 0.0
+meshes = "data/lib_meshes.toml"
+env_sampling_probability = 0.5
 [environment]
 type="HDRI"
-strength = 1.0
-texture_name = "kiara_dawn_8k"
+strength = 0.4
+texture_name = "moonlit_golf_8k"
 
 
 [[instances]]
@@ -22,5 +23,5 @@ two_sided = true
 # skip specifying material identifier and it defaults to the one from the .obj file itself
 # material_name = "ggx_glass_dispersive"
 [instances.aggregate]
-type = "MeshBundle"
-filename = "data/meshes/caustic_test.obj"
+type = "Mesh"
+name = "caustic_test_obj"

@@ -1,11 +1,26 @@
-extern crate serde;
+use crate::accelerator::AcceleratorType;
+use crate::geometry::*;
+
+use crate::materials::*;
+use crate::mediums::MediumEnum;
+use crate::texture::TexStack;
+use crate::world::World;
+
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::error::Error;
+use std::fs::File;
+use std::io::Read;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 pub mod config;
 pub mod curves;
-pub mod environment;
-pub mod instance;
-pub mod material;
-pub mod medium;
+mod environment;
+mod instance;
+mod material;
+mod medium;
+mod meshes;
 pub mod primitives;
 pub mod texture;
 pub mod tonemap;
@@ -19,105 +34,77 @@ use serde::de::DeserializeOwned;
 use texture::*;
 pub use tonemap::parse_tonemapper;
 
-pub use curves::{
-    load_csv, load_ior_and_kappa, load_linear, load_multiple_csv_rows,
-    parse_tabulated_curve_from_csv, CurveData, CurveDataOrReference,
-};
-
-use crate::accelerator::AcceleratorType;
-use crate::geometry::*;
-
-use crate::materials::*;
-use crate::mediums::MediumEnum;
-use crate::world::World;
-
-use std::collections::HashMap;
-use std::error::Error;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
+use curves::{CurveData, CurveDataOrReference};
 
 use serde::{Deserialize, Serialize};
 use toml;
 
-use self::primitives::load_obj_file;
-use self::primitives::AggregateData;
+use self::meshes::{load_obj_file, parse_specific_obj_mesh, MeshData};
+
+use self::primitives::{AggregateData, MeshRef};
 
 pub type Vec3Data = [f32; 3];
 pub type Point3Data = [f32; 3];
 
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum MaybeCurvesLib {
-    Literal(HashMap<String, CurveData>),
-    Path(String),
-}
-
-impl MaybeCurvesLib {
-    pub fn resolve(self) -> Result<HashMap<String, CurveData>, Box<dyn Error>> {
-        match self {
-            Self::Literal(data) => Ok(data),
-            Self::Path(path) => load_arbitrary(PathBuf::from(path)),
+macro_rules! unpack_or_LaP {
+    ($e:expr, $($message: tt)*) => {
+        match $e {
+            Ok(inner) => inner,
+            Err(err) => {
+                error!($($message)*);
+                error!("{:?}", err.to_string());
+                if let Some(backtrace) = err.backtrace() {
+                    error!("{:?}", backtrace);
+                }
+                panic!()
+            }
         }
-    }
+    };
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum MaybeTextureLib {
-    Literal(HashMap<String, TextureStackData>),
-    Path(String),
+macro_rules! generate_maybe_libs {
+    ($($e:ident),+) => {
+        $(
+
+            paste!{
+                #[derive(Serialize, Deserialize, Clone)]
+                #[serde(untagged)]
+                pub enum [<Maybe $e Lib>] {
+                    Literal(HashMap<String, [<$e Data>]>),
+                    Path(String),
+                }
+
+                impl [<Maybe $e Lib>] {
+                    pub fn resolve(self) -> HashMap<String, [<$e Data>]> {
+                        match self {
+                            Self::Literal(data) => data,
+                            Self::Path(path) =>
+                                unpack_or_LaP!(load_arbitrary(PathBuf::from(path.clone())), "failed to resolve path {}", path)
+
+                        }
+                    }
+                }
+            }
+
+        )+
+    };
 }
 
-impl MaybeTextureLib {
-    pub fn resolve(self) -> Result<HashMap<String, TextureStackData>, Box<dyn Error>> {
-        match self {
-            Self::Literal(data) => Ok(data),
-            Self::Path(path) => load_arbitrary(PathBuf::from(path)),
-        }
-    }
-}
+generate_maybe_libs! {Curve, TextureStack, Material, Mesh, Medium}
 
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum MaybeMaterialLib {
-    Literal(HashMap<String, MaterialData>),
-    Path(String),
-}
-
-impl MaybeMaterialLib {
-    pub fn resolve(self) -> Result<HashMap<String, MaterialData>, Box<dyn Error>> {
-        match self {
-            Self::Literal(data) => Ok(data),
-            Self::Path(path) => load_arbitrary(PathBuf::from(path)),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum MaybeMediumLib {
-    Literal(HashMap<String, MediumData>),
-    Path(String),
-}
-
-impl MaybeMediumLib {
-    pub fn resolve(self) -> Result<HashMap<String, MediumData>, Box<dyn Error>> {
-        match self {
-            Self::Literal(data) => Ok(data),
-            Self::Path(path) => load_arbitrary(PathBuf::from(path)),
-        }
-    }
-}
+// TODO: add a world storage for meshes so that instances don't clone them.
+// maybe use Arcs around meshes? or let Mesh hold an actual reference to the actual Mesh data?
+// verify how much arcs mess with performance compared to unsafe raw ptr access
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SceneData {
     pub env_sampling_probability: Option<f32>,
     pub environment: EnvironmentData,
-    pub curves: MaybeCurvesLib,
-    pub textures: MaybeTextureLib,
+    pub curves: MaybeCurveLib,
+    pub textures: MaybeTextureStackLib,
     pub materials: MaybeMaterialLib,
     pub mediums: Option<MaybeMediumLib>,
+    pub meshes: MaybeMeshLib,
     pub instances: Vec<InstanceData>,
 }
 
@@ -156,50 +143,215 @@ fn load_scene(filepath: PathBuf) -> Result<SceneData, Box<dyn Error>> {
         if let Some(source) = e.source() {
             error!("caused by {}", source.to_string());
         }
-        // if let Some(backtrace) = e.backtrace() {
-        //     error!("{}", backtrace.to_string())
-        // }
     })?;
     return Ok(scene);
 }
 
 pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
+    // layout of this function:
+    // parse scene data from file
+    // scan environment data for used textures/curves
+    // scan instances for used meshes
+    // scan meshes for used materials
+    // scan materials for used textures
+    // scan textures for used curves
+    // parse and load used curves
+    // parse and load used textures (expensive step, part of the reason the scanning pass exists)
+    // parse and load used materials
+    // parse and load used meshes
+    // parse and load used instances
+
     // parse scene from disk
-    // FIXME this function does not (yet) analyze the actual usage of curves or textures, and greedily parses everything provided.
 
-    let scene = if let Ok(scene) = load_scene(scene_file) {
-        scene
-    } else {
-        error!("failed to load scene");
-        panic!()
-    };
+    let scene = unpack_or_LaP!(load_scene(scene_file), "failed to resolve scene file");
 
-    // parse curves from disk or from literal
-    let curves: HashMap<String, _> = if let Ok(curves) = scene.curves.resolve() {
-        curves.into_iter().map(|(k, v)| (k, v.into())).collect()
-    } else {
-        error!("failed to parse curves");
-        panic!()
-    };
+    // collect information from instances, materials, and env map data to determine what textures and materials actually need to be parsed and what can be discarded.
+
+    let mut used_materials = HashSet::new();
+    let mut used_textures = HashSet::new();
+    let mut used_curves = HashSet::new();
+    let mut used_meshes = HashSet::new();
+
+    // scan env
+    match &scene.environment {
+        EnvironmentData::Constant(environment::ConstantData {
+            color: CurveDataOrReference::Reference(name),
+            ..
+        }) => {
+            used_curves.insert(name.clone());
+        }
+        EnvironmentData::Sun(environment::SunData {
+            color: CurveDataOrReference::Reference(name),
+            ..
+        }) => {
+            used_curves.insert(name.clone());
+        }
+        EnvironmentData::HDRI(environment::HDRIData { texture_name, .. }) => {
+            used_textures.insert(texture_name.clone());
+        }
+        _ => {}
+    }
+
+    // scan instances
+    for instance in &scene.instances {
+        if let Some(ref name) = instance.material_name {
+            used_materials.insert(name.clone());
+        }
+        match &instance.aggregate {
+            AggregateData::Mesh(MeshRef { name, .. }) => {
+                used_meshes.insert(name.clone());
+            }
+            _ => {} // other aggregate types don't have associated material data
+        }
+    }
+
+    // scan meshes for used materials.
+    // since parsing and loading the actual meshes is required here, keep the mesh data stored somewhere so we can use it later.
+    let mesh_data = scene.meshes.resolve();
+
+    let mut mesh_mapping: HashMap<String, Mesh> = HashMap::new();
+    let mut mesh_material_mapping: HashMap<String, Vec<String>> = HashMap::new();
+    // key 0 is mesh name,
+    // value is vec of material names, matching the order that they are defined in the .mtl file
+    // and thus matching the indices used in the actual mesh data.
+
+    for (name, mesh_data) in mesh_data.iter().filter(|(k, _)| used_meshes.contains(*k)) {
+        // parse mesh data, and add materials to used materials.
+        assert!(
+            !name.contains(';'),
+            "semicolon (;) disallowed in mesh names"
+        );
+        let mut local_material_map = HashMap::new();
+        match mesh_data.mesh_index {
+            Some(index) => {
+                let mesh = parse_specific_obj_mesh(
+                    mesh_data.filename.as_str(),
+                    index,
+                    &mut local_material_map,
+                );
+                mesh_mapping.insert(name.clone(), mesh);
+            }
+            None => {
+                let meshes = load_obj_file(mesh_data.filename.as_str(), &mut local_material_map);
+                for (index, mesh) in meshes.into_iter().enumerate() {
+                    let mut new_name = name.clone();
+                    new_name.push(';');
+                    new_name.extend(index.to_string().chars());
+                    mesh_mapping.insert(new_name, mesh);
+                }
+            }
+        }
+        for mat in local_material_map.keys() {
+            used_materials.insert(mat.clone());
+        }
+        let length = local_material_map.len();
+        // let mut vec = Vec::with_capacity(length + 1);
+        let mut vec = vec![String::from(""); length];
+
+        // vec.fill(String::new());
+        local_material_map
+            .into_iter()
+            .for_each(|(name, index)| vec[index] = name);
+        if length == 0 {
+            vec.push(String::from("error"));
+        }
+        mesh_material_mapping.insert(name.clone(), vec);
+    }
+
+    // scan materials for used textures and curves
+    let materials_data = scene.materials.resolve();
+
+    for (_, material) in materials_data
+        .iter()
+        .filter(|(name, _)| used_materials.contains(*name))
+    {
+        match material {
+            MaterialData::GGX(GGXData {
+                eta, eta_o, kappa, ..
+            }) => {
+                for c_d_or_r in &[eta, eta_o, kappa] {
+                    if let CurveDataOrReference::Reference(name) = c_d_or_r {
+                        used_curves.insert(name.clone());
+                    }
+                }
+            }
+            MaterialData::Lambertian(LambertianData { texture_id: name }) => {
+                used_textures.insert(name.clone());
+            }
+            MaterialData::PassthroughFilter(PassthroughFilterData { color, .. }) => {
+                if let CurveDataOrReference::Reference(name) = color {
+                    used_curves.insert(name.clone());
+                }
+            }
+            MaterialData::SharpLight(SharpLightData {
+                bounce_color,
+                emit_color,
+                ..
+            })
+            | MaterialData::DiffuseLight(DiffuseLightData {
+                bounce_color,
+                emit_color,
+                ..
+            }) => {
+                if let CurveDataOrReference::Reference(name) = bounce_color {
+                    used_curves.insert(name.clone());
+                }
+                if let CurveDataOrReference::Reference(name) = emit_color {
+                    used_curves.insert(name.clone());
+                }
+            }
+        }
+    }
+
+    // scan textures for used curves
+    let textures_data = scene.textures.resolve();
+
+    for (_, texture) in textures_data
+        .iter()
+        .filter(|(name, _)| used_textures.contains(*name))
+    {
+        for layer in &texture.0 {
+            match layer {
+                TextureData::Texture1 { curve, .. } => {
+                    if let CurveDataOrReference::Reference(name) = curve {
+                        used_curves.insert(name.clone());
+                    }
+                }
+                TextureData::Texture4 { curves, .. }
+                | TextureData::HDR { curves, .. }
+                | TextureData::EXR { curves, .. } => {
+                    curves.into_iter().for_each(|curve| {
+                        if let CurveDataOrReference::Reference(name) = curve {
+                            used_curves.insert(name.clone());
+                        }
+                    });
+                }
+                TextureData::SRGB { .. } => {} // uses in-code parsing of sRGB basis functions
+            }
+        }
+    }
+
+    // parse curves from disk or from literal,
+    let curves_data = scene.curves.resolve();
+    let curves = curves_data
+        .into_iter()
+        .filter(|(name, _)| used_curves.contains(name))
+        .map(|(k, v)| (k, v.into()))
+        .collect();
 
     let mauve = crate::curves::mauve(1.0);
 
     // parse textures from disk or from literal
-    let mut textures_map: HashMap<String, _> = HashMap::new();
+    let mut textures_map: HashMap<String, TexStack> = HashMap::new();
 
-    match scene.textures.resolve() {
-        Ok(textures_data) => {
-            for (name, data) in textures_data {
-                if let Some(parsed) = parse_texture_stack(data, &curves) {
-                    textures_map.insert(name.clone(), parsed);
-                } else {
-                    warn!("failed to parse texture {}", name);
-                }
-            }
-        }
-        Err(e) => {
-            error!("failed to resolve textures, error = {}", e.to_string());
-            panic!()
+    for (name, data) in textures_data
+        .iter()
+        .filter(|(name, _)| used_textures.contains(*name))
+    {
+        if let Some(parsed) = parse_texture_stack(data.clone(), &curves) {
+            textures_map.insert(name.clone(), parsed);
+        } else {
+            warn!("failed to parse texture {}", name);
         }
     }
 
@@ -213,23 +365,19 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
 
     // parse materials from disk or from literal
     let mut materials_map: HashMap<String, _> = HashMap::new();
-    match scene.materials.resolve() {
-        Ok(materials_data) => {
-            for (name, data) in materials_data {
-                if let Some(parsed) = data.resolve(&curves, &textures_map) {
-                    if materials_map.insert(name.clone(), parsed).is_none() {
-                        info!("inserted new material {}", &name);
-                    } else {
-                        warn!("replaced material {}", &name);
-                    }
-                } else {
-                    warn!("failed to parse material {}", name);
-                }
+
+    for (name, data) in materials_data
+        .into_iter()
+        .filter(|(name, _)| used_materials.contains(name))
+    {
+        if let Some(parsed) = data.resolve(&curves, &textures_map) {
+            if materials_map.insert(name.clone(), parsed).is_none() {
+                info!("inserted new material {}", &name);
+            } else {
+                warn!("replaced material {}", &name);
             }
-        }
-        Err(e) => {
-            error!("failed to parse materials, error = {}", e.to_string());
-            panic!()
+        } else {
+            warn!("failed to parse material {}", name);
         }
     }
 
@@ -244,10 +392,9 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
     ));
 
     // parse mediums from disk or from literal
-
     let mut mediums_map: HashMap<String, _> = HashMap::new();
     match scene.mediums.map(|e| e.resolve()) {
-        Some(Ok(mediums_data)) => {
+        Some(mediums_data) => {
             for (name, data) in mediums_data {
                 if let Some(parsed) = parse_medium(data, &curves) {
                     if mediums_map.insert(name.clone(), parsed).is_none() {
@@ -260,12 +407,8 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
                 }
             }
         }
-        Some(Err(e)) => {
-            error!("{}", e.to_string());
-            panic!();
-        }
-        _ => {
-            info!("no mediums found, continuing");
+        None => {
+            info!("no mediums data, continuing")
         }
     }
 
@@ -297,26 +440,69 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
         mediums.push(medium);
     }
 
+    // now that materials have been fully parsed and loaded, we can now go into each mesh and convert the dummy material ids
+    // to their real material ids
+
+    let mut mesh_mapping = mesh_mapping
+        .into_iter()
+        .map(|(name, mut mesh)| {
+            info!("remapping material ids for mesh {}", &name);
+            let prefix = name.split(';').next().unwrap();
+            let materials_for_mesh = &mesh_material_mapping[prefix];
+
+            // unwrap and transform material ids
+            let mut material_ids = Arc::<_>::try_unwrap(mesh.material_ids)
+                .expect("another Arc pointing to this mesh exists, and this unwrap failed");
+            for mat_id in material_ids.iter_mut() {
+                let index: usize = (*mat_id).into();
+                let material_name = &materials_for_mesh[index];
+
+                *mat_id = match material_names_to_ids
+                    .get(material_name)
+                    .cloned() {
+                        Some(mat_id) => mat_id,
+                        None => {
+                            warn!("setting material ids to 0 since {} was not found in the materials library", material_name);
+                            0.into()
+                        }
+                    }
+            }
+            mesh.material_ids = Arc::new(material_ids);
+            info!("remapped successfully");
+            (name, mesh)
+        })
+        .collect::<HashMap<_, _>>();
+
+    // construct instances, initializing meshes along the way.
+    // TODO: this would be included in any potential refactor that adds a world-wide storage location for Meshes.
     let mut instances: Vec<Instance> = Vec::new();
     for instance in scene.instances {
         match instance.aggregate {
-            AggregateData::MeshBundle(data) => {
-                let meshes = load_obj_file(&data.filename, &material_names_to_ids);
+            AggregateData::Mesh(MeshRef { name, index: None }) => {
+                // bundle
+
                 let transform: Option<Transform3> = instance.transform.clone().map(|e| e.into());
-                for mut mesh in meshes {
+                for (mesh_name, mesh) in mesh_mapping.iter_mut() {
+                    if !mesh_name.starts_with(&name) {
+                        continue;
+                    }
                     let id = instances.len();
                     mesh.init();
                     let maybe_material_id = instance
                         .material_name
                         .clone()
                         .map(|s| material_names_to_ids[&s]);
-                    info!(
-                        "pushing instance of mesh from meshbundle, with material id {:?} from {:?}",
-                        maybe_material_id,
-                        instance.material_name.clone()
-                    );
+                    if maybe_material_id.is_some() {
+                        info!(
+                            "pushing instance of mesh from meshbundle, with material overridden to material id {:?} from {:?}",
+                            maybe_material_id,
+                            instance.material_name.clone()
+                        );
+                    } else {
+                        info!("pusing instance of mesh from meshbundle, no material override");
+                    }
                     instances.push(Instance::new(
-                        Aggregate::Mesh(mesh),
+                        Aggregate::Mesh(mesh.clone()),
                         transform,
                         maybe_material_id,
                         id,
@@ -326,7 +512,7 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
             _ => {
                 info!("parsing instance and primitive");
                 let id = instances.len();
-                let instance = parse_instance(instance, &material_names_to_ids, id);
+                let instance = parse_instance(instance, &material_names_to_ids, &mesh_mapping, id);
                 info!(
                     "done. pushing instance with material {:?} and instance id {}",
                     instance.material_id, instance.instance_id
@@ -353,9 +539,7 @@ mod test {
 
     #[test]
     fn test_parsing_materials_lib() {
-        let materials = MaybeMaterialLib::Path(String::from("data/lib_materials.toml"))
-            .resolve()
-            .unwrap();
+        let materials = MaybeMaterialLib::Path(String::from("data/lib_materials.toml")).resolve();
 
         for (name, data) in &materials {
             println!("{}", name);
@@ -373,9 +557,7 @@ mod test {
 
     #[test]
     fn test_parsing_textures_lib() {
-        let textures = MaybeTextureLib::Path(String::from("data/lib_textures.toml"))
-            .resolve()
-            .unwrap();
+        let textures = MaybeTextureStackLib::Path(String::from("data/lib_textures.toml")).resolve();
 
         for (name, _data) in &textures {
             println!("{}", name);
@@ -384,11 +566,18 @@ mod test {
 
     #[test]
     fn test_parsing_curves_lib() {
-        let curves = MaybeCurvesLib::Path(String::from("data/lib_curves.toml"))
-            .resolve()
-            .unwrap();
+        let curves = MaybeCurveLib::Path(String::from("data/lib_curves.toml")).resolve();
 
         for (name, _data) in &curves {
+            println!("{}", name);
+        }
+    }
+
+    #[test]
+    fn test_parsing_meshes_lib() {
+        let meshes = MaybeMeshLib::Path(String::from("data/lib_meshes.toml")).resolve();
+
+        for (name, _data) in &meshes {
             println!("{}", name);
         }
     }

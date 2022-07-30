@@ -285,7 +285,7 @@ mod test {
 
     use crate::world::environment::*;
     use crate::{
-        parsing::{construct_world, parse_tonemapper},
+        parsing::construct_world,
         texture::{Texture, Texture1},
     };
 
@@ -337,7 +337,7 @@ mod test {
 
         let converter = Converter::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0);
+        let tonemapper = Clamp::new(0.0);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -460,7 +460,7 @@ mod test {
             let mut film = Film::new(width, height, XYZColor::BLACK);
             let converter = Converter::sRGB;
 
-            let mut tonemapper = Clamp::new(0.0);
+            let tonemapper = Clamp::new(0.0);
 
             window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -547,12 +547,14 @@ mod test {
                 estimate2 / limit as f32
             );
 
-            converter.write_to_files(
-                &film,
-                Box::new(tonemapper),
-                "env_map_sampling_test.exr",
-                "env_map_sampling_test.png",
-            );
+            converter
+                .write_to_files(
+                    &film,
+                    Box::new(tonemapper),
+                    "env_map_sampling_test.exr",
+                    "env_map_sampling_test.png",
+                )
+                .expect("writing to disk failed");
         }
     }
 
@@ -587,7 +589,7 @@ mod test {
         let mut film = Film::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0);
+        let tonemapper = Clamp::new(0.0);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -725,7 +727,7 @@ mod test {
         let mut film = Film::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0);
+        let tonemapper = Clamp::new(0.0);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 

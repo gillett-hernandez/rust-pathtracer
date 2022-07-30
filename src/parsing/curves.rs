@@ -1,4 +1,4 @@
-extern crate serde;
+
 
 use crate::curves::*;
 use crate::math::*;

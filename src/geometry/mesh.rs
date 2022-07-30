@@ -273,6 +273,10 @@ impl Mesh {
         }
     }
     pub fn init(&mut self) {
+        if self.triangles.is_some() {
+            // already initialized
+            return;
+        }
         let mut triangles = Vec::new();
         for tri_num in 0..self.num_faces {
             triangles.push(MeshTriangleRef::new(
