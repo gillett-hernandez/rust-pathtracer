@@ -146,7 +146,7 @@ pub fn random_walk(
     vertices: &mut Vec<SurfaceVertex>,
     russian_roulette_start_index: u16,
     profile: &mut Profile,
-) -> Option<SingleEnergy> {
+) {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
     // let mut additional_contribution = SingleEnergy::ZERO;
@@ -299,8 +299,6 @@ pub fn random_walk(
         }
     }
     profile.bounce_rays += vertices.len();
-
-    None
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HeroEnergy(pub f32x4);
@@ -406,7 +404,6 @@ impl HeroSurfaceVertex {
     }
 }
 
-#[allow(unused_mut)]
 pub fn random_walk_hero(
     mut ray: Ray,
     lambda: f32x4,
@@ -418,11 +415,9 @@ pub fn random_walk_hero(
     vertices: &mut Vec<HeroSurfaceVertex>,
     russian_roulette_start_index: u16,
     profile: &mut Profile,
-) -> Option<HeroEnergy> {
+) {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
-    let mut additional_contribution = HeroEnergy::ZERO;
-    // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
     for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
             hit.lambda = lambda.extract(0);
@@ -633,12 +628,6 @@ pub fn random_walk_hero(
         }
     }
     profile.bounce_rays += vertices.len();
-
-    if additional_contribution.0.gt(f32x4::splat(0.0)).any() {
-        Some(additional_contribution)
-    } else {
-        None
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -739,7 +728,6 @@ impl HeroVertex {
     }
 }
 
-#[allow(unused_mut)]
 pub fn random_walk_medium_hero(
     mut ray: Ray,
     lambda: f32x4,
@@ -751,11 +739,9 @@ pub fn random_walk_medium_hero(
     vertices: &mut Vec<HeroVertex>,
     russian_roulette_start_index: u16,
     profile: &mut Profile,
-) -> Option<HeroEnergy> {
+) {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
-    let mut additional_contribution = HeroEnergy::ZERO;
-    // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
     let mut tracked_mediums: Vec<usize> = Vec::new();
     for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
@@ -1177,10 +1163,4 @@ pub fn random_walk_medium_hero(
         }
     }
     profile.bounce_rays += vertices.len();
-
-    if additional_contribution.0.gt(f32x4::splat(0.0)).any() {
-        Some(additional_contribution)
-    } else {
-        None
-    }
 }

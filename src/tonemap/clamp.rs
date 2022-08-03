@@ -1,4 +1,3 @@
-#![allow(unused, unused_imports)]
 use crate::curves::mauve;
 use crate::renderer::Film;
 use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
@@ -83,7 +82,6 @@ impl Tonemapper for Clamp {
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            
             cie_xyz_color = crate::MAUVE;
         }
 

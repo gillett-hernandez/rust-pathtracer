@@ -140,13 +140,12 @@ pub enum Sample {
     LightSample(XYZColor, (f32, f32)),
 }
 
-#[allow(unused)]
 pub trait GenericIntegrator: Send + Sync {
     fn preprocess(
         &mut self,
-        sampler: &mut Box<dyn Sampler>,
-        settings: &[RenderSettings],
-        profile: &mut Profile,
+        _sampler: &mut Box<dyn Sampler>,
+        _settings: &[RenderSettings],
+        _profile: &mut Profile,
     ) {
     }
     fn color(

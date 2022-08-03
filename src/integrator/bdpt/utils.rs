@@ -425,7 +425,6 @@ impl<'a> Index<usize> for CombinedPath<'a> {
     }
 }
 
-#[allow(unused)]
 pub fn eval_mis<F>(
     world: &Arc<World>,
     light_path: &Vec<SurfaceVertex>,
@@ -499,7 +498,7 @@ where
 
         let light_to_eye_vec = lev.point - llv.point;
         let light_to_eye_direction = light_to_eye_vec.normalized();
-        let eye_to_light_vec = -light_to_eye_vec;
+        // let eye_to_light_vec = -light_to_eye_vec;
         let eye_to_light_direction = -light_to_eye_direction;
 
         let lev_frame = TangentFrame::from_normal(lev_normal);

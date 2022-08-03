@@ -1,4 +1,3 @@
-#![allow(unused, unused_imports)]
 use crate::curves::mauve;
 use crate::renderer::Film;
 use log_once::warn_once;

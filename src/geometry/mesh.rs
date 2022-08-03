@@ -196,19 +196,16 @@ impl Hittable for MeshTriangleRef {
         Some(hit)
     }
 
-    #[allow(unused)]
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
-        (Vec3::ZERO, 0.0.into())
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
+        unimplemented!("mesh light sampling methods are currently unimplemented")
     }
 
-    #[allow(unused)]
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
-        (Point3::ORIGIN, Vec3::ZERO, 0.0.into())
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
+        unimplemented!("mesh light sampling methods are currently unimplemented")
     }
 
-    #[allow(unused)]
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
-        0.0.into()
+    fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
+        unimplemented!("mesh light sampling methods are currently unimplemented")
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
