@@ -9,6 +9,7 @@ default-run = "main"
 visualize_importance_map=[]
 notification=[]
 sort_mesh_aabb_hits = []
+gui = ["eframe", "egui_extras", "egui"]
 
 
 [dependencies]
@@ -34,13 +35,15 @@ math =  { git = "https://github.com/gillett-hernandez/rust_cg_math" }
 rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics" }
 structopt = "0.3.26"
 paste = "1.0.7"
+eframe = {version = "*", optional = true}
+egui = {version = "*", optional = true}
+egui_extras = {version = "*", optional = true}
 
 [target.'cfg(windows)'.dependencies]
 win32_notification = "0.1.0"
 
 [build-dependencies]
 serde = { version = "1.0.120", features = ["derive"] }
-serde_json = "1.0.61"
 
 
 [lib]
@@ -53,6 +56,11 @@ path = "src/bin/clm_test.rs"
 [[bin]]
 name = "medium_test"
 path = "src/bin/medium_test.rs"
+
+[[bin]]
+name = "color_test"
+path = "src/bin/color_test.rs"
+required-features = ["gui"]
 
 [[bin]]
 name = "main"

@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -108,27 +109,27 @@ pub struct SceneData {
     pub instances: Vec<InstanceData>,
 }
 
-fn load_arbitrary<T>(filepath: PathBuf) -> Result<T, Box<dyn Error>>
+pub fn load_arbitrary<T: AsRef<Path>, O>(filepath: T) -> Result<O, Box<dyn Error>>
 where
-    T: DeserializeOwned,
+    O: DeserializeOwned,
 {
-    info!("loading file at {}", &filepath.to_string_lossy());
+    info!("loading file at {}", filepath.as_ref().to_string_lossy());
     let mut input = String::new();
 
-    File::open(filepath.clone())
+    File::open(filepath.as_ref())
         .and_then(|mut f| f.read_to_string(&mut input))
         .expect("failed to load file");
 
-    let data: T = toml::from_str(&input)?;
+    let data: O = toml::from_str(&input)?;
     return Ok(data);
 }
 
-fn load_scene(filepath: PathBuf) -> Result<SceneData, Box<dyn Error>> {
+pub fn load_scene<T: AsRef<Path>>(filepath: T) -> Result<SceneData, Box<dyn Error>> {
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
-    let result = File::open(filepath.clone()).and_then(|mut f| f.read_to_string(&mut input));
+    let result = File::open(filepath.as_ref()).and_then(|mut f| f.read_to_string(&mut input));
 
-    info!("loading file, {}", filepath.to_string_lossy());
+    info!("loading file, {}", filepath.as_ref().to_string_lossy());
     let read_count = result.inspect_err(|e| {
         error!("{}", e.to_string());
     })?;

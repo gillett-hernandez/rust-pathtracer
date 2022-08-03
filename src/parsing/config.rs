@@ -180,7 +180,7 @@ impl From<TOMLConfig> for Config {
     }
 }
 
-pub fn parse_cameras_from(settings: &TOMLConfig) -> (Config, Vec<Camera>) {
+pub fn parse_cameras_from(settings: TOMLConfig) -> (Config, Vec<Camera>) {
     // this function is necessary because different render settings change the aspect ratio of the camera,
     // even if they're using the "same" camera
     let mut cameras: Vec<Camera> = Vec::new();
