@@ -14,14 +14,16 @@ use super::Tonemapper;
 pub struct Reinhard0 {
     key_value: f32,
     l_w: Option<f32>,
+    silenced: bool,
 }
 
 impl Reinhard0 {
     const DELTA: f64 = 0.001;
-    pub fn new(key_value: f32) -> Self {
+    pub fn new(key_value: f32, silenced: bool) -> Self {
         Self {
             key_value,
             l_w: None,
+            silenced,
         }
     }
 }
@@ -60,7 +62,9 @@ impl Tonemapper for Reinhard0 {
         }
 
         if min_luminance < Self::DELTA as f32 {
-            warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
+            if !self.silenced {
+                warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
+            }
             min_luminance = Self::DELTA as f32;
         }
 
@@ -68,22 +72,23 @@ impl Tonemapper for Reinhard0 {
 
         let avg_luminance = total_luminance / (total_pixels as f32);
         let l_w = (sum_of_log / (total_pixels as f64)).exp() as f32;
-
-        info!(
-            "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {})",
-            avg_luminance,
-            l_w,
-            sum_of_log / total_pixels as f64
-        );
-        info!("dynamic range is {}", dynamic_range);
-        info!(
-            "max luminance occurred at {}, {}, is {}",
-            max_lum_xy.0, max_lum_xy.1, max_luminance
-        );
-        info!(
-            "min luminance occurred at {}, {}, is {}",
-            min_lum_xy.0, min_lum_xy.1, min_luminance
-        );
+        if !self.silenced {
+            info!(
+                "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {})",
+                avg_luminance,
+                l_w,
+                sum_of_log / total_pixels as f64
+            );
+            info!("dynamic range is {}", dynamic_range);
+            info!(
+                "max luminance occurred at {}, {}, is {}",
+                max_lum_xy.0, max_lum_xy.1, max_luminance
+            );
+            info!(
+                "min luminance occurred at {}, {}, is {}",
+                min_lum_xy.0, min_lum_xy.1, min_luminance
+            );
+        }
         self.l_w = Some(l_w)
     }
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
@@ -112,14 +117,16 @@ impl Tonemapper for Reinhard0 {
 pub struct Reinhard0x3 {
     key_value: f32,
     l_w: Option<f32x4>,
+    silenced: bool,
 }
 
 impl Reinhard0x3 {
     const DELTA: f32 = 0.001;
-    pub fn new(key_value: f32) -> Self {
+    pub fn new(key_value: f32, silenced: bool) -> Self {
         Self {
             key_value,
             l_w: None,
+            silenced,
         }
     }
 }
@@ -160,7 +167,9 @@ impl Tonemapper for Reinhard0x3 {
         }
 
         if min_luminance < Self::DELTA as f32 {
-            warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
+            if !self.silenced {
+                warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
+            }
             min_luminance = Self::DELTA as f32;
         }
 
@@ -168,22 +177,23 @@ impl Tonemapper for Reinhard0x3 {
 
         let avg_luminance = total_luminance / (total_pixels as f32);
         let l_w = (sum_of_log / (total_pixels as f32)).exp();
-
-        info!(
-            "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {:?})",
-            avg_luminance,
-            l_w,
-            sum_of_log / total_pixels as f32
-        );
-        info!("dynamic range is {}", dynamic_range);
-        info!(
-            "max luminance occurred at {}, {}, is {}",
-            max_lum_xy.0, max_lum_xy.1, max_luminance
-        );
-        info!(
-            "min luminance occurred at {}, {}, is {}",
-            min_lum_xy.0, min_lum_xy.1, min_luminance
-        );
+        if !self.silenced {
+            info!(
+                "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {:?})",
+                avg_luminance,
+                l_w,
+                sum_of_log / total_pixels as f32
+            );
+            info!("dynamic range is {}", dynamic_range);
+            info!(
+                "max luminance occurred at {}, {}, is {}",
+                max_lum_xy.0, max_lum_xy.1, max_luminance
+            );
+            info!(
+                "min luminance occurred at {}, {}, is {}",
+                min_lum_xy.0, min_lum_xy.1, min_luminance
+            );
+        }
         self.l_w = Some(l_w)
     }
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {

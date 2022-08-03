@@ -13,11 +13,12 @@ use super::Tonemapper;
 #[derive(Clone, Debug)]
 pub struct Clamp {
     exposure: f32,
+    silenced: bool,
 }
 
 impl Clamp {
-    pub fn new(exposure: f32) -> Self {
-        Self { exposure }
+    pub fn new(exposure: f32, silenced: bool) -> Self {
+        Self { exposure, silenced }
     }
 }
 
@@ -53,23 +54,26 @@ impl Tonemapper for Clamp {
         }
 
         if min_luminance < 0.00001 {
-            warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
+            if !self.silenced {
+                warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
+            }
             min_luminance = 0.00001;
         }
 
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
 
         let avg_luminance = total_luminance / (total_pixels as f32);
-
-        info!("dynamic range is {}", dynamic_range);
-        info!(
-            "max luminance occurred at {}, {}, is {}",
-            max_lum_xy.0, max_lum_xy.1, max_luminance
-        );
-        info!(
-            "min luminance occurred at {}, {}, is {}",
-            min_lum_xy.0, min_lum_xy.1, min_luminance
-        );
+        if !self.silenced {
+            info!("dynamic range is {}", dynamic_range);
+            info!(
+                "max luminance occurred at {}, {}, is {}",
+                max_lum_xy.0, max_lum_xy.1, max_luminance
+            );
+            info!(
+                "min luminance occurred at {}, {}, is {}",
+                min_lum_xy.0, min_lum_xy.1, min_luminance
+            );
+        }
     }
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);

@@ -337,7 +337,7 @@ mod test {
 
         let converter = Converter::sRGB;
 
-        let tonemapper = Clamp::new(0.0);
+        let mut tonemapper = Clamp::new(0.0, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -383,7 +383,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-
+                tonemapper.initialize(&film);
                 buffer
                     .par_iter_mut()
                     .enumerate()
@@ -460,7 +460,7 @@ mod test {
             let mut film = Film::new(width, height, XYZColor::BLACK);
             let converter = Converter::sRGB;
 
-            let tonemapper = Clamp::new(0.0);
+            let mut tonemapper = Clamp::new(0.0, true);
 
             window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -523,6 +523,7 @@ mod test {
 
                 if idx % 100 == 0 {
                     pb.add(100);
+                    tonemapper.initialize(&film);
                     buffer
                         .par_iter_mut()
                         .enumerate()
@@ -589,7 +590,7 @@ mod test {
         let mut film = Film::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
-        let tonemapper = Clamp::new(0.0);
+        let mut tonemapper = Clamp::new(0.0, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -636,6 +637,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
+                tonemapper.initialize(&film);
                 buffer
                     .par_iter_mut()
                     .enumerate()
@@ -727,7 +729,7 @@ mod test {
         let mut film = Film::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
-        let tonemapper = Clamp::new(0.0);
+        let mut tonemapper = Clamp::new(0.0, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -779,6 +781,7 @@ mod test {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
+                tonemapper.initialize(&film);
                 buffer
                     .par_iter_mut()
                     .enumerate()

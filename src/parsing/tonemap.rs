@@ -12,40 +12,50 @@ pub enum TonemapSettings {
     // conversely, low exposure implies high light levels, requiring a downscaling
     Clamp {
         exposure: Option<f32>,
+        #[serde(default)]
+        silenced: bool,
     },
     Reinhard0 {
         key_value: f32,
         luminance_only: bool,
+        #[serde(default)]
+        silenced: bool,
     },
     Reinhard1 {
         key_value: f32,
         white_point: f32,
         luminance_only: bool,
+        #[serde(default)]
+        silenced: bool,
     },
 }
 
 pub fn parse_tonemapper(settings: TonemapSettings) -> (Box<dyn Tonemapper>, Converter) {
     let tonemapper: Box<dyn Tonemapper> = match settings {
-        TonemapSettings::Clamp { exposure } => Box::new(Clamp::new(exposure.unwrap_or(0.0))),
+        TonemapSettings::Clamp { exposure, silenced } => {
+            Box::new(Clamp::new(exposure.unwrap_or(0.0), silenced))
+        }
         TonemapSettings::Reinhard0 {
             key_value,
             luminance_only,
+            silenced,
         } => {
             if luminance_only {
-                Box::new(Reinhard0::new(key_value))
+                Box::new(Reinhard0::new(key_value, silenced))
             } else {
-                Box::new(Reinhard0x3::new(key_value))
+                Box::new(Reinhard0x3::new(key_value, silenced))
             }
         }
         TonemapSettings::Reinhard1 {
             key_value,
             white_point,
             luminance_only,
+            silenced,
         } => {
             if luminance_only {
-                Box::new(Reinhard1::new(key_value, white_point))
+                Box::new(Reinhard1::new(key_value, white_point, silenced))
             } else {
-                Box::new(Reinhard1x3::new(key_value, white_point))
+                Box::new(Reinhard1x3::new(key_value, white_point, silenced))
             }
         }
     };
