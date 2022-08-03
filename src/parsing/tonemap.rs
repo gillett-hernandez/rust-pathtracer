@@ -12,6 +12,7 @@ pub enum TonemapSettings {
     // conversely, low exposure implies high light levels, requiring a downscaling
     Clamp {
         exposure: Option<f32>,
+        luminance_only: bool,
         #[serde(default)]
         silenced: bool,
     },
@@ -32,9 +33,15 @@ pub enum TonemapSettings {
 
 pub fn parse_tonemapper(settings: TonemapSettings) -> (Box<dyn Tonemapper>, Converter) {
     let tonemapper: Box<dyn Tonemapper> = match settings {
-        TonemapSettings::Clamp { exposure, silenced } => {
-            Box::new(Clamp::new(exposure.unwrap_or(0.0), silenced))
-        }
+        TonemapSettings::Clamp {
+            exposure,
+            luminance_only,
+            silenced,
+        } => Box::new(Clamp::new(
+            exposure.unwrap_or(0.0),
+            luminance_only,
+            silenced,
+        )),
         TonemapSettings::Reinhard0 {
             key_value,
             luminance_only,

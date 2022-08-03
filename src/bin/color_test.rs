@@ -580,7 +580,7 @@ fn main() {
         // let tonemapper = root::tonemap::Reinhard1x3::new(0.18, 1.0, true);
         let tonemapper = root::tonemap::Reinhard0x3::new(0.18, true);
         // let tonemapper = root::tonemap::Reinhard0::new(0.18, true);
-        // let tonemapper = root::tonemap::Clamp::new(0.0, true);
+        // let tonemapper = root::tonemap::Clamp::new(0.0, false, true);
         let mut view = View::new(width, height, Box::new(tonemapper));
         loop {
             model.data_update();

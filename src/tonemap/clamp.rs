@@ -13,12 +13,17 @@ use super::Tonemapper;
 #[derive(Clone, Debug)]
 pub struct Clamp {
     exposure: f32,
+    luminance_only: bool,
     silenced: bool,
 }
 
 impl Clamp {
-    pub fn new(exposure: f32, silenced: bool) -> Self {
-        Self { exposure, silenced }
+    pub fn new(exposure: f32, luminance_only: bool, silenced: bool) -> Self {
+        Self {
+            exposure,
+            luminance_only,
+            silenced,
+        }
     }
 }
 
@@ -82,14 +87,23 @@ impl Tonemapper for Clamp {
             cie_xyz_color =
                 XYZColor::new(0.51994668667475025, 51.48686803771597, 1.0180528737469167);
         }
-        let lum = cie_xyz_color.y();
 
-        // need to scale and clamp the color
-        let new_lum = (lum * 10.0f32.powf(self.exposure)).clamp(0.0, 1.0);
-        // actual factor
-        let scaling_factor = new_lum / lum;
-        // TODO: determine if this needs to be done per channel.
+        if self.luminance_only {
+            let lum = cie_xyz_color.y();
 
-        scaling_factor * cie_xyz_color.0
+            // need to scale and clamp the color
+            let new_lum = (lum * 10.0f32.powf(self.exposure)).clamp(0.0, 1.0);
+            // actual factor
+            let scaling_factor = new_lum / lum;
+            // TODO: determine if this needs to be done per channel.
+
+            scaling_factor * cie_xyz_color.0
+        } else {
+            let new_color = (cie_xyz_color * 10.0f32.powf(self.exposure))
+                .0
+                .min(f32x4::splat(1.0))
+                .max(f32x4::splat(0.0));
+            new_color
+        }
     }
 }

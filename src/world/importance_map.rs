@@ -337,7 +337,7 @@ mod test {
 
         let converter = Converter::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0, true);
+        let mut tonemapper = Clamp::new(0.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -460,7 +460,7 @@ mod test {
             let mut film = Film::new(width, height, XYZColor::BLACK);
             let converter = Converter::sRGB;
 
-            let mut tonemapper = Clamp::new(0.0, true);
+            let mut tonemapper = Clamp::new(0.0, true, true);
 
             window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -590,7 +590,7 @@ mod test {
         let mut film = Film::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0, true);
+        let mut tonemapper = Clamp::new(0.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -729,7 +729,7 @@ mod test {
         let mut film = Film::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0, true);
+        let mut tonemapper = Clamp::new(0.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
