@@ -233,7 +233,7 @@ impl PathTracingIntegrator {
             INFINITY,
         ) {
             // TODO: handle case where we intended to hit the world with the shadow ray but instead hit a light.
-            return 0.0.into();
+            0.0.into()
 
             // light_hit.lambda = lambda;
             // let material = self.world.get_material(light_hit.material);
@@ -529,7 +529,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         material,
                         vertex.throughput,
                         sampler,
-                        &mut profile,
+                        profile,
                     );
                     // println!("light contribution: {:?}", light_contribution);
                     sum.energy += light_contribution / (self.light_samples as f32);

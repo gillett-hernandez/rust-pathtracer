@@ -56,7 +56,7 @@ impl World {
         for instance in instances.iter() {
             match &instance.aggregate {
                 Aggregate::Mesh(mesh) => {
-                    for tri in (&mesh).triangles.as_ref().unwrap() {
+                    for tri in mesh.triangles.as_ref().unwrap() {
                         if let MaterialId::Light(id) = tri.get_material_id() {
                             info!(
                             "adding light with mat id Light({:?}) and instance id {:?} to lights list",
@@ -111,7 +111,6 @@ impl World {
         world
     }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
-
         // currently just uniform sampling
         // TODO: change method to take into account the location from which the light is being picked, to allow light trees or other heuristics
         // i.e. a projected solid angle * power heuristic and pdf
@@ -179,7 +178,7 @@ impl World {
     }
 
     pub fn get_env_sampling_probability(&self) -> f32 {
-        if self.lights.len() > 0 {
+        if !self.lights.is_empty() {
             self.env_sampling_probability
         } else {
             1.0
@@ -203,7 +202,7 @@ impl World {
                         if let Some(camera_surface) = camera.get_surface() {
                             println!("removing camera surface {:?}", &camera_surface);
                             // instances.remove_item(&camera_surface);
-                            let maybe_id = instances.binary_search(&camera_surface);
+                            let maybe_id = instances.binary_search(camera_surface);
                             if let Ok(id) = maybe_id {
                                 instances.remove(id);
                             }
@@ -218,7 +217,7 @@ impl World {
                         if let Some(camera_surface) = camera.get_surface() {
                             println!("removing camera surface {:?}", &camera_surface);
                             // instances.remove_item(&camera_surface);
-                            let maybe_id = instances.binary_search(&camera_surface);
+                            let maybe_id = instances.binary_search(camera_surface);
                             if let Ok(id) = maybe_id {
                                 instances.remove(id);
                             }

@@ -51,7 +51,8 @@ pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
     let (width, height) = rgba_image.dimensions();
     let mut new_film = Film::new(width as usize, height as usize, f32x4::splat(0.0));
     for (x, y, pixel) in rgba_image.enumerate_pixels() {
-        let [r, g, b, a]: [u8; 4] = pixel.0.into();
+        // apparently, no into is needed since an rgba<u8> is just an alias for [u8;4]
+        let [r, g, b, a]: [u8; 4] = pixel.0;
         new_film.write_at(
             x as usize,
             y as usize,
@@ -128,7 +129,7 @@ pub fn parse_bitmap(filepath: &str) -> Film<f32> {
     let (width, height) = greyscale.dimensions();
     let mut new_film = Film::new(width as usize, height as usize, 0.0);
     for (x, y, pixel) in greyscale.enumerate_pixels() {
-        let grey: [u8; 1] = pixel.0.into();
+        let grey: [u8; 1] = pixel.0;
         new_film.write_at(x as usize, y as usize, grey[0] as f32 / 256.0);
     }
     new_film
@@ -254,7 +255,7 @@ pub fn parse_texture(
                 })
                 .to_cdf(BOUNDED_VISIBLE_RANGE, 100),
                 Curve::from(CurveData::TabulatedCSV {
-                    filename: curves_filename.clone(),
+                    filename: curves_filename,
                     column: 3,
                     domain_mapping: None,
                     interpolation_mode: InterpolationMode::Cubic,

@@ -17,9 +17,9 @@ pub enum SampleKind {
 
 pub fn eval_unweighted_contribution(
     world: &Arc<World>,
-    light_path: &Vec<SurfaceVertex>,
+    light_path: &[SurfaceVertex],
     s: usize,
-    eye_path: &Vec<SurfaceVertex>,
+    eye_path: &[SurfaceVertex],
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
     russian_roulette_threshold: f32,
@@ -159,23 +159,20 @@ pub fn eval_unweighted_contribution(
                     ignore_distance_and_cos_o = true;
                     emission
                 }
+            } else if last_eyepath_vertex.vertex_type
+                == VertexType::LightSource(LightSourceType::Environment)
+            {
+                // can't connect env vertex to vertex in scene this way, since the env vertex is already at the end of an eyepath
+                SingleEnergy::ZERO
             } else {
-                if last_eyepath_vertex.vertex_type
-                    == VertexType::LightSource(LightSourceType::Environment)
-                {
-                    // can't connect env vertex to vertex in scene this way, since the env vertex is already at the end of an eyepath
-                    SingleEnergy::ZERO
-                } else {
-                    let hit_light_material = world.get_material(last_lightpath_vertex.material_id);
-                    let hit: HitRecord = last_lightpath_vertex.into();
-                    let emission = hit_light_material.emission(
-                        hit.lambda,
-                        hit.uv,
-                        hit.transport_mode,
-                        llpv_local_dir_to_lepv,
-                    );
-                    emission
-                }
+                let hit_light_material = world.get_material(last_lightpath_vertex.material_id);
+                let hit: HitRecord = last_lightpath_vertex.into();
+                hit_light_material.emission(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    llpv_local_dir_to_lepv,
+                )
             }
         } else if last_lightpath_vertex.vertex_type
             == VertexType::LightSource(LightSourceType::Environment)
@@ -235,7 +232,7 @@ pub fn eval_unweighted_contribution(
             // let wo = -light_to_eye;
             let hit_material = world.get_material(last_eyepath_vertex.material_id);
             let hit: HitRecord = last_eyepath_vertex.into();
-            let reflectance = hit_material
+            hit_material
                 .bsdf(
                     hit.lambda,
                     hit.uv,
@@ -243,8 +240,7 @@ pub fn eval_unweighted_contribution(
                     lepv_frame.to_local(&wi).normalized(),
                     lepv_local_dir_to_llpv,
                 )
-                .0;
-            reflectance
+                .0
         };
 
         if fse == SingleEnergy::ZERO {
@@ -332,34 +328,38 @@ impl<'a> CombinedPath<'a> {
         // however on the eye side, the indices need to be modified.
         assert!(vidx0 + 1 == vidx1);
         assert!(self.s + self.t >= vidx0 + 1 || vidx1 < self.s);
-        if vidx1 == self.s {
-            // self.eye_path[t].veach_g
-            // self.eye_path[self.path_length - vidx1].veach_g
-            self.connecting_g
-        } else if vidx1 < self.s {
-            // if vidx1 is less than s, which is to say <= s-1
-            self.light_path[vidx1].veach_g
-        } else {
-            // vidx1 must be > connection_index
-            assert!(
-                self.s + self.t >= vidx0 + 1,
-                "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
-                vidx0,
-                self.s + self.t,
-                self.s,
-                self
-            );
-            let mapped_index = self.s + self.t - vidx0 - 1;
-            assert!(
-                mapped_index <= self.t,
-                "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
-                mapped_index,
-                self.s + self.t,
-                self.s,
-                self
-            );
-            // let mapped_index = t - mapped_index;
-            self.eye_path[mapped_index].veach_g
+        match vidx1.cmp(&self.s) {
+            std::cmp::Ordering::Less => {
+                // vidx1 is less than s, which is to say vidx1 <= s-1
+                self.light_path[vidx1].veach_g
+            }
+            std::cmp::Ordering::Equal => {
+                // self.eye_path[t].veach_g
+                // self.eye_path[self.path_length - vidx1].veach_g
+                self.connecting_g
+            }
+            std::cmp::Ordering::Greater => {
+                // vidx1 must be > connection_index
+                assert!(
+                    self.s + self.t >= vidx0 + 1,
+                    "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
+                    vidx0,
+                    self.s + self.t,
+                    self.s,
+                    self
+                );
+                let mapped_index = self.s + self.t - vidx0 - 1;
+                assert!(
+                    mapped_index <= self.t,
+                    "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
+                    mapped_index,
+                    self.s + self.t,
+                    self.s,
+                    self
+                );
+                // let mapped_index = t - mapped_index;
+                self.eye_path[mapped_index].veach_g
+            }
         }
     }
 

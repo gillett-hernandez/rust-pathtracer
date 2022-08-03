@@ -132,7 +132,7 @@ pub fn parse_obj_mesh(
             mesh.positions[3 * v + 2],
         ))
     }
-    if mesh.normals.len() > 0 {
+    if !mesh.normals.is_empty() {
         info!("parsing normals");
 
         for n in 0..mesh.normals.len() / 3 {

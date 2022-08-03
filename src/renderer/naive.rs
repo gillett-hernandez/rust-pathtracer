@@ -27,6 +27,7 @@ use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
+#[derive(Default)]
 pub struct NaiveRenderer {}
 
 impl NaiveRenderer {
@@ -56,7 +57,7 @@ impl NaiveRenderer {
 
         let mut presampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let mut preprofile = Profile::default();
-        integrator.preprocess(&mut presampler, &vec![settings.clone()], &mut preprofile);
+        integrator.preprocess(&mut presampler, &[settings.clone()], &mut preprofile);
 
         let total_pixels = width * height;
 
@@ -73,7 +74,6 @@ impl NaiveRenderer {
             }
         });
 
-        let clone2 = pixel_count.clone();
         let stats: Profile = film
             .buffer
             .par_iter_mut()
@@ -107,13 +107,13 @@ impl NaiveRenderer {
                     );
                 }
 
-                clone2.fetch_add(1, Ordering::Relaxed);
+                pixel_count.fetch_add(1, Ordering::Relaxed);
 
                 *pixel_ref = temp_color / (settings.min_samples as f32);
 
                 profile
             })
-            .reduce(|| Profile::default(), |a, b| a.combine(b));
+            .reduce(Profile::default, |a, b| a.combine(b));
 
         if let Err(panic) = thread.join() {
             println!(
@@ -121,7 +121,7 @@ impl NaiveRenderer {
                 panic
             );
         }
-        println!("");
+        println!();
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!("took {}s", elapsed);
         stats.pretty_print(elapsed, settings.threads.unwrap() as usize);
@@ -180,8 +180,6 @@ impl NaiveRenderer {
             }
         });
 
-        let clone2 = pixel_count.clone();
-
         let (tx, rx) = unbounded();
         // let (tx, rx) = bounded(100000);
 
@@ -230,19 +228,17 @@ impl NaiveRenderer {
                 // });
                 for v in rx.try_iter() {
                     let (sample, film_id): (Sample, CameraId) = v;
-                    match sample {
-                        Sample::LightSample(sw, pixel) => {
-                            let film = &mut films[film_id as usize];
-                            let color = sw;
-                            let (x, y) = (
-                                (pixel.0 * film.width as f32) as usize,
-                                film.height - (pixel.1 * film.height as f32) as usize - 1,
-                            );
 
-                            film.buffer[y * film.width + x] += color;
-                            (*local_total_splats) += 1usize;
-                        }
-                        _ => {}
+                    if let Sample::LightSample(sw, pixel) = sample {
+                        let film = &mut films[film_id as usize];
+                        let color = sw;
+                        let (x, y) = (
+                            (pixel.0 * film.width as f32) as usize,
+                            film.height - (pixel.1 * film.height as f32) as usize - 1,
+                        );
+
+                        film.buffer[y * film.width + x] += color;
+                        (*local_total_splats) += 1usize;
                     }
                 }
                 if !local_stop_splatting && stop_splatting_ref.load(Ordering::Relaxed) {
@@ -317,7 +313,7 @@ impl NaiveRenderer {
                             }
 
                             *pixel_ref = temp_color / (settings.min_samples as f32);
-                            clone2.fetch_add(1, Ordering::Relaxed);
+                            pixel_count.fetch_add(1, Ordering::Relaxed);
                             if per_splat_sleep_time.as_nanos() > 0 {
                                 thread::sleep(
                                     per_splat_sleep_time * local_additional_splats.len() as u32,
@@ -328,7 +324,7 @@ impl NaiveRenderer {
                             }
                             profile
                         })
-                        .reduce(|| Profile::default(), |a, b| a.combine(b));
+                        .reduce(Profile::default, |a, b| a.combine(b));
                     profile
                 },
             )
@@ -364,8 +360,7 @@ impl NaiveRenderer {
 
         // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
 
-        let mut i = 0;
-        for light_film in light_films.lock().unwrap().iter() {
+        for (i, light_film) in light_films.lock().unwrap().iter().enumerate() {
             let mut render_settings = films[i].0.clone();
             let mut image_film = films[i].1.clone();
             let new_filename = format!(
@@ -386,7 +381,7 @@ impl NaiveRenderer {
                     let y: usize = pixel_index / render_settings.resolution.width;
                     let x: usize = pixel_index - render_settings.resolution.width * y;
                     let light_color = light_film.at(x, y);
-                    *pixel_ref = *pixel_ref + light_color / (render_settings.min_samples as f32);
+                    *pixel_ref += light_color / (render_settings.min_samples as f32);
                 });
 
             films.push((render_settings, image_film));
@@ -394,10 +389,8 @@ impl NaiveRenderer {
                 "added combination film to films vec, films vec length is now {}",
                 films.len()
             );
-            i += 1;
         }
 
-        // let mut i = 0;
         for (i, light_film) in light_films.lock().unwrap().iter().enumerate() {
             let mut render_settings = films[i].0.clone();
             let new_filename = format!(
@@ -496,6 +489,7 @@ impl Renderer for NaiveRenderer {
                         }
                     }
                     let arc_world = Arc::new(world.clone());
+
                     match Integrator::from_settings_and_world(
                         arc_world.clone(),
                         IntegratorType::PathTracing,
@@ -594,7 +588,7 @@ impl Renderer for NaiveRenderer {
                         bundled_settings.clone(),
                         bundled_cameras.clone(),
                     );
-                    assert!(render_splatted_result.len() > 0);
+                    assert!(!render_splatted_result.is_empty());
                     // films.extend(
                     //     (&bundled_settings)
                     //         .iter()
@@ -662,7 +656,7 @@ impl Renderer for NaiveRenderer {
                         bundled_settings.clone(),
                         bundled_cameras.clone(),
                     );
-                    assert!(render_splatted_result.len() > 0);
+                    assert!(!render_splatted_result.is_empty());
                     // films.extend(
                     //     (&bundled_settings)
                     //         .iter()

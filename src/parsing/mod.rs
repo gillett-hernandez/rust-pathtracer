@@ -121,7 +121,7 @@ where
         .expect("failed to load file");
 
     let data: O = toml::from_str(&input)?;
-    return Ok(data);
+    Ok(data)
 }
 
 pub fn load_scene<T: AsRef<Path>>(filepath: T) -> Result<SceneData, Box<dyn Error>> {
@@ -145,7 +145,7 @@ pub fn load_scene<T: AsRef<Path>>(filepath: T) -> Result<SceneData, Box<dyn Erro
             error!("caused by {}", source.to_string());
         }
     })?;
-    return Ok(scene);
+    Ok(scene)
 }
 
 pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
@@ -198,12 +198,10 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
         if let Some(ref name) = instance.material_name {
             used_materials.insert(name.clone());
         }
-        match &instance.aggregate {
-            AggregateData::Mesh(MeshRef { name, .. }) => {
-                used_meshes.insert(name.clone());
-            }
-            _ => {} // other aggregate types don't have associated material data
+        if let AggregateData::Mesh(MeshRef { name, .. }) = &instance.aggregate {
+            used_meshes.insert(name.clone());
         }
+        // other aggregate types don't have associated material data
     }
 
     // scan meshes for used materials.
@@ -237,7 +235,7 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
                 for (index, mesh) in meshes.into_iter().enumerate() {
                     let mut new_name = name.clone();
                     new_name.push(';');
-                    new_name.extend(index.to_string().chars());
+                    new_name.push_str(&index.to_string());
                     mesh_mapping.insert(new_name, mesh);
                 }
             }
@@ -270,19 +268,19 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
             MaterialData::GGX(GGXData {
                 eta, eta_o, kappa, ..
             }) => {
-                for c_d_or_r in &[eta, eta_o, kappa] {
-                    c_d_or_r.get_name().map(|name| {
+                for curve in &[eta, eta_o, kappa] {
+                    if let Some(name) = curve.get_name() {
                         used_curves.insert(name.to_string());
-                    });
+                    }
                 }
             }
             MaterialData::Lambertian(LambertianData { texture_id: name }) => {
                 used_textures.insert(name.clone());
             }
             MaterialData::PassthroughFilter(PassthroughFilterData { color, .. }) => {
-                color.get_name().map(|name| {
+                if let Some(name) = color.get_name() {
                     used_curves.insert(name.to_string());
-                });
+                }
             }
             MaterialData::SharpLight(SharpLightData {
                 bounce_color,
@@ -294,12 +292,12 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
                 emit_color,
                 ..
             }) => {
-                bounce_color.get_name().map(|name| {
+                if let Some(name) = bounce_color.get_name() {
                     used_curves.insert(name.to_string());
-                });
-                emit_color.get_name().map(|name| {
+                }
+                if let Some(name) = emit_color.get_name() {
                     used_curves.insert(name.to_string());
-                });
+                }
             }
         }
     }
@@ -314,17 +312,17 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
         for layer in &texture.0 {
             match layer {
                 TextureData::Texture1 { curve, .. } => {
-                    curve.get_name().map(|name| {
+                    if let Some(name) = curve.get_name() {
                         used_curves.insert(name.to_string());
-                    });
+                    }
                 }
                 TextureData::Texture4 { curves, .. }
                 | TextureData::HDR { curves, .. }
                 | TextureData::EXR { curves, .. } => {
-                    curves.into_iter().for_each(|curve| {
-                        curve.get_name().map(|name| {
+                    curves.iter().for_each(|curve| {
+                        if let Some(name) = curve.get_name() {
                             used_curves.insert(name.to_string());
-                        });
+                        }
                     });
                 }
                 TextureData::SRGB { .. } => {} // uses in-code parsing of sRGB basis functions
@@ -386,9 +384,7 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
     // completely black for reflection, emits mauve color
     let mauve = MaterialEnum::DiffuseLight(DiffuseLight::new(
         crate::curves::cie_e(0.0),
-        mauve
-            .clone()
-            .to_cdf(math::spectral::EXTENDED_VISIBLE_RANGE, 20),
+        mauve.to_cdf(math::spectral::EXTENDED_VISIBLE_RANGE, 20),
         math::Sidedness::Dual,
     ));
 

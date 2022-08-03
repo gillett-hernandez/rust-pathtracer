@@ -56,7 +56,7 @@ impl MeshTriangleRef {
 
 impl HasBoundingBox for MeshTriangleRef {
     fn aabb(&self) -> AABB {
-        let p0 = self.vertices[self.indices[3 * self.idx + 0]];
+        let p0 = self.vertices[self.indices[3 * self.idx]];
         let p1 = self.vertices[self.indices[3 * self.idx + 1]];
         let p2 = self.vertices[self.indices[3 * self.idx + 2]];
         AABB::new(p0, p1).grow(&p2)
@@ -65,7 +65,7 @@ impl HasBoundingBox for MeshTriangleRef {
 
 impl Hittable for MeshTriangleRef {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let p0 = self.vertices[self.indices[3 * self.idx + 0]];
+        let p0 = self.vertices[self.indices[3 * self.idx]];
         let p1 = self.vertices[self.indices[3 * self.idx + 1]];
         let p2 = self.vertices[self.indices[3 * self.idx + 2]];
         let mat_id = if self.materials.len() > 0 {
@@ -167,7 +167,7 @@ impl Hittable for MeshTriangleRef {
 
         let shading_normal = if self.normals.len() > 0 {
             let (n0, n1, n2) = (
-                self.normals[self.indices[3 * self.idx + 0]],
+                self.normals[self.indices[3 * self.idx]],
                 self.normals[self.indices[3 * self.idx + 1]],
                 self.normals[self.indices[3 * self.idx + 2]],
             );
@@ -212,7 +212,7 @@ impl Hittable for MeshTriangleRef {
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
-        let p0 = transform.to_world(self.vertices[self.indices[3 * self.idx + 0]]);
+        let p0 = transform.to_world(self.vertices[self.indices[3 * self.idx]]);
         let p1 = transform.to_world(self.vertices[self.indices[3 * self.idx + 1]]);
         let p2 = transform.to_world(self.vertices[self.indices[3 * self.idx + 2]]);
         let d02 = (p2 - p0).norm();
@@ -305,7 +305,7 @@ impl HasBoundingBox for Mesh {
 impl Hittable for Mesh {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         let bvh = self.bvh.as_ref().expect("bvh not initialized for mesh");
-        let mut possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
+        let mut possible_hit_triangles = bvh.traverse(&r, self.triangles.as_ref().unwrap());
         // maybe sort AABB intersections so that the earliest aabb hit end is first.
         // TODO: run a performance test to see if doing this speeds up renders with meshs
         if cfg!(feature = "sort_mesh_aabb_hits") {

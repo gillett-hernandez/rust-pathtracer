@@ -67,7 +67,7 @@ pub enum CurveData {
 pub fn spectra(filename: &str, strength: f32) -> Curve {
     // defaults to cubic interpolation mode
     load_linear(filename, |x| x, |y| strength * y, InterpolationMode::Cubic)
-        .expect(&format!("failed parsing spectra file {}", filename))
+        .unwrap_or_else(|_| panic!("failed parsing spectra file {}", filename))
 }
 
 pub fn parse_tabulated_curve_from_csv<F1, F2>(
@@ -82,25 +82,23 @@ where
     F2: Clone + Copy + Fn(f32) -> f32,
 {
     let mut signal: Vec<(f32, f32)> = Vec::new();
-    for line in data.split_terminator("\n") {
+    for line in data.split_terminator('\n') {
         // if line.starts_with(pat)
-        let mut split = line.split(",").take(column + 1);
+        let mut split = line.split(',').take(column + 1);
         let x = split.next();
         for _ in 0..(column - 1) {
             let _ = split.next();
         }
         let y = split.next();
-        match (x, y) {
-            (Some(a), Some(b)) => {
-                let (a2, b2) = (a.trim().parse::<f32>(), b.trim().parse::<f32>());
-                if let (Ok(new_x), Ok(new_y)) = (a2, b2) {
-                    signal.push((domain_func(new_x), range_func(new_y)));
-                } else {
-                    info!("skipped csv line {:?} {:?}", a, b);
-                    continue;
-                }
+
+        if let (Some(a), Some(b)) = (x, y) {
+            let (a2, b2) = (a.trim().parse::<f32>(), b.trim().parse::<f32>());
+            if let (Ok(new_x), Ok(new_y)) = (a2, b2) {
+                signal.push((domain_func(new_x), range_func(new_y)));
+            } else {
+                info!("skipped csv line {:?} {:?}", a, b);
+                continue;
             }
-            _ => {}
         }
     }
     Ok(Curve::Tabulated {
@@ -119,9 +117,9 @@ where
     F1: Clone + Copy + Fn(f32) -> f32,
     F2: Clone + Copy + Fn(f32) -> f32,
 {
-    let mut lines = data.split_terminator("\n");
+    let mut lines = data.split_terminator('\n');
     let first_line = lines.next().unwrap();
-    let mut split = first_line.split(",");
+    let mut split = first_line.split(',');
     let (start_x, step_size) = (split.next().unwrap(), split.next().unwrap());
     let (start_x, step_size) = (
         start_x.trim().parse::<f32>()?,

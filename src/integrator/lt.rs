@@ -1,3 +1,5 @@
+use log_once::warn_once;
+
 use crate::world::World;
 // use crate::config::Settings;
 use crate::hittable::{HitRecord, Hittable};
@@ -123,11 +125,13 @@ impl GenericIntegrator for LightTracingIntegrator {
                     sampler.draw_2d(),
                     wavelength_sample,
                 )
-                .expect(&format!(
-                    "emission sample failed, light is {:?} material is {:?}",
-                    light, mat_id
-                ));
-            light_g_term = (light_surface_normal * (&tmp_sampled.0).direction).abs();
+                .unwrap_or_else(|| {
+                    panic!(
+                        "emission sample failed, light is {:?} material is {:?}",
+                        light, mat_id
+                    )
+                });
+            light_g_term = (light_surface_normal * (tmp_sampled.0).direction).abs();
             sampled = (
                 tmp_sampled.0,
                 tmp_sampled.1,
@@ -189,7 +193,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             &self.world,
             &mut path,
             0,
-            &mut profile,
+            profile,
         );
 
         // let mut sum = ;
@@ -207,50 +211,51 @@ impl GenericIntegrator for LightTracingIntegrator {
             let beta = vertex.throughput * multiplier;
 
             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
-            if let VertexType::LightSource(light_source) = vertex.vertex_type {
-                if light_source == LightSourceType::Environment {
-                    // let wo = -vertex.local_wi;
-                    // let uv = direction_to_uv(wo);
-                    // let emission = self.world.environment.emission(uv, lambda);
-                    // sum.energy += beta * emission ;
-                } else {
-                    // let hit = HitRecord::from(*vertex);
-                    // let frame = TangentFrame::from_normal(hit.normal);
-                    // let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                    // let maybe_dir_to_next = path
-                    //     .get(index + 1)
-                    //     .map(|v| (v.point - vertex.point).normalized());
-                    // let wi = frame.to_local(&dir_to_prev);
-                    // let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
-                    // let material = self.world.get_material(vertex.material_id);
+            if let VertexType::LightSource(_) = vertex.vertex_type {
+                warn_once!("hit light source while doing light tracing");
+                // if light_source == LightSourceType::Environment {
+                // let wo = -vertex.local_wi;
+                // let uv = direction_to_uv(wo);
+                // let emission = self.world.environment.emission(uv, lambda);
+                // sum.energy += beta * emission ;
+                // } else {
+                // let hit = HitRecord::from(*vertex);
+                // let frame = TangentFrame::from_normal(hit.normal);
+                // let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
+                // let maybe_dir_to_next = path
+                //     .get(index + 1)
+                //     .map(|v| (v.point - vertex.point).normalized());
+                // let wi = frame.to_local(&dir_to_prev);
+                // let wo = maybe_dir_to_next.map(|dir| frame.to_local(&dir));
+                // let material = self.world.get_material(vertex.material_id);
 
-                    // let emission = material.emission(&hit, wi, wo);
+                // let emission = material.emission(&hit, wi, wo);
 
-                    // if emission.0 > 0.0 {
-                    //     // this will likely never get triggered, since hitting a light source is handled in the above branch
-                    //     if prev_vertex.pdf_forward <= 0.0 || self.camera_samples == 0 {
-                    //         sum.energy += beta * emission;
-                    //         debug_assert!(!sum.energy.is_nan());
-                    //     } else {
-                    //         let hit_primitive = self.world.get_primitive(hit.instance_id);
-                    //         // // println!("{:?}", hit);
-                    //         let pdf = hit_primitive.psa_pdf(
-                    //             prev_vertex.normal,
-                    //             prev_vertex.point,
-                    //             hit.point,
-                    //         );
-                    //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
-                    //         debug_assert!(
-                    //             !pdf.is_nan() && !weight.is_nan(),
-                    //             "{:?}, {}",
-                    //             pdf,
-                    //             weight
-                    //         );
-                    //         sum.energy += weight * beta * emission;
-                    //         debug_assert!(!sum.energy.is_nan());
-                    //     }
-                    // }
-                }
+                // if emission.0 > 0.0 {
+                //     // this will likely never get triggered, since hitting a light source is handled in the above branch
+                //     if prev_vertex.pdf_forward <= 0.0 || self.camera_samples == 0 {
+                //         sum.energy += beta * emission;
+                //         debug_assert!(!sum.energy.is_nan());
+                //     } else {
+                //         let hit_primitive = self.world.get_primitive(hit.instance_id);
+                //         // // println!("{:?}", hit);
+                //         let pdf = hit_primitive.psa_pdf(
+                //             prev_vertex.normal,
+                //             prev_vertex.point,
+                //             hit.point,
+                //         );
+                //         let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                //         debug_assert!(
+                //             !pdf.is_nan() && !weight.is_nan(),
+                //             "{:?}, {}",
+                //             pdf,
+                //             weight
+                //         );
+                //         sum.energy += weight * beta * emission;
+                //         debug_assert!(!sum.energy.is_nan());
+                //     }
+                // }
+                // }
             } else {
                 let hit = HitRecord::from(*vertex);
                 let frame = TangentFrame::from_normal(hit.normal);

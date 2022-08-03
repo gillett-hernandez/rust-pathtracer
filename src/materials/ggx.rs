@@ -325,12 +325,12 @@ impl GGX {
             let eta_rel2 = eta_rel * eta_rel;
             let mut dwh_dwo1 = ndotl / (sqrt_denom * sqrt_denom); // dwh_dwo w/o etas
             let dwh_dwo2 = eta_rel2 * dwh_dwo1; // dwh_dwo w/etas
-            match transport_mode {
-                // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
-                // in importance_mode, it is scaled by eta^2.
-                TransportMode::Importance => dwh_dwo1 = dwh_dwo2,
-                _ => {}
-            };
+
+            // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
+            // in importance_mode, it is scaled by eta^2.
+            if transport_mode == TransportMode::Importance {
+                dwh_dwo1 = dwh_dwo2;
+            }
             debug_assert!(
                 wh.0.is_finite().all(),
                 "{:?} {:?} {:?} {:?}",
@@ -462,7 +462,7 @@ impl Material for GGX {
             // debug_assert!(sample.x.is_finite(), "{}", refl_prob);
             // reflection
             let wo = reflect(wi, wh);
-            return Some(wo);
+            Some(wo)
         } else {
             // rescale sample x value to 0 to 1 range
             // sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
@@ -475,7 +475,7 @@ impl Material for GGX {
                 // println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
                 wo = Some(reflect(wi, wh));
             }
-            return wo;
+            wo
         }
     }
     fn bsdf(

@@ -3,7 +3,6 @@ use crate::aabb::{HasBoundingBox, AABB};
 use crate::math::Ray;
 
 use std::f32;
-use std::iter::repeat;
 
 use packed_simd::{f32x4, i32x4};
 
@@ -35,8 +34,8 @@ pub trait BoundingHierarchy {
 
 pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
     let mut result = Vec::new();
-    for mut vector in vectors.iter_mut() {
-        result.append(&mut vector);
+    for vector in vectors.iter_mut() {
+        result.append(vector);
     }
     result
 }
@@ -554,7 +553,7 @@ impl BVH {
                     child_r_aabb,
                     ..
                 } => {
-                    let padding: String = repeat(" ").take(depth as usize).collect();
+                    let padding: String = " ".repeat(depth as usize);
                     println!("{}child_l {:?}", padding, child_l_aabb);
                     print_node(nodes, child_l_index);
                     println!("{}child_r {:?}", padding, child_r_aabb);
@@ -563,7 +562,7 @@ impl BVH {
                 BVHNode::Leaf {
                     shape_index, depth, ..
                 } => {
-                    let padding: String = repeat(" ").take(depth as usize).collect();
+                    let padding: String = " ".repeat(depth as usize);
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
             }

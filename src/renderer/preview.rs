@@ -24,6 +24,7 @@ use minifb::{Key, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
+#[derive(Default)]
 pub struct PreviewRenderer {}
 
 impl PreviewRenderer {
@@ -70,7 +71,7 @@ impl Renderer for PreviewRenderer {
             window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
             let mut buffer = vec![0u32; width * height];
             match Integrator::from_settings_and_world(
-                arc_world.clone(),
+                arc_world,
                 IntegratorType::from(render_settings.integrator),
                 &cameras,
                 &render_settings,
@@ -105,17 +106,18 @@ impl Renderer for PreviewRenderer {
                     let mut preprocess_profile = Profile::default();
                     integrator.preprocess(
                         &mut sampler,
-                        &vec![render_settings.clone()],
+                        &[render_settings.clone()],
                         &mut preprocess_profile,
                     );
                     let mut pb = ProgressBar::new(total_pixels as u64);
 
                     let pixel_count = Arc::new(AtomicUsize::new(0));
-                    let clone1 = pixel_count.clone();
+                    let pixel_count_clone = pixel_count.clone();
                     let thread = thread::spawn(move || {
                         let mut local_index = 0;
                         while local_index < total_pixels {
-                            let pixels_to_increment = clone1.load(Ordering::Relaxed) - local_index;
+                            let pixels_to_increment =
+                                pixel_count_clone.load(Ordering::Relaxed) - local_index;
                             if SHOW_PROGRESS_BAR {
                                 pb.add(pixels_to_increment as u64);
                             }
@@ -124,8 +126,6 @@ impl Renderer for PreviewRenderer {
                             thread::sleep(Duration::from_millis(250));
                         }
                     });
-
-                    let clone2 = pixel_count.clone();
 
                     let (tx, rx) = unbounded();
                     // let (tx, rx) = bounded(100000);
@@ -154,6 +154,8 @@ impl Renderer for PreviewRenderer {
                     let light_buffer_ref = Arc::clone(&light_buffer);
                     let render_settings_copy = render_settings.clone();
 
+                    // TODO: write abstraction for splatting threads,
+                    // by passing in the Arc mutex of the relevant destination film and the relevant channel
                     let splatting_thread = thread::spawn(move || {
                         let film = &mut light_film_ref.lock().unwrap();
                         let mut local_total_splats = total_splats_ref.lock().unwrap();
@@ -196,21 +198,20 @@ impl Renderer for PreviewRenderer {
                             // });
                             for v in rx.try_iter() {
                                 let (sample, _film_id): (Sample, CameraId) = v;
-                                match sample {
-                                    Sample::LightSample(sw, pixel) => {
-                                        let color = XYZColor::from(sw);
-                                        let (width, height) = (film.width, film.height);
-                                        let (x, y) = (
-                                            (pixel.0 * width as f32) as usize,
-                                            height - (pixel.1 * height as f32) as usize - 1,
-                                        );
 
-                                        film.buffer[y * width + x] += color;
-                                        (*local_total_splats) += 1usize;
-                                    }
-                                    _ => {}
+                                if let Sample::LightSample(sample, pixel) = sample {
+                                    let color = sample;
+                                    let (width, height) = (film.width, film.height);
+                                    let (x, y) = (
+                                        (pixel.0 * width as f32) as usize,
+                                        height - (pixel.1 * height as f32) as usize - 1,
+                                    );
+
+                                    film.buffer[y * width + x] += color;
+                                    (*local_total_splats) += 1usize;
                                 }
                             }
+
                             {
                                 tonemapper2.initialize(film);
                                 light_buffer_ref
@@ -223,7 +224,7 @@ impl Renderer for PreviewRenderer {
                                         let x: usize = pixel_idx - width * y;
                                         let [r, g, b, _]: [f32; 4] = converter
                                             .transfer_function(
-                                                tonemapper2.map(&film, (x as usize, y as usize)),
+                                                tonemapper2.map(film, (x as usize, y as usize)),
                                                 false,
                                             )
                                             .into();
@@ -268,11 +269,8 @@ impl Renderer for PreviewRenderer {
                         {
                             break;
                         }
-                        (&mut films[film_idx])
-                            .buffer
-                            .par_iter_mut()
-                            .enumerate()
-                            .for_each(|(pixel_index, pixel_ref)| {
+                        films[film_idx].buffer.par_iter_mut().enumerate().for_each(
+                            |(pixel_index, pixel_ref)| {
                                 let mut profile = Profile::default();
                                 let tx1 = { tx_arc.lock().unwrap().clone() };
                                 let y: usize = pixel_index / render_settings.resolution.width;
@@ -295,14 +293,14 @@ impl Renderer for PreviewRenderer {
                                         / (render_settings.resolution.height as f32))
                                         .clamp(0.0, 1.0 - std::f32::EPSILON),
                                 );
-                                temp_color += XYZColor::from(integrator.color(
+                                temp_color += integrator.color(
                                     &mut sampler,
                                     &render_settings,
                                     (camera_uv, render_settings.camera_id),
                                     s as usize,
                                     &mut local_additional_splats,
                                     &mut profile,
-                                ));
+                                );
 
                                 debug_assert!(
                                     temp_color.0.is_finite().all(),
@@ -311,7 +309,7 @@ impl Renderer for PreviewRenderer {
                                 );
 
                                 *pixel_ref += temp_color;
-                                clone2.fetch_add(1, Ordering::Relaxed);
+                                pixel_count.fetch_add(1, Ordering::Relaxed);
                                 if per_splat_sleep_time.as_nanos() > 0 {
                                     thread::sleep(
                                         per_splat_sleep_time * local_additional_splats.len() as u32,
@@ -320,7 +318,8 @@ impl Renderer for PreviewRenderer {
                                 for splat in local_additional_splats {
                                     tx1.send(splat).unwrap();
                                 }
-                            });
+                            },
+                        );
                         tonemapper.initialize(&films[film_idx]);
                         buffer
                             .par_iter_mut()
@@ -406,14 +405,13 @@ impl Renderer for PreviewRenderer {
                         }
                     });
 
-                    let clone2 = pixel_count.clone();
                     let mut s = 0;
                     loop {
                         if !window.is_open() || window.is_key_down(Key::Escape) {
                             break;
                         }
                         let now = Instant::now();
-                        let stats: Profile = (&mut films[film_idx])
+                        let _stats: Profile = films[film_idx]
                             .buffer
                             .par_iter_mut()
                             .enumerate()
@@ -436,12 +434,12 @@ impl Renderer for PreviewRenderer {
                                     (y as f32 + sample.y)
                                         / (render_settings.resolution.height as f32),
                                 );
-                                temp_color += XYZColor::from(integrator.color(
+                                temp_color += integrator.color(
                                     &mut sampler,
                                     (camera_uv, 0),
                                     s as usize,
                                     &mut profile,
-                                ));
+                                );
 
                                 debug_assert!(
                                     temp_color.0.is_finite().all(),
@@ -450,17 +448,17 @@ impl Renderer for PreviewRenderer {
                                     temp_color
                                 );
 
-                                clone2.fetch_add(1, Ordering::Relaxed);
+                                pixel_count.fetch_add(1, Ordering::Relaxed);
 
                                 *pixel_ref += temp_color;
 
                                 profile
                             })
-                            .reduce(|| Profile::default(), |a, b| a.combine(b));
-                        println!("");
+                            .reduce(Profile::default, |a, b| a.combine(b));
+                        // stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
+                        println!();
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
                         println!("fps {}", 1.0 / elapsed);
-                        // stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         tonemapper.initialize(&films[film_idx]);
                         buffer
                             .par_iter_mut()

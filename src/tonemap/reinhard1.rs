@@ -113,9 +113,7 @@ impl Tonemapper for Reinhard1 {
         let scaling_factor = l * one_l_lm2 / (1.0 + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            // mauve. universal sign of danger
-            cie_xyz_color =
-                XYZColor::new(0.51994668667475025, 51.48686803771597, 1.0180528737469167);
+            cie_xyz_color = crate::MAUVE;
         }
 
         scaling_factor * cie_xyz_color.0
@@ -226,10 +224,8 @@ impl Tonemapper for Reinhard1x3 {
         // the last lane likely got set to nan or something nonzero when the division by l_w occurred, so set it to 0
         let mapped = (scaling_factor * cie_xyz_color.0).replace(3, 0.0);
         if !mapped.is_finite().all() || mapped.is_nan().any() {
-            // mauve. universal sign of danger
             warn_once!("detected nan or infinity value in film after tonemapping");
-            cie_xyz_color =
-                XYZColor::new(0.51994668667475025, 51.48686803771597, 1.0180528737469167);
+            cie_xyz_color = crate::MAUVE;
         }
         mapped
     }

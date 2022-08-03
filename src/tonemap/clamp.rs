@@ -83,9 +83,8 @@ impl Tonemapper for Clamp {
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            // mauve. universal sign of danger
-            cie_xyz_color =
-                XYZColor::new(0.51994668667475025, 51.48686803771597, 1.0180528737469167);
+            
+            cie_xyz_color = crate::MAUVE;
         }
 
         if self.luminance_only {
@@ -99,11 +98,10 @@ impl Tonemapper for Clamp {
 
             scaling_factor * cie_xyz_color.0
         } else {
-            let new_color = (cie_xyz_color * 10.0f32.powf(self.exposure))
+            (cie_xyz_color * 10.0f32.powf(self.exposure))
                 .0
                 .min(f32x4::splat(1.0))
-                .max(f32x4::splat(0.0));
-            new_color
+                .max(f32x4::splat(0.0))
         }
     }
 }

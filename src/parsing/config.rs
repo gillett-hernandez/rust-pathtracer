@@ -275,7 +275,7 @@ pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
             None => Some(num_cpus as u16),
         };
     }
-    return Ok(settings);
+    Ok(settings)
 }
 
 #[cfg(test)]

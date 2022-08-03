@@ -12,6 +12,7 @@ extern crate image;
 extern crate minifb;
 
 pub use math;
+use math::XYZColor;
 
 pub mod aabb;
 pub mod accelerator;
@@ -33,3 +34,6 @@ pub mod world;
 pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
     ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
 }
+
+// mauve. universal sign of danger
+pub const MAUVE: XYZColor = XYZColor::new(0.5199467, 51.48687, 1.0180528);

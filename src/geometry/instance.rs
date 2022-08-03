@@ -26,13 +26,7 @@ impl Eq for Instance {}
 
 impl PartialOrd for Instance {
     fn partial_cmp(&self, other: &Instance) -> Option<Ordering> {
-        if self.instance_id < other.instance_id {
-            Some(Ordering::Less)
-        } else if self.instance_id > other.instance_id {
-            Some(Ordering::Greater)
-        } else {
-            Some(Ordering::Equal)
-        }
+        Some(self.instance_id.cmp(&other.instance_id))
     }
 }
 
@@ -116,23 +110,21 @@ impl Hittable for Instance {
             } else {
                 None
             }
+        } else if let Some(hit) = self.aggregate.hit(r, t0, t1) {
+            debug_assert!(
+                hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
+                "{:?}",
+                hit
+            );
+            debug_assert!(hit.uv.0 <= 1.0 && hit.uv.1 <= 1.0, "{:?}", hit);
+            debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
+            Some(HitRecord {
+                instance_id: self.instance_id,
+                material: self.material_id.unwrap_or(hit.material),
+                ..hit
+            })
         } else {
-            if let Some(hit) = self.aggregate.hit(r, t0, t1) {
-                debug_assert!(
-                    hit.point.is_finite() && hit.normal.is_finite() && hit.time.is_finite(),
-                    "{:?}",
-                    hit
-                );
-                debug_assert!(hit.uv.0 <= 1.0 && hit.uv.1 <= 1.0, "{:?}", hit);
-                debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
-                Some(HitRecord {
-                    instance_id: self.instance_id,
-                    material: self.material_id.unwrap_or(hit.material),
-                    ..hit
-                })
-            } else {
-                None
-            }
+            None
         }
     }
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
@@ -179,7 +171,7 @@ impl Instance {
         self.instance_id
     }
     pub fn get_material_id(&self) -> MaterialId {
-        self.material_id.unwrap_or(0u16.into())
+        self.material_id.unwrap_or(MaterialId::Material(0u16))
     }
 }
 

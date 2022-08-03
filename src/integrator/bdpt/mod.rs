@@ -58,15 +58,14 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampler.draw_2d(),
                 wavelength_sample,
             );
-            sampled = maybe_sampled.expect(&format!(
-                "failed to sample, material is {:?}",
-                material.get_name()
-            ));
+            sampled = maybe_sampled.unwrap_or_else(|| {
+                panic!("failed to sample, material is {:?}", material.get_name())
+            });
 
             let directional_pdf = sampled.2;
             // if delta light, the pdf_forward is only directional_pdf
             let pdf_forward: PDF =
-                directional_pdf / (light_surface_normal * (&sampled.0).direction).abs();
+                directional_pdf / (light_surface_normal * sampled.0.direction).abs();
             let pdf_backward: PDF = light_pick_pdf * area_pdf;
             debug_assert!(
                 pdf_forward.0.is_finite(),
@@ -202,7 +201,7 @@ impl GenericIntegrator for BDPTIntegrator {
             &self.world,
             &mut eye_path,
             settings.min_bounces.unwrap_or(3),
-            &mut profile,
+            profile,
         );
         random_walk(
             light_ray,
@@ -214,7 +213,7 @@ impl GenericIntegrator for BDPTIntegrator {
             &self.world,
             &mut light_path,
             settings.min_bounces.unwrap_or(3),
-            &mut profile,
+            profile,
         );
 
         profile.camera_rays += 1;
@@ -378,7 +377,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
-                    &mut profile,
+                    profile,
                 );
                 let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),

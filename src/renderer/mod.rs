@@ -1,4 +1,3 @@
-
 mod film;
 
 mod naive;
@@ -20,24 +19,22 @@ use crate::world::World;
 
 pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
     let filename = render_settings.filename.as_ref();
-    let filename_str = filename.cloned().unwrap_or(String::from("output"));
+    let filename_str = filename.cloned().unwrap_or_else(|| String::from("output"));
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
     let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
     tonemapper.initialize(film);
 
-    match converter.write_to_files(film, tonemapper, &exr_filename, &png_filename) {
-        Err(_) => {
-            error!("failed to write files for some reason");
-            panic!();
-        }
-        Ok(_) => {}
+    if let Err(inner) = converter.write_to_files(film, tonemapper, &exr_filename, &png_filename) {
+        error!("failed to write files");
+        error!("{:?}", inner.to_string());
+        panic!();
     }
 }
 
 pub fn calculate_widest_wavelength_bounds(
-    config: &Vec<RenderSettings>,
+    config: &[RenderSettings],
     default: Bounds1D,
 ) -> Bounds1D {
     let mut wavelength_bounds: Option<Bounds1D> = None;

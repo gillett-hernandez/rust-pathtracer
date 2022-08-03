@@ -122,7 +122,7 @@ pub trait SamplerIntegrator: Sync + Send {
     fn preprocess(
         &mut self,
         _sampler: &mut Box<dyn Sampler>,
-        _settings: &Vec<RenderSettings>,
+        _settings: &[RenderSettings],
         _profile: &mut Profile,
     ) {
     }
@@ -145,7 +145,7 @@ pub trait GenericIntegrator: Send + Sync {
     fn preprocess(
         &mut self,
         sampler: &mut Box<dyn Sampler>,
-        settings: &Vec<RenderSettings>,
+        settings: &[RenderSettings],
         profile: &mut Profile,
     ) {
     }

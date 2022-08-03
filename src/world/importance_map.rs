@@ -199,7 +199,7 @@ impl ImportanceMap {
             }
         }
         pb.lock().finish();
-        println!("");
+        println!();
 
         marginal_data.iter_mut().for_each(|e| *e /= total_luminance);
 

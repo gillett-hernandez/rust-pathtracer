@@ -1,15 +1,12 @@
 extern crate rust_pathtracer as root;
 
-use std::convert::Infallible;
 use std::fs::File;
 use std::ops::RangeInclusive;
-use std::sync::{Arc, RwLock};
 
 use math::curves::*;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
 use math::*;
 
-use parking_lot::Mutex;
 use root::parsing::{config::*, load_scene};
 use root::renderer::Film;
 use root::tonemap::{Converter, Tonemapper};
@@ -49,13 +46,13 @@ enum Request {
     ChangeIlluminant(usize, Curve),
     AppendIlluminant(Curve),
     ViewIlluminant(usize),
-    IlluminantsCount,
+    // IlluminantsCount,
 }
 
 #[derive(Debug)]
 enum Response {
     Illuminant(Option<Curve>),
-    IlluminantsCount(usize),
+    // IlluminantsCount(usize),
 }
 
 struct Model {
@@ -125,10 +122,10 @@ impl Model {
                 Request::AppendIlluminant(new_illuminant) => {
                     self.illuminants.push(new_illuminant);
                 }
-                Request::IlluminantsCount => self
-                    .sender
-                    .try_send(Response::IlluminantsCount(self.illuminants.len()))
-                    .unwrap(),
+                // Request::IlluminantsCount => self
+                //     .sender
+                //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
+                //     .unwrap(),
             }
         }
     }
@@ -189,9 +186,9 @@ impl Controller {
                     println!("got illuminant from model");
                     self.illuminant = illuminant;
                 }
-                Response::IlluminantsCount(num) => {
-                    self.illuminants_count = num;
-                }
+                // Response::IlluminantsCount(num) => {
+                //     self.illuminants_count = num;
+                // }
                 _ => {}
             }
         }

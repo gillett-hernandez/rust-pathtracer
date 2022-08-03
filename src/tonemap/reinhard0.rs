@@ -104,9 +104,7 @@ impl Tonemapper for Reinhard0 {
         let scaling_factor = l / (1.0 + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            // mauve. universal sign of danger
-            cie_xyz_color =
-                XYZColor::new(0.51994668667475025, 51.48686803771597, 1.0180528737469167);
+            cie_xyz_color = crate::MAUVE;
         }
 
         scaling_factor * cie_xyz_color.0
@@ -210,9 +208,7 @@ impl Tonemapper for Reinhard0x3 {
         let scaling_factor = l / (1.0 + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            // mauve. universal sign of danger
-            cie_xyz_color =
-                XYZColor::new(0.51994668667475025, 51.48686803771597, 1.0180528737469167);
+            cie_xyz_color = crate::MAUVE;
         }
 
         scaling_factor * cie_xyz_color.0

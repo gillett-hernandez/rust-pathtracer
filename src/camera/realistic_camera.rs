@@ -132,7 +132,7 @@ impl RealisticCamera {
             (t - 0.5) * self.sensor_size * y_factor,
             self.film_position,
         );
-        let mut _attempts = 0;
+        // let mut _attempts = 0;
         let mut result = None;
 
         for _ in 0..100 {
@@ -148,7 +148,7 @@ impl RealisticCamera {
                 .sample(lambda, point, sampler.draw_2d(), sampler.draw_1d());
             let ray = Ray::new(point, v);
 
-            _attempts += 1;
+            // _attempts += 1;
             // do actual tracing through lens for film sample
 
             // using bladed aperture, though other apertures are possible and should be configurable through this camera's configuration

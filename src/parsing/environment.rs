@@ -100,8 +100,7 @@ pub fn parse_environment(
                             interpolation_mode: InterpolationMode::Linear,
                         })],
                     }
-                })
-                .clone();
+                });
             let importance_map = match data.importance_map {
                 Some(data) => ImportanceMap::Unbaked {
                     horizontal_resolution: data.width,

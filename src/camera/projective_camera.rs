@@ -158,7 +158,9 @@ impl ProjectiveCamera {
             println!("{} {}", u, v);
         }
 
-        if u < 0.0 || u >= 1.0 || v < 0.0 || v >= 1.0 {
+        let zero_to_one = 0.0..1.0;
+
+        if !zero_to_one.contains(&u) || !zero_to_one.contains(&v) {
             None
         } else {
             Some((u, v))

@@ -79,26 +79,25 @@ pub fn parse_instance(
 
     if instance_data.material_name.is_none() {
         error!("material name on instance {} was none", instance_id);
-    } else {
-        if !materials_mapping.contains_key(&instance_data.material_name.clone().unwrap()) {
-            error!(
-                "material not found in mapping, instance {}, material name {}",
-                instance_id,
-                &instance_data.material_name.clone().unwrap()
-            );
-        }
+    } else if !materials_mapping.contains_key(&instance_data.material_name.clone().unwrap()) {
+        error!(
+            "material not found in mapping, instance {}, material name {}",
+            instance_id,
+            &instance_data.material_name.clone().unwrap()
+        );
     }
 
     let material_id = instance_data
         .material_name
         .clone()
-        .map(|v| materials_mapping.get(&v).cloned())
-        .flatten();
+        .and_then(|v| materials_mapping.get(&v).cloned());
 
     info!(
         "parsed instance, assigned material id {:?} from {:?}, and instance id {}",
         material_id,
-        instance_data.material_name.unwrap_or("None".to_string()),
+        instance_data
+            .material_name
+            .unwrap_or_else(|| "None".to_string()),
         instance_id
     );
     Instance::new(aggregate, transform, material_id, instance_id)

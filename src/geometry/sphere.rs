@@ -40,11 +40,11 @@ impl Hittable for Sphere {
         let discriminant = b * b - a * c;
         let discriminant_sqrt = discriminant.sqrt();
         if discriminant > 0.0 {
-            let mut time: f32;
+            let mut time: f32 = (-b - discriminant_sqrt) / a;
             let point: Point3;
             let normal: Vec3;
             // time = r.time + (-b - discriminant_sqrt) / a;
-            time = (-b - discriminant_sqrt) / a;
+
             if time < t1 && time > t0 && time < r.tmax {
                 point = r.point_at_parameter(time);
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);

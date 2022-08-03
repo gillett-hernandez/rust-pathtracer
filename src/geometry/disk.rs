@@ -79,13 +79,8 @@ impl Hittable for Disk {
         debug_assert!(area_pdf.0.is_finite());
         let direction = point - from;
         let cos_i = normal * direction.normalized();
-        if !self.two_sided {
-            if cos_i < 0.0 {
-                return (direction.normalized(), 0.0.into());
-            }
-        }
-        let normal_dot_direction = (normal * direction.normalized()).abs();
-        let pdf = area_pdf * direction.norm_squared() / normal_dot_direction;
+
+        let pdf = area_pdf * direction.norm_squared() / cos_i.abs();
         if !pdf.0.is_finite() {
             println!("pdf was inf, {:?}", direction);
             (direction.normalized(), 0.0.into())
@@ -96,11 +91,6 @@ impl Hittable for Disk {
     fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
 
-        if !self.two_sided {
-            if cos_o < 0.0 {
-                return 0.0.into();
-            }
-        }
         let area = PI * self.radius * self.radius;
         let distance_squared = direction.norm_squared();
         PDF::from(distance_squared / ((cos_o.abs() + 0.00001) * area))

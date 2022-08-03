@@ -6,7 +6,7 @@ use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
 use nalgebra::{Matrix3, Vector3};
 use packed_simd::f32x4;
 
-use std::time::Instant;
+use std::{error::Error, time::Instant};
 
 mod clamp;
 mod reinhard0;
@@ -61,12 +61,10 @@ impl Converter {
                 if linear {
                     srgb_linear
                 } else {
-                    let srgb = (srgb_linear.lt(S313)).select(
+                    (srgb_linear.lt(S313)).select(
                         S323_25 * srgb_linear,
                         (S211 * srgb_linear.powf(S5_12) - S11) / S200,
-                    );
-
-                    srgb
+                    )
                 }
             }
         }
@@ -78,7 +76,7 @@ impl Converter {
         tonemapper: Box<dyn Tonemapper>,
         exr_filename: &str,
         png_filename: &str,
-    ) -> Result<(), ()> {
+    ) -> Result<(), Box<dyn Error>> {
         match self {
             Converter::sRGB => {
                 let now = Instant::now();
@@ -89,8 +87,7 @@ impl Converter {
                     let [r, g, b, _]: [f32; 4] =
                         self.transfer_function(film.at(x, y).0, true).into();
                     (r, g, b)
-                })
-                .unwrap();
+                })?;
                 println!(" done!");
                 let mut img: image::RgbImage =
                     image::ImageBuffer::new(film.width as u32, film.height as u32);
@@ -99,13 +96,13 @@ impl Converter {
                     //apply tonemap here
 
                     let [r, g, b, _]: [f32; 4] = self
-                        .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
+                        .transfer_function(tonemapper.map(film, (x as usize, y as usize)), false)
                         .into();
 
                     *pixel = image::Rgb([(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]);
                 }
                 print!("saving image...");
-                img.save(png_filename).unwrap();
+                img.save(png_filename)?;
                 println!(" done!");
 
                 println!(
