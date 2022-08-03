@@ -86,9 +86,14 @@ impl Hittable for Sphere {
         let normal = random_on_unit_sphere(s);
         let point_on_sphere = self.origin + self.radius * normal;
         let surface_area = self.radius * self.radius * 4.0 * PI;
+
         (point_on_sphere, normal, PDF::from(1.0 / surface_area))
     }
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+        // TODO: replace this with perfect hemisphere sampling
+        // i.e. https://schuttejoe.github.io/post/arealightsampling/
+        // or https://momentsingraphics.de/Media/I3D2019/Peters2019-SamplingSphericalCaps.pdf
+
         let (point_on_sphere, normal, area_pdf) = self.sample_surface(s);
         let direction = point_on_sphere - from;
         debug_assert!(
@@ -97,11 +102,15 @@ impl Hittable for Sphere {
             point_on_sphere,
             from
         );
-        let pdf = area_pdf * direction.norm_squared() / (normal * direction.normalized()).abs();
+
+        let normal_dot_direction = (normal * direction.normalized()).abs();
+        let pdf = area_pdf * direction.norm_squared() / normal_dot_direction;
         if !pdf.0.is_finite() {
             warn_once!(
-                "pdf was {:?}, direction: {:?}, normal: {:?}",
-                pdf, direction, normal
+                "pdf was inf, {:?}, area_pdf: {:?}, n * d: {:?}",
+                pdf,
+                area_pdf,
+                normal_dot_direction,
             );
 
             (direction.normalized(), 0.0.into())
@@ -112,8 +121,14 @@ impl Hittable for Sphere {
     fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
-        let pdf = distance_squared / (cos_o * self.radius * self.radius * 4.0 * PI);
-        debug_assert!(pdf.is_finite() && pdf >= 0.0);
+        let pdf = distance_squared / (cos_o.abs() * self.radius * self.radius * 4.0 * PI);
+        debug_assert!(
+            pdf.is_finite() && pdf >= 0.0,
+            "{:?} {:?} {:?}",
+            distance_squared,
+            cos_o,
+            self.radius
+        );
         pdf.into()
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {

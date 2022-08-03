@@ -270,18 +270,18 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
                 eta, eta_o, kappa, ..
             }) => {
                 for c_d_or_r in &[eta, eta_o, kappa] {
-                    if let CurveDataOrReference::Reference(name) = c_d_or_r {
-                        used_curves.insert(name.clone());
-                    }
+                    c_d_or_r.get_name().map(|name| {
+                        used_curves.insert(name.to_string());
+                    });
                 }
             }
             MaterialData::Lambertian(LambertianData { texture_id: name }) => {
                 used_textures.insert(name.clone());
             }
             MaterialData::PassthroughFilter(PassthroughFilterData { color, .. }) => {
-                if let CurveDataOrReference::Reference(name) = color {
-                    used_curves.insert(name.clone());
-                }
+                color.get_name().map(|name| {
+                    used_curves.insert(name.to_string());
+                });
             }
             MaterialData::SharpLight(SharpLightData {
                 bounce_color,
@@ -293,12 +293,12 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
                 emit_color,
                 ..
             }) => {
-                if let CurveDataOrReference::Reference(name) = bounce_color {
-                    used_curves.insert(name.clone());
-                }
-                if let CurveDataOrReference::Reference(name) = emit_color {
-                    used_curves.insert(name.clone());
-                }
+                bounce_color.get_name().map(|name| {
+                    used_curves.insert(name.to_string());
+                });
+                emit_color.get_name().map(|name| {
+                    used_curves.insert(name.to_string());
+                });
             }
         }
     }
@@ -313,17 +313,17 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
         for layer in &texture.0 {
             match layer {
                 TextureData::Texture1 { curve, .. } => {
-                    if let CurveDataOrReference::Reference(name) = curve {
-                        used_curves.insert(name.clone());
-                    }
+                    curve.get_name().map(|name| {
+                        used_curves.insert(name.to_string());
+                    });
                 }
                 TextureData::Texture4 { curves, .. }
                 | TextureData::HDR { curves, .. }
                 | TextureData::EXR { curves, .. } => {
                     curves.into_iter().for_each(|curve| {
-                        if let CurveDataOrReference::Reference(name) = curve {
-                            used_curves.insert(name.clone());
-                        }
+                        curve.get_name().map(|name| {
+                            used_curves.insert(name.to_string());
+                        });
                     });
                 }
                 TextureData::SRGB { .. } => {} // uses in-code parsing of sRGB basis functions

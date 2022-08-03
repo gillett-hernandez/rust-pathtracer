@@ -302,18 +302,24 @@ impl HasBoundingBox for Mesh {
     }
 }
 
-#[allow(unused)]
 impl Hittable for Mesh {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let bvh = self.bvh.as_ref().unwrap();
+        let bvh = self.bvh.as_ref().expect("bvh not initialized for mesh");
         let mut possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
-        // sort AABB intersections so that the earliest aabb hit end is first.
-        // possible_hit_triangles.sort_unstable_by(|a, b| {
-        //     // let hit0_t1 = a.2;
-        //     // let hit1_t1 = b.2;
-        //     // let sign = (hit1_t1-hit0_t1).signum();
-        //     (a.2).partial_cmp(&b.2).unwrap()
-        // });
+        // maybe sort AABB intersections so that the earliest aabb hit end is first.
+        // TODO: run a performance test to see if doing this speeds up renders with meshs
+        if cfg!(feature = "sort_mesh_aabb_hits") {
+            possible_hit_triangles.sort_unstable_by(
+                |(_, _, aabb_hit_end_time0), (_, _, aabb_hit_end_time1)| {
+                    // let hit0_t1 = a.2;
+                    // let hit1_t1 = b.2;
+                    // let sign = (hit1_t1-hit0_t1).signum();
+                    (aabb_hit_end_time0)
+                        .partial_cmp(aabb_hit_end_time1)
+                        .unwrap()
+                },
+            );
+        }
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for (tri, t0_aabb_hit, t1_aabb_hit) in possible_hit_triangles {
@@ -339,17 +345,18 @@ impl Hittable for Mesh {
         }
         hit_record
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
-        (Vec3::ZERO, 0.0.into())
+    // TODO: implement mesh and triangle light sampling
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
+        unimplemented!("mesh light sampling is unimplemented")
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
-        (Point3::ORIGIN, Vec3::ZERO, 0.0.into())
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
+        unimplemented!("mesh light sampling is unimplemented")
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
-        0.0.into()
+    fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
+        unimplemented!("mesh light sampling is unimplemented")
     }
-    fn surface_area(&self, transform: &Transform3) -> f32 {
-        0.0
+    fn surface_area(&self, _transform: &Transform3) -> f32 {
+        unimplemented!("mesh light sampling is unimplemented")
     }
 }
 /*

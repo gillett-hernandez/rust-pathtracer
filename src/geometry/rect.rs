@@ -87,7 +87,7 @@ impl Hittable for AARect {
         }
         let mut hit_normal = Vec3::from_axis(self.normal);
 
-        // if two sided, and the ray direction and normal 
+        // if two sided, and the ray direction and normal
         if self.two_sided && r.direction * hit_normal > 0.0 {
             hit_normal = -hit_normal;
         }
@@ -111,6 +111,7 @@ impl Hittable for AARect {
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
         let Sample2D { mut x, y } = s;
         let mut normal = Vec3::from_axis(self.normal);
+        // if two sided, randomly choose which side to "emit" from.
         if self.two_sided {
             let choice = Sample1D { x }.choose(0.5, -1.0f32, 1.0f32);
             x = choice.0.x;
@@ -125,17 +126,21 @@ impl Hittable for AARect {
         (point, normal, (1.0 / area).into())
     }
     fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+        // NOTE: it's up to the callee to handle when the normal and sampled direction are not in the same hemisphere.
+        // since lights can be reverse sided, and such.
         let (point, normal, area_pdf) = self.sample_surface(s);
         let direction = point - from;
         let cos_i = normal * direction.normalized();
-        if !self.two_sided {
-            if cos_i < 0.0 {
-                return (direction.normalized(), 0.0.into());
-            }
-        }
+        // if !self.two_sided {
+        //     if cos_i < 0.0 {
+        //         return (direction.normalized(), 0.0.into());
+        //     }
+        // }
+        // if two sided, then normal being flipped doesn't matter because we take the abs of cos_i
         let pdf = area_pdf * direction.norm_squared() / cos_i.abs();
-        if !pdf.0.is_finite() {
-            warn_once!("pdf was inf, {:?}", direction);
+
+        if !pdf.0.is_finite() || pdf.0.is_nan() {
+            warn_once!("pdf was inf or nan, {:?}, {:?}", direction, cos_i);
             (direction.normalized(), 0.0.into())
         } else {
             (direction.normalized(), pdf)
@@ -144,11 +149,11 @@ impl Hittable for AARect {
     fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
 
-        if !self.two_sided {
-            if cos_o < 0.0 {
-                return 0.0.into();
-            }
-        }
+        // if !self.two_sided {
+        //     if cos_o < 0.0 {
+        //         return 0.0.into();
+        //     }
+        // }
         let area = self.size.0 * self.size.1;
         let distance_squared = direction.norm_squared();
 

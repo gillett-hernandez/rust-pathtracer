@@ -83,7 +83,7 @@ impl Converter {
             Converter::sRGB => {
                 let now = Instant::now();
 
-                print!("saving exr image...");
+                print!("saving exr...");
                 exr::prelude::write_rgb_file(exr_filename, film.width, film.height, |x, y| {
                     // TODO: maybe don't use linear srgb here, but instead CIE RGB
                     let [r, g, b, _]: [f32; 4] =

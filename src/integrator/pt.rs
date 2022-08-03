@@ -3,8 +3,8 @@ use crate::integrator::utils::{random_walk, veach_v, LightSourceType, SurfaceVer
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
 use crate::math::*;
-use crate::world::TransportMode;
 use crate::world::World;
+use crate::world::{TransportMode, NORMAL_OFFSET};
 
 use std::f32::INFINITY;
 use std::sync::Arc;
@@ -19,6 +19,8 @@ pub struct PathTracingIntegrator {
     pub wavelength_bounds: Bounds1D,
 }
 
+const USE_VEACH_V: bool = false;
+
 impl PathTracingIntegrator {
     fn estimate_direct_illumination(
         &self,
@@ -32,89 +34,161 @@ impl PathTracingIntegrator {
         profile: &mut Profile,
     ) -> SingleEnergy {
         if let Some((light, light_pick_pdf)) = self.world.pick_random_light(light_pick_sample) {
-            // determine pick pdf
-            // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
-            // sample the primitive from hit_point
-            // let (direction, light_pdf) = light.sample(sampler.draw_2d(), hit.point);
-            let (point_on_light, normal, light_area_pdf) =
-                light.sample_surface(additional_light_sample);
-            debug_assert!(light_area_pdf.0.is_finite());
-            if light_area_pdf.0 == 0.0 {
-                return SingleEnergy::ZERO;
-            }
-            // direction is from shading point to light
-            let direction = (point_on_light - hit.point).normalized();
-            // direction is already in world space.
-            // direction is also oriented away from the shading point already, so no need to negate directions until later.
-            let local_light_direction = frame.to_local(&direction);
-            let light_vertex_wi = TangentFrame::from_normal(normal).to_local(&(-direction));
+            // TODO: figure out why the hell the USE_VEACH_V branch was so bad.
+            if USE_VEACH_V {
+                // determine pick pdf
+                // as of now the pick pdf is just num lights, however if it were to change this would be where it should change.
+                // sample the primitive from hit_point
+                let (point_on_light, normal, light_area_pdf) =
+                    light.sample_surface(additional_light_sample);
+                debug_assert!(light_area_pdf.0.is_finite());
+                if light_area_pdf.0 == 0.0 {
+                    return SingleEnergy::ZERO;
+                }
+                // direction is from shading point to light
+                let direction = (point_on_light - hit.point).normalized();
+                // direction is already in world space.
+                // direction is also oriented away from the shading point already, so no need to negate directions until later.
+                let local_light_direction = frame.to_local(&direction);
+                let light_vertex_wi = TangentFrame::from_normal(normal).to_local(&(-direction));
 
-            let dropoff = light_vertex_wi.z().abs();
-            if dropoff == 0.0 {
-                return SingleEnergy::ZERO;
-            }
-            // since direction is already in world space, no need to call frame.to_world(direction) in the above line
-            let (reflectance, scatter_pdf_for_light_ray) = material.bsdf(
-                hit.lambda,
-                hit.uv,
-                hit.transport_mode,
-                wi,
-                local_light_direction,
-            );
-            // if reflectance.0 < 0.00001 {
-            //     // if reflectance is 0 for all components, skip this light sample
-            //     continue;
-            // }
-
-            let pdf = light.psa_pdf(
-                hit.normal * (point_on_light - hit.point).normalized(),
-                hit.point,
-                point_on_light,
-            );
-            let light_pdf = pdf * light_pick_pdf; // / light_vertex_wi.z().abs();
-            if light_pdf.0 == 0.0 {
-                // println!("light pdf was 0");
-                // go to next pick
-                return SingleEnergy::ZERO;
-            }
-
-            let light_material = self.world.get_material(light.get_material_id());
-            let emission =
-                light_material.emission(hit.lambda, hit.uv, hit.transport_mode, light_vertex_wi);
-            // this should be the same as the other method, but maybe not.
-            if emission.0 == 0.0 {
-                return SingleEnergy::ZERO;
-            }
-
-            profile.shadow_rays += 1;
-            if veach_v(&self.world, point_on_light, hit.point) {
-                let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-
-                debug_assert!(emission.0 >= 0.0);
-                // successful_light_samples += 1;
-                let v = reflectance * throughput * dropoff * emission * weight / light_pdf.0;
-                debug_assert!(
-                    v.0.is_finite(),
-                    "{:?},{:?},{:?},{:?},{:?},{:?},",
-                    reflectance,
-                    throughput,
-                    dropoff,
-                    emission,
-                    weight,
-                    light_pdf.0
+                let cos_i = light_vertex_wi.z().abs();
+                if cos_i == 0.0 {
+                    return SingleEnergy::ZERO;
+                }
+                // since direction is already in world space, no need to call frame.to_world(direction) in the above line
+                let (reflectance, scatter_pdf_for_light_ray) = material.bsdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    wi,
+                    local_light_direction,
                 );
-                return v;
-                // debug_assert!(
-                //     !light_contribution.0.is_nan(),
-                //     "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} ",
-                //     light_contribution,
-                //     reflectance,
-                //     beta,
-                //     dropoff,
-                //     emission,
-                //     weight,
-                //     light_pdf
-                // );
+                // if reflectance.0 < 0.00001 {
+                //     // if reflectance is 0 for all components, skip this light sample
+                //     continue;
+                // }
+
+                let pdf = light.psa_pdf(
+                    hit.normal * (point_on_light - hit.point).normalized(),
+                    hit.point,
+                    point_on_light,
+                );
+                let light_pdf = pdf * light_pick_pdf; // / light_vertex_wi.z().abs();
+                if light_pdf.0 == 0.0 {
+                    // println!("light pdf was 0");
+                    // go to next pick
+                    return SingleEnergy::ZERO;
+                }
+
+                let light_material = self.world.get_material(light.get_material_id());
+                // FIXME: why are we using hit.uv for this, since hit.uv is the uv for the hit on the material, not on the light
+
+                let emission = light_material.emission(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    light_vertex_wi,
+                );
+                // this should be the same as the other method, but maybe not.
+                if emission.0 == 0.0 {
+                    return SingleEnergy::ZERO;
+                }
+
+                profile.shadow_rays += 1;
+                if veach_v(&self.world, point_on_light, hit.point) {
+                    let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+
+                    debug_assert!(emission.0 >= 0.0);
+                    // successful_light_samples += 1;
+                    let v = reflectance * throughput * cos_i * emission * weight / light_pdf.0;
+                    debug_assert!(
+                        v.0.is_finite(),
+                        "{:?},{:?},{:?},{:?},{:?},{:?},",
+                        reflectance,
+                        throughput,
+                        cos_i,
+                        emission,
+                        weight,
+                        light_pdf.0
+                    );
+                    return v;
+                    // debug_assert!(
+                    //     !light_contribution.0.is_nan(),
+                    //     "l {:?} r {:?} b {:?} d {:?} s {:?} w {:?} p {:?} ",
+                    //     light_contribution,
+                    //     reflectance,
+                    //     beta,
+                    //     dropoff,
+                    //     emission,
+                    //     weight,
+                    //     light_pdf
+                    // );
+                }
+            } else {
+                // light direction is in world space, and is from hit.point
+                let (light_direction, light_pdf) = light.sample(additional_light_sample, hit.point);
+                let light_pdf = light_pdf * light_pick_pdf;
+
+                if light_pdf.0 == 0.0 {
+                    return 0.0.into();
+                }
+                let bsdf_wo = frame.to_local(&light_direction);
+                let (reflectance, bounce_pdf) =
+                    material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, bsdf_wo);
+                let weight = power_heuristic(light_pdf.0, bounce_pdf.0);
+
+                let shadow_ray = Ray::new(
+                    hit.point + hit.normal * NORMAL_OFFSET * bsdf_wo.z().signum(),
+                    light_direction,
+                );
+
+                profile.shadow_rays += 1;
+                if let Some(shadow_hit) = self.world.hit(shadow_ray, 0.0, INFINITY) {
+                    if matches!(shadow_hit.material, MaterialId::Light(_)) {
+                        let light_material = self.world.get_material(shadow_hit.material);
+                        let light_local_frame = TangentFrame::from_normal(shadow_hit.normal);
+                        let light_local_wi = light_local_frame.to_local(&-light_direction);
+
+                        let light_emission = light_material.emission(
+                            hit.lambda,
+                            shadow_hit.uv,
+                            hit.transport_mode,
+                            light_local_wi,
+                        );
+
+                        let cos_i = light_local_wi.z().abs();
+                        let cos_o = bsdf_wo.z().abs();
+
+                        let v = reflectance * throughput * cos_o * cos_i * light_emission * weight
+                            / light_pdf.0;
+                        // if throughput.0 == 1.0 {
+                        //     info!(
+                        //         "{:?} = {:?}*{:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
+                        //         v,
+                        //         throughput,
+                        //         reflectance,
+                        //         light_emission,
+                        //         bsdf_wo,
+                        //         light_local_wi,
+                        //         weight,
+                        //         light_pdf
+                        //     );
+                        // }
+                        debug_assert!(
+                            v.0.is_finite(),
+                            "{:?},{:?},{:?},{:?},{:?},{:?},{:?},",
+                            reflectance,
+                            throughput,
+                            cos_o,
+                            cos_i,
+                            light_emission,
+                            weight,
+                            light_pdf.0
+                        );
+                        return v;
+                    }
+                }
             }
         }
         SingleEnergy::ZERO
@@ -150,49 +224,53 @@ impl PathTracingIntegrator {
 
         profile.shadow_rays += 1;
         // TODO: add support for passthrough material, such that it doesn't fully interfere with direct illumination
-        if let Some(mut _light_hit) =
-            self.world
-                .hit(Ray::new(hit.point, direction), 0.00001, INFINITY)
-        {
-            0.0.into()
-        /*
-        light_hit.lambda = lambda;
-        // handle case where we intended to hit the world but instead hit a light
-        let material = self.world.get_material(light_hit.material);
+        if let Some(_light_hit) = self.world.hit(
+            Ray::new(
+                hit.point + hit.normal * NORMAL_OFFSET * direction.z().signum(),
+                direction,
+            ),
+            0.0,
+            INFINITY,
+        ) {
+            // TODO: handle case where we intended to hit the world with the shadow ray but instead hit a light.
+            return 0.0.into();
 
-        let point_on_light = light_hit.point;
-        let light_frame = TangentFrame::from_normal(light_hit.normal);
-        let light_wi = light_frame.to_local(&-direction);
-        let dropoff = light_wi.z().abs();
-        if dropoff == 0.0 {
-            return SingleEnergy::ZERO;
-        }
-        // if reflectance.0 < 0.00001 {
-        //     // if reflectance is 0 for all components, skip this light sample
-        //     continue;
-        // }
-        let emission = material.emission(
-            light_hit.lambda,
-            light_hit.uv,
-            light_hit.transport_mode,
-            light_wi,
-        );
-        if emission.0 > 0.0 {
-            let light = self.world.get_primitive(light_hit.instance_id);
-            let pdf = light.psa_pdf(
-                hit.normal * (point_on_light - hit.point).normalized(),
-                hit.point,
-                point_on_light,
-            );
+            // light_hit.lambda = lambda;
+            // let material = self.world.get_material(light_hit.material);
 
-            if pdf.0 == 0.0 {
-                return SingleEnergy::ZERO;
-            }
-            let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
-            reflectance * throughput * dropoff * emission * weight / light_pdf.0
-        } else {
-            SingleEnergy::ZERO
-        } */
+            // let point_on_light = light_hit.point;
+            // let light_frame = TangentFrame::from_normal(light_hit.normal);
+            // let light_wi = light_frame.to_local(&-direction);
+            // let dropoff = light_wi.z().abs();
+            // if dropoff == 0.0 {
+            //     return SingleEnergy::ZERO;
+            // }
+            // // if reflectance.0 < 0.00001 {
+            // //     // if reflectance is 0 for all components, skip this light sample
+            // //     continue;
+            // // }
+            // let emission = material.emission(
+            //     light_hit.lambda,
+            //     light_hit.uv,
+            //     light_hit.transport_mode,
+            //     light_wi,
+            // );
+            // if emission.0 > 0.0 {
+            //     let light = self.world.get_primitive(light_hit.instance_id);
+            //     let pdf = light.psa_pdf(
+            //         hit.normal * (point_on_light - hit.point).normalized(),
+            //         hit.point,
+            //         point_on_light,
+            //     );
+
+            //     if pdf.0 == 0.0 {
+            //         return SingleEnergy::ZERO;
+            //     }
+            //     let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+            //     reflectance * throughput * dropoff * emission * weight / light_pdf.0
+            // } else {
+            //     SingleEnergy::ZERO
+            // }
         } else {
             // successfully world is visible along this ray
             let emission = self.world.environment.emission(uv, lambda);
@@ -231,7 +309,7 @@ impl PathTracingIntegrator {
         if self.world.lights.is_empty() && env_sampling_probability == 0.0 {
             return SingleEnergy::ZERO;
         }
-        for _i in 0..self.light_samples {
+        for _ in 0..self.light_samples {
             let (light_pick_sample, sample_world) =
                 sampler
                     .draw_1d()
@@ -366,8 +444,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wi = vertex.local_wi;
                     let material = self.world.get_material(vertex.material_id);
 
-                    // bug with specific special conditions
-
                     let emission =
                         material.emission(vertex.lambda, vertex.uv, TransportMode::Importance, wi);
 
@@ -380,20 +456,31 @@ impl SamplerIntegrator for PathTracingIntegrator {
                         } else {
                             let hit_primitive = self.world.get_primitive(vertex.instance_id);
 
-                            let pdf = hit_primitive.psa_pdf(
+                            let hypothetical_nee_pdf = hit_primitive.psa_pdf(
                                 prev_vertex.normal
                                     * (vertex.point - prev_vertex.point).normalized(),
                                 prev_vertex.point,
                                 vertex.point,
                             );
-                            let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                            let weight =
+                                power_heuristic(prev_vertex.pdf_forward, hypothetical_nee_pdf.0);
+
+                            // info!(
+                            //     "{:?}, {:?} ---- {:?}, {:?}, {:?}",
+                            //     prev_vertex.pdf_forward,
+                            //     hypothetical_nee_pdf.0,
+                            //     weight,
+                            //     vertex.throughput,
+                            //     emission
+                            // );
 
                             debug_assert!(
-                                !pdf.is_nan() && !weight.is_nan(),
+                                !hypothetical_nee_pdf.is_nan() && !weight.is_nan(),
                                 "{:?}, {}",
-                                pdf,
+                                hypothetical_nee_pdf,
                                 weight
                             );
+                            // NOTE: not dividing by prev_vertex.pdf_forward because vertex.throughput already factors that in, due to how random walk works
                             sum.energy += weight * vertex.throughput * emission;
 
                             debug_assert!(!sum.energy.is_nan());
@@ -414,22 +501,23 @@ impl SamplerIntegrator for PathTracingIntegrator {
 
                 if emission.0 > 0.0 {
                     // this will likely never get triggered, since hitting a light source is handled in the above branch
-                    if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
-                        sum.energy += vertex.throughput * emission;
-                        debug_assert!(!sum.energy.is_nan());
-                    } else {
-                        let hit_primitive = self.world.get_primitive(hit.instance_id);
-                        // // println!("{:?}", hit);
-                        let pdf = hit_primitive.psa_pdf(
-                            prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
-                            prev_vertex.point,
-                            hit.point,
-                        );
-                        let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
-                        debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                        sum.energy += weight * vertex.throughput * emission;
-                        debug_assert!(!sum.energy.is_nan());
-                    }
+                    panic!();
+                    // if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
+                    //     sum.energy += vertex.throughput * emission;
+                    //     debug_assert!(!sum.energy.is_nan());
+                    // } else {
+                    //     let hit_primitive = self.world.get_primitive(hit.instance_id);
+                    //     // // println!("{:?}", hit);
+                    //     let pdf = hit_primitive.psa_pdf(
+                    //         prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
+                    //         prev_vertex.point,
+                    //         hit.point,
+                    //     );
+                    //     let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                    //     debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                    //     sum.energy += weight * vertex.throughput * emission;
+                    //     debug_assert!(!sum.energy.is_nan());
+                    // }
                 }
 
                 if self.light_samples > 0 {

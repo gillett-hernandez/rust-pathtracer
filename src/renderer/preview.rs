@@ -459,8 +459,8 @@ impl Renderer for PreviewRenderer {
                             .reduce(|| Profile::default(), |a, b| a.combine(b));
                         println!("");
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-                        println!("took {}s", elapsed);
-                        stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
+                        println!("fps {}", 1.0 / elapsed);
+                        // stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         tonemapper.initialize(&films[film_idx]);
                         buffer
                             .par_iter_mut()
@@ -475,9 +475,9 @@ impl Renderer for PreviewRenderer {
                                     )
                                     .into();
                                 *v = rgb_to_u32(
-                                    (255.0 * r) as u8,
-                                    (255.0 * g) as u8,
-                                    (255.0 * b) as u8,
+                                    (256.0 * r) as u8,
+                                    (256.0 * g) as u8,
+                                    (256.0 * b) as u8,
                                 );
                             });
                         window.update_with_buffer(&buffer, width, height).unwrap();

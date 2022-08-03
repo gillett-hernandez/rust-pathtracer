@@ -1,0 +1,120 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+
+# TODO: use a variant of this scene to test implementations for triangle light sampling and disk light sampling
+
+env_sampling_probability = 0.0
+[environment]
+type="HDRI"
+strength = 0.1
+texture_name = "machine_shop_4k"
+
+
+# floor
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [20, 20]
+origin = [0.0, 0.0, -2.0]
+normal = "Z"
+two_sided = true
+
+
+# lights
+[[instances]]
+material_name = "diffuse_light_warm"
+[instances.aggregate]
+type = "Sphere"
+origin = [0.0, 4.5, 4.0]
+radius = 0.25
+
+
+[[instances]]
+material_name = "diffuse_light_warm"
+[instances.aggregate]
+type = "Sphere"
+origin = [0.0, 1.5, 4.0]
+radius = 0.15
+
+
+[[instances]]
+material_name = "diffuse_light_warm"
+[instances.aggregate]
+type = "Sphere"
+origin = [0.0, -1.5, 4.0]
+radius = 0.05
+
+[[instances]]
+material_name = "diffuse_light_warm"
+[instances.aggregate]
+type = "Sphere"
+origin = [0.0, -4.5, 4.0]
+radius = 0.01
+
+
+# slats
+
+
+[[instances]]
+material_name = "ggx_iron_roughness0_2"
+[instances.aggregate]
+type = "Rect"
+size = [1, 10]
+origin = [2, 0, 0]
+normal = "Z"
+two_sided = true
+[instances.transform]
+translate = [0.0, 0.0, 0.0]
+[[instances.transform.rotate]]
+axis = [0.0, 1.0, 0.0]
+angle = -54.6
+
+
+[[instances]]
+material_name = "ggx_iron_roughness0_02"
+[instances.aggregate]
+type = "Rect"
+size = [1, 10]
+origin = [0, 0, 0]
+normal = "Z"
+two_sided = true
+[instances.transform]
+translate = [0.0, 0.0, 0.0]
+[[instances.transform.rotate]]
+axis = [0.0, 1.0, 0.0]
+angle = -36.9
+
+
+[[instances]]
+material_name = "ggx_iron_roughness0_002"
+[instances.aggregate]
+type = "Rect"
+size = [1, 10]
+origin = [-2, 0, 0]
+normal = "Z"
+two_sided = true
+[instances.transform]
+translate = [0.0, 0.0, 0.0]
+[[instances.transform.rotate]]
+axis = [0.0, 1.0, 0.0]
+angle = -20.9
+
+
+
+[[instances]]
+material_name = "ggx_iron_roughness0_002"
+[instances.aggregate]
+type = "Rect"
+size = [1, 10]
+origin = [-4, 0, 0]
+normal = "Z"
+two_sided = true
+[instances.transform]
+translate = [0.0, 0.0, 0.0]
+[[instances.transform.rotate]]
+axis = [0.0, 1.0, 0.0]
+angle = -8.9

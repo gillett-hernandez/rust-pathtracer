@@ -127,6 +127,94 @@ interpolation_mode = "Cubic"
 [ggx_iron.kappa.domain_mapping]
 x_scale = 1000.0
 
+[ggx_iron_roughness0_0002]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.0002
+[ggx_iron_roughness0_0002.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_0002.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_0002.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_0002.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+
+[ggx_iron_roughness0_002]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.002
+[ggx_iron_roughness0_002.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_002.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_002.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_002.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+
+[ggx_iron_roughness0_02]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.02
+[ggx_iron_roughness0_02.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_02.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_02.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_02.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+
+[ggx_iron_roughness0_2]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.2
+[ggx_iron_roughness0_2.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_2.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_2.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_2.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+
 
 [ggx_lead]
 type = "GGX"
@@ -173,21 +261,21 @@ x_scale = 1000.0
 
 [diffuse_light_fluorescent]
 type = "DiffuseLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 emit_color = "fluorescent_x5"
 bounce_color = "flat_78"
 
 
 [diffuse_light_xenon]
 type = "DiffuseLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 emit_color = "xenon_x5"
 bounce_color = "flat_78"
 
 
 [diffuse_light_warm]
 type = "DiffuseLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 emit_color = "blackbody_3000k_x5"
 bounce_color = "flat_78"
 
@@ -215,7 +303,7 @@ bounce_color = "flat_78"
 
 [sharp_light_xenon]
 type = "SharpLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 sharpness = 4.0
 emit_color = "xenon_x5"
 bounce_color = "flat_78"
@@ -223,7 +311,7 @@ bounce_color = "flat_78"
 
 [sharp_light_warm]
 type = "SharpLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 sharpness = 4.0
 emit_color = "blackbody_3000k_x5"
 bounce_color = "flat_78"
@@ -231,7 +319,7 @@ bounce_color = "flat_78"
 
 [sharp_light]
 type = "SharpLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 sharpness = 4.0
 emit_color = "blackbody_5000k"
 bounce_color = "flat_78"
@@ -239,7 +327,7 @@ bounce_color = "flat_78"
 
 [sharp_light_fluorescent]
 type = "SharpLight"
-sidedness = "Reverse"
+sidedness = "Dual"
 sharpness = 4.0
 emit_color = "fluorescent_x5"
 bounce_color = "flat_78"

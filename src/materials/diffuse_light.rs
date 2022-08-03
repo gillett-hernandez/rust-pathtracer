@@ -122,7 +122,6 @@ impl Material for DiffuseLight {
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            // if wi.z() > 0.0 {
             SingleEnergy::new(self.emit_color.evaluate_power(lambda) / PI)
         } else {
             SingleEnergy::ZERO

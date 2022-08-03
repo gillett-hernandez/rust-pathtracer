@@ -1,5 +1,3 @@
-
-
 use crate::curves::*;
 use crate::math::*;
 use math::curves::InterpolationMode;
@@ -329,6 +327,12 @@ impl CurveDataOrReference {
                 info!("resolving curve {}", name);
                 curves_mapping.get(name).cloned()
             }
+        }
+    }
+    pub fn get_name(&self) -> Option<&str> {
+        match self {
+            Self::Literal(_) => None,
+            Self::Reference(name) => Some(name),
         }
     }
 }

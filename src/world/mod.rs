@@ -111,7 +111,11 @@ impl World {
         world
     }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
+
         // currently just uniform sampling
+        // TODO: change method to take into account the location from which the light is being picked, to allow light trees or other heuristics
+        // i.e. a projected solid angle * power heuristic and pdf
+        // maybe use reservoir sampling?
         let length = self.lights.len();
         if length == 0 {
             None

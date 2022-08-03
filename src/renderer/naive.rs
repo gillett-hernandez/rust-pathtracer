@@ -483,14 +483,17 @@ impl Renderer for NaiveRenderer {
                     if let EnvironmentMap::HDR {
                         texture,
                         importance_map,
+                        strength,
                         ..
                     } = &mut world.environment
                     {
-                        let wavelength_bounds = render_settings
-                            .wavelength_bounds
-                            .map(|e| Bounds1D::new(e.0, e.1))
-                            .unwrap_or(math::spectral::BOUNDED_VISIBLE_RANGE);
-                        importance_map.bake_in_place(texture, wavelength_bounds);
+                        if *strength > 0.0 {
+                            let wavelength_bounds = render_settings
+                                .wavelength_bounds
+                                .map(|e| Bounds1D::new(e.0, e.1))
+                                .unwrap_or(math::spectral::BOUNDED_VISIBLE_RANGE);
+                            importance_map.bake_in_place(texture, wavelength_bounds);
+                        }
                     }
                     let arc_world = Arc::new(world.clone());
                     match Integrator::from_settings_and_world(
@@ -570,10 +573,13 @@ impl Renderer for NaiveRenderer {
                     if let EnvironmentMap::HDR {
                         texture,
                         importance_map,
+                        strength,
                         ..
                     } = &mut world.environment
                     {
-                        importance_map.bake_in_place(texture, wavelength_bounds);
+                        if *strength > 0.0 {
+                            importance_map.bake_in_place(texture, wavelength_bounds);
+                        }
                     }
                     let arc_world = Arc::new(world.clone());
                     let integrator = BDPTIntegrator {
@@ -633,10 +639,13 @@ impl Renderer for NaiveRenderer {
                     if let EnvironmentMap::HDR {
                         texture,
                         importance_map,
+                        strength,
                         ..
                     } = &mut world.environment
                     {
-                        importance_map.bake_in_place(texture, wavelength_bounds);
+                        if *strength > 0.0 {
+                            importance_map.bake_in_place(texture, wavelength_bounds);
+                        }
                     }
                     let arc_world = Arc::new(world.clone());
                     let integrator = LightTracingIntegrator {

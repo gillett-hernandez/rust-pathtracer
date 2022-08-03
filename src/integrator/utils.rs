@@ -120,21 +120,14 @@ impl From<SurfaceVertex> for HitRecord {
 }
 
 pub fn veach_v(world: &Arc<World>, point0: Point3, point1: Point3) -> bool {
-    // returns if the points are visible
+    // returns whether the points are mutually visible.
+
     let diff = point1 - point0;
     let norm = diff.norm();
     let tmax = norm * 0.99;
     let point0_to_point1 = Ray::new_with_time_and_tmax(point0, diff / norm, 0.0, tmax);
     let hit = world.hit(point0_to_point1, INTERSECTION_TIME_OFFSET, tmax);
-    // if (point0.x() == 1.0 || point1.x() == 1.0) && !hit.as_ref().is_none() {
-    //     // from back wall to something
-    //     println!(
-    //         "{:?} {:?}, hit was {:?}",
-    //         point0,
-    //         point1,
-    //         hit.as_ref().unwrap()
-    //     );
-    // }
+
     hit.is_none()
 }
 
@@ -142,7 +135,6 @@ pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
 }
 
-#[allow(unused_mut)]
 pub fn random_walk(
     mut ray: Ray,
     lambda: f32,
@@ -157,7 +149,7 @@ pub fn random_walk(
 ) -> Option<SingleEnergy> {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
-    let mut additional_contribution = SingleEnergy::ZERO;
+    // let mut additional_contribution = SingleEnergy::ZERO;
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
     // let mut last_vertex: Option<SurfaceVertex> = None;
     for bounce in 0..bounce_limit {
@@ -228,19 +220,17 @@ pub fn random_walk(
                 } else {
                     1.0
                 };
-                let russian_roulette_sample = sampler.draw_1d();
-                if russian_roulette_sample.x > rr_continue_prob {
-                    break;
-                }
-                beta *= f * cos_o.abs() / (rr_continue_prob * pdf.0);
+                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
+                beta *= f / vertex.pdf_forward;
                 if pdf.0 == 0.0 {
                     beta.0 = 0.0;
                 }
-                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
 
                 // consider handling delta distributions differently here, if deltas are ever added.
 
                 // eval pdf in reverse direction
+                // FIXME: confirm that transport mode doesn't need to be flipped
+                // also, maybe gate this behind a passed flag, to avoid wasted computation when called by the PT integrator
                 vertex.pdf_backward = rr_continue_prob
                     * material
                         .bsdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
@@ -248,33 +238,23 @@ pub fn random_walk(
                          .0
                     / cos_i;
 
-                // debug_assert!(
-                //     vertex.pdf_forward > 0.0 && vertex.pdf_forward.is_finite(),
-                //     "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                //     material.get_name(),
-                //     vertex,
-                //     wi,
-                //     wo,
-                //     cos_o,
-                //     cos_i,
-                //     rr_continue_prob,
-                // );
-
                 // last_vertex = Some(vertex);
                 vertices.push(vertex);
-
-                // let beta_before_hit = beta;
-                // last_bsdf_pdf = pdf;
 
                 debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_o, pdf);
                 if beta.0 == 0.0 {
                     break;
                 }
 
+                let russian_roulette_sample = sampler.draw_1d();
+                if russian_roulette_sample.x > rr_continue_prob {
+                    break;
+                }
+
                 // add normal to avoid self intersection
                 // also convert wo back to world space when spawning the new ray
                 ray = Ray::new(
-                    hit.point + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
+                    hit.point + hit.normal * NORMAL_OFFSET * wo.z().signum(),
                     frame.to_world(&wo).normalized(),
                 );
             } else {
@@ -320,11 +300,7 @@ pub fn random_walk(
     }
     profile.bounce_rays += vertices.len();
 
-    if additional_contribution.0 > 0.0 {
-        Some(additional_contribution)
-    } else {
-        None
-    }
+    None
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HeroEnergy(pub f32x4);
@@ -448,7 +424,7 @@ pub fn random_walk_hero(
     let mut additional_contribution = HeroEnergy::ZERO;
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
     for bounce in 0..bounce_limit {
-        if let Some(mut hit) = world.hit(ray, 0.01, ray.tmax) {
+        if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
             hit.lambda = lambda.extract(0);
             hit.transport_mode = trace_type;
             let mut vertex = HeroSurfaceVertex::new(
@@ -782,7 +758,7 @@ pub fn random_walk_medium_hero(
     // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
     let mut tracked_mediums: Vec<usize> = Vec::new();
     for bounce in 0..bounce_limit {
-        if let Some(mut hit) = world.hit(ray, 0.001, ray.tmax) {
+        if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
             hit.lambda = lambda.extract(0);
             hit.transport_mode = trace_type;
             let mut surface_vertex = HeroSurfaceVertex::new(
@@ -866,18 +842,16 @@ pub fn random_walk_medium_hero(
                     let frame = TangentFrame::from_normal(hit.normal);
                     let wi = frame.to_local(&-ray.direction).normalized();
 
-                    if let MaterialId::Camera(_camera_id) = hit.material {
+                    if matches!(hit.material, MaterialId::Camera(_)) {
                         if trace_type == TransportMode::Radiance {
                             // if hit camera directly while tracing a light path
                             surface_vertex.vertex_type = VertexType::Camera;
                             vertices.push(HeroVertex::Surface(surface_vertex));
                         }
                         break;
-                    } else {
+                    } else if matches!(hit.material, MaterialId::Light(_)) {
                         // if directly hit a light while tracing a camera path.
-                        if let MaterialId::Light(_light_id) = hit.material {
-                            // TODO: handle this
-                        }
+                        // TODO: handle this
                     }
 
                     let material = world.get_material(hit.material);

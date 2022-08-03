@@ -46,10 +46,12 @@ impl AggregateData {
     pub fn parse_with(self, mesh_map: &HashMap<String, Mesh>) -> Aggregate {
         match self {
             AggregateData::Disk(data) => {
+                assert!(data.radius > 0.0);
                 info!("parsed disk data");
                 Aggregate::Disk(Disk::new(data.radius, data.origin.into(), data.two_sided))
             }
             AggregateData::Rect(data) => {
+                assert!(data.size.0 > 0.0 && data.size.1 > 0.0);
                 info!("parsed rect data");
                 Aggregate::AARect(AARect::new(
                     data.size,
@@ -59,6 +61,7 @@ impl AggregateData {
                 ))
             }
             AggregateData::Sphere(data) => {
+                assert!(data.radius > 0.0);
                 info!("parsed sphere data");
                 Aggregate::Sphere(Sphere::new(data.radius, data.origin.into()))
             }

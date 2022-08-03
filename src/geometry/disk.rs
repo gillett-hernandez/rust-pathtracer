@@ -84,9 +84,10 @@ impl Hittable for Disk {
                 return (direction.normalized(), 0.0.into());
             }
         }
-        let pdf = area_pdf * direction.norm_squared() / ((normal * direction.normalized()).abs());
+        let normal_dot_direction = (normal * direction.normalized()).abs();
+        let pdf = area_pdf * direction.norm_squared() / normal_dot_direction;
         if !pdf.0.is_finite() {
-            // println!("pdf was inf, {:?}", direction);
+            println!("pdf was inf, {:?}", direction);
             (direction.normalized(), 0.0.into())
         } else {
             (direction.normalized(), pdf)
