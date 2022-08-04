@@ -473,6 +473,7 @@ impl Renderer for NaiveRenderer {
                 IntegratorType::PathTracing => {
                     world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
 
+                    let env_sampling_probability = world.get_env_sampling_probability();
                     if let EnvironmentMap::HDR {
                         texture,
                         importance_map,
@@ -480,7 +481,7 @@ impl Renderer for NaiveRenderer {
                         ..
                     } = &mut world.environment
                     {
-                        if *strength > 0.0 {
+                        if *strength > 0.0 && env_sampling_probability > 0.0 {
                             let wavelength_bounds = render_settings
                                 .wavelength_bounds
                                 .map(|e| Bounds1D::new(e.0, e.1))
@@ -564,6 +565,7 @@ impl Renderer for NaiveRenderer {
                     let wavelength_bounds =
                         calculate_widest_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
                     world.assign_cameras(bundled_cameras.clone(), true);
+                    let env_sampling_probability = world.get_env_sampling_probability();
                     if let EnvironmentMap::HDR {
                         texture,
                         importance_map,
@@ -571,7 +573,7 @@ impl Renderer for NaiveRenderer {
                         ..
                     } = &mut world.environment
                     {
-                        if *strength > 0.0 {
+                        if *strength > 0.0 && env_sampling_probability > 0.0 {
                             importance_map.bake_in_place(texture, wavelength_bounds);
                         }
                     }
@@ -630,6 +632,7 @@ impl Renderer for NaiveRenderer {
                     let wavelength_bounds =
                         calculate_widest_wavelength_bounds(&bundled_settings, VISIBLE_RANGE);
                     world.assign_cameras(bundled_cameras.clone(), true);
+                    let env_sampling_probability = world.get_env_sampling_probability();
                     if let EnvironmentMap::HDR {
                         texture,
                         importance_map,
@@ -637,7 +640,7 @@ impl Renderer for NaiveRenderer {
                         ..
                     } = &mut world.environment
                     {
-                        if *strength > 0.0 {
+                        if *strength > 0.0 && env_sampling_probability > 0.0 {
                             importance_map.bake_in_place(texture, wavelength_bounds);
                         }
                     }

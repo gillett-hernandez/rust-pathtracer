@@ -54,9 +54,9 @@ macro_rules! unpack_or_LaP {
             Err(err) => {
                 error!($($message)*);
                 error!("{:?}", err.to_string());
-                if let Some(backtrace) = err.backtrace() {
-                    error!("{:?}", backtrace);
-                }
+                // if let Some(backtrace) = err.backtrace() {
+                //     error!("{:?}", backtrace);
+                // }
                 panic!()
             }
         }

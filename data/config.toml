@@ -209,17 +209,18 @@ type="Naive"
 [[render_settings]]
 threads = 22
 # filename = "cornell_box"
-filename = "veach_mis"
+# filename = "veach_mis"
+filename = "PT"
 min_samples = 256
 min_bounces = 2
 max_bounces = 8
 hwss = false
 # camera_id = "caustic test camera"
-# camera_id = "sun test camera"
+camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
 # camera_id = "cornell camera"
-camera_id = "veach mis camera"
+# camera_id = "veach mis camera"
 # camera_id = "true cornell camera"
 # camera_id = "wideangle sun test camera side"
 russian_roulette = true
@@ -235,10 +236,10 @@ luminance_only = false
 [render_settings.integrator]
 # type = "BDPT"
 type = "PT"
-light_samples = 1
+light_samples = 4
 # camera_samples = 4
 # selected_pair = [1,1]
 [render_settings.resolution]
-width = 1080
+width = 1920
 height = 1080
 
