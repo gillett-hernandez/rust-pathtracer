@@ -10,7 +10,7 @@ The following is an image rendered with the BDPT integrator. The light at the to
 
 See [this](./showcase.md) for some more renders and details
 
-Most, if not all of the integrators use importance sampling and MIS, and they trace using single wavelength sampling
+Most of the integrators use NEE and MIS, and they trace using single wavelength sampling.
 
 Supported integrators:
 
