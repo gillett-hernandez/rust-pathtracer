@@ -560,20 +560,20 @@ mod tests {
         }
 
         let mut succeeded = 0;
-        for wi in wi_s.iter() {
+        for &wi in wi_s.iter() {
             let maybe_wo = ggx_glass.generate(
                 fake_hit_record.lambda,
                 fake_hit_record.uv,
                 fake_hit_record.transport_mode,
                 sampler.draw_2d(),
-                *wi,
+                wi,
             );
             if let Some(wo) = maybe_wo {
                 let (orig_f, orig_pdf) = ggx_glass.bsdf(
                     fake_hit_record.lambda,
                     fake_hit_record.uv,
                     fake_hit_record.transport_mode,
-                    *wi,
+                    wi,
                     wo,
                 );
 
@@ -584,12 +584,12 @@ mod tests {
                     fake_hit_record.uv,
                     fake_hit_record.transport_mode,
                     wi,
-                    *wo,
+                    wo,
                 );
                 assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 assert!(sampled_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                assert!(orig_pdf.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(orig_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 succeeded += 1;
             } /* else {
                   print!("x");

@@ -705,8 +705,8 @@ mod test {
             luminance_curve: crate::curves::cie_e(1.0),
         };
 
-        let width = 512;
-        let height = 512;
+        let width = 256;
+        let height = 256;
         let limit = width * height;
         let deterministic = false;
         // let limit = 100000;

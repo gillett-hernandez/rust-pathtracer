@@ -201,7 +201,7 @@ unsafe impl Send for RealisticCamera {}
 unsafe impl Sync for RealisticCamera {}
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::math::{RandomSampler, Sample2D, Sampler};
     use std::{fs::File, io::Read};
 
@@ -286,7 +286,7 @@ mod tests {
     #[test]
     fn check_camera_position_and_orientation() {
         use crate::hittable::Hittable;
-        let interfaces = read_from_file("data/cameras/petzval_kodak.fx");
+        let interfaces = read_from_file("data/cameras/petzval_kodak.txt");
         let camera: RealisticCamera = RealisticCamera::new(
             Point3::new(-5.0, 0.0, 0.0),
             Point3::ZERO,
