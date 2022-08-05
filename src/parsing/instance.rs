@@ -77,20 +77,30 @@ pub fn parse_instance(
         .transform
         .map(|transform_data| transform_data.into());
 
-    if instance_data.material_name.is_none() {
-        error!("material name on instance {} was none", instance_id);
-    } else if !materials_mapping.contains_key(&instance_data.material_name.clone().unwrap()) {
-        error!(
-            "material not found in mapping, instance {}, material name {}",
-            instance_id,
-            &instance_data.material_name.clone().unwrap()
-        );
-    }
+    let material_id = match &instance_data.material_name {
+        None => {
+            warn!("material name on instance {} was none", instance_id);
+            None
+        }
+        Some(name) => Some(match materials_mapping.get(name) {
+            Some(id) => *id,
+            None => {
+                error!(
+                    "material not found in mapping, instance {}, material name {}",
+                    instance_id, name
+                );
+                *materials_mapping.get("error").unwrap()
+            }
+        }),
+    };
 
-    let material_id = instance_data
-        .material_name
-        .clone()
-        .and_then(|v| materials_mapping.get(&v).cloned());
+    //  = match instance_data.material_name.clone() {
+    //     Some(name) => materials_mapping.get(&name).cloned(),
+    //     None => {
+    //         error!();
+    //         materials_mapping.get("error").cloned()
+    //     },
+    // };
 
     info!(
         "parsed instance, assigned material id {:?} from {:?}, and instance id {}",

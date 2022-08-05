@@ -431,6 +431,7 @@ pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
         info!("added material {} as {:?}", &name, id);
         assert!(material_names_to_ids.insert(name, id).is_none());
     }
+    // dbg!(material_names_to_ids);
     // put medium_names_to_ids here
     let mut mediums: Vec<MediumEnum> = Vec::new();
     for (_, medium) in mediums_map {

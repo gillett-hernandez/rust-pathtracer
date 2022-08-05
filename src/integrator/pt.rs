@@ -160,7 +160,13 @@ impl PathTracingIntegrator {
                         let cos_i = light_local_wi.z().abs();
                         let cos_o = bsdf_wo.z().abs();
 
-                        let v = reflectance * throughput * cos_o * cos_i * light_emission * weight
+                        #[rustfmt::skip]
+                        let v = reflectance
+                            * throughput
+                            * cos_o
+                            * cos_i
+                            * light_emission
+                            * weight
                             / light_pdf.0;
                         // if throughput.0 == 1.0 {
                         //     info!(
@@ -278,7 +284,8 @@ impl PathTracingIntegrator {
             // calculate weight
             let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
             // include
-            let v = weight * throughput * reflectance * emission / light_pdf.0;
+            let v = weight * throughput * reflectance * emission * local_cosine_theta.abs()
+                / light_pdf.0;
             debug_assert!(
                 v.0.is_finite(),
                 "{:?},{:?},{:?},{:?},{:?},{:?},",
@@ -501,7 +508,11 @@ impl SamplerIntegrator for PathTracingIntegrator {
 
                 if emission.0 > 0.0 {
                     // this will likely never get triggered, since hitting a light source is handled in the above branch
-                    panic!();
+                    panic!(
+                        "material should not be emissive, {}, {:?}",
+                        material.get_name(),
+                        vertex.material_id
+                    );
                     // if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
                     //     sum.energy += vertex.throughput * emission;
                     //     debug_assert!(!sum.energy.is_nan());

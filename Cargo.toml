@@ -45,7 +45,6 @@ win32_notification = "0.1.0"
 [build-dependencies]
 serde = { version = "1.0.120", features = ["derive"] }
 
-
 [lib]
 path = "src/lib.rs"
 
@@ -82,7 +81,7 @@ opt-level = 0
 
 [profile.release]
 opt-level = 3
-debug = true
+debug = false
 lto = 'fat'
 incremental = false
 debug-assertions = false

@@ -14,7 +14,7 @@ color = "D65"
 
 
 [[instances]]
-material_name = "lambertian_white"
+material_name = "ggx_iron_roughness0_0002"
 [instances.aggregate]
 type = "Sphere"
 radius = 1.0

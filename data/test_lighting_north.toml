@@ -1,8 +1,8 @@
 default_scene_file = "data/scenes/test_lighting_north.toml"
 [renderer]
-type="Naive"
-# type = "Preview"
-# selected_preview_film_id = 0
+# type="Naive"
+type = "Preview"
+selected_preview_film_id = 0
 
 
 [[cameras]]
@@ -10,14 +10,14 @@ type="SimpleCamera"
 name = "camera"
 look_from = [-1.5, 0.0, 0.0]
 look_at = [0, 0, 0]
-aperture_size = 0.03
-focal_distance = 1.0
+aperture_size = 0.001
+focal_distance = 1.5
 vfov = 90
 
 [[render_settings]]
-threads = 22
+threads = 1
 filename = "test_lighting_north_pt"
-min_samples = 128
+min_samples = 64
 min_bounces = 1
 max_bounces = 4
 hwss = false
@@ -26,11 +26,12 @@ russian_roulette = false
 only_direct = false
 [render_settings.tonemap_settings]
 type = "Clamp"
-exposure = 0.0
+exposure = 1.0
+luminance_only = true
 [render_settings.integrator]
 type = "PT"
-light_samples = 6
+light_samples = 4
 [render_settings.resolution]
-width = 1024
-height = 1024
+width = 512
+height = 512
 
