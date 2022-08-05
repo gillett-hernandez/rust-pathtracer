@@ -160,6 +160,7 @@ impl PathTracingIntegrator {
                         let cos_i = light_local_wi.z().abs();
                         let cos_o = bsdf_wo.z().abs();
 
+                        // TODO: test whether including cos_i or cos_o makes things unphysical
                         #[rustfmt::skip]
                         let v = reflectance
                             * throughput
@@ -168,19 +169,7 @@ impl PathTracingIntegrator {
                             * light_emission
                             * weight
                             / light_pdf.0;
-                        // if throughput.0 == 1.0 {
-                        //     info!(
-                        //         "{:?} = {:?}*{:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
-                        //         v,
-                        //         throughput,
-                        //         reflectance,
-                        //         light_emission,
-                        //         bsdf_wo,
-                        //         light_local_wi,
-                        //         weight,
-                        //         light_pdf
-                        //     );
-                        // }
+
                         debug_assert!(
                             v.0.is_finite(),
                             "{:?},{:?},{:?},{:?},{:?},{:?},{:?},",
@@ -420,6 +409,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             &mut path,
             self.min_bounces,
             profile,
+            true,
         );
         // sum.energy += additional_contribution.unwrap_or(0.0.into());
 

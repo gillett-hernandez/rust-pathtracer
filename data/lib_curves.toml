@@ -12,6 +12,11 @@ strength = 1.0
 type = "Flat"
 strength = 1.0
 
+
+[E10]
+type = "Flat"
+strength = 10.0
+
 [flat_zero]
 type = "Flat"
 strength = 0.0

@@ -147,8 +147,6 @@ interpolation_mode = "Cubic"
 [ggx_iron_roughness0_0002.kappa.domain_mapping]
 x_scale = 1000.0
 
-
-
 [ggx_iron_roughness0_002]
 type = "GGX"
 eta_o = "air_ior"
@@ -168,8 +166,6 @@ column = 2
 interpolation_mode = "Cubic"
 [ggx_iron_roughness0_002.kappa.domain_mapping]
 x_scale = 1000.0
-
-
 
 [ggx_iron_roughness0_02]
 type = "GGX"
@@ -191,8 +187,6 @@ interpolation_mode = "Cubic"
 [ggx_iron_roughness0_02.kappa.domain_mapping]
 x_scale = 1000.0
 
-
-
 [ggx_iron_roughness0_2]
 type = "GGX"
 eta_o = "air_ior"
@@ -212,7 +206,6 @@ column = 2
 interpolation_mode = "Cubic"
 [ggx_iron_roughness0_2.kappa.domain_mapping]
 x_scale = 1000.0
-
 
 
 
@@ -258,6 +251,11 @@ interpolation_mode = "Cubic"
 x_scale = 1000.0
 
 
+[diffuse_light_flat_x10]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "E10"
+bounce_color = "flat_78"
 
 [diffuse_light_fluorescent]
 type = "DiffuseLight"

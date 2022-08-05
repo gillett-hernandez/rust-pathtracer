@@ -85,18 +85,19 @@ impl Tonemapper for Clamp {
             cie_xyz_color = crate::MAUVE;
         }
 
+        let exposure_mult = 2.0f32.powf(self.exposure);
         if self.luminance_only {
             let lum = cie_xyz_color.y();
 
             // need to scale and clamp the color
-            let new_lum = (lum * 10.0f32.powf(self.exposure)).clamp(0.0, 1.0);
+            let new_lum = (lum * exposure_mult).clamp(0.0, 1.0);
             // actual factor
             let scaling_factor = new_lum / lum;
             // TODO: determine if this needs to be done per channel.
 
             scaling_factor * cie_xyz_color.0
         } else {
-            (cie_xyz_color * 10.0f32.powf(self.exposure))
+            (cie_xyz_color * exposure_mult)
                 .0
                 .min(f32x4::splat(1.0))
                 .max(f32x4::splat(0.0))

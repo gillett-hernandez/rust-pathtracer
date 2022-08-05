@@ -202,6 +202,7 @@ impl GenericIntegrator for BDPTIntegrator {
             &mut eye_path,
             settings.min_bounces.unwrap_or(3),
             profile,
+            false,
         );
         random_walk(
             light_ray,
@@ -214,6 +215,7 @@ impl GenericIntegrator for BDPTIntegrator {
             &mut light_path,
             settings.min_bounces.unwrap_or(3),
             profile,
+            false,
         );
 
         profile.camera_rays += 1;

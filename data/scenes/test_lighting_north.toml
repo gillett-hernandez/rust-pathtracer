@@ -3,10 +3,10 @@ textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 
-env_sampling_probability = 0.5
+env_sampling_probability = 0.0
 [environment]
 type="Sun"
-strength = 1.0
+strength = 0.0
 angular_diameter = 0.0565
 sun_direction = [0.0, 0.0, 1.0]
 color = "D65"
@@ -14,7 +14,20 @@ color = "D65"
 
 
 [[instances]]
-material_name = "ggx_iron_roughness0_0002"
+material_name = "diffuse_light_flat_x10"
+[instances.aggregate]
+type = "Rect"
+size = [0.5, 0.5]
+origin = [0.0, 0.0, 10.0]
+normal = "Z"
+two_sided = true
+# [[instances.aggregate.transform.rotation]]
+# axis = [0.0, 1.0, 0.0]
+# angle = 45.0
+
+
+[[instances]]
+material_name = "lambertian_white"
 [instances.aggregate]
 type = "Sphere"
 radius = 1.0

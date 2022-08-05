@@ -194,6 +194,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             &mut path,
             0,
             profile,
+            true
         );
 
         // let mut sum = ;

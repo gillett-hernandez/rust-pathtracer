@@ -210,10 +210,10 @@ type="Naive"
 threads = 22
 # filename = "cornell_box"
 # filename = "veach_mis"
-filename = "PT"
-min_samples = 256
+filename = "beauty"
+min_samples = 1024
 min_bounces = 2
-max_bounces = 8
+max_bounces = 12
 hwss = false
 # camera_id = "caustic test camera"
 camera_id = "sun test camera"
@@ -229,9 +229,9 @@ only_direct = false
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.tonemap_settings]
 type = "Reinhard1"
-# exposure = 1.0
-key_value = 0.18
-white_point = 1.0
+# exposure = -2.0
+key_value = 0.04
+white_point = 10.0
 luminance_only = false
 [render_settings.integrator]
 # type = "BDPT"

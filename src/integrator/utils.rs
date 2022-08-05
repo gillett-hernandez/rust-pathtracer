@@ -146,6 +146,7 @@ pub fn random_walk(
     vertices: &mut Vec<SurfaceVertex>,
     russian_roulette_start_index: u16,
     profile: &mut Profile,
+    ignore_backward: bool,
 ) {
     let mut beta = start_throughput;
     // let mut last_bsdf_pdf = PDF::from(0.0);
@@ -220,27 +221,28 @@ pub fn random_walk(
                 } else {
                     1.0
                 };
-                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
-                beta *= f / vertex.pdf_forward;
-                if pdf.0 == 0.0 {
-                    beta.0 = 0.0;
-                }
 
                 // consider handling delta distributions differently here, if deltas are ever added.
+                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
 
                 // eval pdf in reverse direction
                 // FIXME: confirm that transport mode doesn't need to be flipped
                 // also, maybe gate this behind a passed flag, to avoid wasted computation when called by the PT integrator
-                vertex.pdf_backward = rr_continue_prob
-                    * material
-                        .bsdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
-                        .1
-                         .0
-                    / cos_i;
-
+                if !ignore_backward {
+                    vertex.pdf_backward = rr_continue_prob
+                        * material
+                            .bsdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
+                            .1
+                             .0
+                        / cos_i;
+                }
                 // last_vertex = Some(vertex);
                 vertices.push(vertex);
 
+                beta *= f / vertex.pdf_forward;
+                if vertex.pdf_forward == 0.0 {
+                    beta.0 = 0.0;
+                }
                 debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_o, pdf);
                 if beta.0 == 0.0 {
                     break;

@@ -26,7 +26,7 @@ russian_roulette = false
 only_direct = false
 [render_settings.tonemap_settings]
 type = "Clamp"
-exposure = 1.0
+exposure = 2.0
 luminance_only = true
 [render_settings.integrator]
 type = "PT"
