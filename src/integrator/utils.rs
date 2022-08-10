@@ -1,3 +1,5 @@
+use log_once::warn_once;
+
 use crate::hittable::HitRecord;
 use crate::materials::{Material, MaterialId};
 use crate::math::*;
@@ -209,6 +211,15 @@ pub fn random_walk(
                 let cos_o = wo.z().abs();
                 let cos_i = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
+                if !vertex.veach_g.is_finite() {
+                    warn_once!(
+                        "veach g was inf, {:?} {:?} {} {}",
+                        hit.point,
+                        ray.origin,
+                        cos_i,
+                        cos_o
+                    );
+                }
 
                 debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.is_nan() {
@@ -227,7 +238,7 @@ pub fn random_walk(
 
                 // eval pdf in reverse direction
                 // FIXME: confirm that transport mode doesn't need to be flipped
-                // also, maybe gate this behind a passed flag, to avoid wasted computation when called by the PT integrator
+
                 if !ignore_backward {
                     vertex.pdf_backward = rr_continue_prob
                         * material
@@ -1106,9 +1117,10 @@ pub fn random_walk_medium_hero(
                 HeroVertex::Medium(mut vertex) => {
                     let medium = &world.mediums[vertex.medium_id - 1];
                     let wi = -ray.direction;
+                    let [u, v, w, _] = vertex.point.as_array();
                     let (wo, f_and_pdf) = medium.sample_p(
                         lambda.extract(0),
-                        vertex.point.as_tuple(),
+                        (u, v, w),
                         wi,
                         Sample2D::new_random_sample(),
                     );
@@ -1126,9 +1138,10 @@ pub fn random_walk_medium_hero(
                     beta /= f_and_pdf; // pre divide by hero pdf
                     beta = beta.replace(0, beta.extract(0) * f_and_pdf);
                     debug_assert!(beta.is_finite().all(), "{:?} {:?}", beta, f_and_pdf);
+
+                    let [u, v, w, _] = vertex.point.as_array();
                     for i in 1..4 {
-                        let f_and_pdf =
-                            medium.p(lambda.extract(i), vertex.point.as_tuple(), wi, wo);
+                        let f_and_pdf = medium.p(lambda.extract(i), (u, v, w), wi, wo);
                         beta = beta.replace(i, beta.extract(i) * f_and_pdf);
                         debug_assert!(beta.is_finite().all(), "{:?} {:?}", beta, f_and_pdf);
                     }

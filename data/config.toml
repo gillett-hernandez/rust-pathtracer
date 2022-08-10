@@ -127,16 +127,6 @@ vfov = 16.2
 
 [[cameras]]
 type="SimpleCamera"
-name = "wideangle sun test camera"
-look_from = [-5, 0, 0]
-look_at = [0.0, 0.0, -0.4]
-aperture_size = 0.02
-focal_distance = 5.0
-vfov = 90.0
-
-
-[[cameras]]
-type="SimpleCamera"
 name = "wideangle sun test camera reverse"
 look_from = [5, 0, 0]
 look_at = [0.0, 0.0, -0.4]
@@ -201,22 +191,48 @@ aperture_size = 0.001
 focal_distance = 10.0
 vfov = 60.8
 
+
+
+
+[[cameras]]
+type="SimpleCamera"
+name = "wideangle sun test camera"
+look_from = [-5.0, 0.0, 0.5]
+look_at = [0.0, 0.0, 0.4]
+aperture_size = 0.1
+focal_distance = 5.0
+vfov = 45.0
+
+
+[[cameras]]
+type="SimpleCamera"
+name = "debug"
+look_from = [-5.0, 0.0, 0.5]
+look_at = [-0.71, 0.3, -1.0]
+aperture_size = 0.1
+focal_distance = 5.0
+vfov = 5.0
+
+
 [renderer]
-type="Naive"
-# type="Preview"
-# selected_preview_film_id = 0
+# type="Naive"
+type="Preview"
+selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
 # filename = "cornell_box"
 # filename = "veach_mis"
-filename = "beauty"
-min_samples = 1024
+# filename = "test_sampling_methods, no cos_i"
+filename = "sun test"
+min_samples = 256
 min_bounces = 2
-max_bounces = 12
+max_bounces = 6
 hwss = false
+camera_id = "debug"
 # camera_id = "caustic test camera"
-camera_id = "sun test camera"
+# camera_id = "wideangle sun test camera"
+# camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
 # camera_id = "cornell camera"
@@ -224,22 +240,23 @@ camera_id = "sun test camera"
 # camera_id = "true cornell camera"
 # camera_id = "wideangle sun test camera side"
 russian_roulette = true
-only_direct = false
+only_direct = true
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
-key_value = 0.04
+key_value = 0.5
 white_point = 10.0
 luminance_only = false
 [render_settings.integrator]
-# type = "BDPT"
 type = "PT"
-light_samples = 4
+# type = "PT"
+light_samples = 2
 # camera_samples = 4
-# selected_pair = [1,1]
+# s = light, t = camera
+# selected_pair = [2,2]
 [render_settings.resolution]
-width = 1920
-height = 1080
+width = 1024
+height = 512
 

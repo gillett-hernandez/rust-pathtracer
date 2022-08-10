@@ -82,7 +82,7 @@ impl NaiveRenderer {
                 let mut profile = Profile::default();
                 // let clone = pixel_count.clone();
                 let y: usize = pixel_index / width;
-                let x: usize = pixel_index - width * y;
+                let x: usize = pixel_index % width;
                 // gen ray for pixel x, y
 
                 let mut temp_color = XYZColor::BLACK;
@@ -507,7 +507,7 @@ impl Renderer for NaiveRenderer {
                                     &cameras[render_settings.camera_id],
                                 ),
                             );
-                            output_film(&render_settings, &film);
+                            output_film(&render_settings, &film, 1.0);
                         }
                         _ => {}
                     }
@@ -614,7 +614,7 @@ impl Renderer for NaiveRenderer {
                             println!("new filename is {}", new_filename);
                             render_settings.filename = Some(new_filename);
                         }
-                        output_film(&render_settings, &film);
+                        output_film(&render_settings, &film, 1.0);
                     }
                 }
                 IntegratorType::LightTracing => {
@@ -667,7 +667,7 @@ impl Renderer for NaiveRenderer {
                     //         .zip(render_splatted_result),
                     // );
                     for (render_settings, film) in render_splatted_result {
-                        output_film(&render_settings, &film);
+                        output_film(&render_settings, &film, 1.0);
                     }
                 }
 

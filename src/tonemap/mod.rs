@@ -39,7 +39,7 @@ const S200: f32x4 = f32x4::splat(200.0);
 // and Reinhard '02 https://www.cs.utah.edu/docs/techreports/2002/pdf/UUCS-02-001.pdf
 
 pub trait Tonemapper: Send + Sync {
-    fn initialize(&mut self, film: &Film<XYZColor>);
+    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32);
     // should tonemap a pixel from hdr to ldr
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4;
 }

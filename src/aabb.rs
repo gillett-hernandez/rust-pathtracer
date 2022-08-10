@@ -97,12 +97,12 @@ impl AABB {
     }
 
     pub fn surface_area(&self) -> f32 {
-        let [sx, sy, sz, _]: [f32; 4] = self.size().0.into();
+        let [sx, sy, sz, _]: [f32; 4] = self.size().as_array();
         2.0 * (sx * sy + sx * sz + sy * sz)
     }
 
     pub fn volume(&self) -> f32 {
-        let [sx, sy, sz, _]: [f32; 4] = self.size().0.into();
+        let [sx, sy, sz, _]: [f32; 4] = self.size().as_array();
         sx * sy * sz
     }
 }

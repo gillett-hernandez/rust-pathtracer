@@ -10,6 +10,18 @@ filename = "data/hdri/machine_shop_03_4k.hdr"
 alpha_fill = 0.0
 curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
 
+[[sunny_vondelpark_8k]]
+type = "HDR"
+filename = "data/hdri/sunny_vondelpark_8k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[autumn_park_8k]]
+type = "HDR"
+filename = "data/hdri/autumn_park_8k.hdr"
+alpha_fill = 0.0
+curves= ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
 [[kiara_dawn_8k]]
 type = "HDR"
 filename = "data/hdri/kiara_1_dawn_8k.hdr"

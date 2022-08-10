@@ -383,7 +383,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-                tonemapper.initialize(&film);
+                tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
                 buffer
                     .par_iter_mut()
                     .enumerate()
@@ -523,7 +523,7 @@ mod test {
 
                 if idx % 100 == 0 {
                     pb.add(100);
-                    tonemapper.initialize(&film);
+                    tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
                     buffer
                         .par_iter_mut()
                         .enumerate()
@@ -637,7 +637,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-                tonemapper.initialize(&film);
+                tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
                 buffer
                     .par_iter_mut()
                     .enumerate()
@@ -781,7 +781,7 @@ mod test {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
-                tonemapper.initialize(&film);
+                tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
                 buffer
                     .par_iter_mut()
                     .enumerate()

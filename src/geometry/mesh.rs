@@ -88,9 +88,9 @@ impl Hittable for MeshTriangleRef {
         p0t.0 = vec_shuffle(p0t.0, kz);
         p1t.0 = vec_shuffle(p1t.0, kz);
         p2t.0 = vec_shuffle(p2t.0, kz);
-        let [mut p0t_x, mut p0t_y, mut p0t_z, _]: [f32; 4] = p0t.0.into();
-        let [mut p1t_x, mut p1t_y, mut p1t_z, _]: [f32; 4] = p1t.0.into();
-        let [mut p2t_x, mut p2t_y, mut p2t_z, _]: [f32; 4] = p2t.0.into();
+        let [mut p0t_x, mut p0t_y, mut p0t_z, _]: [f32; 4] = p0t.as_array();
+        let [mut p1t_x, mut p1t_y, mut p1t_z, _]: [f32; 4] = p1t.as_array();
+        let [mut p2t_x, mut p2t_y, mut p2t_z, _]: [f32; 4] = p2t.as_array();
         let sx = -dx / dz;
         let sy = -dy / dz;
         let sz = 1.0 / dz;

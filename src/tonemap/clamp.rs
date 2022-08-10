@@ -13,6 +13,7 @@ use super::Tonemapper;
 pub struct Clamp {
     exposure: f32,
     luminance_only: bool,
+    factor: f32,
     silenced: bool,
 }
 
@@ -21,13 +22,15 @@ impl Clamp {
         Self {
             exposure,
             luminance_only,
+            factor: 1.0,
             silenced,
         }
     }
 }
 
 impl Tonemapper for Clamp {
-    fn initialize(&mut self, film: &Film<XYZColor>) {
+    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
+        self.factor = factor;
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
         let mut max_lum_xy = (0, 0);
@@ -80,7 +83,7 @@ impl Tonemapper for Clamp {
         }
     }
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
-        let mut cie_xyz_color = film.at(pixel.0, pixel.1);
+        let mut cie_xyz_color = film.at(pixel.0, pixel.1) * self.factor;
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
             cie_xyz_color = crate::MAUVE;
         }

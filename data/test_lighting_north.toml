@@ -17,7 +17,7 @@ vfov = 90
 [[render_settings]]
 threads = 1
 filename = "test_lighting_north_pt"
-min_samples = 64
+min_samples = 1
 min_bounces = 1
 max_bounces = 4
 hwss = false
@@ -26,7 +26,7 @@ russian_roulette = false
 only_direct = false
 [render_settings.tonemap_settings]
 type = "Clamp"
-exposure = 2.0
+exposure = 5.0
 luminance_only = true
 [render_settings.integrator]
 type = "PT"

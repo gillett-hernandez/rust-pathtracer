@@ -246,14 +246,14 @@ impl GenericIntegrator for BDPTIntegrator {
         } = settings.integrator
         {
             if s <= light_vertex_count && t <= eye_vertex_count {
-                if s == 1
-                    && t == 1
-                    && light_path[0].vertex_type
-                        == VertexType::LightSource(LightSourceType::Environment)
-                {
-                    // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
-                    return XYZColor::from(SingleWavelength::BLACK);
-                }
+                // if s == 1
+                //     && t == 1
+                //     && light_path[0].vertex_type
+                //         == VertexType::LightSource(LightSourceType::Environment)
+                // {
+                //     // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
+                //     return XYZColor::from(SingleWavelength::BLACK);
+                // }
                 let res = eval_unweighted_contribution(
                     &self.world,
                     &light_path,
@@ -279,7 +279,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 &eye_path,
                                 t,
                                 g,
-                                |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                                |weights: &[f32]| { 1.0 / weights.iter().sum::<f32>() },
                             )
                         } else {
                             1.0 / ((s + t) as f32)
@@ -304,7 +304,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 &eye_path,
                                 t,
                                 g,
-                                |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                                |weights: &[f32]| { 1.0 / weights.iter().sum::<f32>() },
                             )
                         } else {
                             1.0 / ((s + t) as f32)
@@ -341,11 +341,11 @@ impl GenericIntegrator for BDPTIntegrator {
                                 // println!("pixel uv was nothing");
                             }
                         }
-                        return XYZColor::from(SingleWavelength::BLACK);
+                        return XYZColor::BLACK;
                     }
                 }
             }
-            return XYZColor::from(SingleWavelength::BLACK);
+            return XYZColor::BLACK;
         }
 
         let mut sum = SingleEnergy::ZERO;
@@ -397,7 +397,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         &eye_path,
                         t,
                         g,
-                        |weights: &Vec<f32>| -> f32 {
+                        |weights: &[f32]| {
                             1.0 / weights.iter().map(|&v| v * v).sum::<f32>()
                         },
                     )

@@ -213,7 +213,7 @@ impl Renderer for PreviewRenderer {
                             }
 
                             {
-                                tonemapper2.initialize(film);
+                                tonemapper2.initialize(film, 1.0);
                                 light_buffer_ref
                                     .lock()
                                     .unwrap()
@@ -320,7 +320,7 @@ impl Renderer for PreviewRenderer {
                                 }
                             },
                         );
-                        tonemapper.initialize(&films[film_idx]);
+                        tonemapper.initialize(&films[film_idx], 1.0 / (s as f32 + 1.0));
                         buffer
                             .par_iter_mut()
                             .enumerate()
@@ -371,7 +371,7 @@ impl Renderer for PreviewRenderer {
 
                     println!("took {}s", elapsed);
                     preprocess_profile.pretty_print(elapsed, maximum_threads as usize);
-                    output_film(&render_settings, &films[film_idx]);
+                    output_film(&render_settings, &films[film_idx], 1.0 / (s as f32 + 1.0));
                     output_film(
                         &RenderSettings {
                             filename: Some(format!(
@@ -382,6 +382,7 @@ impl Renderer for PreviewRenderer {
                             ..render_settings
                         },
                         &light_film.lock().unwrap(),
+                        1.0,
                     );
                 }
                 Some(Integrator::PathTracing(integrator)) => {
@@ -459,7 +460,7 @@ impl Renderer for PreviewRenderer {
                         println!();
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
                         println!("fps {}", 1.0 / elapsed);
-                        tonemapper.initialize(&films[film_idx]);
+                        tonemapper.initialize(&films[film_idx], 1.0 / (s as f32 + 1.0));
                         buffer
                             .par_iter_mut()
                             .enumerate()
@@ -487,7 +488,7 @@ impl Renderer for PreviewRenderer {
                             panic
                         );
                     }
-                    output_film(&render_settings, &films[film_idx]);
+                    output_film(&render_settings, &films[film_idx], 1.0 / (s as f32 + 1.0));
                 }
                 Some(_) => {}
             }

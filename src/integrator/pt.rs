@@ -164,8 +164,8 @@ impl PathTracingIntegrator {
                         #[rustfmt::skip]
                         let v = reflectance
                             * throughput
-                            * cos_o
                             * cos_i
+                            * cos_o
                             * light_emission
                             * weight
                             / light_pdf.0;
@@ -175,8 +175,8 @@ impl PathTracingIntegrator {
                             "{:?},{:?},{:?},{:?},{:?},{:?},{:?},",
                             reflectance,
                             throughput,
-                            cos_o,
                             cos_i,
+                            cos_o,
                             light_emission,
                             weight,
                             light_pdf.0

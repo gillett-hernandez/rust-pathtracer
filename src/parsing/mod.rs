@@ -148,7 +148,7 @@ pub fn load_scene<T: AsRef<Path>>(filepath: T) -> Result<SceneData, Box<dyn Erro
     Ok(scene)
 }
 
-pub fn construct_world(scene_file: PathBuf) -> Result<World, Box<dyn Error>> {
+pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn Error>> {
     // layout of this function:
     // parse scene data from file
     // scan environment data for used textures/curves

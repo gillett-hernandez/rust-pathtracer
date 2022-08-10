@@ -31,7 +31,7 @@ impl Reinhard1 {
 }
 
 impl Tonemapper for Reinhard1 {
-    fn initialize(&mut self, film: &Film<XYZColor>) {
+    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
         let mut max_lum_xy = (0, 0);
@@ -73,7 +73,7 @@ impl Tonemapper for Reinhard1 {
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
 
         let avg_luminance = total_luminance / (total_pixels as f32);
-        let l_w = (sum_of_log / (total_pixels as f64)).exp() as f32;
+        let l_w = (sum_of_log / (total_pixels as f64)).exp() as f32 / factor;
 
         if !self.silenced {
             info!(
@@ -140,7 +140,7 @@ impl Reinhard1x3 {
 }
 
 impl Tonemapper for Reinhard1x3 {
-    fn initialize(&mut self, film: &Film<XYZColor>) {
+    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
         let mut max_lum_xy = (0, 0);
@@ -182,7 +182,7 @@ impl Tonemapper for Reinhard1x3 {
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
 
         let avg_luminance = total_luminance / (total_pixels as f32);
-        let l_w = (sum_of_log / (total_pixels as f32)).exp();
+        let l_w = (sum_of_log / (total_pixels as f32)).exp() / factor;
         if !self.silenced {
             info!(
                 "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {:?})",

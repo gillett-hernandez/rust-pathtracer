@@ -17,14 +17,15 @@ use crate::parsing::config::{Config, RenderSettings};
 use crate::parsing::parse_tonemapper;
 use crate::world::World;
 
-pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
+pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, factor: f32) {
+    assert!(factor > 0.0);
     let filename = render_settings.filename.as_ref();
     let filename_str = filename.cloned().unwrap_or_else(|| String::from("output"));
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
     let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
-    tonemapper.initialize(film);
+    tonemapper.initialize(film, factor);
 
     if let Err(inner) = converter.write_to_files(film, tonemapper, &exr_filename, &png_filename) {
         error!("failed to write files");

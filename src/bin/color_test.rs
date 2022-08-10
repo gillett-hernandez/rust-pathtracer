@@ -38,6 +38,7 @@ struct Opt {
     pub dynamic_range: f32,
 }
 
+// TODO: add request and response, and impl for printing out CIE xy(Y) coordinates for colors as the illuminant strength increases
 #[derive(Debug)]
 enum Request {
     ChangeBins(usize),
@@ -436,7 +437,7 @@ impl View {
                 *pixel = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
             });
 
-        self.tonemapper.initialize(&self.film);
+        self.tonemapper.initialize(&self.film, 1.0);
         // let window = self.window
         let film = &self.film;
         let tonemapper = &self.tonemapper;

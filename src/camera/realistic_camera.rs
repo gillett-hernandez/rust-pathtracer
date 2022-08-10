@@ -137,7 +137,7 @@ impl RealisticCamera {
 
         for _ in 0..100 {
             // let s0 = sampler.draw_2d();
-            // let [x, y, z, _]: [f32; 4] = central_point.0.into();
+            // let [x, y, z, _]: [f32; 4] = central_point.as_array();
             // x += (s0.x - 0.5) / width as f32 * self.sensor_size;
             // y += (s0.y - 0.5) / height as f32 * self.sensor_size;
 

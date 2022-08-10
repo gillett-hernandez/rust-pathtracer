@@ -149,12 +149,8 @@ impl Hittable for AARect {
     fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
 
-        // if !self.two_sided {
-        //     if cos_o < 0.0 {
-        //         return 0.0.into();
-        //     }
-        // }
         let area = self.size.0 * self.size.1;
+
         let distance_squared = direction.norm_squared();
 
         let denominator = cos_o.abs() * area;

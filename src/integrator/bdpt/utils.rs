@@ -435,7 +435,7 @@ pub fn eval_mis<F>(
     mis_function: F,
 ) -> f32
 where
-    F: FnOnce(&Vec<f32>) -> f32,
+    F: Fn(&[f32]) -> f32,
 {
     let lambda = light_path[0].lambda;
     // computes the mis weight of generating the path determined by s and t
