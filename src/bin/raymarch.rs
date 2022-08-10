@@ -12,10 +12,12 @@ use math::curves::*;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
 use math::*;
 
+use pbr::ProgressBar;
 use root::camera::ProjectiveCamera;
 use root::hittable::{HasBoundingBox, AABB};
+use root::parsing::tonemap::TonemapSettings;
 use root::parsing::{config::*, construct_world, load_scene, parse_tonemapper};
-use root::renderer::Film;
+use root::renderer::{output_film, Film};
 use root::rgb_to_u32;
 use root::tonemap::{Clamp, Converter, Tonemapper};
 use root::world::{EnvironmentMap, Material, MaterialEnum, TransportMode, NORMAL_OFFSET};
@@ -274,7 +276,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
         &self,
         mut r: Ray,
         lambda: f32,
-        bounces: usize,
+        bounces: u8,
         sampler: &mut Box<dyn Sampler>,
         printout: bool,
     ) -> XYZColor {
@@ -300,7 +302,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                         material.emission(lambda, (0.0, 0.0), TransportMode::Importance, wi);
                     if emission.0 > 0.0 {
                         // do MIS based on last_bsdf_pdf
-                        sum += throughput * emission * wi.z().abs();
+                        sum += throughput * emission * if true { wi.z().abs() } else { 1.0 };
                     }
 
                     let wo = material.generate(
@@ -429,7 +431,7 @@ fn main() {
 
     find_material!(world, material_map, MaterialEnum::Lambertian(_));
     find_material!(world, material_map, MaterialEnum::GGX(_));
-    find_material!(world, material_map, MaterialEnum::DiffuseLight(_));
+    find_material!(world, material_map, MaterialEnum::SharpLight(_));
 
     let env_map = world.environment;
 
@@ -477,18 +479,54 @@ fn main() {
         world_aabb,
     };
 
-    let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
+    let wavelength_bounds = render_settings
+        .wavelength_bounds
+        .map(|e| e.into())
+        .unwrap_or(BOUNDED_VISIBLE_RANGE);
 
     let mut render_film = Film::new(width, height, XYZColor::BLACK);
 
     // let converter = Converter::sRGB;
 
     // let mut tonemapper = Clamp::new(-1.0, false, true);
-    let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
+
+    // force silence
+    let tonemap_settings = match render_settings.tonemap_settings {
+        TonemapSettings::Clamp {
+            exposure,
+            luminance_only,
+            silenced,
+        } => TonemapSettings::Clamp {
+            exposure,
+            luminance_only,
+            silenced: true,
+        },
+        TonemapSettings::Reinhard0 {
+            key_value,
+            luminance_only,
+            silenced,
+        } => TonemapSettings::Reinhard0 {
+            key_value,
+            luminance_only,
+            silenced: true,
+        },
+        TonemapSettings::Reinhard1 {
+            key_value,
+            white_point,
+            luminance_only,
+            silenced,
+        } => TonemapSettings::Reinhard1 {
+            key_value,
+            white_point,
+            luminance_only,
+            silenced: true,
+        },
+    };
+    let (mut tonemapper, converter) = parse_tonemapper(tonemap_settings);
 
     let mut total_samples = 0;
     let samples_per_frame = 1;
-    let bounces = 5;
+    let bounces = render_settings.max_bounces.unwrap_or(10) as u8;
 
     if opt.dry_run {
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
@@ -500,45 +538,83 @@ fn main() {
         return;
     }
 
-    root::window_loop(
-        width,
-        height,
-        144,
-        WindowOptions::default(),
-        |_, film, width, height| {
-            render_film
-                .buffer
-                .par_iter_mut()
-                .enumerate()
-                .for_each(|(idx, pixel)| {
-                    let (px, py) = (idx % width, idx / width);
-                    let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+    match config.renderer {
+        RendererType::Naive => {
+            total_samples = render_settings
+                .max_samples
+                .unwrap_or(render_settings.min_samples);
+            let mut pb = ProgressBar::new((width * height * total_samples as usize) as u64);
+            for _ in 0..total_samples {
+                render_film
+                    .buffer
+                    .par_iter_mut()
+                    .enumerate()
+                    .for_each(|(idx, pixel)| {
+                        let (px, py) = (idx % width, idx / width);
+                        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
 
-                    for _ in 0..samples_per_frame {
-                        let lambda = wavelength_bounds.sample(sampler.draw_1d().x);
-                        let film_sample = sampler.draw_2d();
-                        let (u, v) = (
-                            (px as f32 + film_sample.x) / width as f32,
-                            (py as f32 + film_sample.y) / height as f32,
-                        );
-                        let (r, pdf) = camera.get_ray(&mut sampler, lambda, u, v);
-                        *pixel += scene.color(r, lambda, bounces, &mut sampler, false);
-                    }
-                });
-            total_samples += samples_per_frame;
+                        for _ in 0..samples_per_frame {
+                            let lambda = wavelength_bounds.sample(sampler.draw_1d().x);
+                            let film_sample = sampler.draw_2d();
+                            let (u, v) = (
+                                (px as f32 + film_sample.x) / width as f32,
+                                (py as f32 + film_sample.y) / height as f32,
+                            );
+                            let (r, pdf) = camera.get_ray(&mut sampler, lambda, u, v);
+                            *pixel += scene.color(r, lambda, bounces, &mut sampler, false);
+                        }
+                    });
+                pb.add((width * height) as u64);
+            }
+            pb.finish();
+        }
+        RendererType::Preview { .. } => {
+            root::window_loop(
+                width,
+                height,
+                144,
+                WindowOptions::default(),
+                |_, film, width, height| {
+                    render_film
+                        .buffer
+                        .par_iter_mut()
+                        .enumerate()
+                        .for_each(|(idx, pixel)| {
+                            let (px, py) = (idx % width, idx / width);
+                            let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
 
-            tonemapper.initialize(&render_film, 1.0 / (total_samples as f32 + 1.0));
-            film.par_iter_mut().enumerate().for_each(|(pixel_idx, v)| {
-                let y: usize = pixel_idx / width;
-                let x: usize = pixel_idx % width;
-                let [r, g, b, _]: [f32; 4] = converter
-                    .transfer_function(
-                        tonemapper.map(&render_film, (x as usize, y as usize)),
-                        false,
-                    )
-                    .into();
-                *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-            });
-        },
-    )
+                            for _ in 0..samples_per_frame {
+                                let lambda = wavelength_bounds.sample(sampler.draw_1d().x);
+                                let film_sample = sampler.draw_2d();
+                                let (u, v) = (
+                                    (px as f32 + film_sample.x) / width as f32,
+                                    (py as f32 + film_sample.y) / height as f32,
+                                );
+                                let (r, pdf) = camera.get_ray(&mut sampler, lambda, u, v);
+                                *pixel += scene.color(r, lambda, bounces, &mut sampler, false);
+                            }
+                        });
+                    total_samples += samples_per_frame;
+
+                    tonemapper.initialize(&render_film, 1.0 / (total_samples as f32 + 1.0));
+                    film.par_iter_mut().enumerate().for_each(|(pixel_idx, v)| {
+                        let y: usize = pixel_idx / width;
+                        let x: usize = pixel_idx % width;
+                        let [r, g, b, _]: [f32; 4] = converter
+                            .transfer_function(
+                                tonemapper.map(&render_film, (x as usize, y as usize)),
+                                false,
+                            )
+                            .into();
+                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    });
+                },
+            );
+        }
+    }
+    output_film(
+        &render_settings,
+        &render_film,
+        1.0 / (total_samples as f32 + 1.0),
+    );
 }

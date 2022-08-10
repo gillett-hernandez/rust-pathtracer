@@ -20,16 +20,16 @@ vfov = 70.4
 
 
 [renderer]
-type="Naive"
-# type="Preview"
-# selected_preview_film_id = 0
+# type="Naive"
+type="Preview"
+selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "sun test"
+filename = "raymarch test"
 min_samples = 256
 min_bounces = 2
-max_bounces = 6
+max_bounces = 12
 hwss = false
 camera_id = "simple camera"
 russian_roulette = true
