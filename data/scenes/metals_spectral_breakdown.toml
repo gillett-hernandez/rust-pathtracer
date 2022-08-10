@@ -1,0 +1,59 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+
+env_sampling_probability = 0.2
+[environment]
+type="HDRI"
+strength = 0.0
+texture_name = "autumn_park_8k"
+
+
+[[instances]]
+material_name = "sharp_light"
+# material_name = "diffuse_light"
+[instances.aggregate]
+type = "Rect"
+size = [0.4, 1.0]
+origin = [0.0, 0.0, 3.0]
+normal = "Z"
+two_sided = false
+
+# floor
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [20, 20]
+origin = [0.0, 0.0, -1.0]
+normal = "Z"
+two_sided = true
+
+# floor
+[[instances]]
+# material_name = "lambertian_white"
+material_name = "ggx_copper"
+# material_name = "ggx_gold"
+# material_name = "ggx_flat"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [1.0, 0.0, 0.0]
+normal = "X"
+two_sided = true
+
+[[instances]]
+material_name = "ggx_glass_dispersive"
+[instances.aggregate]
+type = "Mesh"
+name = "prism"
+[instances.transform]
+scale = [3.0, 3.0, 3.0]
+translate = [0.0, 0.0, 0.333]
+# [[instances.transform.rotate]]
+# axis = [0.0, 0.0, 1.0]
+# angle = 0
+[[instances.transform.rotate]]
+axis = [0.0, 1.0, 0.0]
+angle = 35

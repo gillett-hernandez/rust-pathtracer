@@ -285,6 +285,14 @@ emit_color = "blackbody_5000k"
 bounce_color = "flat_78"
 
 
+[diffuse_540THz]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "540THz"
+bounce_color = "flat_zero"
+
+
+
 [diffuse_light_cornell]
 type = "DiffuseLight"
 sidedness = "Reverse"
@@ -309,7 +317,7 @@ bounce_color = "flat_78"
 
 [sharp_light_warm]
 type = "SharpLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 sharpness = 4.0
 emit_color = "blackbody_3000k_x5"
 bounce_color = "flat_78"
@@ -317,7 +325,7 @@ bounce_color = "flat_78"
 
 [sharp_light]
 type = "SharpLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 sharpness = 4.0
 emit_color = "blackbody_5000k"
 bounce_color = "flat_78"
@@ -325,7 +333,7 @@ bounce_color = "flat_78"
 
 [sharp_light_fluorescent]
 type = "SharpLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 sharpness = 4.0
 emit_color = "fluorescent_x5"
 bounce_color = "flat_78"

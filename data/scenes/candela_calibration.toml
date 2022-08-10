@@ -1,0 +1,19 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+env_sampling_probability = 0.0
+[environment]
+type="Constant"
+strength = 0.0
+color = "D65"
+
+
+
+# floor on side
+[[instances]]
+material_name = "diffuse_540THz"
+[instances.aggregate]
+type = "Sphere"
+radius = 1.0
+origin = [0.0, 0.0, 0.0]

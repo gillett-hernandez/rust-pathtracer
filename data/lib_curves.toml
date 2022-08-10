@@ -12,10 +12,16 @@ strength = 1.0
 type = "Flat"
 strength = 1.0
 
-
 [E10]
 type = "Flat"
 strength = 10.0
+
+[540THz]
+type = "SimpleSpike"
+strength = 1.0
+lambda = 555.17
+left_taper = 1.0
+right_taper = 1.0
 
 [flat_zero]
 type = "Flat"

@@ -6,12 +6,12 @@ meshes = "data/lib_meshes.toml"
 env_sampling_probability = 0.01
 [environment]
 type="HDRI"
-strength = 1.0
+strength = 0.0
 texture_name = "kiara_dawn_8k"
 
 
 [[instances]]
-material_name = "diffuse_light"
+material_name = "sharp_light_fluorescent"
 [instances.aggregate]
 type = "Rect"
 size = [0.6, 0.6]

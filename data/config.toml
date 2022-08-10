@@ -1,4 +1,4 @@
-default_scene_file = "data/scenes/cornell_box.toml"
+default_scene_file = "data/scenes/cornell_box_diamond_arrangement.toml"
 
 
 [[cameras]]
@@ -19,14 +19,6 @@ focal_distance = 5.0
 vfov = 27.4
 
 
-[[cameras]]
-type="SimpleCamera"
-name = "cornell camera"
-look_from = [ -5.0, 0.0, 0.0]
-look_at = [0.0, 0.0, 0.0]
-aperture_size = 0.03
-focal_distance = 5.0
-vfov = 37.8
 
 [[cameras]]
 type="SimpleCamera"
@@ -213,34 +205,40 @@ aperture_size = 0.1
 focal_distance = 5.0
 vfov = 5.0
 
+[[cameras]]
+type="SimpleCamera"
+name = "cornell camera"
+look_from = [ -5.0, 0.0, 0.0]
+look_at = [0.0, 0.0, 0.0]
+aperture_size = 0.03
+focal_distance = 5.0
+vfov = 40.8
 
 [renderer]
-# type="Naive"
-type="Preview"
-selected_preview_film_id = 0
+type="Naive"
+# type="Preview"
+# selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-# filename = "cornell_box"
-# filename = "veach_mis"
-# filename = "test_sampling_methods, no cos_i"
-filename = "sun test"
+filename = "cornell box lt"
 min_samples = 256
 min_bounces = 2
-max_bounces = 6
+max_bounces = 12
 hwss = false
-camera_id = "debug"
+# camera_id = "debug"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
 # camera_id = "cornell camera"
+camera_id = "true cornell camera"
+# camera_id = "distant camera"
 # camera_id = "veach mis camera"
-# camera_id = "true cornell camera"
 # camera_id = "wideangle sun test camera side"
 russian_roulette = true
-only_direct = true
+only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.tonemap_settings]
@@ -248,15 +246,22 @@ type = "Reinhard1"
 # exposure = -2.0
 key_value = 0.5
 white_point = 10.0
-luminance_only = false
+luminance_only = true
 [render_settings.integrator]
-type = "PT"
 # type = "PT"
-light_samples = 2
-# camera_samples = 4
+# light_samples = 4
+type = "LT"
+camera_samples = 4
+# type = "BDPT"
 # s = light, t = camera
+# selected_pair = [6,1]
+# selected_pair = [3,1]
 # selected_pair = [2,2]
+# selected_pair = [1,3]
+# selected_pair = [2,1]
+# selected_pair = [1,2]
+# selected_pair = [1,1]
 [render_settings.resolution]
-width = 1024
+width = 512
 height = 512
 
