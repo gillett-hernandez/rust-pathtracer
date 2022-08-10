@@ -10,6 +10,7 @@ visualize_importance_map=[]
 notification=[]
 sort_mesh_aabb_hits = []
 gui = ["eframe", "egui_extras", "egui"]
+build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 
 
 [dependencies]
@@ -38,6 +39,8 @@ paste = "1.0.7"
 eframe = {version = "*", optional = true}
 egui = {version = "*", optional = true}
 egui_extras = {version = "*", optional = true}
+sdfu = {git="https://github.com/fu5ha/sdfu", optional = true, features=["ultraviolet"]}
+ultraviolet = {version = "0.8.1", optional = true}
 
 [target.'cfg(windows)'.dependencies]
 win32_notification = "0.1.0"
@@ -51,6 +54,11 @@ path = "src/lib.rs"
 [[bin]]
 name = "clm_test"
 path = "src/bin/clm_test.rs"
+
+[[bin]]
+name = "raymarch"
+path = "src/bin/raymarch.rs"
+required-features = ["build_raymarch"]
 
 [[bin]]
 name = "medium_test"
