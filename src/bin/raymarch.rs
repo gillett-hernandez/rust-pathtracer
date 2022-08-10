@@ -3,6 +3,7 @@ extern crate log;
 extern crate rust_pathtracer as root;
 extern crate simplelog;
 
+use std::cmp::Ordering;
 use std::fs::File;
 use std::ops::{Add, Div, Mul, Neg, RangeInclusive, Sub};
 
@@ -24,15 +25,32 @@ use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
+use sdfu::ops::{HardMin, Union};
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
 use sdfu::{Sphere, SDF};
 use ultraviolet::vec::Vec3 as uvVec3;
 
+trait Convert {
+    fn convert(self) -> [f32; 4];
+}
+
+impl Convert for Point3 {
+    fn convert(self) -> [f32; 4] {
+        self.as_array()
+    }
+}
+
+impl Convert for Vec3 {
+    fn convert(self) -> [f32; 4] {
+        self.as_array()
+    }
+}
+
 #[inline(always)]
-fn convert(p: Point3) -> uvVec3 {
-    let [x, y, z, _] = p.as_array();
+fn convert(p: impl Convert) -> uvVec3 {
+    let [x, y, z, _] = p.convert();
     uvVec3::new(x, y, z)
 }
 
@@ -61,33 +79,86 @@ enum MarchResult {
     },
 }
 
-macro_rules! generate_primitive_enum {
-    ($($variant:ident => $type:ty )+) => {
-        #[derive(Copy, Clone)]
-        enum PrimitiveEnum {
-            $(
-                $variant($type),
-            )+
-        }
-        impl SDF<f32, uvVec3> for PrimitiveEnum {
-            fn dist(&self, p: uvVec3) -> f32 {
-                match self {
-                    $(
-                        PrimitiveEnum::$variant(inner) => {
-                            inner.dist(p)
-                        },
-                    )+
-                }
-            }
-        }
-    };
+// macro_rules! generate_primitive_enum {
+//     ($($variant:ident => $type:ty )+) => {
+//         #[derive(Copy, Clone)]
+//         enum PrimitiveEnum {
+//             $(
+//                 $variant($type),
+//             )+
+//         }
+//         impl SDF<f32, uvVec3> for PrimitiveEnum {
+//             fn dist(&self, p: uvVec3) -> f32 {
+//                 match self {
+//                     $(
+//                         PrimitiveEnum::$variant(inner) => {
+//                             inner.dist(p)
+//                         },
+//                     )+
+//                 }
+//             }
+//         }
+//     };
+// }
+
+// generate_primitive_enum!(Sphere => Sphere<f32>);
+
+trait MaterialTag {
+    fn material(&self, p: uvVec3) -> usize {
+        0
+    }
 }
 
-generate_primitive_enum!(Sphere => Sphere<f32>);
+#[derive(Copy, Clone)]
+struct TaggedSDF<S>
+where
+    S: SDF<f32, uvVec3>,
+{
+    sdf: S,
+    material: usize,
+}
+
+impl<S: SDF<f32, uvVec3>> TaggedSDF<S> {
+    pub fn new(sdf: S, material: usize) -> Self {
+        Self { sdf, material }
+    }
+}
+
+impl<S: SDF<f32, uvVec3>> SDF<f32, uvVec3> for TaggedSDF<S> {
+    fn dist(&self, p: uvVec3) -> f32 {
+        self.sdf.dist(p)
+    }
+}
+
+impl<S: SDF<f32, uvVec3>> MaterialTag for TaggedSDF<S> {
+    fn material(&self, p: uvVec3) -> usize {
+        self.material
+    }
+}
+
+impl<S1: SDF<f32, uvVec3> + MaterialTag, S2: SDF<f32, uvVec3> + MaterialTag> MaterialTag
+    for Union<f32, S1, S2, HardMin<f32>>
+{
+    fn material(&self, p: uvVec3) -> usize {
+        // let minfunc = self.min_func;
+        // minfunc.
+        let d0 = self.sdf1.dist(p);
+        let d1 = self.sdf2.dist(p);
+        match d0.partial_cmp(&d1) {
+            Some(Ordering::Less) => self.sdf1.material(p),
+            Some(Ordering::Greater) => self.sdf2.material(p),
+            Some(Ordering::Equal) => {
+                // just choose one?
+                self.sdf1.material(p)
+            }
+            None => unreachable!(),
+        }
+    }
+}
 
 struct Scene<S>
 where
-    S: SDF<f32, uvVec3>,
+    S: SDF<f32, uvVec3> + MaterialTag,
 {
     // primitives: Vec<Box<dyn SDF<f32, uvVec3>>>,
     // primitives: Vec<PrimitiveEnum>,
@@ -100,7 +171,7 @@ where
     world_aabb: AABB,
 }
 
-impl<S: SDF<f32, uvVec3>> Scene<S> {
+impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
     fn sdf(&self, p: Point3) -> (f32, usize) {
         let mut min_time = f32::INFINITY;
         let mut selected = 0;
@@ -113,10 +184,11 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
         //         selected = index
         //     }
         // }
+        selected = self.primitives.material(convert(p));
         min_time = self.primitives.dist(convert(p));
         (min_time, selected)
     }
-    fn normal(&self, p: Point3, index: usize, threshold: f32) -> Vec3 {
+    fn normal(&self, p: Point3, threshold: f32) -> Vec3 {
         // get normal from prim[index]
         // Vec3(deconvert(
         //     self.primitives[index]
@@ -148,7 +220,7 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
         let mut distance = offset;
         let mut p = r.origin;
         let mut maybe_normal: Option<Vec3> = None;
-        let mut closest_primitive: Option<usize> = None;
+        let mut maybe_material: Option<usize> = None;
         let max_depth = 100;
         for _ in 0..max_depth {
             p = r.point_at_parameter(distance);
@@ -164,7 +236,7 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
                     direction: r.direction,
                 };
             }
-            let (mut current_distance, primitive) = self.sdf(p);
+            let (mut current_distance, material_tag) = self.sdf(p);
             current_distance *= if flipped_sdf { -1.0 } else { 1.0 };
             if printout {
                 println!(
@@ -173,7 +245,7 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
                     distance + current_distance,
                     distance,
                     current_distance,
-                    primitive
+                    material_tag
                 );
             }
             distance += current_distance;
@@ -181,8 +253,8 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
                 // reached boundary,
                 // update p
                 p = r.point_at_parameter(distance);
-                maybe_normal = Some(self.normal(p, primitive, 0.01));
-                closest_primitive = Some(primitive);
+                maybe_normal = Some(self.normal(p, 0.01));
+                maybe_material = Some(material_tag);
                 break;
             }
         }
@@ -191,7 +263,7 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
                 point: p,
                 normal,
                 material: self.material_map
-                    [closest_primitive.unwrap_or_else(|| panic!("strange error at point {:?}", p))],
+                    [maybe_material.unwrap_or_else(|| panic!("strange error at point {:?}", p))],
             },
             None => MarchResult::NoIntersection {
                 direction: r.direction,
@@ -209,6 +281,7 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
         let mut throughput = SingleEnergy(1.0);
         let mut sum = SingleEnergy(0.0);
         let mut flipped_sdf = false;
+        let mut last_bsdf_pdf = 0.0;
         for bounce in 0..bounces {
             match self.march(r, 0.001, 0.001, flipped_sdf, printout) {
                 MarchResult::SurfaceIntersection {
@@ -223,7 +296,12 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
                     let wi = frame.to_local(&-r.direction);
                     let material = &self.materials[material];
 
-                    // add if material.emission
+                    let emission =
+                        material.emission(lambda, (0.0, 0.0), TransportMode::Importance, wi);
+                    if emission.0 > 0.0 {
+                        // do MIS based on last_bsdf_pdf
+                        sum += throughput * emission * wi.z().abs();
+                    }
 
                     let wo = material.generate(
                         lambda,
@@ -285,6 +363,21 @@ impl<S: SDF<f32, uvVec3>> Scene<S> {
     }
 }
 
+macro_rules! find_material {
+    ($world: expr, $materials:expr, $scrutinee: pat) => {
+        $world
+            .materials
+            .iter()
+            .enumerate()
+            .find(|(index, material)| matches!(material, $scrutinee))
+            .and_then(|(i, material)| {
+                $materials.push(i);
+                Some(material)
+            })
+            .unwrap();
+    };
+}
+
 fn main() {
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -331,40 +424,19 @@ fn main() {
     // due to the culling optimization within construct world
     // assigning materials is tricky, currently.
     // you need to create dummy instances that reference materials so their data gets loaded
-    // and you need to assign by finding that material through its type information here, i.e.
-    // primitives
-    // primitives.push(PrimitiveEnum::Sphere(sdfu::Sphere::new(1.0)));
-    // primitives.push(Box::new(sdfu::Sphere::new(1.0)));
-    // primitives.push(Box::new(
-    //     sdfu::Sphere::new(1.0).translate(uvVec3::new(0.0, 1.0, 1.0)),
-    // ));
+    // and you need to assign by finding that material through its type information here.
+    // for more details, look at the definition of the find_material macro
 
-    // find the first lambertian
-    world
-        .materials
-        .iter()
-        .enumerate()
-        .find(|(index, material)| matches!(material, MaterialEnum::GGX(_)))
-        .and_then(|(i, material)| {
-            material_map.push(i);
-            Some(material)
-        })
-        .unwrap();
-    // find the first diffuse light
-    // world
-    //     .materials
-    //     .iter()
-    //     .enumerate()
-    //     .find(|(index, material)| matches!(material, MaterialEnum::DiffuseLight(_)))
-    //     .and_then(|(i, material)| {
-    //         material_map.push(i);
-    //         Some(material)
-    //     })
-    //     .unwrap();
+    find_material!(world, material_map, MaterialEnum::Lambertian(_));
+    find_material!(world, material_map, MaterialEnum::GGX(_));
+    find_material!(world, material_map, MaterialEnum::DiffuseLight(_));
 
     let env_map = world.environment;
 
-    let mut world_aabb = AABB::new(Point3::new(-1.1, -1.1, -1.1), Point3::new(1.1, 1.1, 4.1));
+    let mut world_aabb = AABB::new(
+        Point3::new(-10.0, -10.0, -10.0),
+        Point3::new(10.0, 10.0, 10.0),
+    );
     // world_aabb.grow_mut(&camera.origin);
     let (min, max) = {
         let aabb = camera.get_surface().unwrap().aabb();
@@ -373,12 +445,29 @@ fn main() {
     world_aabb.grow_mut(&min);
     world_aabb.grow_mut(&max);
 
-    let scene = Scene {
-        // primitives,
-        primitives: (sdfu::Sphere::new(1.0)).union_smooth(
-            sdfu::Sphere::new(1.0).translate(convert(Point3::new(0.0, 0.0, 1.0))),
+    let subject = TaggedSDF::new(
+        sdfu::Sphere::new(1.0).union_smooth(
+            sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 0.0, 1.0))),
             0.3,
         ),
+        1,
+    );
+    let local_light = TaggedSDF::new(
+        sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 2.0, 2.0))),
+        2,
+    );
+
+    let ground = TaggedSDF::new(
+        sdfu::Box::new(convert(Vec3::new(10.0, 10.0, 0.1)))
+            .translate(convert(Vec3::new(0.0, 0.0, -2.0))),
+        0,
+    );
+
+    let scene_sdf = subject.union(local_light).union(ground);
+
+    let scene = Scene {
+        // primitives,
+        primitives: scene_sdf,
 
         environment: env_map,
         materials: world.materials,
