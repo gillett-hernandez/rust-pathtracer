@@ -4,16 +4,16 @@ materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.5
-# [environment]
-# type="HDRI"
-# strength = 1.0
-# texture_name = "sunny_vondelpark_8k"
 [environment]
-type="Sun"
-sun_direction=[0, 0, 1]
+type="HDRI"
 strength = 1.0
-color = "D65"
-angular_diameter = 0.565
+texture_name = "sunny_vondelpark_8k"
+# [environment]
+# type="Sun"
+# sun_direction=[0, 0, 1]
+# strength = 1.0
+# color = "D65"
+# angular_diameter = 0.565
 
 # instances are ignored
 [[instances]]

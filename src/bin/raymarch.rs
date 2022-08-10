@@ -12,7 +12,7 @@ use math::spectral::BOUNDED_VISIBLE_RANGE;
 use math::*;
 
 use root::camera::ProjectiveCamera;
-use root::hittable::AABB;
+use root::hittable::{HasBoundingBox, AABB};
 use root::parsing::{config::*, construct_world, load_scene, parse_tonemapper};
 use root::renderer::Film;
 use root::rgb_to_u32;
@@ -287,7 +287,7 @@ fn main() {
 
     let settings = get_settings(opt.config_file).unwrap();
     let (config, cameras) = parse_cameras_from(settings);
-    let render_settings = config.render_settings[0];
+    let render_settings = &config.render_settings[0];
     let (width, height) = (
         render_settings.resolution.width,
         render_settings.resolution.height,
@@ -305,7 +305,7 @@ fn main() {
     // )
     let camera = cameras[0].with_aspect_ratio(height as f32 / width as f32);
 
-    let world = construct_world(settings.default_scene_file).unwrap();
+    let world = construct_world(config.scene_file).unwrap();
 
     let mut primitives: Vec<PrimitiveEnum> = Vec::new();
     let mut material_map = Vec::new();
@@ -346,7 +346,13 @@ fn main() {
     let env_map = world.environment;
 
     let mut world_aabb = AABB::new(Point3::new(-1.1, -1.1, -1.1), Point3::new(1.1, 1.1, 1.1));
-    world_aabb.grow_mut(&camera.origin);
+    // world_aabb.grow_mut(&camera.origin);
+    let (min, max) = {
+        let aabb = camera.get_surface().unwrap().aabb();
+        (aabb.min, aabb.max)
+    };
+    world_aabb.grow_mut(&min);
+    world_aabb.grow_mut(&max);
 
     let scene = Scene {
         primitives,
@@ -360,7 +366,7 @@ fn main() {
 
     let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
 
-    let mut render_film = Film::new(opt.width, opt.height, XYZColor::BLACK);
+    let mut render_film = Film::new(width, height, XYZColor::BLACK);
 
     // let converter = Converter::sRGB;
 
@@ -382,8 +388,8 @@ fn main() {
     }
 
     root::window_loop(
-        opt.width,
-        opt.height,
+        width,
+        height,
         144,
         WindowOptions::default(),
         |_, film, width, height| {
