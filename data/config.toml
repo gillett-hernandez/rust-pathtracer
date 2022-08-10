@@ -215,25 +215,25 @@ focal_distance = 5.0
 vfov = 40.8
 
 [renderer]
-type="Naive"
-# type="Preview"
-# selected_preview_film_id = 0
+# type="Naive"
+type="Preview"
+selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "cornell box lt"
-min_samples = 256
+filename = "sun test"
+min_samples = 512
 min_bounces = 2
 max_bounces = 12
 hwss = false
 # camera_id = "debug"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
-# camera_id = "sun test camera"
+camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
 # camera_id = "cornell camera"
-camera_id = "true cornell camera"
+# camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
 # camera_id = "wideangle sun test camera side"
@@ -245,14 +245,14 @@ only_direct = false
 type = "Reinhard1"
 # exposure = -2.0
 key_value = 0.5
-white_point = 10.0
-luminance_only = true
+white_point = 100.0
+luminance_only = false
 [render_settings.integrator]
 # type = "PT"
 # light_samples = 4
-type = "LT"
-camera_samples = 4
-# type = "BDPT"
+# type = "LT"
+# camera_samples = 4
+type = "BDPT"
 # s = light, t = camera
 # selected_pair = [6,1]
 # selected_pair = [3,1]
@@ -262,6 +262,7 @@ camera_samples = 4
 # selected_pair = [1,2]
 # selected_pair = [1,1]
 [render_settings.resolution]
-width = 512
-height = 512
-
+# width = 3840
+# height = 2160
+width = 500
+height = 300
