@@ -17,7 +17,8 @@ texture_name = "sunny_vondelpark_8k"
 
 # instances are ignored
 [[instances]]
-material_name = "lambertian_white"
+# material_name = "ggx_gold"
+material_name = "ggx_glass"
 [instances.aggregate]
 type = "Sphere"
 radius = 1.0
@@ -25,7 +26,7 @@ origin = [0.0, 0.0, 0.0]
 
 # instances are ignored
 [[instances]]
-material_name = "lambertian_light"
+material_name = "diffuse_light"
 [instances.aggregate]
 type = "Sphere"
 radius = 1.0

@@ -85,9 +85,13 @@ macro_rules! generate_primitive_enum {
 
 generate_primitive_enum!(Sphere => Sphere<f32>);
 
-struct Scene {
+struct Scene<S>
+where
+    S: SDF<f32, uvVec3>,
+{
     // primitives: Vec<Box<dyn SDF<f32, uvVec3>>>,
-    primitives: Vec<PrimitiveEnum>,
+    // primitives: Vec<PrimitiveEnum>,
+    primitives: S,
     environment: EnvironmentMap,
     materials: Vec<MaterialEnum>,
     // indexed by the same index as primitives, returns the material id for that primitive
@@ -96,27 +100,31 @@ struct Scene {
     world_aabb: AABB,
 }
 
-impl Scene {
+impl<S: SDF<f32, uvVec3>> Scene<S> {
     fn sdf(&self, p: Point3) -> (f32, usize) {
         let mut min_time = f32::INFINITY;
         let mut selected = 0;
 
-        for (index, prim) in self.primitives.iter().enumerate() {
-            let time = prim.dist(convert(p));
+        // for (index, prim) in self.primitives.iter().enumerate() {
+        //     let time = prim.dist(convert(p));
 
-            if time < min_time {
-                min_time = time;
-                selected = index
-            }
-        }
+        //     if time < min_time {
+        //         min_time = time;
+        //         selected = index
+        //     }
+        // }
+        min_time = self.primitives.dist(convert(p));
         (min_time, selected)
     }
     fn normal(&self, p: Point3, index: usize, threshold: f32) -> Vec3 {
         // get normal from prim[index]
+        // Vec3(deconvert(
+        //     self.primitives[index]
+        //         .normals(threshold)
+        //         .normal_at(convert(p)),
+        // ))
         Vec3(deconvert(
-            self.primitives[index]
-                .normals(threshold)
-                .normal_at(convert(p)),
+            self.primitives.normals(threshold).normal_at(convert(p)),
         ))
     }
     // fn material(&self, p: Point3, threshold: f32) -> Option<usize> {
@@ -129,10 +137,14 @@ impl Scene {
     //     }
     //     None
     // }
-}
-
-impl Scene {
-    pub fn march(&self, r: Ray, threshold: f32, offset: f32, printout: bool) -> MarchResult {
+    pub fn march(
+        &self,
+        r: Ray,
+        threshold: f32,
+        offset: f32,
+        flipped_sdf: bool,
+        printout: bool,
+    ) -> MarchResult {
         let mut distance = offset;
         let mut p = r.origin;
         let mut maybe_normal: Option<Vec3> = None;
@@ -152,7 +164,8 @@ impl Scene {
                     direction: r.direction,
                 };
             }
-            let (current_distance, primitive) = self.sdf(p);
+            let (mut current_distance, primitive) = self.sdf(p);
+            current_distance *= if flipped_sdf { -1.0 } else { 1.0 };
             if printout {
                 println!(
                     "from point {:?}, time ({}) = {} + {} with nearest primitive = {}",
@@ -195,8 +208,9 @@ impl Scene {
     ) -> XYZColor {
         let mut throughput = SingleEnergy(1.0);
         let mut sum = SingleEnergy(0.0);
+        let mut flipped_sdf = false;
         for bounce in 0..bounces {
-            match self.march(r, 0.001, 0.001, printout) {
+            match self.march(r, 0.001, 0.001, flipped_sdf, printout) {
                 MarchResult::SurfaceIntersection {
                     point,
                     normal,
@@ -244,6 +258,10 @@ impl Scene {
                                 point + normal * NORMAL_OFFSET * wo.z().signum(),
                                 frame.to_world(&wo).normalized(),
                             );
+                            if wo.z() * wi.z() < 0.0 {
+                                // flipped inside of a material, thus invert the sdf until we do this again.
+                                flipped_sdf = !flipped_sdf;
+                            }
                         }
                         None => {
                             warn_once!("didn't bounce at {:?}", point);
@@ -307,14 +325,15 @@ fn main() {
 
     let world = construct_world(config.scene_file).unwrap();
 
-    let mut primitives: Vec<PrimitiveEnum> = Vec::new();
+    // let mut primitives: Vec<PrimitiveEnum> = Vec::new();
     let mut material_map = Vec::new();
 
     // due to the culling optimization within construct world
     // assigning materials is tricky, currently.
     // you need to create dummy instances that reference materials so their data gets loaded
     // and you need to assign by finding that material through its type information here, i.e.
-    primitives.push(PrimitiveEnum::Sphere(sdfu::Sphere::new(1.0)));
+    // primitives
+    // primitives.push(PrimitiveEnum::Sphere(sdfu::Sphere::new(1.0)));
     // primitives.push(Box::new(sdfu::Sphere::new(1.0)));
     // primitives.push(Box::new(
     //     sdfu::Sphere::new(1.0).translate(uvVec3::new(0.0, 1.0, 1.0)),
@@ -325,27 +344,27 @@ fn main() {
         .materials
         .iter()
         .enumerate()
-        .find(|(index, material)| matches!(material, MaterialEnum::Lambertian(_)))
+        .find(|(index, material)| matches!(material, MaterialEnum::GGX(_)))
         .and_then(|(i, material)| {
             material_map.push(i);
             Some(material)
         })
         .unwrap();
     // find the first diffuse light
-    world
-        .materials
-        .iter()
-        .enumerate()
-        .find(|(index, material)| matches!(material, MaterialEnum::DiffuseLight(_)))
-        .and_then(|(i, material)| {
-            material_map.push(i);
-            Some(material)
-        })
-        .unwrap();
+    // world
+    //     .materials
+    //     .iter()
+    //     .enumerate()
+    //     .find(|(index, material)| matches!(material, MaterialEnum::DiffuseLight(_)))
+    //     .and_then(|(i, material)| {
+    //         material_map.push(i);
+    //         Some(material)
+    //     })
+    //     .unwrap();
 
     let env_map = world.environment;
 
-    let mut world_aabb = AABB::new(Point3::new(-1.1, -1.1, -1.1), Point3::new(1.1, 1.1, 1.1));
+    let mut world_aabb = AABB::new(Point3::new(-1.1, -1.1, -1.1), Point3::new(1.1, 1.1, 4.1));
     // world_aabb.grow_mut(&camera.origin);
     let (min, max) = {
         let aabb = camera.get_surface().unwrap().aabb();
@@ -355,7 +374,12 @@ fn main() {
     world_aabb.grow_mut(&max);
 
     let scene = Scene {
-        primitives,
+        // primitives,
+        primitives: (sdfu::Sphere::new(1.0)).union_smooth(
+            sdfu::Sphere::new(1.0).translate(convert(Point3::new(0.0, 0.0, 1.0))),
+            0.3,
+        ),
+
         environment: env_map,
         materials: world.materials,
         material_map,
