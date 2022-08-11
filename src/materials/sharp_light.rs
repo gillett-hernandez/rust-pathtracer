@@ -4,7 +4,6 @@ use crate::world::TransportMode;
 
 #[derive(Clone, Debug)]
 pub struct SharpLight {
-
     pub bounce_color: Curve,
     pub emit_color: CurveWithCDF,
     pub sharpness: f32,
@@ -12,7 +11,12 @@ pub struct SharpLight {
 }
 
 impl SharpLight {
-    pub fn new(bounce_color: Curve, emit_color: CurveWithCDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+    pub fn new(
+        bounce_color: Curve,
+        emit_color: CurveWithCDF,
+        sharpness: f32,
+        sidedness: Sidedness,
+    ) -> SharpLight {
         SharpLight {
             bounce_color,
             emit_color,
@@ -24,6 +28,7 @@ impl SharpLight {
 }
 
 fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
+
     let cos_phi = vec.z().clamp(0.0, 1.0);
     // assert!(cos_phi <= 1.0 && cos_phi >= 0.0);
     let cos_phi2 = cos_phi * cos_phi;
@@ -54,8 +59,37 @@ fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
 }
 
 impl Material for SharpLight {
-    // don't implement the other functions, since the fallback default implementation does the exact same thing
+    fn bsdf(
+        &self,
+        lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> (SingleEnergy, PDF) {
+        // copy from lambertian
+        if wo.z() * wi.z() > 0.0 {
+            (
+                SingleEnergy::new(self.bounce_color.evaluate_clamped(lambda) / PI),
+                (wo.z().abs() / PI).into(),
+            )
+        } else {
+            (0.0.into(), 0.0.into())
+        }
+    }
+    fn generate(
+        &self,
+        _lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> Option<Vec3> {
+        // bounce, copy from lambertian
 
+        let d = random_cosine_direction(s) * wi.z().signum();
+        Some(d)
+    }
     fn sample_emission(
         &self,
         point: Point3,
@@ -130,6 +164,7 @@ impl Material for SharpLight {
         _transport_mode: TransportMode,
         wi: Vec3,
     ) -> SingleEnergy {
+
         // wi is in local space, and is normalized
         // lets check if it could have been constructed by sample_emission.
         let cosine = wi.z();
@@ -157,6 +192,7 @@ impl Material for SharpLight {
         _transport_mode: TransportMode,
         wo: Vec3,
     ) -> PDF {
+        // TODO: confirm this pdf evaluates to 1.0 over its domain
         let cosine = wo.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
@@ -176,21 +212,24 @@ impl Material for SharpLight {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::curves;
-//     #[test]
-//     fn test_integral() {
-//         let light = SharpLight::new(curves::void(), 4.0, Sidedness::Forward);
-//         for _ in 0..10000 {
-//             let generated = light.sample_emission(
-//                 Point3::ORIGIN,
-//                 Vec3::Z,
-//                 curves::EXTENDED_VISIBLE_RANGE,
-//                 Sample2D::new_random_sample(),
-//                 Sample1D::new_random_sample(),
-//             );
-//         }
-//     }
-// }
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::curves;
+    #[test]
+    fn test_integral() {
+        let light = SharpLight::new(curves::cie_e(0.78), curves::cie_e(10.0), 4.0, Sidedness::Forward);
+        for _ in 0..100000 {
+            let generated = light.sample_emission(
+                Point3::ORIGIN,
+                Vec3::Z,
+                curves::EXTENDED_VISIBLE_RANGE,
+                Sample2D::new_random_sample(),
+                Sample1D::new_random_sample(),
+            );
+        }
+    }
+
+    #[test]
+    fn test_bounce() {}
+}

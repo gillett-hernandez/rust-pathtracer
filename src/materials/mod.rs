@@ -17,9 +17,7 @@ pub trait Material: Send + Sync {
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
-        (SingleEnergy::new(0.0), 0.0.into())
-    }
+    ) -> (SingleEnergy, PDF);
     fn generate(
         &self,
         lambda: f32,
@@ -27,9 +25,7 @@ pub trait Material: Send + Sync {
         transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,
-    ) -> Option<Vec3> {
-        None
-    }
+    ) -> Option<Vec3>;
 
     fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
         0
