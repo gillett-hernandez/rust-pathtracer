@@ -254,16 +254,16 @@ sharpness = 2.0
 
 
 [renderer]
-type="Naive"
-# type="Preview"
-# selected_preview_film_id = 0
+# type="Naive"
+type="Preview"
+selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "bokeh test, realistic camera"
-min_samples = 1024
-min_bounces = 2
-max_bounces = 8
+filename = "lt test"
+min_samples = 128
+min_bounces = 1
+max_bounces = 5
 hwss = false
 # camera_id = "debug"
 # camera_id = "caustic test camera"
@@ -271,7 +271,7 @@ hwss = false
 # camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
-# camera_id = "cornell camera"
+camera_id = "cornell camera"
 # camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
@@ -281,7 +281,7 @@ hwss = false
 # camera_id = "telephoto"
 # camera_id = "simple 2"
 # camera_id = "petzval kodak"
-camera_id = "petzval kodak cornell"
+# camera_id = "petzval kodak cornell"
 russian_roulette = true
 only_direct = false
 # wavelength_bounds = [380.0, 750.0]
@@ -289,14 +289,14 @@ only_direct = false
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
-key_value = 10.0
-white_point = 10.0
+key_value = 0.18
+white_point = 1.0
 luminance_only = false
 [render_settings.integrator]
-type = "PT"
-light_samples = 4
-# type = "LT"
-# camera_samples = 4
+# type = "PT"
+# light_samples = 4
+type = "LT"
+camera_samples = 25
 # type = "BDPT"
 # s = light, t = camera
 # selected_pair = [6,1]
@@ -309,5 +309,5 @@ light_samples = 4
 [render_settings.resolution]
 # width = 3840
 # height = 2160
-width = 1080
-height = 1080
+width = 512
+height = 512

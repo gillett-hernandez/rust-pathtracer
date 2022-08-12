@@ -475,8 +475,8 @@ mod test {
                 let x_float = ((idx % width) as f32 + sample.x) / width as f32;
                 let y_float = ((idx / width) as f32 + sample.y) / height as f32;
                 // env.sample_emission(
-                //     world.get_world_radius(),
-                //     world.get_center(),
+                //     world.radius,
+                //     world.center,
                 //     Sample2D::new_random_sample(),
                 //     Sample2D::new_random_sample(),
                 //     BOUNDED_VISIBLE_RANGE,
@@ -656,6 +656,42 @@ mod test {
             }
         }
         println!("\n\nestimate is {}", estimate / limit as f32);
+    }
+
+    #[test]
+    fn test_env_scene_ray_sampling() {
+        let mut world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+
+        let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
+        if let EnvironmentMap::HDR {
+            importance_map,
+            texture,
+            ..
+        } = &mut world.environment
+        {
+            importance_map.bake_in_place(texture, wavelength_bounds);
+        }
+
+        let (world_radius, world_center) = (world.radius, world.center);
+        let mut sampler = RandomSampler::new();
+
+        let mut integral = XYZColor::BLACK;
+        let n = 10000;
+        for _ in 0..n {
+            let (position_sample, direction_sample, wavelength_sample) =
+                (sampler.draw_2d(), sampler.draw_2d(), sampler.draw_1d());
+            let (ray, le, pdf, wavelength_pdf) = world.environment.sample_emission(
+                world_radius,
+                world_center,
+                position_sample,
+                direction_sample,
+                wavelength_bounds,
+                wavelength_sample,
+            );
+            integral += XYZColor::from(le / pdf.0 / wavelength_pdf.0);
+        }
+        assert!((integral / n as f32).0.gt(f32x4::splat(0.0)).any());
+        println!("{:?}", integral / n as f32);
     }
 
     #[test]

@@ -286,7 +286,7 @@ pub fn random_walk(
             // add a vertex when a camera ray hits the environment
             // TODO: maybe resample the environment here?
             if trace_type == TransportMode::Importance {
-                let world_radius = world.get_world_radius();
+                let world_radius = world.radius;
                 let at_env = ray.direction * world_radius;
                 let vertex = SurfaceVertex::new(
                     VertexType::LightSource(LightSourceType::Environment),
@@ -616,7 +616,7 @@ pub fn random_walk_hero(
             // add a vertex when a camera ray hits the environment
             if trace_type == TransportMode::Importance {
                 let ray_direction = ray.direction;
-                let world_radius = world.get_world_radius();
+                let world_radius = world.radius;
                 let at_env = ray_direction * world_radius;
                 let vertex = HeroSurfaceVertex::new(
                     VertexType::LightSource(LightSourceType::Environment),
@@ -1153,7 +1153,7 @@ pub fn random_walk_medium_hero(
             // add a vertex when a camera ray hits the environment
             if trace_type == TransportMode::Importance {
                 let ray_direction = ray.direction;
-                let world_radius = world.get_world_radius();
+                let world_radius = world.radius;
                 let at_env = ray_direction * world_radius;
                 let vertex = HeroSurfaceVertex::new(
                     VertexType::LightSource(LightSourceType::Environment),

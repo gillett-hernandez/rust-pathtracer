@@ -398,7 +398,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             0.0,
             1.0,
         ));
-        let _ = random_walk(
+        random_walk(
             camera_ray,
             lambda,
             max_bounces,

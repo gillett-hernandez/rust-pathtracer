@@ -37,8 +37,8 @@ pub struct World {
     pub mediums: MediumTable,
     pub environment: EnvironmentMap,
     env_sampling_probability: f32,
-    radius: f32,
-    center: Point3,
+    pub radius: f32,
+    pub center: Point3,
 }
 
 impl World {
@@ -183,14 +183,6 @@ impl World {
         } else {
             1.0
         }
-    }
-
-    pub fn get_world_radius(&self) -> f32 {
-        self.radius
-    }
-
-    pub fn get_center(&self) -> Point3 {
-        self.center
     }
 
     pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {

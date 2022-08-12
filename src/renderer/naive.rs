@@ -359,15 +359,15 @@ impl NaiveRenderer {
         }
 
         // TODO: do correct lightfilm + imagefilm combination, instead of outputting both
-
-        for (i, light_film) in light_films.lock().unwrap().iter().enumerate() {
+        let locked = light_films.lock().unwrap();
+        for (i, light_film) in locked.iter().enumerate() {
             let mut render_settings = films[i].0.clone();
             let mut image_film = films[i].1.clone();
             let new_filename = format!(
                 "{}{}",
                 render_settings
                     .filename
-                    .expect("render didn't have filename, wtf"),
+                    .expect("render didn't have filename. this should be caught earlier so we don't waste the render time"),
                 "_combined"
             );
             println!("new filename is {}", new_filename);
@@ -390,8 +390,10 @@ impl NaiveRenderer {
                 films.len()
             );
         }
+        drop(locked);
 
-        for (i, light_film) in light_films.lock().unwrap().iter().enumerate() {
+        let locked = light_films.lock().unwrap();
+        for (i, light_film) in locked.iter().enumerate() {
             let mut render_settings = films[i].0.clone();
             let new_filename = format!(
                 "{}{}",
@@ -408,6 +410,7 @@ impl NaiveRenderer {
                 films.len()
             );
         }
+        drop(locked);
 
         films
     }
@@ -491,25 +494,24 @@ impl Renderer for NaiveRenderer {
                     }
                     let arc_world = Arc::new(world.clone());
 
-                    match Integrator::from_settings_and_world(
-                        arc_world.clone(),
-                        IntegratorType::PathTracing,
-                        &bundled_cameras,
-                        render_settings,
-                    ) {
-                        Some(Integrator::PathTracing(integrator)) => {
-                            println!("rendering with PathTracing integrator");
-                            let (render_settings, film) = (
-                                render_settings.clone(),
-                                NaiveRenderer::render_sampled(
-                                    integrator,
-                                    render_settings,
-                                    &cameras[render_settings.camera_id],
-                                ),
-                            );
-                            output_film(&render_settings, &film, 1.0);
-                        }
-                        _ => {}
+                    if let Some(Integrator::PathTracing(integrator)) =
+                        Integrator::from_settings_and_world(
+                            arc_world.clone(),
+                            IntegratorType::PathTracing,
+                            &bundled_cameras,
+                            render_settings,
+                        )
+                    {
+                        println!("rendering with PathTracing integrator");
+                        let (render_settings, film) = (
+                            render_settings.clone(),
+                            NaiveRenderer::render_sampled(
+                                integrator,
+                                render_settings,
+                                &cameras[render_settings.camera_id],
+                            ),
+                        );
+                        output_film(&render_settings, &film, 1.0);
                     }
                 }
                 // IntegratorType::SPPM => {

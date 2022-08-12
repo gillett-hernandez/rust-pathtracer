@@ -108,8 +108,8 @@ impl GenericIntegrator for BDPTIntegrator {
             );
         } else {
             // sample world env
-            let world_radius = self.world.get_world_radius();
-            let world_center = self.world.get_center();
+            let world_radius = self.world.radius;
+            let world_center = self.world.center;
             sampled = self.world.environment.sample_emission(
                 world_radius,
                 world_center,
@@ -279,7 +279,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 &eye_path,
                                 t,
                                 g,
-                                |weights: &[f32]| { 1.0 / weights.iter().sum::<f32>() },
+                                |weights: &[f32]| 1.0 / weights.iter().sum::<f32>(),
                             )
                         } else {
                             1.0 / ((s + t) as f32)
@@ -304,7 +304,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 &eye_path,
                                 t,
                                 g,
-                                |weights: &[f32]| { 1.0 / weights.iter().sum::<f32>() },
+                                |weights: &[f32]| 1.0 / weights.iter().sum::<f32>(),
                             )
                         } else {
                             1.0 / ((s + t) as f32)
@@ -397,9 +397,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         &eye_path,
                         t,
                         g,
-                        |weights: &[f32]| {
-                            1.0 / weights.iter().map(|&v| v * v).sum::<f32>()
-                        },
+                        |weights: &[f32]| 1.0 / weights.iter().map(|&v| v * v).sum::<f32>(),
                     )
                 } else {
                     1.0 / ((s + t) as f32)

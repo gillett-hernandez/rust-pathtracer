@@ -234,7 +234,7 @@ mod test {
     use crate::math::{RandomSampler, Sample2D, Sampler};
     use std::{fs::File, io::Read};
 
-    use optics::parse_lenses_from;
+    use optics::{aperture::CircularAperture, parse_lenses_from};
 
     use super::*;
 
@@ -259,6 +259,7 @@ mod test {
             6.0,
             0.0,
             interfaces,
+            ApertureEnum::CircularAperture(CircularAperture::default()),
             0.0,
             1.0,
             128,
@@ -325,6 +326,7 @@ mod test {
             10.0,
             0.0,
             interfaces,
+            ApertureEnum::CircularAperture(CircularAperture::default()),
             0.0,
             1.0,
             128,
