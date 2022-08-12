@@ -5,8 +5,10 @@ use crate::materials::MaterialId;
 use crate::math::{
     random, spectral::EXTENDED_VISIBLE_RANGE, Point3, Ray, Sampler, TangentFrame, Transform3, Vec3,
 };
+use optics::aperture::{Aperture, ApertureEnum};
 use optics::{
-    bladed_aperture, lens_sampler::RadialSampler, Input, LensAssembly, LensInterface, Output,
+    aperture::SimpleBladedAperture, lens_sampler::RadialSampler, Input, LensAssembly,
+    LensInterface, Output,
 };
 
 #[derive(Debug, Clone)]
@@ -16,6 +18,7 @@ pub struct RealisticCamera {
     // focal_adjustment: f32,
     pub lens: Instance,
     pub assembly: LensAssembly,
+    pub aperture: ApertureEnum,
     sampler: RadialSampler,
     aspect_ratio: f32, // 16:9 would yield an aspect ratio of 16/9 ~= 1.777777777
     sensor_size: f32,
@@ -38,13 +41,14 @@ impl RealisticCamera {
         f_stop: f32,
         lens_zoom: f32,
         interfaces: Vec<LensInterface>,
+        aperture: ApertureEnum,
         t0: f32,
         t1: f32,
         radial_bins: usize,
         wavelength_bins: usize,
         solver_heat: f32,
     ) -> RealisticCamera {
-        info!("{}", "constructing realistic camera");
+        info!("constructing realistic camera");
         let direction = (look_at - look_from).normalized();
         let mut assembly = LensAssembly::new(&interfaces);
         let mut aperture_radius = assembly.lenses[assembly.aperture_index].housing_radius;
@@ -55,34 +59,50 @@ impl RealisticCamera {
         let w = -direction;
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
-        let film_position = -assembly.total_thickness_at(lens_zoom) + focal_adjustment;
+        let thiccness = assembly.total_thickness_at(lens_zoom);
+        let max_focal_adjustment = assembly.lenses.last().unwrap().thickness_at(lens_zoom);
+        info!(
+            "to aid with lens focusing, the max focal adjustment that can be made is {}",
+            max_focal_adjustment
+        );
+
+        if focal_adjustment > max_focal_adjustment {
+            // cannot move film position beyond this point, otherwise the film intersects with the lens elements
+            error!("film position would be {}, which is closer than the closest physical distance allowable ({})", -thiccness + focal_adjustment, -thiccness + max_focal_adjustment);
+            panic!();
+        }
+
+        let film_position = -thiccness + focal_adjustment;
 
         // scale down, rotate, and move
+        // scale = from meters to mm
         let transform = Transform3::from_stack(
             Some(Transform3::from_scale(Vec3::new(1000.0, 1000.0, 1000.0))),
             Some(TangentFrame::new(u, -v, -w).into()), // rotate and stuff
             Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
         )
         .inverse();
-        info!("{}", "creating cache");
+        info!("creating cache");
+
         let sampler = RadialSampler::new(
-            SQRT_2 * sensor_size / 2.0, // diagonal.
+            SQRT_2 * sensor_size / 2.0, // maximum possible diagonal
             radial_bins,
             wavelength_bins,
             EXTENDED_VISIBLE_RANGE,
             film_position,
             &assembly,
             lens_zoom,
-            |aperture_radius, ray| bladed_aperture(aperture_radius, 6, ray),
+            &aperture,
             solver_heat,
             sensor_size,
         );
-        info!("{}", "finished cache");
+        info!("finished cache, avg efficiency = {}", sampler.sensor_size);
 
         RealisticCamera {
             origin: look_from,
             direction,
             // focal_adjustment,
+            // this lens surface is an approximation of the actual lens surface and will likely miss rays that would otherwise hit the camera
             lens: Instance::new(
                 Aggregate::from(Disk::new(lens_radius, Point3::ORIGIN, true)),
                 Some(transform),
@@ -95,6 +115,7 @@ impl RealisticCamera {
             lens_zoom,
             assembly,
             aperture_radius,
+            aperture,
             sampler,
             transform,
             // lens_radius,
@@ -118,15 +139,23 @@ impl RealisticCamera {
         let _time: f32 = self.t0 + random() * (self.t1 - self.t0);
 
         // crop sensor to match aspect ratio
+        // aspect ratio is something like 16/9 for normal screens, where 16 == width and 9 == height
+        // i.e. 1.777777 w/h
+        // if the larger extent of the sensor were used for the larger aspect,
+        // then the smaller extent would reach a shorter distance along the sensor
+        // i.e. if the sensor was a 35mm x 35mm square, then with an aspect ratio of 4/3 (1.3333),
+        // the full 35 mm would be used for the x extent (x mul = 1.0)
+        // and only a fraction of that would be used for the y extent (y mul = 3/4)
         let (x_factor, y_factor) = if self.aspect_ratio > 1.0 {
             // x larger than y
-            // thus x needs to be scaled down
-            (1.0, self.aspect_ratio)
+            // thus y needs to be scaled down
+            (1.0, 1.0 / self.aspect_ratio)
         } else {
             // y larger than x
             // thus x is scaled down
             (1.0 / self.aspect_ratio, 1.0)
         };
+
         let central_point: Point3 = Point3::new(
             (s - 0.5) * self.sensor_size * x_factor,
             (t - 0.5) * self.sensor_size * y_factor,
@@ -151,13 +180,13 @@ impl RealisticCamera {
             // _attempts += 1;
             // do actual tracing through lens for film sample
 
-            // using bladed aperture, though other apertures are possible and should be configurable through this camera's configuration
-            // TODO: implement above (configuration of aperture through camera config)
-            let trace_result =
-                self.assembly
-                    .trace_forward(self.lens_zoom, &Input { ray, lambda }, 1.0, |e| {
-                        (bladed_aperture(self.aperture_radius, 6, e), false)
-                    });
+            // convert lambda fron nm to micrometers
+            let trace_result = self.assembly.trace_forward(
+                self.lens_zoom,
+                Input::new(ray, lambda / 1000.0),
+                1.0,
+                |e| (self.aperture.intersects(self.aperture_radius, e), false),
+            );
             if let Some(Output {
                 ray: mut pupil_ray,
                 tau,

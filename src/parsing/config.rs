@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
+use optics::aperture::{ApertureEnum, CircularAperture, SimpleBladedAperture};
 use optics::parse_lenses_from;
 use serde::Deserialize;
 use toml;
@@ -16,6 +17,28 @@ pub struct Resolution {
     pub height: usize,
 }
 
+#[derive(Deserialize, Clone, Copy)]
+#[serde(tag = "type")]
+pub enum ApertureData {
+    Circular,
+    // only 6 blades are supported right now.
+    // sharpness should be between -2 and 2.3
+    // 2.3 is very close to a circular aperture
+    // -2 is something like a pointy star
+    Bladed { blades: u8, sharpness: f32 },
+}
+
+impl Into<ApertureEnum> for ApertureData {
+    fn into(self) -> ApertureEnum {
+        match self {
+            ApertureData::Circular => ApertureEnum::CircularAperture(CircularAperture::default()),
+            ApertureData::Bladed { blades, sharpness } => {
+                ApertureEnum::SimpleBladedAperture(SimpleBladedAperture::new(blades, sharpness))
+            }
+        }
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub struct SimpleCameraSettings {
     pub name: String,
@@ -24,7 +47,8 @@ pub struct SimpleCameraSettings {
     pub v_up: Option<[f32; 3]>,
     pub vfov: f32,
     pub focal_distance: Option<f32>,
-    pub aperture_size: Option<f32>,
+    pub aperture_size: Option<f32>,     // in meters
+    pub aperture: Option<ApertureData>, // defaults to Circular
     pub shutter_open_time: Option<f32>,
     pub shutter_close_time: Option<f32>,
 }
@@ -38,6 +62,7 @@ pub struct RealisticCameraSettings {
     pub v_up: Option<[f32; 3]>,          // defaults to 0,0,1
     pub focal_adjustment: Option<f32>,   // defaults to 0.0
     pub fstop: Option<f32>,              // defaults to f/2.0
+    pub aperture: ApertureData,          // defaults to Circular
     pub shutter_open_time: Option<f32>,  // defaults to 0.0
     pub shutter_close_time: Option<f32>, // defaults to 1.0
     pub lens_zoom: Option<f32>,          // defaults to 0.0
@@ -220,6 +245,7 @@ pub fn parse_cameras_from(settings: TOMLConfig) -> (Config, Vec<Camera>) {
                 let mut camera_spec = String::new();
                 camera_file.read_to_string(&mut camera_spec).unwrap();
                 let (interfaces, _n0, _n1) = parse_lenses_from(&camera_spec);
+
                 let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
                 (
                     cam.name.clone(),
@@ -232,6 +258,7 @@ pub fn parse_cameras_from(settings: TOMLConfig) -> (Config, Vec<Camera>) {
                         cam.fstop.unwrap_or(2.0),
                         cam.lens_zoom.unwrap_or(0.0),
                         interfaces,
+                        cam.aperture.into(),
                         shutter_open_time,
                         cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
                         cam.radial_bins,
