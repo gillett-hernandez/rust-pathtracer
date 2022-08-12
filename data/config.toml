@@ -254,16 +254,16 @@ sharpness = 2.0
 
 
 [renderer]
-# type="Naive"
-type="Preview"
-selected_preview_film_id = 0
+type="Naive"
+# type="Preview"
+# selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
 filename = "bokeh test, realistic camera"
-min_samples = 512
+min_samples = 1024
 min_bounces = 2
-max_bounces = 4
+max_bounces = 8
 hwss = false
 # camera_id = "debug"
 # camera_id = "caustic test camera"
@@ -309,5 +309,5 @@ light_samples = 4
 [render_settings.resolution]
 # width = 3840
 # height = 2160
-width = 1024
-height = 800
+width = 1080
+height = 1080
