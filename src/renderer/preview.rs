@@ -605,7 +605,9 @@ impl Renderer for PreviewRenderer {
                                     let (width, height) = (film.width, film.height);
                                     let (x, y) = (
                                         (pixel.0 * width as f32) as usize,
-                                        height - (pixel.1 * height as f32) as usize - 1, //FIXME: ???
+                                        // vertical inversion
+                                        // height - (pixel.1 * height as f32) as usize - 1,
+                                        ((1.0 - pixel.1) * height as f32) as usize,
                                     );
 
                                     film.buffer[y * width + x] += color;
@@ -615,7 +617,7 @@ impl Renderer for PreviewRenderer {
 
                             {
                                 let owned = local_total_splats.to_owned();
-                                tonemapper2.initialize(film, 1.0 / (owned as f32 + 1.0));
+                                tonemapper2.initialize(film, 1.0 / ((owned as f32).sqrt() + 1.0));
                                 light_buffer_ref
                                     .lock()
                                     .unwrap()
@@ -659,6 +661,8 @@ impl Renderer for PreviewRenderer {
                                 break;
                             }
                         }
+
+                        // total_splats_ref
                     });
 
                     let tx_arc = Arc::new(Mutex::new(tx));
@@ -754,11 +758,11 @@ impl Renderer for PreviewRenderer {
                     println!("full profile");
                     profile.pretty_print(elapsed, maximum_threads as usize);
 
-                    output_film(
-                        &original_render_settings,
-                        &films[film_idx],
-                        1.0 / (s as f32 + 1.0),
-                    );
+                    // output_film(
+                    //     &original_render_settings,
+                    //     &films[film_idx],
+                    //     1.0 / (s as f32 + 1.0),
+                    // );
                     output_film(
                         &RenderSettings {
                             filename: Some(format!(

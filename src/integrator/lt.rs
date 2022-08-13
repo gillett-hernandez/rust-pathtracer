@@ -219,10 +219,6 @@ impl GenericIntegrator for LightTracingIntegrator {
                 continue;
             }
             let prev_vertex = path[index - 1];
-            // if index == 1 {
-            //     multiplier =
-            //         vertex.local_wi.z() / (vertex.point - prev_vertex.point).norm_squared();
-            // }
             let beta = vertex.throughput;
 
             // for every vertex past the 1st one (which is on the light), evaluate the direct importance at that vertex
