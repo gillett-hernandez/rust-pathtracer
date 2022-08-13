@@ -191,7 +191,7 @@ impl GenericIntegrator for BDPTIntegrator {
             (self.max_bounces as usize, self.max_bounces as usize)
         };
 
-        let _additional_contribution_eye_path = random_walk(
+        random_walk(
             camera_ray,
             lambda,
             tp1 as u16,
