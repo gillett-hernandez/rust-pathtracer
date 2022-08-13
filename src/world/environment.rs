@@ -101,7 +101,6 @@ impl EnvironmentMap {
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> (Ray, SingleWavelength, PDF, PDF) {
-        // unimplemented!();
         // sample env map cdf to get light ray, based on env map strength
         match self {
             EnvironmentMap::Constant { color, strength } => {
@@ -260,7 +259,7 @@ impl EnvironmentMap {
         _wavelength_range: Bounds1D,
         _wavelength_sample: Sample1D,
     ) -> (Vec3, PDF) {
-        unimplemented!()
+        todo!()
     }
 
     // sample env UV given a wavelength, based on env CDF for a specific wavelength. might be hard to evaluate, or nearly impossible.

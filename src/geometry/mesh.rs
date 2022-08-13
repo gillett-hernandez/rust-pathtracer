@@ -197,15 +197,15 @@ impl Hittable for MeshTriangleRef {
     }
 
     fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
-        unimplemented!("mesh light sampling methods are currently unimplemented")
+        todo!("mesh light sampling methods are currently unimplemented")
     }
 
     fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
-        unimplemented!("mesh light sampling methods are currently unimplemented")
+        todo!("mesh light sampling methods are currently unimplemented")
     }
 
     fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
-        unimplemented!("mesh light sampling methods are currently unimplemented")
+        todo!("mesh light sampling methods are currently unimplemented")
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
@@ -344,16 +344,16 @@ impl Hittable for Mesh {
     }
     // TODO: implement mesh and triangle light sampling
     fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
-        unimplemented!("mesh light sampling is unimplemented")
+        todo!("mesh light sampling is unimplemented")
     }
     fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
-        unimplemented!("mesh light sampling is unimplemented")
+        todo!("mesh light sampling is unimplemented")
     }
     fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
-        unimplemented!("mesh light sampling is unimplemented")
+        todo!("mesh light sampling is unimplemented")
     }
     fn surface_area(&self, _transform: &Transform3) -> f32 {
-        unimplemented!("mesh light sampling is unimplemented")
+        todo!("mesh light sampling is unimplemented")
     }
 }
 /*

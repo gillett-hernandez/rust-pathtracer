@@ -263,7 +263,7 @@ threads = 22
 filename = "lt test"
 min_samples = 128
 min_bounces = 1
-max_bounces = 5
+max_bounces = 2
 hwss = false
 # camera_id = "debug"
 # camera_id = "caustic test camera"
@@ -296,7 +296,7 @@ luminance_only = false
 # type = "PT"
 # light_samples = 4
 type = "LT"
-camera_samples = 25
+camera_samples = 4
 # type = "BDPT"
 # s = light, t = camera
 # selected_pair = [6,1]

@@ -30,6 +30,7 @@ fn evaluate_direct_importance(
         .expect("camera pick failed");
     if let Some(camera_surface) = camera.get_surface() {
         let (point_on_lens, lens_normal, pdf) = camera_surface.sample_surface(lens_sample);
+        // maybe resample to a better direction, if we had a outer->inner lens acceleration structure
         let camera_pdf = pdf * camera_pick_pdf;
         if camera_pdf.0 == 0.0 {
             // go to next pick
@@ -43,7 +44,7 @@ fn evaluate_direct_importance(
         let (reflectance, scatter_pdf_into_camera) =
             material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo_to_camera);
 
-        trace!("picked valid camera, {:?}, {:?}", direction, pdf);
+        // trace!("picked valid camera, {:?}, {:?}", direction, pdf);
         // generate point on camera, then see if it can be connected to.
         // println!("hit {:?}", &hit);
         profile.shadow_rays += 1;
@@ -53,12 +54,13 @@ fn evaluate_direct_importance(
             // correctly connected.
             let candidate_camera_ray = Ray::new(point_on_lens, -direction);
             let pixel_uv = camera.get_pixel_for_ray(candidate_camera_ray, lambda);
-            trace!(
-                " weight {}, uv for ray {:?} is {:?}",
-                weight,
-                candidate_camera_ray,
-                pixel_uv
-            );
+            let (we, _pdf) = camera.eval_we(lambda, lens_normal, point_on_lens, hit.point);
+            // trace!(
+            //     " weight {}, uv for ray {:?} is {:?}",
+            //     weight,
+            //     candidate_camera_ray,
+            //     pixel_uv
+            // );
             if let Some(uv) = pixel_uv {
                 debug_assert!(
                     !camera_pdf.is_nan() && !weight.is_nan(),
@@ -66,12 +68,13 @@ fn evaluate_direct_importance(
                     camera_pdf,
                     weight
                 );
-                let energy = reflectance * beta * wo_to_camera.z().abs() * weight / camera_pdf.0;
+                let energy =
+                    reflectance * beta * wo_to_camera.z().abs() * we * weight / camera_pdf.0;
                 debug_assert!(energy.0.is_finite());
                 let sample = XYZColor::from(SingleWavelength::new(lambda, energy));
-                let ret = (Sample::LightSample(sample, uv), camera_id as CameraId);
+
                 // println!("adding camera sample to splatting list");
-                samples.push(ret);
+                samples.push((Sample::LightSample(sample, uv), camera_id as CameraId));
             }
         }
     }
@@ -178,7 +181,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             light_ray.origin,
             light_ray.direction,
             (0.0, 0.0),
-            MaterialId::Camera(0),
+            MaterialId::Light(0),
             0,
             radiance,
             light_pdf.0 * lambda_pdf.0,
@@ -189,7 +192,8 @@ impl GenericIntegrator for LightTracingIntegrator {
             light_ray,
             lambda,
             self.max_bounces,
-            radiance,
+            radiance / light_pdf.0 / lambda_pdf.0,
+            // radiance ,
             TransportMode::Radiance,
             sampler,
             &self.world,
@@ -199,7 +203,13 @@ impl GenericIntegrator for LightTracingIntegrator {
             true,
         );
 
-        // info!("{:?}\n\n", path);
+        if let Some(SurfaceVertex {
+            vertex_type: VertexType::Camera,
+            ..
+        }) = path.get(1)
+        {
+            trace!("{:?}\n\n", path);
+        }
 
         // let mut sum = ;
         // let mut multiplier = 1.0;
@@ -216,35 +226,90 @@ impl GenericIntegrator for LightTracingIntegrator {
             let beta = vertex.throughput;
 
             // for every vertex past the 1st one (which is on the light), evaluate the direct importance at that vertex
-            if let VertexType::LightSource(_) = vertex.vertex_type {
-                warn_once!("hit light source while doing light tracing");
-                // could potentially add energy to the path if light sources are hit while tracing
-            } else {
-                let hit = HitRecord::from(*vertex);
-                let frame = TangentFrame::from_normal(hit.normal);
+            match vertex.vertex_type {
+                VertexType::Light => {
+                    // generic vertex along light path, handle normally
+                    let hit = HitRecord::from(*vertex);
+                    let frame = TangentFrame::from_normal(hit.normal);
 
-                let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                let wi = frame.to_local(&dir_to_prev);
-                let material = self.world.get_material(vertex.material_id);
+                    let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
+                    let wi = frame.to_local(&dir_to_prev);
+                    let material = self.world.get_material(vertex.material_id);
 
-                for _ in 0..self.camera_samples {
-                    evaluate_direct_importance(
-                        &self.world,
-                        sampler.draw_1d(),
-                        sampler.draw_2d(),
-                        vertex.lambda,
-                        beta,
-                        material,
-                        wi,
-                        &hit,
-                        &frame,
-                        samples,
-                        profile,
-                    );
+                    for _ in 0..self.camera_samples {
+                        evaluate_direct_importance(
+                            &self.world,
+                            sampler.draw_1d(),
+                            sampler.draw_2d(),
+                            vertex.lambda,
+                            beta,
+                            material,
+                            wi,
+                            &hit,
+                            &frame,
+                            samples,
+                            profile,
+                        );
+                    }
+                    // if self.camera_samples > 0 {
+                    //     trace!("added {} camera samples", samples.len());
+                    // }
                 }
-                if self.camera_samples > 0 {
-                    trace!("added {} camera samples", samples.len());
+                VertexType::Camera => {
+                    assert!(matches!(vertex.material_id, MaterialId::Camera(_)));
+                    let camera_id: usize = vertex.material_id.into();
+                    // directly hit camera
+                    // maybe resample to a better direction, if we had a outer->inner lens acceleration structure
+                    match prev_vertex.vertex_type {
+                        VertexType::LightSource(_light_source_type) => {
+                            // camera to light source direct connection.
+
+                            // if light_source_type == LightSourceType::Environment {
+                            //     // do resampling maybe?
+                            // }
+                            // TODO: figure out some way to make lens_normal work for realistic cameras.
+                            // currently it's based on the disk instance in the scene.
+                            let camera = self.world.get_camera(camera_id);
+                            // this could also be a point on the env.
+                            let point_on_light = prev_vertex.point;
+
+                            let (point_on_lens, lens_normal) = (vertex.point, vertex.normal);
+
+                            let direction = (point_on_lens - point_on_light).normalized();
+
+                            let hypothetical_camera_ray = Ray::new(point_on_lens, -direction);
+                            let pixel_uv =
+                                camera.get_pixel_for_ray(hypothetical_camera_ray, lambda);
+                            let (we, _pdf) =
+                                camera.eval_we(lambda, lens_normal, point_on_lens, point_on_light);
+                            trace!(
+                                "uv for ray {:?} is {:?}, we = {}",
+                                hypothetical_camera_ray,
+                                pixel_uv,
+                                we
+                            );
+                            if let Some(uv) = pixel_uv {
+                                let energy = beta * we;
+                                debug_assert!(energy.0.is_finite());
+                                let sample = XYZColor::from(SingleWavelength::new(lambda, energy));
+
+                                // println!("adding camera sample to splatting list");
+                                samples
+                                    .push((Sample::LightSample(sample, uv), camera_id as CameraId));
+                            }
+                        }
+                        VertexType::Light => {
+                            // hit camera from vertex in scene, analogous to hitting a light while random walking in PT
+                            todo!()
+                        }
+                        _ => unreachable!(),
+                    }
                 }
+                VertexType::LightSource(_) => {
+                    warn_once!("hit light source while doing light tracing");
+                    // could potentially add energy to the path if light sources are hit while tracing
+                }
+                VertexType::Eye => unreachable!(),
             }
         }
         XYZColor::from(SingleWavelength::BLACK)

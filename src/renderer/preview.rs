@@ -10,7 +10,7 @@ use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
 use crate::parsing::parse_tonemapper;
 use crate::profile::Profile;
 use crate::rgb_to_u32;
-use crate::world::World;
+use crate::world::{EnvironmentMap, World};
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -18,6 +18,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crossbeam::channel::unbounded;
+use math::spectral::BOUNDED_VISIBLE_RANGE;
 use pbr::ProgressBar;
 
 use minifb::{Key, Scale, Window, WindowOptions};
@@ -47,10 +48,30 @@ impl Renderer for PreviewRenderer {
             println!("num cameras {}", world.cameras.len());
 
             let film_idx = selected_preview_film_id;
-            let render_settings = config.render_settings[film_idx].clone();
+            let original_render_settings = config.render_settings[film_idx].clone();
+            let mut render_settings = config.render_settings[film_idx].clone();
+            render_settings.tonemap_settings = render_settings.tonemap_settings.silenced();
             let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
 
             world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
+            let env_sampling_probability = world.get_env_sampling_probability();
+            if let EnvironmentMap::HDR {
+                texture,
+                importance_map,
+                strength,
+                ..
+            } = &mut world.environment
+            {
+                if *strength > 0.0 && env_sampling_probability > 0.0 {
+                    importance_map.bake_in_place(
+                        texture,
+                        render_settings
+                            .wavelength_bounds
+                            .map(|e| e.into())
+                            .unwrap_or(BOUNDED_VISIBLE_RANGE),
+                    );
+                }
+            }
             let arc_world = Arc::new(world.clone());
 
             let Resolution { width, height } = render_settings.resolution;
@@ -527,8 +548,6 @@ impl Renderer for PreviewRenderer {
                     println!("minimum total samples: {}", total_camera_samples);
                     let maximum_threads = render_settings.threads.unwrap_or(1);
 
-                    const SHOW_PROGRESS_BAR: bool = true;
-
                     let mut sampler: Box<dyn Sampler> =
                         Box::new(StratifiedSampler::new(20, 20, 10));
                     let mut preprocess_profile = Profile::default();
@@ -537,24 +556,6 @@ impl Renderer for PreviewRenderer {
                         &[render_settings.clone()],
                         &mut preprocess_profile,
                     );
-                    let mut pb = ProgressBar::new(total_pixels as u64);
-
-                    // pb thread
-                    let pixel_count = Arc::new(AtomicUsize::new(0));
-                    let pixel_count_clone = pixel_count.clone();
-                    let thread = thread::spawn(move || {
-                        let mut local_index = 0;
-                        while local_index < total_pixels {
-                            let pixels_to_increment =
-                                pixel_count_clone.load(Ordering::Relaxed) - local_index;
-                            if SHOW_PROGRESS_BAR {
-                                pb.add(pixels_to_increment as u64);
-                            }
-                            local_index += pixels_to_increment;
-
-                            thread::sleep(Duration::from_millis(250));
-                        }
-                    });
 
                     let (tx, rx) = unbounded();
 
@@ -592,6 +593,9 @@ impl Renderer for PreviewRenderer {
                         let (mut tonemapper2, converter) =
                             parse_tonemapper(render_settings_copy.tonemap_settings);
 
+                        let mut last_instant = Instant::now();
+                        let first_instant = last_instant.clone();
+                        let mut last_total_splats = 0;
                         loop {
                             for v in rx.try_iter() {
                                 let (sample, _film_id): (Sample, CameraId) = v;
@@ -601,7 +605,7 @@ impl Renderer for PreviewRenderer {
                                     let (width, height) = (film.width, film.height);
                                     let (x, y) = (
                                         (pixel.0 * width as f32) as usize,
-                                        height - (pixel.1 * height as f32) as usize - 1,
+                                        height - (pixel.1 * height as f32) as usize - 1, //FIXME: ???
                                     );
 
                                     film.buffer[y * width + x] += color;
@@ -610,7 +614,8 @@ impl Renderer for PreviewRenderer {
                             }
 
                             {
-                                tonemapper2.initialize(film, 1.0);
+                                let owned = local_total_splats.to_owned();
+                                tonemapper2.initialize(film, 1.0 / (owned as f32 + 1.0));
                                 light_buffer_ref
                                     .lock()
                                     .unwrap()
@@ -618,7 +623,7 @@ impl Renderer for PreviewRenderer {
                                     .enumerate()
                                     .for_each(|(pixel_idx, v)| {
                                         let y: usize = pixel_idx / width;
-                                        let x: usize = pixel_idx - width * y;
+                                        let x: usize = pixel_idx % width;
                                         let [r, g, b, _]: [f32; 4] = converter
                                             .transfer_function(
                                                 tonemapper2.map(film, (x as usize, y as usize)),
@@ -631,6 +636,17 @@ impl Renderer for PreviewRenderer {
                                             (255.0 * b) as u8,
                                         );
                                     });
+                                println!(
+                                    "total splats {}, {} per second, avg: {}",
+                                    owned,
+                                    1000.0 * (owned - last_total_splats) as f32
+                                        / last_instant.elapsed().as_millis() as f32,
+                                    1000.0 * owned as f32
+                                        / first_instant.elapsed().as_millis() as f32
+                                );
+
+                                last_instant = Instant::now();
+                                last_total_splats = owned;
                             }
                             if !local_stop_splatting && stop_splatting_ref.load(Ordering::Relaxed) {
                                 local_stop_splatting = true;
@@ -650,20 +666,17 @@ impl Renderer for PreviewRenderer {
                     // Light tracing will use an unbounded amount of memory though.
                     let per_splat_sleep_time = Duration::from_nanos(0);
 
-                    if let IntegratorKind::BDPT {
-                        selected_pair: Some((s, t)),
-                    } = render_settings.clone().integrator
-                    {
-                        println!("rendering specific pair {} {}", s, t);
-                    }
-
                     let mut s = 0;
+                    let mut profile = Profile::default();
                     loop {
                         if !light_window.is_open() || light_window.is_key_down(Key::Escape) {
                             break;
                         }
-                        films[film_idx].buffer.par_iter_mut().enumerate().for_each(
-                            |(pixel_index, pixel_ref)| {
+                        let local_profile = films[film_idx]
+                            .buffer
+                            .par_iter_mut()
+                            .enumerate()
+                            .map(|(pixel_index, pixel_ref)| {
                                 let mut profile = Profile::default();
                                 let tx1 = { tx_arc.lock().unwrap().clone() };
                                 let y: usize = pixel_index / render_settings.resolution.width;
@@ -702,7 +715,6 @@ impl Renderer for PreviewRenderer {
                                 );
 
                                 *pixel_ref += temp_color;
-                                pixel_count.fetch_add(1, Ordering::Relaxed);
                                 if per_splat_sleep_time.as_nanos() > 0 {
                                     thread::sleep(
                                         per_splat_sleep_time * local_additional_splats.len() as u32,
@@ -711,21 +723,15 @@ impl Renderer for PreviewRenderer {
                                 for splat in local_additional_splats {
                                     tx1.send(splat).unwrap();
                                 }
-                            },
-                        );
-
+                                profile
+                            })
+                            .reduce(|| Profile::default(), |a, b| a.combine(b));
 
                         light_window
                             .update_with_buffer(&light_buffer.lock().unwrap(), width, height)
                             .unwrap();
                         s += 1;
-                    }
-
-                    if let Err(panic) = thread.join() {
-                        println!(
-                            "progress bar incrementing thread threw an error {:?}",
-                            panic
-                        );
+                        profile = profile.combine(local_profile);
                     }
 
                     let now2 = Instant::now();
@@ -736,16 +742,23 @@ impl Renderer for PreviewRenderer {
                     }
                     let elapsed2 = (now2.elapsed().as_millis() as f32) / 1000.0;
                     println!(
-                        "found {} splats, and took {}s to finish splatting them to film",
+                        "found {} total splats, and took {}s to finish splatting them to film after giving the stop command",
                         total_splats.lock().unwrap(),
                         elapsed2
                     );
 
                     let elapsed = now.elapsed().as_millis() as f32 / 1000.0;
 
-                    println!("took {}s", elapsed);
+                    println!("took {}s\npreprocess profile:", elapsed);
                     preprocess_profile.pretty_print(elapsed, maximum_threads as usize);
-                    output_film(&render_settings, &films[film_idx], 1.0 / (s as f32 + 1.0));
+                    println!("full profile");
+                    profile.pretty_print(elapsed, maximum_threads as usize);
+
+                    output_film(
+                        &original_render_settings,
+                        &films[film_idx],
+                        1.0 / (s as f32 + 1.0),
+                    );
                     output_film(
                         &RenderSettings {
                             filename: Some(format!(
@@ -753,10 +766,10 @@ impl Renderer for PreviewRenderer {
                                 render_settings.filename.unwrap(),
                                 "_lightfilm"
                             )),
-                            ..render_settings
+                            ..original_render_settings
                         },
                         &light_film.lock().unwrap(),
-                        1.0,
+                        1.0 / (s as f32 + 1.0),
                     );
                 }
                 Some(_) => {}

@@ -31,6 +31,42 @@ pub enum TonemapSettings {
     },
 }
 
+impl TonemapSettings {
+    pub fn silenced(self) -> Self {
+        match self {
+            TonemapSettings::Clamp {
+                exposure,
+                luminance_only,
+                ..
+            } => TonemapSettings::Clamp {
+                exposure,
+                luminance_only,
+                silenced: true,
+            },
+            TonemapSettings::Reinhard0 {
+                key_value,
+                luminance_only,
+                ..
+            } => TonemapSettings::Reinhard0 {
+                key_value,
+                luminance_only,
+                silenced: true,
+            },
+            TonemapSettings::Reinhard1 {
+                key_value,
+                white_point,
+                luminance_only,
+                ..
+            } => TonemapSettings::Reinhard1 {
+                key_value,
+                white_point,
+                luminance_only,
+                silenced: true,
+            },
+        }
+    }
+}
+
 pub fn parse_tonemapper(settings: TonemapSettings) -> (Box<dyn Tonemapper>, Converter) {
     let tonemapper: Box<dyn Tonemapper> = match settings {
         TonemapSettings::Clamp {
