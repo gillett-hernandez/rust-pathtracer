@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
-
 use crate::geometry::*;
+use log_once::warn_once;
 use optics::aperture::{Aperture, ApertureEnum};
 use optics::{lens_sampler::RadialSampler, Input, LensAssembly, LensInterface, Output};
 
@@ -116,14 +116,8 @@ impl RealisticCamera {
     }
 }
 
-impl RealisticCamera {
-    pub fn get_ray(
-        &self,
-        sampler: &mut Box<dyn Sampler>,
-        lambda: f32,
-        s: f32,
-        t: f32,
-    ) -> (Ray, f32) {
+impl Camera for RealisticCamera {
+    fn get_ray(&self, sampler: &mut Box<dyn Sampler>, lambda: f32, s: f32, t: f32) -> (Ray, f32) {
         // crop sensor to match aspect ratio
         // aspect ratio is something like 16/9 for normal screens, where 16 == width and 9 == height
         // i.e. 1.777777 w/h
@@ -189,26 +183,33 @@ impl RealisticCamera {
         if let Some(r) = result {
             r
         } else {
-            // println!(
-            //     "{:?}, {}, {:?}",
-            //     central_point,
-            //     lambda,
-            //     self.sampler
-            //         .sample(lambda, central_point, sampler.draw_2d(), sampler.draw_1d())
-            // );
-
-            // panic!();
+            warn_once!("failed to sample ray, returning ray with tau/pdf 0");
             (Ray::new(central_point, Vec3::Z), 0.0)
         }
     }
-    // returns None if the point on the lens was not from a valid pixel
-    pub fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
-        // TODO: implement backwards tracing. requires a reversed radial sampler cache or something like an OMP fit.
-        todo!();
-    }
-    pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
+    fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
         self.aspect_ratio = aspect_ratio;
         self
+    }
+    // returns None if the point on the lens was not from a valid pixel
+    fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
+        // TODO: implement backwards tracing. for this to be fast, it requires a reverse radial sampler cache or something like an OMP fit.
+
+        todo!();
+    }
+
+    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+        todo!()
+    }
+
+    fn sample_we(
+        &self,
+        film_sample: Sample2D,
+        sampler: &mut Box<dyn Sampler>,
+        lambda: f32,
+    ) -> (Ray, Vec3, PDF) {
+        let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
+        (ray, self.direction, tau.into())
     }
 }
 

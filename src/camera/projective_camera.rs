@@ -89,14 +89,8 @@ impl ProjectiveCamera {
     }
 }
 
-impl ProjectiveCamera {
-    pub fn get_ray(
-        &self,
-        sampler: &mut Box<dyn Sampler>,
-        _lambda: f32,
-        u: f32,
-        v: f32,
-    ) -> (Ray, f32) {
+impl Camera for ProjectiveCamera {
+    fn get_ray(&self, sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // circular aperture/lens
         let rd: Vec3 = self.lens_radius * random_in_unit_disk(sampler.draw_2d());
         let offset = self.u * rd.x() + self.v * rd.y();
@@ -110,8 +104,21 @@ impl ProjectiveCamera {
         debug_assert!(ray_direction.is_finite());
         (Ray::new_with_time(ray_origin, ray_direction, 0.0), 1.0)
     }
+    fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
+        assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
+        let theta: f32 = self.vfov.to_radians();
+        let half_height = (theta / 2.0).tan();
+        let half_width = aspect_ratio * half_height;
+        self.lower_left_corner = self.origin
+            - self.u * half_width * self.focal_distance
+            - self.v * half_height * self.focal_distance
+            - self.w * self.focal_distance;
+        self.horizontal = self.u * 2.0 * half_width * self.focal_distance;
+        self.vertical = self.v * 2.0 * half_height * self.focal_distance;
+        self
+    }
     // returns None if the point on the lens was not from a valid pixel
-    pub fn get_pixel_for_ray(&self, ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
+    fn get_pixel_for_ray(&self, ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
         // would require tracing ray backwards, but for now, try and see what image uv it went through according to the thinlens approximation
 
         // println!("ray is {:?}", ray);
@@ -157,18 +164,19 @@ impl ProjectiveCamera {
             Some((u, v))
         }
     }
-    pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
-        assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
-        let theta: f32 = self.vfov.to_radians();
-        let half_height = (theta / 2.0).tan();
-        let half_width = aspect_ratio * half_height;
-        self.lower_left_corner = self.origin
-            - self.u * half_width * self.focal_distance
-            - self.v * half_height * self.focal_distance
-            - self.w * self.focal_distance;
-        self.horizontal = self.u * 2.0 * half_width * self.focal_distance;
-        self.vertical = self.v * 2.0 * half_height * self.focal_distance;
-        self
+
+    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+        todo!()
+    }
+
+    fn sample_we(
+        &self,
+        film_sample: Sample2D,
+        sampler: &mut Box<dyn Sampler>,
+        lambda: f32,
+    ) -> (Ray, Vec3, PDF) {
+        let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
+        (ray, self.direction, tau.into())
     }
 }
 

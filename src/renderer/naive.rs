@@ -1,11 +1,10 @@
-use crate::prelude::*;
 use super::prelude::*;
+use crate::prelude::*;
 
 use crate::integrator::{
     BDPTIntegrator, GenericIntegrator, Integrator, IntegratorType, LightTracingIntegrator, Sample,
     SamplerIntegrator,
 };
-
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use math::Bounds1D;
@@ -437,7 +436,7 @@ impl Renderer for NaiveRenderer {
             let aspect_ratio = width as f32 / height as f32;
 
             // copy camera and modify its aspect ratio (so that uv splatting works correctly)
-            let copied_camera = cameras[camera_id].with_aspect_ratio(aspect_ratio);
+            let copied_camera = cameras[camera_id].clone().with_aspect_ratio(aspect_ratio);
 
             let integrator_type: IntegratorType = IntegratorType::from(render_settings.integrator);
 

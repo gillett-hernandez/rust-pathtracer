@@ -64,16 +64,10 @@ impl PanoramaCamera {
     }
 }
 
-impl PanoramaCamera {
-    pub fn get_ray(
-        &self,
-        _sampler: &mut Box<dyn Sampler>,
-        _lambda: f32,
-        u: f32,
-        v: f32,
-    ) -> (Ray, f32) {
+impl Camera for PanoramaCamera {
+    fn get_ray(&self, _sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // spherical aperture, though of zero size at the moment. see TODO in struct definition
-        // let rd: Vec3 = self.radius * random_in_unit_sphere(sampler.draw_2d());
+        // let offset: Vec3 = self.radius * random_in_unit_sphere(sampler.draw_2d());
 
         let ray_origin = self.origin;
 
@@ -92,24 +86,29 @@ impl PanoramaCamera {
         debug_assert!(ray_direction.is_finite());
         // TODO: determine whether this pdf needs to be set, and to what.
         // probably self.angle_span.0 * self.angle_span.1 / (4 pi^2 * untransformed_vec.y()) or something like that, mirroring the jacobian in the environment map code
-        
+
         (Ray::new(ray_origin, ray_direction), 1.0)
     }
-    // returns None if the point on the lens was not from a valid pixel
-    pub fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
-        // let ray_in_local_space = self.transform.to_local(ray);
-
-        // let zero_to_one = 0.0..1.0;
-
-        // if !zero_to_one.contains(&u) || !zero_to_one.contains(&v) {
-        //     None
-        // } else {
-        //     Some((u, v))
-        // }
-        None
-    }
-    pub fn with_aspect_ratio(self, _aspect_ratio: f32) -> Self {
+    fn with_aspect_ratio(self, _aspect_ratio: f32) -> Self {
         self
+    }
+    // returns None if the point on the lens was not from a valid pixel
+    fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
+        todo!()
+    }
+
+    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+        todo!()
+    }
+
+    fn sample_we(
+        &self,
+        film_sample: Sample2D,
+        sampler: &mut Box<dyn Sampler>,
+        lambda: f32,
+    ) -> (Ray, Vec3, PDF) {
+        let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
+        (ray, ray.direction, tau.into())
     }
 }
 

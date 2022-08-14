@@ -15,8 +15,9 @@ pub type CameraId = usize;
 
 #[allow(unused_variables)]
 pub trait Camera {
+    // determine how sample_we is different from get_ray
     fn get_ray(&self, sampler: &mut Box<dyn Sampler>, lambda: f32, u: f32, v: f32) -> (Ray, f32);
-    fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self;
+    fn with_aspect_ratio(self, aspect_ratio: f32) -> Self;
     fn get_surface(&self) -> Option<&Instance> {
         None
     }
@@ -55,7 +56,7 @@ macro_rules! generate_camera {
                     )+
                 }
             }
-             fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
+             fn with_aspect_ratio(self, aspect_ratio: f32) -> Self {
                 match self {
                     $(
                         $s::$e(inner) => $s::$e(inner.clone().with_aspect_ratio(aspect_ratio)),
@@ -93,15 +94,13 @@ macro_rules! generate_camera {
              fn sample_we(
                 &self,
                 film_sample: Sample2D,
-                mut sampler: &mut Box<dyn Sampler>,
+                sampler: &mut Box<dyn Sampler>,
                 lambda: f32,
             ) -> (Ray, Vec3, PDF) {
                 match self {
                     $(
-                        $s::$e(inner) => {
-                            let (ray, tau) = inner.get_ray(&mut sampler, lambda, film_sample.x, film_sample.y);
-                            (ray, inner.direction, PDF::from(tau))
-                        },
+                        $s::$e(inner) => inner.sample_we(film_sample, sampler, lambda)
+                        ,
                     )+
                 }
 
