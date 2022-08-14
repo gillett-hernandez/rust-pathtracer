@@ -294,6 +294,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                         }
                         VertexType::Light => {
                             // hit camera from vertex in scene, analogous to hitting a light while random walking in PT
+                            // TODO
                             todo!()
                         }
                         _ => unreachable!(),

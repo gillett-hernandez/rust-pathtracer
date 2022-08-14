@@ -258,6 +258,7 @@ impl EnvironmentMap {
         _wavelength_range: Bounds1D,
         _wavelength_sample: Sample1D,
     ) -> (Vec3, PDF) {
+        // TODO
         todo!()
     }
 

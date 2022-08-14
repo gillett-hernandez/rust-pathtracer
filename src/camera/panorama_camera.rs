@@ -94,10 +94,15 @@ impl Camera for PanoramaCamera {
     }
     // returns None if the point on the lens was not from a valid pixel
     fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
+        // TODO
         todo!()
     }
 
     fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+        // pdf is projected solid angle wrt `to` point unless (from - self.origin).norm_squared() > self.radius * self.radius
+        // if radius is very small, then the projected solid angle becomes very small
+        // becomes a delta distribution
+        // TODO
         todo!()
     }
 
