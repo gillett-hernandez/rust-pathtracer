@@ -4,8 +4,7 @@ use super::Medium;
 
 #[derive(Clone)]
 pub struct Rayleigh {
-    pub pre_sigma_factor: f32,
-    pub particles_per_unit_volume: f32,
+    pub corrective_factor: f32,
     pub ior: Curve,
 }
 
@@ -13,38 +12,14 @@ pub struct Rayleigh {
 // such that they don't require a massive scale factor to cause things to actually render correctly.
 
 impl Rayleigh {
-    pub fn new(
-        particle_diameter_meters: f32,
-        particles_per_m_cubed: f32,
-        corrective_factor: f32,
-        ior: Curve,
-    ) -> Self {
+    pub fn new(corrective_factor: f32, ior: Curve) -> Self {
         // let sixth_root = particles_per_m_cubed.cbrt().sqrt();
         let self_ = Self {
-            pre_sigma_factor: (10.0f32.powi(6) * particle_diameter_meters / 2.0).powi(6)
-                * 2.0
-                * corrective_factor
-                / 3.0
-                * PI.powi(5),
-
-            particles_per_unit_volume: particles_per_m_cubed,
+            corrective_factor,
             ior,
         };
         #[cfg(test)]
-        {
-            let avg_ior_factor = (self_.ior_factor(740.0) + self_.ior_factor(400.0)) / 2.0;
-            // let scale = 10^9 nm / m
-            // (1/lambda^4) nm^4 = m_to_nm_scale^4 (about 10^36) x larger than (1/lambda^4) m^4
-
-            let avg_lambda_factor = (400.0f32.recip().powi(4) + 740.0f32.recip().powi(4)) / 2.0;
-            println!("avg ior factor is {:?}", avg_ior_factor);
-            println!("avg lambda factor (1/l^4) = {:?}", avg_lambda_factor);
-            println!("baked factor is {:?}", self_.pre_sigma_factor);
-            println!(
-                "all combined is {:?}",
-                avg_ior_factor * avg_lambda_factor * self_.pre_sigma_factor
-            );
-        }
+        {}
         self_
     }
     fn ior_factor(&self, lambda: f32) -> f32 {
@@ -56,9 +31,11 @@ impl Rayleigh {
     }
     pub fn sigma_s(&self, lambda: f32) -> f32 {
         let ior_factor = self.ior_factor(lambda);
-        let lambda_factor = lambda.recip().powi(4);
 
-        ior_factor * self.pre_sigma_factor * self.particles_per_unit_volume * lambda_factor
+        // convert to micrometers before applying rayleigh lambda stuff, to avoid floating point issues.
+        let lambda_factor = (lambda / 1000.0).recip().powi(4);
+
+        ior_factor * self.corrective_factor * lambda_factor
     }
     // TODO: figure out if rayleigh mediums have a sigma_a at all, or if sigma_t == sigma_s
 }
@@ -76,15 +53,8 @@ impl Medium for Rayleigh {
 
         let ior_factor = self.ior_factor(lambda);
 
-        // let factor_particle = (self.pre_sigma_factor / 2.0).powi(6);
-        let lambda_factor = lambda.recip().powi(4);
-        (1.0 + cos_squared)
-            * 3.0
-            * ior_factor
-            * self.pre_sigma_factor
-            * self.particles_per_unit_volume
-            * lambda_factor
-            / 8.0
+        let lambda_factor = (lambda / 1000.0).recip().powi(4);
+        (1.0 + cos_squared) * 3.0 * ior_factor * lambda_factor * self.corrective_factor / 8.0
     }
     fn sample_p(
         &self,
@@ -126,10 +96,10 @@ impl Medium for Rayleigh {
     }
     fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32 {
         let sigma = self.sigma_s(lambda);
-        (-sigma * self.particles_per_unit_volume * (p1 - p0).norm()).exp()
+        (-sigma * (p1 - p0).norm()).exp()
     }
     fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool) {
-        let sigma_s = self.sigma_s(lambda) * self.particles_per_unit_volume;
+        let sigma_s = self.sigma_s(lambda);
         let dist = -(1.0 - s.x).ln() / sigma_s;
         let t = dist.min(ray.tmax); // only go as far as tmax, unless tmax is inf
                                     // did we sample the medium or did we hit the end of the ray
@@ -176,10 +146,7 @@ mod test {
 
         #[rustfmt::skip]
         let medium = Rayleigh::new(
-
-            364.0 * 10.0f32.powi(-12),
-            2.0 * 10.0f32.powi(25),
-             3213612.0, // corrective factor, required to offset the apparently wrong ior i'm feeding in here
+            10.0,
             air_curve
         );
 
@@ -205,7 +172,11 @@ mod test {
         println!("test phase = {:?}", test_phase);
 
         let test_transmittance = medium.tr(test_lambda, Point3::new(0.0, 0.0, 1.0), Point3::ORIGIN);
-        println!("{:?}", test_transmittance);
+        println!(
+            "{:?} . should be near {}",
+            test_transmittance,
+            1.0 - 1.0 / 100000.0
+        );
         let test_transmittance =
             medium.tr(test_lambda, Point3::new(0.0, 0.0, 10.0), Point3::ORIGIN);
         println!("{:?}", test_transmittance);
