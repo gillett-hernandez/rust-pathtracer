@@ -114,4 +114,4 @@ macro_rules! generate_camera {
     };
 }
 
-generate_camera! {CameraEnum, ProjectiveCamera, RealisticCamera}
+generate_camera! {CameraEnum, ProjectiveCamera, PanoramaCamera, RealisticCamera}

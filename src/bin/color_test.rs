@@ -1,16 +1,15 @@
 extern crate rust_pathtracer as root;
+use root::prelude::*;
 
 use std::fs::File;
 use std::ops::RangeInclusive;
 
 use math::curves::*;
-use math::spectral::BOUNDED_VISIBLE_RANGE;
-use math::*;
 
-use root::parsing::{config::*, load_scene};
-use root::renderer::Film;
+use root::parsing::config::TOMLConfig;
+use root::parsing::parse_config_and_cameras;
+use root::parsing::*;
 use root::tonemap::{Converter, Tonemapper};
-use root::*;
 
 #[macro_use]
 extern crate log;
@@ -482,7 +481,7 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
         .unwrap();
 
     // override scene file based on provided command line argument
-    let (config, _) = parse_cameras_from(config);
+    let (config, _) = parse_config_and_cameras(config);
 
     let curves = load_scene(config.scene_file)
         .expect("failed to load scene")

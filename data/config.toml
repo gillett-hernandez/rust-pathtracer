@@ -90,14 +90,6 @@ focal_distance = 5.0
 vfov = 90.0
 
 
-# [[cameras]]
-# type="PanoramaCamera"
-# name = "panorama"
-# look_from = [0, 0, 1]
-# horizontal_span = [-180, 180]
-# vertical_span = [-90, 90]
-
-
 [[cameras]]
 type="SimpleCamera"
 name = "caustic test camera"
@@ -252,6 +244,14 @@ blades = 6
 sharpness = 2.0
 
 
+[[cameras]]
+type="PanoramaCamera"
+name = "panorama"
+look_from = [0.0, 0.0, -0.5]
+look_at = [1.0, 0.0, -0.5]
+fov = [360, 180]
+
+
 
 [renderer]
 # type="Naive"
@@ -260,7 +260,7 @@ selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "lt test"
+filename = "panorama test"
 min_samples = 128
 min_bounces = 1
 max_bounces = 12
@@ -271,7 +271,8 @@ hwss = false
 # camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
-camera_id = "cornell camera"
+camera_id = "panorama"
+# camera_id = "cornell camera"
 # camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
@@ -289,14 +290,14 @@ only_direct = false
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
-key_value = 0.18
-white_point = 1.0
+key_value = 0.01
+white_point = 10.0
 luminance_only = false
 [render_settings.integrator]
-# type = "PT"
-# light_samples = 4
-type = "LT"
-camera_samples = 25
+type = "PT"
+light_samples = 4
+# type = "LT"
+# camera_samples = 25
 # type = "BDPT"
 # s = light, t = camera
 # selected_pair = [6,1]
@@ -309,5 +310,7 @@ camera_samples = 25
 [render_settings.resolution]
 # width = 3840
 # height = 2160
-width = 512
-height = 512
+width = 1000
+height = 500
+# width = 4096
+# height = 2048

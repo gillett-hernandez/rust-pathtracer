@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use crate::camera::{CameraEnum, ProjectiveCamera, RealisticCamera};
+use crate::camera::{CameraEnum, PanoramaCamera, ProjectiveCamera, RealisticCamera};
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -35,7 +35,7 @@ impl Into<ApertureEnum> for ApertureData {
 }
 
 #[derive(Deserialize, Clone)]
-pub struct SimpleCameraSettings {
+pub struct SimpleCameraData {
     pub name: String,
     pub look_from: [f32; 3],
     pub look_at: [f32; 3],
@@ -49,7 +49,7 @@ pub struct SimpleCameraSettings {
 }
 
 #[derive(Deserialize, Clone)]
-pub struct RealisticCameraSettings {
+pub struct RealisticCameraData {
     pub name: String,
     pub lens_spec: String,
     pub look_from: [f32; 3],
@@ -68,10 +68,20 @@ pub struct RealisticCameraSettings {
 }
 
 #[derive(Deserialize, Clone)]
+pub struct PanoramaCameraData {
+    pub name: String,
+    pub look_from: [f32; 3],
+    pub look_at: [f32; 3],
+    pub v_up: Option<[f32; 3]>, // defaults to 0,0,1
+    pub fov: [f32; 2],          // in degrees. x should be in (0, 360], y should be in (0, 180]
+}
+
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum CameraSettings {
-    SimpleCamera(SimpleCameraSettings),
-    RealisticCamera(RealisticCameraSettings),
+    SimpleCamera(SimpleCameraData),
+    RealisticCamera(RealisticCameraData),
+    PanoramaCamera(PanoramaCameraData),
 }
 
 impl CameraSettings {
@@ -79,6 +89,7 @@ impl CameraSettings {
         match self {
             CameraSettings::SimpleCamera(data) => &data.name,
             CameraSettings::RealisticCamera(data) => &data.name,
+            CameraSettings::PanoramaCamera(data) => &data.name,
         }
     }
 }
@@ -118,6 +129,16 @@ pub fn parse_config_and_cameras(settings: TOMLConfig) -> (Config, Vec<CameraEnum
                     )),
                 )
             }
+            CameraSettings::PanoramaCamera(cam) => (
+                cam.name.clone(),
+                CameraEnum::PanoramaCamera(PanoramaCamera::new(
+                    Point3::from(cam.look_from),
+                    Point3::from(cam.look_at),
+                    Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])).normalized(),
+                    cam.fov[0],
+                    cam.fov[1],
+                )),
+            ),
             CameraSettings::RealisticCamera(cam) => {
                 let mut camera_file = File::open(&cam.lens_spec).unwrap();
                 let mut camera_spec = String::new();

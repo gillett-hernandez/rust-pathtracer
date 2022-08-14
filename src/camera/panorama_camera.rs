@@ -5,6 +5,7 @@ use crate::geometry::*;
 #[derive(Debug, Clone)]
 pub struct PanoramaCamera {
     pub origin: Point3,
+    pub direction: Vec3, // primary facing direction in world space
     // angle_span.0 is horizontal, and must be below 2pi radians
     // angle_span.1 is vertical, and must be below pi radians
     pub angle_span: (f32, f32),
@@ -19,13 +20,13 @@ impl PanoramaCamera {
         look_from: Point3,
         look_at: Point3,
         v_up: Vec3,
-        vertical_fov: f32, // vertical_fov should be given in degrees, since it is converted to radians
-        horizontal_fov: f32, // ditto for this
+        horizontal_fov: f32, // horizontal_fov should be given in degrees, since it is converted to radians
+        vertical_fov: f32,   // ditto for this
     ) -> PanoramaCamera {
         let direction = (look_at - look_from).normalized();
 
-        let w = -direction;
-        let u = -v_up.cross(w).normalized();
+        let w = direction;
+        let u = v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
 
         let (horizontal_fov, vertical_fov) = (
@@ -40,13 +41,14 @@ impl PanoramaCamera {
 
         let transform = Transform3::from_stack(
             None,
-            Some(TangentFrame::new(u, -v, w).into()), // rotate and stuff
+            Some(TangentFrame::new(u, v, w).into()), // rotate and stuff
             Some(Transform3::from_translation(Point3::ORIGIN - look_from)), // move to match camera origin
         )
         .inverse();
 
         PanoramaCamera {
             origin: look_from,
+            direction,
             angle_span: (horizontal_fov, vertical_fov),
             surface: Instance::new(
                 Aggregate::from(Sphere::new(1.0, Point3::ORIGIN)),
@@ -76,12 +78,12 @@ impl PanoramaCamera {
         let ray_origin = self.origin;
 
         let ray_direction = {
-            let (angle_x, angle_y) = (self.angle_span.0 * (u - 0.5), self.angle_span.1 * (v - 0.5));
+            let (angle_x, angle_y) = (self.angle_span.0 * (u - 0.5), self.angle_span.1 * (0.5 - v));
             // angle y is elevation from horizon
             // angle x is azimuthal angle from the center line
             let (sin_x, cos_x) = angle_x.sin_cos();
             let (sin_y, cos_y) = angle_y.sin_cos();
-            let vec = Vec3::new(sin_x * cos_y, cos_x * cos_y, sin_y);
+            let vec = Vec3::new(sin_x * cos_y, sin_y, cos_x * cos_y);
             trace!("{:?}", vec);
             self.transform.to_world(vec)
         };
@@ -90,6 +92,7 @@ impl PanoramaCamera {
         debug_assert!(ray_direction.is_finite());
         // TODO: determine whether this pdf needs to be set, and to what.
         // probably self.angle_span.0 * self.angle_span.1 / (4 pi^2 * untransformed_vec.y()) or something like that, mirroring the jacobian in the environment map code
+        
         (Ray::new(ray_origin, ray_direction), 1.0)
     }
     // returns None if the point on the lens was not from a valid pixel
@@ -112,3 +115,19 @@ impl PanoramaCamera {
 
 unsafe impl Send for PanoramaCamera {}
 unsafe impl Sync for PanoramaCamera {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_panorama_camera() {
+        let panorama = PanoramaCamera::new(
+            Point3::new(-1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 0.0),
+            Vec3::Z,
+            180.0,
+            90.0,
+        );
+    }
+}
