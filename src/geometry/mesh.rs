@@ -1,9 +1,9 @@
+use crate::prelude::*;
+
 use crate::aabb::AABB;
 use crate::accelerator::{BHShape, BoundingHierarchy, FlatBVH};
 // use crate::geometry::triangle::Triangle;
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable};
-use crate::materials::MaterialId;
-use crate::math::*;
 
 use packed_simd::{f32x4, i32x4};
 

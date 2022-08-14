@@ -3,7 +3,7 @@
 use crate::hittable::HitRecord;
 use crate::integrator::utils::*;
 use crate::materials::{Material, MaterialId};
-use crate::math::*;
+use crate::prelude::*;
 use crate::profile::Profile;
 use crate::world::World;
 
@@ -484,12 +484,12 @@ where
     let second_to_last_eye_vertex = if t > 1 { Some(eye_path[t - 2]) } else { None };
 
     // compute forward pdfs, which is lev to llv pdf and llv to lev pdf
-    let mut llv_forward_pdf = 1.0f32;
-    let mut lev_forward_pdf = 1.0f32;
+    let llv_forward_pdf;
+    let lev_forward_pdf;
 
     // recompute affected backward pdfs, that is, the backward pdfs of the vertices referred to as llv and lev, since their pdfs will have changed.
-    let mut llv_backward_pdf = 1.0f32;
-    let mut lev_backward_pdf = 1.0f32;
+    let llv_backward_pdf;
+    let lev_backward_pdf;
 
     // there are special cases need to be considered for t = 0 and s = 0. check the second arm of the following if branch
     if let (Some(llv), Some(lev)) = (last_light_vertex, last_eye_vertex) {

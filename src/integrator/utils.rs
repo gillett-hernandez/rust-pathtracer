@@ -1,13 +1,11 @@
+use crate::prelude::*;
+
 use log_once::warn_once;
 
 use crate::hittable::HitRecord;
-use crate::materials::{Material, MaterialId};
-use crate::math::*;
 use crate::mediums::Medium;
 use crate::profile::Profile;
 use crate::world::World;
-use crate::world::INTERSECTION_TIME_OFFSET;
-use crate::world::{TransportMode, NORMAL_OFFSET};
 
 use std::{ops::AddAssign, sync::Arc};
 

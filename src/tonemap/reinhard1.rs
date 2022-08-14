@@ -1,14 +1,7 @@
-use crate::curves::mauve;
-use crate::renderer::Film;
-use log_once::warn_once;
-use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
-
-use nalgebra::{Matrix3, Vector3};
-use packed_simd::f32x4;
-
-use std::time::Instant;
-
 use super::Tonemapper;
+use crate::prelude::*;
+
+use log_once::warn_once;
 
 #[derive(Clone, Debug)]
 pub struct Reinhard1 {
@@ -112,7 +105,7 @@ impl Tonemapper for Reinhard1 {
         let scaling_factor = l * one_l_lm2 / (1.0 + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            cie_xyz_color = crate::MAUVE;
+            cie_xyz_color = MAUVE;
         }
 
         scaling_factor * cie_xyz_color.0
@@ -205,7 +198,7 @@ impl Tonemapper for Reinhard1x3 {
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         // TODO: determine whether applying this per channel in xyz space is adequate,
         // or if this needs to be applied in sRGB linear or cie RGB space.
-        let mut cie_xyz_color = film.at(pixel.0, pixel.1);
+        let cie_xyz_color = film.at(pixel.0, pixel.1);
 
         // using slightly more complex reinhard mapping
         // a = key_value
@@ -221,10 +214,10 @@ impl Tonemapper for Reinhard1x3 {
         let scaling_factor = l * one_l_lm2 / (1.0 + l);
 
         // the last lane likely got set to nan or something nonzero when the division by l_w occurred, so set it to 0
-        let mapped = (scaling_factor * cie_xyz_color.0).replace(3, 0.0);
+        let mut mapped = (scaling_factor * cie_xyz_color.0).replace(3, 0.0);
         if !mapped.is_finite().all() || mapped.is_nan().any() {
             warn_once!("detected nan or infinity value in film after tonemapping");
-            cie_xyz_color = crate::MAUVE;
+            mapped = MAUVE.0;
         }
         mapped
     }

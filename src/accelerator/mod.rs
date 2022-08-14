@@ -7,7 +7,7 @@ pub use lbvh::FlatBVH;
 use crate::aabb::*;
 use crate::geometry::Instance;
 use crate::hittable::{HitRecord, Hittable};
-use crate::math::*;
+use math::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum AcceleratorType {

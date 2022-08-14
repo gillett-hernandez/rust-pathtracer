@@ -1,8 +1,8 @@
+use crate::prelude::*;
 use log_once::warn_once;
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
-use crate::math::*;
 
 fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
     match axis {

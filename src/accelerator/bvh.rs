@@ -1,6 +1,6 @@
 use crate::aabb::{HasBoundingBox, AABB};
 // use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
-use crate::math::Ray;
+use math::Ray;
 
 use std::f32;
 

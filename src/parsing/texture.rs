@@ -1,10 +1,11 @@
-use crate::math::*;
+use crate::prelude::*;
+
 use crate::parsing::curves::CurveData;
-use crate::renderer::Film;
+
 use crate::texture::*;
 
 use math::curves::InterpolationMode;
-use math::spectral::BOUNDED_VISIBLE_RANGE;
+
 use packed_simd::f32x4;
 use serde::{Deserialize, Serialize};
 

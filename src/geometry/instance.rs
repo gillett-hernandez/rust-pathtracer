@@ -1,6 +1,6 @@
+use crate::prelude::*;
+
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
-use crate::materials::MaterialId;
-use crate::math::*;
 
 use crate::accelerator::BHShape;
 use crate::geometry::*;

@@ -1,6 +1,4 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::world::TransportMode;
+use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct DiffuseLight {

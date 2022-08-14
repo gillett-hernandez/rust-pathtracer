@@ -1,15 +1,37 @@
+mod panorama_camera;
 mod projective_camera;
 mod realistic_camera;
 
+pub use panorama_camera::PanoramaCamera;
 pub use projective_camera::ProjectiveCamera;
 pub use realistic_camera::RealisticCamera;
 
 use crate::geometry::*;
-use crate::math::*;
+use crate::prelude::*;
 
 use std::marker::{Send, Sync};
 
 pub type CameraId = usize;
+
+#[allow(unused_variables)]
+pub trait Camera {
+    fn get_ray(&self, sampler: &mut Box<dyn Sampler>, lambda: f32, u: f32, v: f32) -> (Ray, f32);
+    fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self;
+    fn get_surface(&self) -> Option<&Instance> {
+        None
+    }
+    fn get_pixel_for_ray(&self, ray: Ray, lambda: f32) -> Option<(f32, f32)>;
+    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF);
+    fn sample_we(
+        &self,
+        film_sample: Sample2D,
+        sampler: &mut Box<dyn Sampler>,
+        lambda: f32,
+    ) -> (Ray, Vec3, PDF);
+    fn sample_surface(&self, lambda: f32, from: Point3) -> Option<(Ray, f32, PDF)> {
+        None
+    }
+}
 
 macro_rules! generate_camera {
     ($s: ident, $($e:ident),+) => {
@@ -19,8 +41,8 @@ macro_rules! generate_camera {
                 $e($e),
             )+
         }
-        impl $s {
-            pub fn get_ray(
+        impl Camera for $s {
+             fn get_ray(
                 &self,
                 sampler: &mut Box<dyn Sampler>,
                 lambda: f32,
@@ -33,21 +55,21 @@ macro_rules! generate_camera {
                     )+
                 }
             }
-            pub fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
+             fn with_aspect_ratio(&self, aspect_ratio: f32) -> Self {
                 match self {
                     $(
                         $s::$e(inner) => $s::$e(inner.clone().with_aspect_ratio(aspect_ratio)),
                     )+
                 }
             }
-            pub fn get_surface(&self) -> Option<&Instance> {
+             fn get_surface(&self) -> Option<&Instance> {
                 match self {
                     $(
                         $s::$e(inner) => inner.get_surface(),
                     )+
                 }
             }
-            pub fn get_pixel_for_ray(&self, ray: Ray, lambda: f32) -> Option<(f32, f32)> {
+             fn get_pixel_for_ray(&self, ray: Ray, lambda: f32) -> Option<(f32, f32)> {
                 match self {
                     $(
                         $s::$e(inner) => inner.get_pixel_for_ray(ray, lambda),
@@ -55,7 +77,7 @@ macro_rules! generate_camera {
                 }
             }
 
-            pub fn eval_we(&self, _lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+             fn eval_we(&self, _lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
                 // TODO: once an accelerator for reverse tracing is implemented for realistic camera
                 // or a "reverse trace" for the thin lens approximation is implemented for SimpleCamera,
                 // use that to evaluate this
@@ -68,7 +90,7 @@ macro_rules! generate_camera {
                 }
             }
 
-            pub fn sample_we(
+             fn sample_we(
                 &self,
                 film_sample: Sample2D,
                 mut sampler: &mut Box<dyn Sampler>,
@@ -92,4 +114,4 @@ macro_rules! generate_camera {
     };
 }
 
-generate_camera! {Camera, ProjectiveCamera, RealisticCamera}
+generate_camera! {CameraEnum, ProjectiveCamera, RealisticCamera}

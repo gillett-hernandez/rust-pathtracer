@@ -1,5 +1,6 @@
+use crate::prelude::*;
+
 use crate::geometry::*;
-use crate::math::*;
 
 use serde::{Deserialize, Serialize};
 use tobj;

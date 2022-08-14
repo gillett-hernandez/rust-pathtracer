@@ -1,7 +1,4 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::texture::TexStack;
-use crate::world::TransportMode;
+use crate::prelude::*;
 
 #[derive(Clone)]
 pub struct Lambertian {

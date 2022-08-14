@@ -1,9 +1,9 @@
 // this module contains a series of SDFs
 
-use crate::math::curves::{InterpolationMode, Op};
-use crate::math::*;
+use crate::prelude::*;
+use math::curves::{InterpolationMode, Op};
 
-pub use crate::math::spectral::EXTENDED_VISIBLE_RANGE;
+
 
 pub fn cie_e(power: f32) -> Curve {
     Curve::Linear {

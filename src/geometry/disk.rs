@@ -1,6 +1,7 @@
+use crate::prelude::*;
+
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
-use crate::math::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Disk {

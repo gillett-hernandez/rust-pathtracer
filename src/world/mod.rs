@@ -4,35 +4,23 @@ mod importance_map;
 pub use environment::EnvironmentMap;
 pub use importance_map::ImportanceMap;
 
+use crate::prelude::*;
+
 use crate::hittable::*;
 use crate::materials::MaterialTable;
-use crate::math::*;
-use crate::{camera::Camera, mediums::MediumTable};
+
+use crate::mediums::MediumTable;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
-pub const NORMAL_OFFSET: f32 = 0.001;
-pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum TransportMode {
-    Radiance,
-    Importance,
-}
-
-impl Default for TransportMode {
-    fn default() -> Self {
-        TransportMode::Importance
-    }
-}
 
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
-    pub cameras: Vec<Camera>,
+    pub cameras: Vec<CameraEnum>,
     pub materials: MaterialTable,
     pub mediums: MediumTable,
     pub environment: EnvironmentMap,
@@ -136,7 +124,7 @@ impl World {
         }
     }
 
-    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&Camera, usize, PDF)> {
+    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&CameraEnum, usize, PDF)> {
         // currently just uniform sampling
         let length = self.cameras.len();
         if length == 0 {
@@ -169,7 +157,7 @@ impl World {
         self.accelerator.get_primitive(index)
     }
 
-    pub fn get_camera(&self, index: usize) -> &Camera {
+    pub fn get_camera(&self, index: usize) -> &CameraEnum {
         &self.cameras[index]
     }
 
@@ -185,7 +173,7 @@ impl World {
         }
     }
 
-    pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
+    pub fn assign_cameras(&mut self, cameras: Vec<CameraEnum>, add_and_rebuild_scene: bool) {
         // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
         if add_and_rebuild_scene {
             match &mut self.accelerator {

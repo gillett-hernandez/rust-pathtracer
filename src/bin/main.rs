@@ -1,8 +1,11 @@
 extern crate rust_pathtracer as root;
 
 use log::LevelFilter;
+use root::parsing::cameras::parse_config_and_cameras;
+// use root::prelude::*;
 use root::parsing::config::*;
 use root::parsing::construct_world;
+use root::parsing::get_settings;
 use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
 
@@ -101,7 +104,7 @@ fn main() {
 
     // override scene file based on provided command line argument
     config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
-    let (config, cameras) = parse_cameras_from(config);
+    let (config, cameras) = parse_config_and_cameras(config);
     let world = construct_scene(&config);
     if world.is_err() {
         error!(

@@ -1,7 +1,4 @@
-#![allow(unused, unused_imports)]
-use crate::curves::mauve;
-use crate::renderer::Film;
-use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
+use crate::prelude::*;
 
 use nalgebra::{Matrix3, Vector3};
 use packed_simd::f32x4;

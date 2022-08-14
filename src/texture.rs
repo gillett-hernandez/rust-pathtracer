@@ -1,5 +1,4 @@
-use crate::math::*;
-use crate::renderer::Film;
+use crate::prelude::*;
 
 use math::curves::{Curve, CurveWithCDF, InterpolationMode, Op};
 use packed_simd::f32x4;

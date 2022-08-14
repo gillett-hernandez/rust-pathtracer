@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use log_once::warn_once;
 
 use crate::world::World;
@@ -6,9 +7,6 @@ use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::{Material, MaterialEnum, MaterialId};
-use crate::math::*;
-
-use crate::world::TransportMode;
 
 use std::sync::Arc;
 

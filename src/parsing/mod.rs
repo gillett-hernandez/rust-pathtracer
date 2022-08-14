@@ -1,9 +1,10 @@
+use crate::mediums::MediumEnum;
+use crate::prelude::*;
+
 use crate::accelerator::AcceleratorType;
 use crate::geometry::*;
 
 use crate::materials::*;
-use crate::mediums::MediumEnum;
-use crate::texture::TexStack;
 use crate::world::World;
 
 use std::collections::HashMap;
@@ -15,6 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+pub mod cameras;
 pub mod config;
 pub mod curves;
 mod environment;
@@ -26,6 +28,8 @@ pub mod primitives;
 pub mod texture;
 pub mod tonemap;
 
+pub use cameras::*;
+use config::*;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
@@ -531,6 +535,24 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
     Ok(world)
 }
 
+pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
+    // will return None in the case that it can't read the settings file for whatever reason.
+    // TODO: convert this to return Result<Settings, UnionOfErrors>
+    let mut input = String::new();
+    File::open(&filepath)
+        .and_then(|mut f| f.read_to_string(&mut input))
+        .unwrap();
+    let num_cpus = num_cpus::get();
+    let mut settings: TOMLConfig = toml::from_str(&input)?;
+    for render_settings in settings.render_settings.iter_mut() {
+        render_settings.threads = match render_settings.threads {
+            Some(expr) => Some(expr),
+            None => Some(num_cpus as u16),
+        };
+    }
+    Ok(settings)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -598,5 +620,21 @@ mod test {
     #[test]
     fn test_world() {
         let _world = construct_world(PathBuf::from("data/scenes/test_prism.toml")).unwrap();
+    }
+
+    #[test]
+    fn test_parsing_config() {
+        let settings: TOMLConfig = match get_settings("data/config.toml".to_string()) {
+            Ok(expr) => expr,
+            Err(v) => {
+                println!("{:?}", "couldn't read config.toml");
+                println!("{:?}", v);
+                return;
+            }
+        };
+        for config in &settings.render_settings {
+            assert!(config.filename != None);
+            assert!(config.threads.unwrap() > 0)
+        }
     }
 }

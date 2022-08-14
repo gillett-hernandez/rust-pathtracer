@@ -1,15 +1,11 @@
-use super::{calculate_widest_wavelength_bounds, output_film, Film, Renderer};
-
-use crate::camera::{Camera, CameraId};
+use crate::prelude::*;
+use super::prelude::*;
 
 use crate::integrator::{
     BDPTIntegrator, GenericIntegrator, Integrator, IntegratorType, LightTracingIntegrator, Sample,
     SamplerIntegrator,
 };
-use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
-use crate::parsing::config::{Config, IntegratorKind, RenderSettings};
-use crate::profile::Profile;
-use crate::world::{EnvironmentMap, World};
+
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use math::Bounds1D;
@@ -38,7 +34,7 @@ impl NaiveRenderer {
     pub fn render_sampled<I: SamplerIntegrator>(
         mut integrator: I,
         settings: &RenderSettings,
-        _camera: &Camera,
+        _camera: &CameraEnum,
     ) -> Film<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
         println!("starting render with film resolution {}x{}", width, height);
@@ -130,7 +126,7 @@ impl NaiveRenderer {
     pub fn render_splatted<I: GenericIntegrator>(
         mut integrator: I,
         renders: Vec<RenderSettings>,
-        _cameras: Vec<Camera>,
+        _cameras: Vec<CameraEnum>,
     ) -> Vec<(RenderSettings, Film<XYZColor>)> {
         let now = Instant::now();
 
@@ -417,15 +413,15 @@ impl NaiveRenderer {
 }
 
 impl Renderer for NaiveRenderer {
-    fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
+    fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {
         // bin the render settings into bins corresponding to what integrator they need.
 
-        let mut bundled_cameras: Vec<Camera> = Vec::new();
+        let mut bundled_cameras: Vec<CameraEnum> = Vec::new();
         // let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
         let mut sampled_renders: Vec<(IntegratorType, RenderSettings)> = Vec::new();
         let mut splatting_renders_and_cameras: HashMap<
             IntegratorType,
-            Vec<(RenderSettings, Camera)>,
+            Vec<(RenderSettings, CameraEnum)>,
         > = HashMap::new();
         splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
@@ -552,13 +548,15 @@ impl Renderer for NaiveRenderer {
             }
             match integrator_type {
                 IntegratorType::BDPT => {
-                    let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
-                        splatting_renders_and_cameras
-                            .get(integrator_type)
-                            .unwrap()
-                            .iter()
-                            .cloned()
-                            .unzip();
+                    let (bundled_settings, bundled_cameras): (
+                        Vec<RenderSettings>,
+                        Vec<CameraEnum>,
+                    ) = splatting_renders_and_cameras
+                        .get(integrator_type)
+                        .unwrap()
+                        .iter()
+                        .cloned()
+                        .unzip();
                     let mut max_bounces = 0;
 
                     for settings in bundled_settings.iter() {
@@ -620,13 +618,15 @@ impl Renderer for NaiveRenderer {
                     }
                 }
                 IntegratorType::LightTracing => {
-                    let (bundled_settings, bundled_cameras): (Vec<RenderSettings>, Vec<Camera>) =
-                        splatting_renders_and_cameras
-                            .get(integrator_type)
-                            .unwrap()
-                            .iter()
-                            .cloned()
-                            .unzip();
+                    let (bundled_settings, bundled_cameras): (
+                        Vec<RenderSettings>,
+                        Vec<CameraEnum>,
+                    ) = splatting_renders_and_cameras
+                        .get(integrator_type)
+                        .unwrap()
+                        .iter()
+                        .cloned()
+                        .unzip();
                     let mut max_bounces = 0;
                     for settings in bundled_settings.iter() {
                         max_bounces = max_bounces.max(settings.max_bounces.unwrap_or(2));

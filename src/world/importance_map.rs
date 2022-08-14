@@ -4,8 +4,8 @@ use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
 
-use crate::texture::TexStack;
-use crate::{math::*, rgb_to_u32};
+
+use crate::prelude::*;
 
 use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
@@ -680,7 +680,7 @@ mod test {
         for _ in 0..n {
             let (position_sample, direction_sample, wavelength_sample) =
                 (sampler.draw_2d(), sampler.draw_2d(), sampler.draw_1d());
-            let (ray, le, pdf, wavelength_pdf) = world.environment.sample_emission(
+            let (_ray, le, pdf, wavelength_pdf) = world.environment.sample_emission(
                 world_radius,
                 world_center,
                 position_sample,

@@ -1,6 +1,4 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::world::TransportMode;
+use crate::prelude::*;
 
 pub fn reflect(wi: Vec3, normal: Vec3) -> Vec3 {
     let wi = -wi;
@@ -498,7 +496,6 @@ impl Material for GGX {
 
 #[cfg(test)]
 mod tests {
-    use std::f32::consts::TAU;
 
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use spectral::BOUNDED_VISIBLE_RANGE;

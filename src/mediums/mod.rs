@@ -1,7 +1,8 @@
-use crate::math::*;
+use crate::prelude::*;
 
 use std::marker::{Send, Sync};
 
+#[allow(unused_variables)]
 pub trait Medium {
     fn p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32;
     fn sample_p(
@@ -13,10 +14,10 @@ pub trait Medium {
     ) -> (Vec3, f32);
     fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool);
     fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32;
-    fn emission(&self, _lambda: f32, _wo: Vec3, _uvw: (f32, f32, f32)) -> SingleEnergy {
+    fn emission(&self, lambda: f32, wo: Vec3, uvw: (f32, f32, f32)) -> SingleEnergy {
         0.0.into()
     }
-    fn sample_emission(&self, _lambda: f32, _uvw: (f32, f32, f32)) -> (Vec3, SingleEnergy) {
+    fn sample_emission(&self, lambda: f32, uvw: (f32, f32, f32)) -> (Vec3, SingleEnergy) {
         (Vec3::ZERO, 0.0.into())
     }
 }
@@ -30,7 +31,7 @@ pub fn phase_hg(cos_theta: f32, g: f32) -> f32 {
         2.0 * g * cos_theta,
         denom
     );
-    (1.0 - g * g) / (denom * denom.sqrt() * 2.0 * std::f32::consts::TAU)
+    (1.0 - g * g) / (denom * denom.sqrt() * 2.0 * TAU)
 }
 #[derive(Clone)]
 pub struct HenyeyGreensteinHomogeneous {
@@ -70,7 +71,7 @@ impl Medium for HenyeyGreensteinHomogeneous {
         // println!("{} {}", cos_theta, g);
 
         let sin_theta = (0.0f32).max(1.0 - cos_theta * cos_theta).sqrt();
-        let phi = std::f32::consts::TAU * s.y;
+        let phi = TAU * s.y;
         let frame = TangentFrame::from_normal(wi);
         let (sin_phi, cos_phi) = phi.sin_cos();
         let wo = Vec3::new(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);

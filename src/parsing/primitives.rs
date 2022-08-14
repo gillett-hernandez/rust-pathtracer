@@ -1,5 +1,6 @@
+use crate::prelude::*;
+
 use crate::geometry::*;
-use crate::math::*;
 use crate::parsing::Point3Data;
 
 use serde::{Deserialize, Serialize};

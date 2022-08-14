@@ -1,3 +1,5 @@
+use crate::prelude::*;
+
 mod disk;
 mod instance;
 mod mesh;
@@ -11,7 +13,7 @@ pub use rect::AARect;
 pub use sphere::Sphere;
 
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
-use crate::math::*;
+
 
 macro_rules! generate_aggregate {
     ($($e:ident),+) => {

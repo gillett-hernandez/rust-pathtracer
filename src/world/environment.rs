@@ -1,5 +1,4 @@
-use crate::math::*;
-use crate::texture::TexStack;
+use crate::prelude::*;
 use crate::world::importance_map::ImportanceMap;
 
 #[derive(Clone)]

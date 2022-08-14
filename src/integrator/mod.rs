@@ -1,13 +1,13 @@
+use crate::prelude::*;
+
 mod bdpt;
 mod lt;
 mod pt;
 // mod sppm;
 pub mod utils;
 
-pub use crate::camera::{Camera, CameraId};
 use crate::parsing::config::{IntegratorKind, RenderSettings};
 
-use crate::math::*;
 use crate::profile::Profile;
 use crate::world::World;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
@@ -64,7 +64,7 @@ impl Integrator {
     pub fn from_settings_and_world(
         world: Arc<World>,
         integrator_type: IntegratorType,
-        _cameras: &[Camera],
+        _cameras: &[CameraEnum],
         settings: &RenderSettings,
     ) -> Option<Self> {
         let bounds = settings
@@ -75,7 +75,7 @@ impl Integrator {
         let max_bounces = settings.max_bounces.unwrap();
         let russian_roulette = settings.russian_roulette.unwrap_or(true);
         match (integrator_type, settings.integrator) {
-            (IntegratorType::BDPT, IntegratorKind::BDPT { selected_pair }) => {
+            (IntegratorType::BDPT, IntegratorKind::BDPT { .. }) => {
                 Some(Integrator::BDPT(BDPTIntegrator {
                     max_bounces,
                     world,
@@ -118,12 +118,13 @@ impl Integrator {
     }
 }
 
+#[allow(unused_variables)]
 pub trait SamplerIntegrator: Sync + Send {
     fn preprocess(
         &mut self,
-        _sampler: &mut Box<dyn Sampler>,
-        _settings: &[RenderSettings],
-        _profile: &mut Profile,
+        sampler: &mut Box<dyn Sampler>,
+        settings: &[RenderSettings],
+        profile: &mut Profile,
     ) {
     }
     fn color(
@@ -140,12 +141,13 @@ pub enum Sample {
     LightSample(XYZColor, (f32, f32)),
 }
 
+#[allow(unused_variables)]
 pub trait GenericIntegrator: Send + Sync {
     fn preprocess(
         &mut self,
-        _sampler: &mut Box<dyn Sampler>,
-        _settings: &[RenderSettings],
-        _profile: &mut Profile,
+        sampler: &mut Box<dyn Sampler>,
+        settings: &[RenderSettings],
+        profile: &mut Profile,
     ) {
     }
     fn color(

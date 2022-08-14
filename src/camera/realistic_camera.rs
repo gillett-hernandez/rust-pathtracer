@@ -1,15 +1,9 @@
-use std::f32::consts::SQRT_2;
+use crate::prelude::*;
+
 
 use crate::geometry::*;
-use crate::materials::MaterialId;
-use crate::math::{
-    random, spectral::EXTENDED_VISIBLE_RANGE, Point3, Ray, Sampler, TangentFrame, Transform3, Vec3,
-};
 use optics::aperture::{Aperture, ApertureEnum};
-use optics::{
-    aperture::SimpleBladedAperture, lens_sampler::RadialSampler, Input, LensAssembly,
-    LensInterface, Output,
-};
+use optics::{lens_sampler::RadialSampler, Input, LensAssembly, LensInterface, Output};
 
 #[derive(Debug, Clone)]
 pub struct RealisticCamera {
@@ -26,9 +20,6 @@ pub struct RealisticCamera {
     aperture_radius: f32,
     transform: Transform3,
     lens_zoom: f32,
-    // lens_radius: f32,
-    t0: f32,
-    t1: f32,
 }
 
 impl RealisticCamera {
@@ -42,8 +33,8 @@ impl RealisticCamera {
         lens_zoom: f32,
         interfaces: Vec<LensInterface>,
         aperture: ApertureEnum,
-        t0: f32,
-        t1: f32,
+        // t0: f32,
+        // t1: f32,
         radial_bins: usize,
         wavelength_bins: usize,
         solver_heat: f32,
@@ -118,9 +109,6 @@ impl RealisticCamera {
             aperture,
             sampler,
             transform,
-            // lens_radius,
-            t0,
-            t1,
         }
     }
     pub fn get_surface(&self) -> Option<&Instance> {
@@ -136,8 +124,6 @@ impl RealisticCamera {
         s: f32,
         t: f32,
     ) -> (Ray, f32) {
-        let _time: f32 = self.t0 + random() * (self.t1 - self.t0);
-
         // crop sensor to match aspect ratio
         // aspect ratio is something like 16/9 for normal screens, where 16 == width and 9 == height
         // i.e. 1.777777 w/h
@@ -231,7 +217,7 @@ unsafe impl Sync for RealisticCamera {}
 
 #[cfg(test)]
 mod test {
-    use crate::math::{RandomSampler, Sample2D, Sampler};
+    use math::{RandomSampler, Sample2D, Sampler};
     use std::{fs::File, io::Read};
 
     use optics::{aperture::CircularAperture, parse_lenses_from};
@@ -260,8 +246,8 @@ mod test {
             0.0,
             interfaces,
             ApertureEnum::CircularAperture(CircularAperture::default()),
-            0.0,
-            1.0,
+            // 0.0,
+            // 1.0,
             128,
             128,
             0.01,
@@ -327,8 +313,8 @@ mod test {
             0.0,
             interfaces,
             ApertureEnum::CircularAperture(CircularAperture::default()),
-            0.0,
-            1.0,
+            // 0.0,
+            // 1.0,
             128,
             128,
             0.01,

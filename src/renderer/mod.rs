@@ -1,5 +1,9 @@
-mod film;
+use crate::prelude::*;
 
+mod film;
+mod prelude;
+
+// integrators
 mod naive;
 mod preview;
 // mod sppm;
@@ -10,9 +14,8 @@ pub use naive::NaiveRenderer;
 pub use preview::PreviewRenderer;
 // pub use sppm::SPPMRenderer;
 
-use crate::camera::Camera;
+use crate::camera::CameraEnum;
 
-use crate::math::{Bounds1D, XYZColor};
 use crate::parsing::config::{Config, RenderSettings};
 use crate::parsing::parse_tonemapper;
 use crate::world::World;
@@ -60,5 +63,5 @@ pub fn calculate_widest_wavelength_bounds(
 }
 
 pub trait Renderer {
-    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config);
+    fn render(&self, world: World, cameras: Vec<CameraEnum>, config: &Config);
 }

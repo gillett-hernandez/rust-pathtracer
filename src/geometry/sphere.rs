@@ -1,8 +1,8 @@
+use crate::prelude::*;
 use log_once::warn_once;
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
-use crate::math::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Sphere {

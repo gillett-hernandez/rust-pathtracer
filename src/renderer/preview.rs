@@ -1,15 +1,16 @@
-use super::{output_film, Film, Renderer};
+use crate::prelude::*;
+use super::prelude::*;
 
 use crate::parsing::config::{Config, IntegratorKind, RenderSettings, RendererType, Resolution};
 // use crate::integrator::*;
-use crate::camera::Camera;
+
 use crate::integrator::{
-    CameraId, GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator,
+    GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator,
 };
-use crate::math::{RandomSampler, Sampler, StratifiedSampler, XYZColor};
+
+
 use crate::parsing::parse_tonemapper;
 use crate::profile::Profile;
-use crate::rgb_to_u32;
 use crate::world::{EnvironmentMap, World};
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -34,7 +35,7 @@ impl PreviewRenderer {
     }
 }
 impl Renderer for PreviewRenderer {
-    fn render(&self, mut world: World, cameras: Vec<Camera>, config: &Config) {
+    fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {
         if let RendererType::Preview {
             selected_preview_film_id,
         } = config.renderer
@@ -776,7 +777,6 @@ impl Renderer for PreviewRenderer {
                         1.0 / (s as f32 + 1.0),
                     );
                 }
-                Some(_) => {}
             }
         }
     }

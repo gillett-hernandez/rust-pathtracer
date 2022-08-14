@@ -1,12 +1,12 @@
+use crate::prelude::*;
+
 use std::collections::HashMap;
 
 use math::curves::InterpolationMode;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
 use serde::{Deserialize, Serialize};
 
-use crate::math::*;
-use crate::renderer::Film;
-use crate::texture::{TexStack, Texture, Texture1};
+use crate::texture::{Texture, Texture1};
 use crate::world::{EnvironmentMap, ImportanceMap};
 
 use super::curves::CurveData;
