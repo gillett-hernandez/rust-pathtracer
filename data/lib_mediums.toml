@@ -1,0 +1,10 @@
+[rayleigh]
+type = "Rayleigh"
+ior = "air_ior"
+corrective_factor = 23.0
+
+[isotropic_uniform_dense_bright]
+type = "HG"
+g = "flat_one" # isotropic.
+sigma_s = "flat_one" # high scatter density
+sigma_a = "flat_zero" # bright in that it doesn't absorb, only scatters

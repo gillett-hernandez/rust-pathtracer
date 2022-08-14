@@ -172,6 +172,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
 
     // collect information from instances, materials, and env map data to determine what textures and materials actually need to be parsed and what can be discarded.
 
+    // let mut used_mediums = HashSet::new();
     let mut used_materials = HashSet::new();
     let mut used_textures = HashSet::new();
     let mut used_curves = HashSet::new();

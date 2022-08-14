@@ -2,7 +2,7 @@ curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
-
+mediums = "data/lib_mediums.toml"
 
 env_sampling_probability = 0.0
 [environment]
@@ -11,29 +11,6 @@ strength = 1.0
 texture_name = "kiara_dawn_8k"
 
 
-
-[[mediums]]
-name = "fog"
-[mediums.data]
-type = "HG"
-[mediums.data.g]
-type = "Linear"
-filename = "data/curves/spectra/rayleigh.spectra"
-interpolation_mode = "Linear"
-[mediums.data.g.domain_mapping]
-y_scale = 2.0
-[mediums.data.sigma_s]
-# type = "Blackbody"
-# temperature = 5500.0
-# strength = 2.0
-type = "Flat"
-strength = 1.0
-[mediums.data.sigma_t]
-# type = "Blackbody"
-# temperature = 5500.0
-# strength = 2.0
-type = "Flat"
-strength = 0.4
 
 
 
@@ -107,13 +84,13 @@ two_sided = true
 # # axis = [0, 1, 0]
 # # angle = 20
 
-# # middle sphere
-# [[instances]]
-# material_name = "fog_boundary"
-# [instances.aggregate]
-# type = "Sphere"
-# radius = 0.8
-# origin = [0.0, 0.0, 0.0]
+# middle sphere
+[[instances]]
+material_name = "isotropic_uniform_dense_bright"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.8
+origin = [0.0, 0.0, 0.0]
 
 # sphere on top
 [[instances]]
