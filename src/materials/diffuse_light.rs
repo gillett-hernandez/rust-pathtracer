@@ -1,22 +1,60 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::world::TransportMode;
+use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct DiffuseLight {
-    // pub color: Box<dyn SpectralPowerDistribution>,
-    pub color: CurveWithCDF,
+    // TODO: make this textured.
+    pub bounce_color: Curve,
+    pub emit_color: CurveWithCDF,
     pub sidedness: Sidedness,
 }
 
 impl DiffuseLight {
-    pub fn new(color: CurveWithCDF, sidedness: Sidedness) -> DiffuseLight {
-        DiffuseLight { color, sidedness }
+    pub fn new(
+        bounce_color: Curve,
+        emit_color: CurveWithCDF,
+        sidedness: Sidedness,
+    ) -> DiffuseLight {
+        DiffuseLight {
+            bounce_color,
+            emit_color,
+            sidedness,
+        }
     }
     pub const NAME: &'static str = "DiffuseLight";
 }
 
 impl Material for DiffuseLight {
+    fn bsdf(
+        &self,
+        lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> (SingleEnergy, PDF) {
+        // copy from lambertian
+        if wo.z() * wi.z() > 0.0 {
+            (
+                SingleEnergy::new(self.bounce_color.evaluate_clamped(lambda) / PI),
+                (wo.z().abs() / PI).into(),
+            )
+        } else {
+            (0.0.into(), 0.0.into())
+        }
+    }
+    fn generate(
+        &self,
+        _lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> Option<Vec3> {
+        // bounce, copy from lambertian
+
+        let d = random_cosine_direction(s) * wi.z().signum();
+        Some(d)
+    }
     fn sample_emission(
         &self,
         point: Point3,
@@ -48,7 +86,7 @@ impl Material for DiffuseLight {
         let directional_pdf = local_wo.z().abs() / PI;
         debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
         let (sw, pdf) = self
-            .color
+            .emit_color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
             Ray::new(point, object_wo),
@@ -65,7 +103,7 @@ impl Material for DiffuseLight {
         wavelength_sample: Sample1D,
     ) -> Option<(f32, PDF)> {
         let (sw, pdf) = self
-            .color
+            .emit_color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((sw.lambda, pdf))
     }
@@ -82,14 +120,12 @@ impl Material for DiffuseLight {
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            // if wi.z() > 0.0 {
-            SingleEnergy::new(self.color.evaluate_power(lambda) / PI)
+            SingleEnergy::new(self.emit_color.evaluate_power(lambda) / PI)
         } else {
             SingleEnergy::ZERO
         }
     }
 
-    // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
         &self,
         _lambda: f32,

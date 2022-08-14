@@ -1,6 +1,4 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::world::TransportMode;
+use crate::prelude::*;
 
 #[derive(Clone)]
 pub struct PassthroughFilter {
@@ -20,6 +18,7 @@ impl PassthroughFilter {
     pub const NAME: &'static str = "PassthroughFilter";
 }
 
+// essentially a pseudo-transparent film material. does not alter the direction when scattering, and
 impl Material for PassthroughFilter {
     fn generate(
         &self,
@@ -39,7 +38,8 @@ impl Material for PassthroughFilter {
         _wi: Vec3,
         wo: Vec3,
     ) -> (SingleEnergy, PDF) {
-        // TODO: maybe have this switch between wo and wi based on transport_mode
+        // TODO: maybe have this switch between wo and wi based on transport_mode?
+        // TODO: assess whether this pdf needs to be 0 if wi != -wo
         (
             SingleEnergy::from(self.color.evaluate(lambda) / wo.z().abs()),
             1.0.into(),

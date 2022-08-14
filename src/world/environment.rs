@@ -1,5 +1,4 @@
-use crate::math::*;
-use crate::texture::TexStack;
+use crate::prelude::*;
 use crate::world::importance_map::ImportanceMap;
 
 #[derive(Clone)]
@@ -19,7 +18,7 @@ pub enum EnvironmentMap {
     // i.e. if there's a texture with a low max luminance compared to other env textures, it should not be selected for importance sampling very often.
     HDR {
         texture: TexStack,
-        importance_map: Option<ImportanceMap>,
+        importance_map: ImportanceMap,
         rotation: Transform3,
         strength: f32,
     },
@@ -91,7 +90,6 @@ impl EnvironmentMap {
         }
     }
 
-    // sample a ray and wavelength based on env map CDF
     pub fn sample_emission(
         &self,
         world_radius: f32,
@@ -101,7 +99,6 @@ impl EnvironmentMap {
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> (Ray, SingleWavelength, PDF, PDF) {
-        // unimplemented!();
         // sample env map cdf to get light ray, based on env map strength
         match self {
             EnvironmentMap::Constant { color, strength } => {
@@ -186,8 +183,8 @@ impl EnvironmentMap {
         }
     }
 
-    // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
     pub fn pdf_for(&self, uv: (f32, f32)) -> PDF {
+        // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
         match self {
             EnvironmentMap::Constant { .. } => PDF::from(1.0 / 4.0 / PI),
             EnvironmentMap::Sun {
@@ -210,7 +207,10 @@ impl EnvironmentMap {
                 importance_map,
                 ..
             } => {
-                if let Some(importance_map) = importance_map {
+                if let ImportanceMap::Baked {
+                    data, marginal_cdf, ..
+                } = importance_map
+                {
                     let direction = uv_to_direction(uv);
                     let new_direction = rotation.to_local(direction);
                     let uv = direction_to_uv(new_direction);
@@ -230,9 +230,8 @@ impl EnvironmentMap {
                     // thus the combined jacobian from uv to solid angle is 2pi^2 * sin(pi * v)
 
                     PDF::from(
-                        importance_map.marginal_cdf.evaluate_power(uv.0)
-                            * importance_map.data[(uv.0.clamp(0.0, 1.0 - std::f32::EPSILON)
-                                * importance_map.data.len() as f32)
+                        marginal_cdf.evaluate_power(uv.0)
+                            * data[(uv.0.clamp(0.0, 1.0 - std::f32::EPSILON) * data.len() as f32)
                                 as usize]
                                 .evaluate_power(uv.1)
                             * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
@@ -258,7 +257,8 @@ impl EnvironmentMap {
         _wavelength_range: Bounds1D,
         _wavelength_sample: Sample1D,
     ) -> (Vec3, PDF) {
-        unimplemented!()
+        // TODO
+        todo!()
     }
 
     // sample env UV given a wavelength, based on env CDF for a specific wavelength. might be hard to evaluate, or nearly impossible.
@@ -305,7 +305,7 @@ impl EnvironmentMap {
                 importance_map,
                 ..
             } => {
-                if let Some(importance_map) = importance_map {
+                if let ImportanceMap::Baked { .. } = importance_map {
                     // inverse transform sample the vertical cdf
                     let (uv, pdf) = importance_map.sample_uv(sample);
 

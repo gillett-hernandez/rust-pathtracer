@@ -6,7 +6,8 @@ Cargo.lock
 output/*
 .vscode/*
 data/meshes/*
+data/download/*
 *.obj
 *.mtl
-
+*.log
 *.zip

@@ -1,0 +1,57 @@
+[[moonlit_golf_8k]]
+type = "HDR"
+filename = "data/hdri/moonlit_golf_8k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[machine_shop_4k]]
+type = "HDR"
+filename = "data/hdri/machine_shop_03_4k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[sunny_vondelpark_8k]]
+type = "HDR"
+filename = "data/hdri/sunny_vondelpark_8k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[autumn_park_8k]]
+type = "HDR"
+filename = "data/hdri/autumn_park_8k.hdr"
+alpha_fill = 0.0
+curves= ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[kiara_dawn_8k]]
+type = "HDR"
+filename = "data/hdri/kiara_1_dawn_8k.hdr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[lambertian_white]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+curve = "cornell_white"
+
+[[lambertian_green]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+curve = "cornell_green"
+
+[[lambertian_red]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+curve = "cornell_red"
+
+# layered colored cloud texture
+[[test_texture]]
+type = "Texture4"
+filename = "data/textures/test.png"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_one"]
+
+
+[[test_texture_2]]
+type = "Texture1"
+filename = "data/textures/test.bmp"
+curve = "cornell_white"

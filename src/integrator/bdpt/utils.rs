@@ -3,7 +3,7 @@
 use crate::hittable::HitRecord;
 use crate::integrator::utils::*;
 use crate::materials::{Material, MaterialId};
-use crate::math::*;
+use crate::prelude::*;
 use crate::profile::Profile;
 use crate::world::World;
 
@@ -17,9 +17,9 @@ pub enum SampleKind {
 
 pub fn eval_unweighted_contribution(
     world: &Arc<World>,
-    light_path: &Vec<SurfaceVertex>,
+    light_path: &[SurfaceVertex],
     s: usize,
-    eye_path: &Vec<SurfaceVertex>,
+    eye_path: &[SurfaceVertex],
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
     russian_roulette_threshold: f32,
@@ -159,45 +159,40 @@ pub fn eval_unweighted_contribution(
                     ignore_distance_and_cos_o = true;
                     emission
                 }
-            } else {
-                if last_eyepath_vertex.vertex_type
-                    == VertexType::LightSource(LightSourceType::Environment)
-                {
-                    // can't connect env vertex to vertex in scene this way, since the env vertex is already at the end of an eyepath
-                    SingleEnergy::ZERO
-                } else {
-                    let hit_light_material = world.get_material(last_lightpath_vertex.material_id);
-                    let hit: HitRecord = last_lightpath_vertex.into();
-                    let emission = hit_light_material.emission(
-                        hit.lambda,
-                        hit.uv,
-                        hit.transport_mode,
-                        llpv_local_dir_to_lepv,
-                    );
-                    emission
-                }
-            }
-        } else {
-            if last_lightpath_vertex.vertex_type
+            } else if last_eyepath_vertex.vertex_type
                 == VertexType::LightSource(LightSourceType::Environment)
             {
+                // can't connect env vertex to vertex in scene this way, since the env vertex is already at the end of an eyepath
                 SingleEnergy::ZERO
             } else {
-                let second_to_last_lightpath_vertex = light_path[s - 2];
-                let wi =
-                    (second_to_last_lightpath_vertex.point - last_lightpath_vertex.point).normalized();
-                let hit_material = world.get_material(last_lightpath_vertex.material_id);
+                let hit_light_material = world.get_material(last_lightpath_vertex.material_id);
                 let hit: HitRecord = last_lightpath_vertex.into();
-                hit_material
-                    .bsdf(
-                        hit.lambda,
-                        hit.uv,
-                        hit.transport_mode,
-                        llpv_frame.to_local(&wi).normalized(),
-                        llpv_local_dir_to_lepv,
-                    )
-                    .0
+                hit_light_material.emission(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    llpv_local_dir_to_lepv,
+                )
             }
+        } else if last_lightpath_vertex.vertex_type
+            == VertexType::LightSource(LightSourceType::Environment)
+        {
+            SingleEnergy::ZERO
+        } else {
+            let second_to_last_lightpath_vertex = light_path[s - 2];
+            let wi =
+                (second_to_last_lightpath_vertex.point - last_lightpath_vertex.point).normalized();
+            let hit_material = world.get_material(last_lightpath_vertex.material_id);
+            let hit: HitRecord = last_lightpath_vertex.into();
+            hit_material
+                .bsdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    llpv_frame.to_local(&wi).normalized(),
+                    llpv_local_dir_to_lepv,
+                )
+                .0
         };
 
         if fsl == SingleEnergy::ZERO {
@@ -227,28 +222,25 @@ pub fn eval_unweighted_contribution(
             } else {
                 SingleEnergy(0.0)
             }
+        } else if last_eyepath_vertex.vertex_type
+            == VertexType::LightSource(LightSourceType::Environment)
+        {
+            SingleEnergy::ZERO
         } else {
-            if last_eyepath_vertex.vertex_type
-                == VertexType::LightSource(LightSourceType::Environment)
-            {
-                SingleEnergy::ZERO
-            } else {
-                let second_to_last_eyepath_vertex = eye_path[t - 2];
-                let wi = (second_to_last_eyepath_vertex.point - last_eyepath_vertex.point).normalized();
-                // let wo = -light_to_eye;
-                let hit_material = world.get_material(last_eyepath_vertex.material_id);
-                let hit: HitRecord = last_eyepath_vertex.into();
-                let reflectance = hit_material
-                    .bsdf(
-                        hit.lambda,
-                        hit.uv,
-                        hit.transport_mode,
-                        lepv_frame.to_local(&wi).normalized(),
-                        lepv_local_dir_to_llpv,
-                    )
-                    .0;
-                reflectance
-            }
+            let second_to_last_eyepath_vertex = eye_path[t - 2];
+            let wi = (second_to_last_eyepath_vertex.point - last_eyepath_vertex.point).normalized();
+            // let wo = -light_to_eye;
+            let hit_material = world.get_material(last_eyepath_vertex.material_id);
+            let hit: HitRecord = last_eyepath_vertex.into();
+            hit_material
+                .bsdf(
+                    hit.lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    lepv_frame.to_local(&wi).normalized(),
+                    lepv_local_dir_to_llpv,
+                )
+                .0
         };
 
         if fse == SingleEnergy::ZERO {
@@ -336,34 +328,38 @@ impl<'a> CombinedPath<'a> {
         // however on the eye side, the indices need to be modified.
         assert!(vidx0 + 1 == vidx1);
         assert!(self.s + self.t >= vidx0 + 1 || vidx1 < self.s);
-        if vidx1 == self.s {
-            // self.eye_path[t].veach_g
-            // self.eye_path[self.path_length - vidx1].veach_g
-            self.connecting_g
-        } else if vidx1 < self.s {
-            // if vidx1 is less than s, which is to say <= s-1
-            self.light_path[vidx1].veach_g
-        } else {
-            // vidx1 must be > connection_index
-            assert!(
-                self.s + self.t >= vidx0 + 1,
-                "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
-                vidx0,
-                self.s + self.t,
-                self.s,
-                self
-            );
-            let mapped_index = self.s + self.t - vidx0 - 1;
-            assert!(
-                mapped_index <= self.t,
-                "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
-                mapped_index,
-                self.s + self.t,
-                self.s,
-                self
-            );
-            // let mapped_index = t - mapped_index;
-            self.eye_path[mapped_index].veach_g
+        match vidx1.cmp(&self.s) {
+            std::cmp::Ordering::Less => {
+                // vidx1 is less than s, which is to say vidx1 <= s-1
+                self.light_path[vidx1].veach_g
+            }
+            std::cmp::Ordering::Equal => {
+                // self.eye_path[t].veach_g
+                // self.eye_path[self.path_length - vidx1].veach_g
+                self.connecting_g
+            }
+            std::cmp::Ordering::Greater => {
+                // vidx1 must be > connection_index
+                assert!(
+                    self.s + self.t >= vidx0 + 1,
+                    "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
+                    vidx0,
+                    self.s + self.t,
+                    self.s,
+                    self
+                );
+                let mapped_index = self.s + self.t - vidx0 - 1;
+                assert!(
+                    mapped_index <= self.t,
+                    "mapped_index = {}, pl = {}, ci = {}, paths = {:?}",
+                    mapped_index,
+                    self.s + self.t,
+                    self.s,
+                    self
+                );
+                // let mapped_index = t - mapped_index;
+                self.eye_path[mapped_index].veach_g
+            }
         }
     }
 
@@ -429,7 +425,6 @@ impl<'a> Index<usize> for CombinedPath<'a> {
     }
 }
 
-#[allow(unused)]
 pub fn eval_mis<F>(
     world: &Arc<World>,
     light_path: &Vec<SurfaceVertex>,
@@ -440,7 +435,7 @@ pub fn eval_mis<F>(
     mis_function: F,
 ) -> f32
 where
-    F: FnOnce(&Vec<f32>) -> f32,
+    F: Fn(&[f32]) -> f32,
 {
     let lambda = light_path[0].lambda;
     // computes the mis weight of generating the path determined by s and t
@@ -489,12 +484,12 @@ where
     let second_to_last_eye_vertex = if t > 1 { Some(eye_path[t - 2]) } else { None };
 
     // compute forward pdfs, which is lev to llv pdf and llv to lev pdf
-    let mut llv_forward_pdf = 1.0f32;
-    let mut lev_forward_pdf = 1.0f32;
+    let llv_forward_pdf;
+    let lev_forward_pdf;
 
     // recompute affected backward pdfs, that is, the backward pdfs of the vertices referred to as llv and lev, since their pdfs will have changed.
-    let mut llv_backward_pdf = 1.0f32;
-    let mut lev_backward_pdf = 1.0f32;
+    let llv_backward_pdf;
+    let lev_backward_pdf;
 
     // there are special cases need to be considered for t = 0 and s = 0. check the second arm of the following if branch
     if let (Some(llv), Some(lev)) = (last_light_vertex, last_eye_vertex) {
@@ -503,7 +498,7 @@ where
 
         let light_to_eye_vec = lev.point - llv.point;
         let light_to_eye_direction = light_to_eye_vec.normalized();
-        let eye_to_light_vec = -light_to_eye_vec;
+        // let eye_to_light_vec = -light_to_eye_vec;
         let eye_to_light_direction = -light_to_eye_direction;
 
         let lev_frame = TangentFrame::from_normal(lev_normal);

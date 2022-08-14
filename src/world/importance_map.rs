@@ -4,8 +4,7 @@ use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
 
-use crate::texture::TexStack;
-use crate::{math::*, rgb_to_u32};
+use crate::prelude::*;
 
 use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
@@ -15,16 +14,58 @@ use rayon::prelude::*;
 
 // equirectangular importance map.
 // maybe refactor this to another submodule under or separate from src/world so that more importance map types can be defined.
+// also, refactor this importance map type so that it can properly sample from the curves that make up texstack
+// would change memory usage complexity from O(n*m) to O(k*n*m) where k is the number of channels in the texstack
+// which is 4 for every tex4, 1 for every tex1, etc.
 
 #[derive(Clone)]
-pub struct ImportanceMap {
-    pub data: Vec<CurveWithCDF>,
-    pub marginal_cdf: CurveWithCDF,
-    // wavelength_bounds: Bounds1D,
+pub enum ImportanceMap {
+    Baked {
+        luminance_curve: Curve,
+        vertical_resolution: usize,
+        horizontal_resolution: usize,
+        data: Vec<CurveWithCDF>,
+        marginal_cdf: CurveWithCDF,
+    },
+    Unbaked {
+        luminance_curve: Curve,
+        vertical_resolution: usize,
+        horizontal_resolution: usize,
+    },
+    Empty,
 }
 
 impl ImportanceMap {
-    pub fn new(
+    pub fn bake_in_place(&mut self, texture: &TexStack, wavelength_bounds: Bounds1D) -> bool {
+        warn!(
+            "baking importance map with wavelength_bounds {:?}",
+            wavelength_bounds
+        );
+        match self {
+            Self::Baked {
+                luminance_curve,
+                vertical_resolution,
+                horizontal_resolution,
+                ..
+            }
+            | Self::Unbaked {
+                luminance_curve,
+                vertical_resolution,
+                horizontal_resolution,
+            } => {
+                *self = Self::bake_raw(
+                    texture,
+                    *vertical_resolution,
+                    *horizontal_resolution,
+                    luminance_curve.clone(),
+                    wavelength_bounds,
+                );
+                true
+            }
+            _ => false,
+        }
+    }
+    pub fn bake_raw(
         texture_stack: &TexStack,
         vertical_resolution: usize,
         horizontal_resolution: usize,
@@ -157,7 +198,7 @@ impl ImportanceMap {
             }
         }
         pb.lock().finish();
-        println!("");
+        println!();
 
         marginal_data.iter_mut().for_each(|e| *e /= total_luminance);
 
@@ -188,48 +229,59 @@ impl ImportanceMap {
         }
         .to_cdf(Bounds1D::new(0.0, 1.0), 100);
 
-        Self {
+        Self::Baked {
             data,
             marginal_cdf,
-            // wavelength_bounds,
+            horizontal_resolution,
+            vertical_resolution,
+            luminance_curve,
         }
     }
     pub fn sample_uv(&self, sample: Sample2D) -> ((f32, f32), (PDF, PDF)) {
-        // inverse transform sample of the marginal distribution, selecting a row with a high luminance.
-        let (
-            SingleWavelength {
-                lambda: u,
-                energy: _,
-            },
-            row_pdf,
-        ) = self
-            .marginal_cdf
-            .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.y));
+        match self {
+            Self::Baked {
+                data, marginal_cdf, ..
+            } => {
+                // inverse transform sample of the marginal distribution, selecting a row with a high luminance.
+                let (
+                    SingleWavelength {
+                        lambda: u,
+                        energy: _,
+                    },
+                    row_pdf,
+                ) = marginal_cdf
+                    .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.y));
 
-        // inverse transform sample the selected row, finding a uv coordinate with a high luminance.
-        let (
-            SingleWavelength {
-                lambda: v,
-                energy: _,
-            },
-            column_pdf,
-        ) = self.data[(u * self.data.len() as f32) as usize]
-            .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.x));
-        assert!(u < 1.0, "{}", u);
-        assert!(u >= 0.0, "{}", u);
-        assert!(v < 1.0, "{}", v);
-        assert!(v >= 0.0, "{}", v);
-        ((u, v), (row_pdf, column_pdf))
+                // inverse transform sample the selected row, finding a uv coordinate with a high luminance.
+                let (
+                    SingleWavelength {
+                        lambda: v,
+                        energy: _,
+                    },
+                    column_pdf,
+                ) = data[(u * data.len() as f32) as usize]
+                    .sample_power_and_pdf(Bounds1D::new(0.0, 1.0), Sample1D::new(sample.x));
+                assert!(u < 1.0, "{}", u);
+                assert!(u >= 0.0, "{}", u);
+                assert!(v < 1.0, "{}", v);
+                assert!(v >= 0.0, "{}", v);
+                ((u, v), (row_pdf, column_pdf))
+            }
+            _ => panic!("used unbaked importance map"),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::path::PathBuf;
+
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
     use crate::renderer::Film;
-    use crate::tonemap::{sRGB, Tonemapper};
+    use crate::tonemap::{Clamp, Converter, Tonemapper};
+
     use crate::world::environment::*;
     use crate::{
         parsing::construct_world,
@@ -255,7 +307,8 @@ mod test {
                 interpolation_mode: InterpolationMode::Nearest,
             })],
         };
-        let map = ImportanceMap::new(&texture, 1024, 1024, Curve::y_bar(), BOUNDED_VISIBLE_RANGE);
+        let map =
+            ImportanceMap::bake_raw(&texture, 1024, 1024, Curve::y_bar(), BOUNDED_VISIBLE_RANGE);
 
         // let mut sum = 0.0;
         let width = 512;
@@ -280,6 +333,10 @@ mod test {
         });
         let mut buffer = vec![0u32; limit];
         let mut film = Film::new(width, height, XYZColor::BLACK);
+
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Clamp::new(0.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -325,17 +382,13 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                update_window_buffer(
+                    &mut buffer,
+                    &film,
+                    &mut tonemapper,
+                    converter,
+                    1.0 / (idx as f32 + 1.0),
+                );
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -344,7 +397,17 @@ mod test {
 
     #[test]
     fn test_env_importance_sampling() {
-        let world = construct_world("data/scenes/hdri_test_2.toml");
+        let mut world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+
+        if let EnvironmentMap::HDR {
+            importance_map,
+            texture,
+            ..
+        } = &mut world.environment
+        {
+            importance_map.bake_in_place(texture, BOUNDED_VISIBLE_RANGE);
+        }
+
         let env = &world.environment;
         if let EnvironmentMap::HDR {
             importance_map,
@@ -353,7 +416,7 @@ mod test {
             ..
         } = env
         {
-            if importance_map.is_some() {
+            if matches!(importance_map, ImportanceMap::Baked { .. }) {
                 println!("got importance map, now do some math on it to see if it works");
             } else {
                 println!("testing env map without importance map, now do some math on it to see if it works");
@@ -385,6 +448,9 @@ mod test {
             });
             let mut buffer = vec![0u32; limit];
             let mut film = Film::new(width, height, XYZColor::BLACK);
+            let converter = Converter::sRGB;
+
+            let mut tonemapper = Clamp::new(0.0, true, true);
 
             window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -399,8 +465,8 @@ mod test {
                 let x_float = ((idx % width) as f32 + sample.x) / width as f32;
                 let y_float = ((idx / width) as f32 + sample.y) / height as f32;
                 // env.sample_emission(
-                //     world.get_world_radius(),
-                //     world.get_center(),
+                //     world.radius,
+                //     world.center,
                 //     Sample2D::new_random_sample(),
                 //     Sample2D::new_random_sample(),
                 //     BOUNDED_VISIBLE_RANGE,
@@ -447,18 +513,14 @@ mod test {
 
                 if idx % 100 == 0 {
                     pb.add(100);
-                    let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-                    buffer
-                        .par_iter_mut()
-                        .enumerate()
-                        .for_each(|(pixel_idx, v)| {
-                            let y: usize = pixel_idx / width;
-                            let x: usize = pixel_idx - width * y;
-                            let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                            let [r, g, b, _]: [f32; 4] = mapped.into();
-                            *v =
-                                rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                        });
+                    tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
+                    update_window_buffer(
+                        &mut buffer,
+                        &film,
+                        &mut tonemapper,
+                        converter,
+                        1.0 / (idx as f32 + 1.0),
+                    );
                     window.update_with_buffer(&buffer, width, height).unwrap();
                 }
             }
@@ -467,18 +529,21 @@ mod test {
                 estimate / limit as f32,
                 estimate2 / limit as f32
             );
-            let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-            srgb_tonemapper.write_to_files(
-                &film,
-                "env_map_sampling_test.exr",
-                "env_map_sampling_test.png",
-            );
+
+            converter
+                .write_to_files(
+                    &film,
+                    Box::new(tonemapper),
+                    "env_map_sampling_test.exr",
+                    "env_map_sampling_test.png",
+                )
+                .expect("writing to disk failed");
         }
     }
 
     #[test]
     fn test_env_direct_access() {
-        let world = construct_world("data/scenes/hdri_test_2.toml");
+        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
         let env = &world.environment;
 
         let wavelength_range = BOUNDED_VISIBLE_RANGE;
@@ -505,6 +570,9 @@ mod test {
         });
         let mut buffer = vec![0u32; limit];
         let mut film = Film::new(width, height, XYZColor::BLACK);
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Clamp::new(0.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -551,21 +619,53 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                update_window_buffer(
+                    &mut buffer,
+                    &film,
+                    &mut tonemapper,
+                    converter,
+                    1.0 / (idx as f32 + 1.0),
+                );
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
         println!("\n\nestimate is {}", estimate / limit as f32);
+    }
+
+    #[test]
+    fn test_env_scene_ray_sampling() {
+        let mut world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+
+        let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
+        if let EnvironmentMap::HDR {
+            importance_map,
+            texture,
+            ..
+        } = &mut world.environment
+        {
+            importance_map.bake_in_place(texture, wavelength_bounds);
+        }
+
+        let (world_radius, world_center) = (world.radius, world.center);
+        let mut sampler = RandomSampler::new();
+
+        let mut integral = XYZColor::BLACK;
+        let n = 10000;
+        for _ in 0..n {
+            let (position_sample, direction_sample, wavelength_sample) =
+                (sampler.draw_2d(), sampler.draw_2d(), sampler.draw_1d());
+            let (_ray, le, pdf, wavelength_pdf) = world.environment.sample_emission(
+                world_radius,
+                world_center,
+                position_sample,
+                direction_sample,
+                wavelength_bounds,
+                wavelength_sample,
+            );
+            integral += XYZColor::from(le / pdf.0 / wavelength_pdf.0);
+        }
+        assert!((integral / n as f32).0.gt(f32x4::splat(0.0)).any());
+        println!("{:?}", integral / n as f32);
     }
 
     #[test]
@@ -602,7 +702,7 @@ mod test {
         //     .iter_mut()
         //     .for_each(|e| *e /= total);
 
-        let importance_map = ImportanceMap {
+        let importance_map = ImportanceMap::Baked {
             data: cdfs,
             marginal_cdf: Curve::Linear {
                 signal: marginal_distribution_data,
@@ -610,10 +710,13 @@ mod test {
                 mode: InterpolationMode::Linear,
             }
             .to_cdf(bounds, resolution),
+            vertical_resolution: resolution,
+            horizontal_resolution: resolution,
+            luminance_curve: crate::curves::cie_e(1.0),
         };
 
-        let width = 512;
-        let height = 512;
+        let width = 256;
+        let height = 256;
         let limit = width * height;
         let deterministic = false;
         // let limit = 100000;
@@ -634,6 +737,9 @@ mod test {
         });
         let mut buffer = vec![0u32; limit];
         let mut film = Film::new(width, height, XYZColor::BLACK);
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Clamp::new(0.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
@@ -664,10 +770,7 @@ mod test {
             // estimate of env map luminance will have unacceptable bias depending on the actual size of the env map texture.
             // need to downsample to retain size information in importance map so that the pdf can be adjusted.
 
-            let (mut sw, _) = (
-                SingleWavelength::new_from_range(0.5, BOUNDED_VISIBLE_RANGE),
-                1.0,
-            );
+            let mut sw = SingleWavelength::new_from_range(0.5, BOUNDED_VISIBLE_RANGE);
 
             sw.energy.0 = func(sample_transform(uv.0), sample_transform(uv.1));
 
@@ -685,17 +788,13 @@ mod test {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
-                let srgb_tonemapper = sRGB::new(&film, 1.0, false);
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-                        let (mapped, _linear) = srgb_tonemapper.map(&film, (x, y));
-                        let [r, g, b, _]: [f32; 4] = mapped.into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                update_window_buffer(
+                    &mut buffer,
+                    &film,
+                    &mut tonemapper,
+                    converter,
+                    1.0 / (idx as f32 + 1.0),
+                );
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }

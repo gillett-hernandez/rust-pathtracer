@@ -2,42 +2,58 @@
 # additionally the environment should be some bright color.
 # this is to test light leakage
 
-env_sampling_probability = 0.99
-env_strength = 10.0
+default_scene_file = "data/scenes/test_blackbox.toml"
+[renderer]
+type="Naive"
+
 
 [[cameras]]
 type="SimpleCamera"
-look_from = [-0.8, 0, 0]
+name = "camera"
+look_from = [-0.8, 0.0, 0.0]
 look_at = [0, 0, 0]
 aperture_size = 0.03
-focal_distance = 5.0
+focal_distance = 0.8
 vfov = 90
 
 [[render_settings]]
 threads = 22
-filename = "PT_DI"
-integrator = "PT"
-max_bounces = 8
-resolution.width = 1024
-resolution.height = 1024
-exposure = 1.0
+filename = "test_blackbox_pt_di"
 min_samples = 16
-camera_id = 1
+min_bounces = 3
+max_bounces = 16
+hwss = false
+camera_id = "camera"
 russian_roulette = true
 only_direct = true
-light_samples = 8
+[render_settings.tonemap_settings]
+type = "Clamp"
+exposure = 0.0
+[render_settings.integrator]
+type = "PT"
+light_samples = 6
+[render_settings.resolution]
+width = 1024
+height = 1024
+
+
 
 [[render_settings]]
 threads = 22
-filename = "PT"
-integrator = "PT"
-max_bounces = 8
-resolution.width = 1024
-resolution.height = 1024
-exposure = 1.0
+filename = "test_blackbox_pt"
 min_samples = 16
-camera_id = 1
+min_bounces = 3
+max_bounces = 16
+hwss = false
+camera_id = "camera"
 russian_roulette = true
 only_direct = false
-light_samples = 8
-
+[render_settings.tonemap_settings]
+type = "Clamp"
+exposure = 0.0
+[render_settings.integrator]
+type = "PT"
+light_samples = 6
+[render_settings.resolution]
+width = 1024
+height = 1024

@@ -1,0 +1,340 @@
+[lambertian_white]
+type = "Lambertian"
+texture_id = "lambertian_white"
+
+
+[lambertian_textured]
+type = "Lambertian"
+texture_id = "test_texture"
+
+
+[lambertian_green]
+type = "Lambertian"
+texture_id = "lambertian_green"
+
+
+[lambertian_red]
+type = "Lambertian"
+texture_id = "lambertian_red"
+
+# passes white furnace test
+[ggx_glass]
+type = "GGX"
+permeability = 1.0
+alpha = 0.0004
+kappa = "flat_zero"
+eta_o = "air_ior"
+[ggx_glass.eta]
+type = "Cauchy"
+a = 1.4
+b = 4500.0
+
+
+[ggx_glass_rough]
+type = "GGX"
+permeability = 1.0
+alpha = 0.2
+kappa = "flat_zero"
+eta_o = "air_ior"
+[ggx_glass_rough.eta]
+type = "Cauchy"
+a = 1.4
+b = 4500.0
+
+
+[ggx_glass_dispersive]
+type = "GGX"
+permeability = 1.0
+alpha = 0.0004
+kappa = "flat_zero"
+eta_o = "air_ior"
+[ggx_glass_dispersive.eta]
+type = "Cauchy"
+a = 1.4
+b = 50000.0
+
+[ggx_moissanite]
+type = "GGX"
+permeability = 1.0
+alpha = 0.0004
+kappa = "flat_zero"
+eta_o = "air_ior"
+[ggx_moissanite.eta]
+type = "Cauchy"
+a = 2.4
+b = 34000.0
+
+
+[ggx_gold]
+type = "GGX"
+permeability = 0.0
+alpha = 0.004
+eta_o = "air_ior"
+[ggx_gold.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_gold.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_gold.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/gold.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_gold.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+[ggx_copper]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.002
+[ggx_copper.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/copper-mcpeak.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_copper.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_copper.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/copper-mcpeak.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_copper.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+[ggx_iron]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.002
+[ggx_iron.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron.kappa.domain_mapping]
+x_scale = 1000.0
+
+[ggx_iron_roughness0_0002]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.0002
+[ggx_iron_roughness0_0002.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_0002.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_0002.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_0002.kappa.domain_mapping]
+x_scale = 1000.0
+
+[ggx_iron_roughness0_002]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.002
+[ggx_iron_roughness0_002.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_002.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_002.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_002.kappa.domain_mapping]
+x_scale = 1000.0
+
+[ggx_iron_roughness0_02]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.02
+[ggx_iron_roughness0_02.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_02.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_02.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_02.kappa.domain_mapping]
+x_scale = 1000.0
+
+[ggx_iron_roughness0_2]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.2
+[ggx_iron_roughness0_2.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_2.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_iron_roughness0_2.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/iron-johnson.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_iron_roughness0_2.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+
+[ggx_lead]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.002
+[ggx_lead.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/lead-140K.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_lead.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_lead.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/lead-140K.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_lead.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+[ggx_platinum]
+type = "GGX"
+eta_o = "air_ior"
+permeability = 0.0
+alpha = 0.002
+[ggx_platinum.eta]
+type = "TabulatedCSV"
+filename = "data/curves/csv/platinum.csv"
+column = 1
+interpolation_mode = "Cubic"
+[ggx_platinum.eta.domain_mapping]
+x_scale = 1000.0
+[ggx_platinum.kappa]
+type = "TabulatedCSV"
+filename = "data/curves/csv/platinum.csv"
+column = 2
+interpolation_mode = "Cubic"
+[ggx_platinum.kappa.domain_mapping]
+x_scale = 1000.0
+
+
+[diffuse_light_flat_x10]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "E10"
+bounce_color = "flat_78"
+
+[diffuse_light_fluorescent]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "fluorescent_x5"
+bounce_color = "flat_78"
+
+
+[diffuse_light_xenon]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "xenon_x5"
+bounce_color = "flat_78"
+
+
+[diffuse_light_warm]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "blackbody_3000k_x5"
+bounce_color = "flat_78"
+
+
+[diffuse_light]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "blackbody_5000k"
+bounce_color = "flat_78"
+
+
+[diffuse_540THz]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "540THz"
+bounce_color = "flat_zero"
+
+
+
+[diffuse_light_cornell]
+type = "DiffuseLight"
+sidedness = "Reverse"
+emit_color = "cornell_light"
+bounce_color = "flat_78"
+
+
+[diffuse_light_cornell_accurate]
+type = "DiffuseLight"
+sidedness = "Reverse"
+emit_color = "cornell_light_accurate"
+bounce_color = "flat_78"
+
+
+[sharp_light_xenon]
+type = "SharpLight"
+sidedness = "Dual"
+sharpness = 4.0
+emit_color = "xenon_x5"
+bounce_color = "flat_78"
+
+
+[sharp_light_warm]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+emit_color = "blackbody_3000k_x5"
+bounce_color = "flat_78"
+
+
+[sharp_light]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+emit_color = "blackbody_5000k"
+bounce_color = "flat_78"
+
+
+[sharp_light_fluorescent]
+type = "SharpLight"
+sidedness = "Reverse"
+sharpness = 4.0
+emit_color = "fluorescent_x5"
+bounce_color = "flat_78"
+

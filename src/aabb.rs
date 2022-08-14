@@ -1,6 +1,6 @@
-use crate::math::*;
-use packed_simd::{f32x4, m32x4};
+use crate::prelude::*;
 
+use packed_simd::{f32x4, m32x4};
 use std::ops::Mul;
 
 pub trait HasBoundingBox {
@@ -45,7 +45,6 @@ impl AABB {
             (denom.eq(ZERO)).select(f32x4::splat(INFINITY), (self.max - r.origin).0 / denom);
         let tmin = min.min(max);
         let tmax = min.max(max);
-        // println!("{:?} {:?}", tmin, tmax);
         if tmin.max_element() > tmax.min_element() {
             return None;
         }
@@ -63,50 +62,6 @@ impl AABB {
             scaled_t0.replace(3, f32::INFINITY).min_element(),
             scaled_t1.replace(3, f32::NEG_INFINITY).max_element(),
         ))
-
-        // old code without simd.
-        // let tmin: f32x4 = f32x4::splat(t0);
-        // let tmax: f32x4 = f32x4::splat(t1);
-        // assert that the absolute value of all the components of direction are greater than 0
-        // assert!(
-        //     r.direction.0.abs().gt(f32x4::splat(0.0)).all(),
-        //     "{:?}",
-        //     r.direction
-        // );
-
-        // return whether all of tmax's elements were greater than tmins
-        // this can be made safe by replacing NaNs with positive or negative 1 depending on the side
-        // tmax.gt(tmin).all()
-
-        // t0 = ((self.min.x - r.origin.x()) / r.direction.x())
-        //     .min((self.max.x() - r.origin.x()) / r.direction.x());
-        // t1 = ((self.min.x() - r.origin.x()) / r.direction.x())
-        //     .max((self.max.x() - r.origin.x()) / r.direction.x());
-        // if tmax <= tmin {
-        //     return false;
-        // }
-        // tmin = tmin.max(t0);
-        // tmax = tmax.min(t1);
-
-        // t0 = ((self.min.y() - r.origin.y()) / r.direction.y())
-        //     .min((self.max.y() - r.origin.y()) / r.direction.y());
-        // t1 = ((self.min.y() - r.origin.y()) / r.direction.y())
-        //     .max((self.max.y() - r.origin.y()) / r.direction.y());
-        // if tmax <= tmin {
-        //     return false;
-        // }
-        // tmin = tmin.max(t0);
-        // tmax = tmax.min(t1);
-
-        // t0 = ((self.min.z() - r.origin.z()) / r.direction.z())
-        //     .min((self.max.z() - r.origin.z()) / r.direction.z());
-        // t1 = ((self.min.z() - r.origin.z()) / r.direction.z())
-        //     .max((self.max.z() - r.origin.z()) / r.direction.z());
-        // if tmax <= tmin {
-        //     return false;
-        // }
-        // tmin = tmin.max(t0);
-        // tmax = tmax.min(t1);
     }
     pub fn expand(mut self, other: &AABB) -> AABB {
         self.min = Point3(self.min.0.min(other.min.0));
@@ -142,19 +97,14 @@ impl AABB {
     }
 
     pub fn surface_area(&self) -> f32 {
-        let [sx, sy, sz, _]: [f32; 4] = self.size().0.into();
+        let [sx, sy, sz, _]: [f32; 4] = self.size().as_array();
         2.0 * (sx * sy + sx * sz + sy * sz)
     }
 
     pub fn volume(&self) -> f32 {
-        let [sx, sy, sz, _]: [f32; 4] = self.size().0.into();
+        let [sx, sy, sz, _]: [f32; 4] = self.size().as_array();
         sx * sy * sz
     }
-
-    // pub fn relative_eq(&self, other: &AABB, epsilon: f32) -> bool {
-    //     relative_eq!(self.min, other.min, epsilon = epsilon)
-    //         && relative_eq!(self.max, other.max, epsilon = epsilon)
-    // }
 }
 
 impl Default for AABB {

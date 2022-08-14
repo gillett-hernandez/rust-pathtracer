@@ -1,35 +1,46 @@
-extern crate pbr;
+use crate::prelude::*;
 
 mod film;
-mod gpu_style;
+mod prelude;
+
+// integrators
 mod naive;
 mod preview;
-mod sppm;
+// mod sppm;
 
 pub use film::Film;
-pub use gpu_style::GPUStyleRenderer;
+
 pub use naive::NaiveRenderer;
 pub use preview::PreviewRenderer;
-pub use sppm::SPPMRenderer;
+// pub use sppm::SPPMRenderer;
 
-use crate::camera::Camera;
+use crate::camera::CameraEnum;
 
-use crate::config::{Config, RenderSettings};
-use crate::math::{Bounds1D, XYZColor};
-use crate::tonemap::{sRGB, Tonemapper};
+use crate::parsing::config::{Config, RenderSettings};
+use crate::parsing::parse_tonemapper;
 use crate::world::World;
 
-pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>) {
+pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, factor: f32) {
+    assert!(factor > 0.0);
     let filename = render_settings.filename.as_ref();
-    let filename_str = filename.cloned().unwrap_or(String::from("output"));
+    let filename_str = filename.cloned().unwrap_or_else(|| String::from("output"));
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
-    let srgb_tonemapper = sRGB::new(film, render_settings.exposure.unwrap_or(1.0), true);
-    srgb_tonemapper.write_to_files(film, &exr_filename, &png_filename);
+    let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
+    tonemapper.initialize(film, factor);
+
+    if let Err(inner) = converter.write_to_files(film, tonemapper, &exr_filename, &png_filename) {
+        error!("failed to write files");
+        error!("{:?}", inner.to_string());
+        panic!();
+    }
 }
 
-pub fn parse_wavelength_bounds(config: &Vec<RenderSettings>, default: Bounds1D) -> Bounds1D {
+pub fn calculate_widest_wavelength_bounds(
+    config: &[RenderSettings],
+    default: Bounds1D,
+) -> Bounds1D {
     let mut wavelength_bounds: Option<Bounds1D> = None;
     for settings in config.iter() {
         if let Some((lower, upper)) = settings.wavelength_bounds {
@@ -47,10 +58,10 @@ pub fn parse_wavelength_bounds(config: &Vec<RenderSettings>, default: Bounds1D) 
         Some(bounds) => bounds,
         None => default,
     };
-    println!("parsed wavelength bounds to be {:?}", result);
+    info!("parsed wavelength bounds to be {:?}", result);
     result
 }
 
 pub trait Renderer {
-    fn render(&self, world: World, cameras: Vec<Camera>, config: &Config);
+    fn render(&self, world: World, cameras: Vec<CameraEnum>, config: &Config);
 }

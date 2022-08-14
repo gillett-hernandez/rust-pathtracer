@@ -1,9 +1,4 @@
-use crate::math::*;
-use crate::renderer::Film;
-
-// use std::error::Error;
-// use std::fs::File;
-// use std::io::Read;
+use crate::prelude::*;
 
 use math::curves::{Curve, CurveWithCDF, InterpolationMode, Op};
 use packed_simd::f32x4;
@@ -135,7 +130,7 @@ impl TexStack {
     //     // let mut cumulative_integral = 0.0;
     //     // let mut s = 0.0;
     //     // for spd in &self.textures {}
-    //     unimplemented!()
+    //     todo!()
     // }
 
     pub fn curve_at(&self, uv: (f32, f32)) -> Curve {

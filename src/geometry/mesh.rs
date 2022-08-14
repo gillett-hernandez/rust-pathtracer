@@ -1,9 +1,9 @@
+use crate::prelude::*;
+
 use crate::aabb::AABB;
 use crate::accelerator::{BHShape, BoundingHierarchy, FlatBVH};
 // use crate::geometry::triangle::Triangle;
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable};
-use crate::materials::MaterialId;
-use crate::math::*;
 
 use packed_simd::{f32x4, i32x4};
 
@@ -56,7 +56,7 @@ impl MeshTriangleRef {
 
 impl HasBoundingBox for MeshTriangleRef {
     fn aabb(&self) -> AABB {
-        let p0 = self.vertices[self.indices[3 * self.idx + 0]];
+        let p0 = self.vertices[self.indices[3 * self.idx]];
         let p1 = self.vertices[self.indices[3 * self.idx + 1]];
         let p2 = self.vertices[self.indices[3 * self.idx + 2]];
         AABB::new(p0, p1).grow(&p2)
@@ -65,7 +65,7 @@ impl HasBoundingBox for MeshTriangleRef {
 
 impl Hittable for MeshTriangleRef {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let p0 = self.vertices[self.indices[3 * self.idx + 0]];
+        let p0 = self.vertices[self.indices[3 * self.idx]];
         let p1 = self.vertices[self.indices[3 * self.idx + 1]];
         let p2 = self.vertices[self.indices[3 * self.idx + 2]];
         let mat_id = if self.materials.len() > 0 {
@@ -88,9 +88,9 @@ impl Hittable for MeshTriangleRef {
         p0t.0 = vec_shuffle(p0t.0, kz);
         p1t.0 = vec_shuffle(p1t.0, kz);
         p2t.0 = vec_shuffle(p2t.0, kz);
-        let [mut p0t_x, mut p0t_y, mut p0t_z, _]: [f32; 4] = p0t.0.into();
-        let [mut p1t_x, mut p1t_y, mut p1t_z, _]: [f32; 4] = p1t.0.into();
-        let [mut p2t_x, mut p2t_y, mut p2t_z, _]: [f32; 4] = p2t.0.into();
+        let [mut p0t_x, mut p0t_y, mut p0t_z, _]: [f32; 4] = p0t.as_array();
+        let [mut p1t_x, mut p1t_y, mut p1t_z, _]: [f32; 4] = p1t.as_array();
+        let [mut p2t_x, mut p2t_y, mut p2t_z, _]: [f32; 4] = p2t.as_array();
         let sx = -dx / dz;
         let sy = -dy / dz;
         let sz = 1.0 / dz;
@@ -167,7 +167,7 @@ impl Hittable for MeshTriangleRef {
 
         let shading_normal = if self.normals.len() > 0 {
             let (n0, n1, n2) = (
-                self.normals[self.indices[3 * self.idx + 0]],
+                self.normals[self.indices[3 * self.idx]],
                 self.normals[self.indices[3 * self.idx + 1]],
                 self.normals[self.indices[3 * self.idx + 2]],
             );
@@ -196,23 +196,23 @@ impl Hittable for MeshTriangleRef {
         Some(hit)
     }
 
-    #[allow(unused)]
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
-        (Vec3::ZERO, 0.0.into())
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
+        // TODO
+        todo!("mesh light sampling methods are currently unimplemented")
     }
 
-    #[allow(unused)]
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
-        (Point3::ORIGIN, Vec3::ZERO, 0.0.into())
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
+        // TODO
+        todo!("mesh light sampling methods are currently unimplemented")
     }
 
-    #[allow(unused)]
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
-        0.0.into()
+    fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
+        // TODO
+        todo!("mesh light sampling methods are currently unimplemented")
     }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
-        let p0 = transform.to_world(self.vertices[self.indices[3 * self.idx + 0]]);
+        let p0 = transform.to_world(self.vertices[self.indices[3 * self.idx]]);
         let p1 = transform.to_world(self.vertices[self.indices[3 * self.idx + 1]]);
         let p2 = transform.to_world(self.vertices[self.indices[3 * self.idx + 2]]);
         let d02 = (p2 - p0).norm();
@@ -273,6 +273,10 @@ impl Mesh {
         }
     }
     pub fn init(&mut self) {
+        if self.triangles.is_some() {
+            // already initialized
+            return;
+        }
         let mut triangles = Vec::new();
         for tri_num in 0..self.num_faces {
             triangles.push(MeshTriangleRef::new(
@@ -298,18 +302,24 @@ impl HasBoundingBox for Mesh {
     }
 }
 
-#[allow(unused)]
 impl Hittable for Mesh {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
-        let bvh = self.bvh.as_ref().unwrap();
-        let mut possible_hit_triangles = bvh.traverse(&r, &self.triangles.as_ref().unwrap());
-        // sort AABB intersections so that the earliest aabb hit end is first.
-        // possible_hit_triangles.sort_unstable_by(|a, b| {
-        //     // let hit0_t1 = a.2;
-        //     // let hit1_t1 = b.2;
-        //     // let sign = (hit1_t1-hit0_t1).signum();
-        //     (a.2).partial_cmp(&b.2).unwrap()
-        // });
+        let bvh = self.bvh.as_ref().expect("bvh not initialized for mesh");
+        let mut possible_hit_triangles = bvh.traverse(&r, self.triangles.as_ref().unwrap());
+        // maybe sort AABB intersections so that the earliest aabb hit end is first.
+        // TODO: run a performance test to see if doing this speeds up renders with meshs
+        if cfg!(feature = "sort_mesh_aabb_hits") {
+            possible_hit_triangles.sort_unstable_by(
+                |(_, _, aabb_hit_end_time0), (_, _, aabb_hit_end_time1)| {
+                    // let hit0_t1 = a.2;
+                    // let hit1_t1 = b.2;
+                    // let sign = (hit1_t1-hit0_t1).signum();
+                    (aabb_hit_end_time0)
+                        .partial_cmp(aabb_hit_end_time1)
+                        .unwrap()
+                },
+            );
+        }
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for (tri, t0_aabb_hit, t1_aabb_hit) in possible_hit_triangles {
@@ -335,17 +345,22 @@ impl Hittable for Mesh {
         }
         hit_record
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
-        (Vec3::ZERO, 0.0.into())
+    // TODO: implement mesh and triangle light sampling
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
-        (Point3::ORIGIN, Vec3::ZERO, 0.0.into())
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
-        0.0.into()
+    fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
-    fn surface_area(&self, transform: &Transform3) -> f32 {
-        0.0
+    fn surface_area(&self, _transform: &Transform3) -> f32 {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
 }
 /*

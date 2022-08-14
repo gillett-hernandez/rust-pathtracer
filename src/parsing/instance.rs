@@ -1,6 +1,3 @@
-extern crate num_cpus;
-extern crate serde;
-
 use crate::geometry::*;
 use crate::materials::MaterialId;
 use crate::parsing::primitives::*;
@@ -31,9 +28,9 @@ pub struct Transform3Data {
 
 impl From<Transform3Data> for Transform3 {
     fn from(data: Transform3Data) -> Self {
-        println!("parsing transform data");
+        info!("parsing transform data");
         let maybe_scale = data.scale.map(|v| {
-            println!("parsed scale");
+            info!("parsed scale");
             Transform3::from_scale(Vec3::from(v))
         });
         let maybe_rotate = if let Some(rotations) = data.rotate {
@@ -43,7 +40,7 @@ impl From<Transform3Data> for Transform3 {
                     Vec3::from(rotation.axis).normalized(),
                     PI * rotation.angle / 180.0,
                 );
-                println!("parsed rotate");
+                info!("parsed rotate");
                 if base.is_none() {
                     base = Some(transform);
                 } else {
@@ -55,7 +52,7 @@ impl From<Transform3Data> for Transform3 {
             None
         };
         let maybe_translate = data.translate.map(|v| {
-            println!("parsed translate");
+            info!("parsed translate");
             Transform3::from_translation(Vec3::from(v))
         });
         Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
@@ -66,30 +63,51 @@ impl From<Transform3Data> for Transform3 {
 pub struct InstanceData {
     pub aggregate: AggregateData,
     pub transform: Option<Transform3Data>,
-    pub material_identifier: Option<String>,
+    pub material_name: Option<String>,
 }
 
 pub fn parse_instance(
     instance_data: InstanceData,
     materials_mapping: &HashMap<String, MaterialId>,
+    mesh_map: &HashMap<String, Mesh>,
     instance_id: usize,
 ) -> Instance {
-    let aggregate: Aggregate = instance_data.aggregate.parse_with(materials_mapping);
+    let aggregate: Aggregate = instance_data.aggregate.parse_with(mesh_map);
     let transform: Option<Transform3> = instance_data
         .transform
         .map(|transform_data| transform_data.into());
 
-    let material_id = instance_data.material_identifier.clone().map(|v| {
-        *materials_mapping
-            .get(&v)
-            .expect("material mapping did not contain material name")
-    });
-    println!(
+    let material_id = match &instance_data.material_name {
+        None => {
+            warn!("material name on instance {} was none", instance_id);
+            None
+        }
+        Some(name) => Some(match materials_mapping.get(name) {
+            Some(id) => *id,
+            None => {
+                error!(
+                    "material not found in mapping, instance {}, material name {}",
+                    instance_id, name
+                );
+                *materials_mapping.get("error").unwrap()
+            }
+        }),
+    };
+
+    //  = match instance_data.material_name.clone() {
+    //     Some(name) => materials_mapping.get(&name).cloned(),
+    //     None => {
+    //         error!();
+    //         materials_mapping.get("error").cloned()
+    //     },
+    // };
+
+    info!(
         "parsed instance, assigned material id {:?} from {:?}, and instance id {}",
         material_id,
         instance_data
-            .material_identifier
-            .unwrap_or("None".to_string()),
+            .material_name
+            .unwrap_or_else(|| "None".to_string()),
         instance_id
     );
     Instance::new(aggregate, transform, material_id, instance_id)

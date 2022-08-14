@@ -1,17 +1,17 @@
+use crate::prelude::*;
+
 pub mod utils;
 
 use utils::*;
 
 // use crate::aabb::HasBoundingBox;
-use crate::config::RenderSettings;
 use crate::hittable::Hittable;
 use crate::integrator::utils::*;
 use crate::integrator::*;
 use crate::materials::*;
-use crate::math::*;
-use crate::world::TransportMode;
+use crate::parsing::config::RenderSettings;
 use crate::world::World;
-// use std::f32::INFINITY;
+
 use std::sync::Arc;
 
 pub struct BDPTIntegrator {
@@ -23,7 +23,7 @@ pub struct BDPTIntegrator {
 impl GenericIntegrator for BDPTIntegrator {
     fn color(
         &self,
-        mut sampler: &mut Box<dyn Sampler>,
+        sampler: &mut Box<dyn Sampler>,
         settings: &RenderSettings,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
@@ -58,17 +58,14 @@ impl GenericIntegrator for BDPTIntegrator {
                 sampler.draw_2d(),
                 wavelength_sample,
             );
-            sampled = if let Some(data) = maybe_sampled {
-                data
-            } else {
-                println!("failed to sample, material is {:?}", material.get_name());
-                panic!();
-            };
+            sampled = maybe_sampled.unwrap_or_else(|| {
+                panic!("failed to sample, material is {:?}", material.get_name())
+            });
 
             let directional_pdf = sampled.2;
             // if delta light, the pdf_forward is only directional_pdf
             let pdf_forward: PDF =
-                directional_pdf / (light_surface_normal * (&sampled.0).direction).abs();
+                directional_pdf / (light_surface_normal * sampled.0.direction).abs();
             let pdf_backward: PDF = light_pick_pdf * area_pdf;
             debug_assert!(
                 pdf_forward.0.is_finite(),
@@ -111,8 +108,8 @@ impl GenericIntegrator for BDPTIntegrator {
             );
         } else {
             // sample world env
-            let world_radius = self.world.get_world_radius();
-            let world_center = self.world.get_center();
+            let world_radius = self.world.radius;
+            let world_center = self.world.center;
             sampled = self.world.environment.sample_emission(
                 world_radius,
                 world_center,
@@ -151,7 +148,6 @@ impl GenericIntegrator for BDPTIntegrator {
             sampled.3
         );
 
-        let camera_ray;
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id);
         let film_sample = Sample2D::new(
@@ -160,9 +156,9 @@ impl GenericIntegrator for BDPTIntegrator {
         );
 
         let (sampled_camera_ray, lens_normal, camera_pdf) =
-            camera.sample_we(film_sample, &mut sampler, lambda);
+            camera.sample_we(film_sample, sampler, lambda);
         // let camera_pdf = pdf;
-        camera_ray = sampled_camera_ray;
+        let camera_ray = sampled_camera_ray;
 
         let radiance = sampled.1.energy;
 
@@ -195,7 +191,7 @@ impl GenericIntegrator for BDPTIntegrator {
             (self.max_bounces as usize, self.max_bounces as usize)
         };
 
-        let _additional_contribution_eye_path = random_walk(
+        random_walk(
             camera_ray,
             lambda,
             tp1 as u16,
@@ -205,7 +201,8 @@ impl GenericIntegrator for BDPTIntegrator {
             &self.world,
             &mut eye_path,
             settings.min_bounces.unwrap_or(3),
-            &mut profile,
+            profile,
+            false,
         );
         random_walk(
             light_ray,
@@ -217,7 +214,8 @@ impl GenericIntegrator for BDPTIntegrator {
             &self.world,
             &mut light_path,
             settings.min_bounces.unwrap_or(3),
-            &mut profile,
+            profile,
+            false,
         );
 
         profile.camera_rays += 1;
@@ -248,14 +246,14 @@ impl GenericIntegrator for BDPTIntegrator {
         } = settings.integrator
         {
             if s <= light_vertex_count && t <= eye_vertex_count {
-                if s == 1
-                    && t == 1
-                    && light_path[0].vertex_type
-                        == VertexType::LightSource(LightSourceType::Environment)
-                {
-                    // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
-                    return XYZColor::from(SingleWavelength::BLACK);
-                }
+                // if s == 1
+                //     && t == 1
+                //     && light_path[0].vertex_type
+                //         == VertexType::LightSource(LightSourceType::Environment)
+                // {
+                //     // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
+                //     return XYZColor::from(SingleWavelength::BLACK);
+                // }
                 let res = eval_unweighted_contribution(
                     &self.world,
                     &light_path,
@@ -264,7 +262,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
-                    &mut profile,
+                    profile,
                 );
 
                 match res {
@@ -281,7 +279,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 &eye_path,
                                 t,
                                 g,
-                                |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                                |weights: &[f32]| 1.0 / weights.iter().sum::<f32>(),
                             )
                         } else {
                             1.0 / ((s + t) as f32)
@@ -306,7 +304,7 @@ impl GenericIntegrator for BDPTIntegrator {
                                 &eye_path,
                                 t,
                                 g,
-                                |weights: &Vec<f32>| -> f32 { 1.0 / weights.iter().sum::<f32>() },
+                                |weights: &[f32]| 1.0 / weights.iter().sum::<f32>(),
                             )
                         } else {
                             1.0 / ((s + t) as f32)
@@ -343,11 +341,11 @@ impl GenericIntegrator for BDPTIntegrator {
                                 // println!("pixel uv was nothing");
                             }
                         }
-                        return XYZColor::from(SingleWavelength::BLACK);
+                        return XYZColor::BLACK;
                     }
                 }
             }
-            return XYZColor::from(SingleWavelength::BLACK);
+            return XYZColor::BLACK;
         }
 
         let mut sum = SingleEnergy::ZERO;
@@ -381,7 +379,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     t,
                     sampler,
                     russian_roulette_threshold,
-                    &mut profile,
+                    profile,
                 );
                 let (factor, g, calculate_splat) = match result {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),
@@ -399,9 +397,7 @@ impl GenericIntegrator for BDPTIntegrator {
                         &eye_path,
                         t,
                         g,
-                        |weights: &Vec<f32>| -> f32 {
-                            1.0 / weights.iter().map(|&v| v * v).sum::<f32>()
-                        },
+                        |weights: &[f32]| 1.0 / weights.iter().map(|&v| v * v).sum::<f32>(),
                     )
                 } else {
                     1.0 / ((s + t) as f32)

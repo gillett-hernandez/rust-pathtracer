@@ -1,19 +1,19 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::world::TransportMode;
+use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct SharpLight {
-    // pub color: Box<dyn SpectralPowerDistribution>,
-    pub color: CurveWithCDF,
+
+    pub bounce_color: Curve,
+    pub emit_color: CurveWithCDF,
     pub sharpness: f32,
     pub sidedness: Sidedness,
 }
 
 impl SharpLight {
-    pub fn new(color: CurveWithCDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+    pub fn new(bounce_color: Curve, emit_color: CurveWithCDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
         SharpLight {
-            color,
+            bounce_color,
+            emit_color,
             sharpness: 1.0 + sharpness,
             sidedness,
         }
@@ -98,7 +98,7 @@ impl Material for SharpLight {
         // let directional_pdf = local_wo.z().abs() / PI;
         // debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
         let (sw, pdf) = self
-            .color
+            .emit_color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         // fac both affects the power of the emitted light and the pdf.
         Some((
@@ -116,7 +116,7 @@ impl Material for SharpLight {
         wavelength_sample: Sample1D,
     ) -> Option<(f32, PDF)> {
         let (sw, pdf) = self
-            .color
+            .emit_color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((sw.lambda, pdf))
     }
@@ -139,7 +139,7 @@ impl Material for SharpLight {
             if cosine > min_z {
                 // could have been generated
                 let fac = evaluate(wi, self.sharpness);
-                SingleEnergy::new(fac * self.color.evaluate_power(lambda))
+                SingleEnergy::new(fac * self.emit_color.evaluate_power(lambda))
             } else {
                 SingleEnergy::ZERO
             }

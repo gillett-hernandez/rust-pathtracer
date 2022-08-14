@@ -4,41 +4,29 @@ mod importance_map;
 pub use environment::EnvironmentMap;
 pub use importance_map::ImportanceMap;
 
+use crate::prelude::*;
+
 use crate::hittable::*;
 use crate::materials::MaterialTable;
-use crate::math::*;
-use crate::{camera::Camera, mediums::MediumTable};
+
+use crate::mediums::MediumTable;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
-pub const NORMAL_OFFSET: f32 = 0.00001;
-pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum TransportMode {
-    Radiance,
-    Importance,
-}
-
-impl Default for TransportMode {
-    fn default() -> Self {
-        TransportMode::Importance
-    }
-}
 
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<usize>,
-    pub cameras: Vec<Camera>,
+    pub cameras: Vec<CameraEnum>,
     pub materials: MaterialTable,
     pub mediums: MediumTable,
     pub environment: EnvironmentMap,
     env_sampling_probability: f32,
-    radius: f32,
-    center: Point3,
+    pub radius: f32,
+    pub center: Point3,
 }
 
 impl World {
@@ -50,13 +38,15 @@ impl World {
         mut env_sampling_probability: f32,
         accelerator_type: AcceleratorType,
     ) -> Self {
+        // TODO: add light accelerator data structure, to prevent sampling very distant (and small) lights when there are lights closer by
+
         let mut lights = Vec::new();
         for instance in instances.iter() {
             match &instance.aggregate {
                 Aggregate::Mesh(mesh) => {
-                    for tri in (&mesh).triangles.as_ref().unwrap() {
+                    for tri in mesh.triangles.as_ref().unwrap() {
                         if let MaterialId::Light(id) = tri.get_material_id() {
-                            println!(
+                            info!(
                             "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                             id, instance.instance_id
                         );
@@ -66,7 +56,7 @@ impl World {
                 }
                 _ => {
                     if let MaterialId::Light(id) = instance.get_material_id() {
-                        println!(
+                        info!(
                         "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                         id, instance.instance_id
                     );
@@ -81,12 +71,12 @@ impl World {
         let span = world_aabb.max - world_aabb.min;
         let center: Point3 = world_aabb.min + span / 2.0;
         let radius = span.norm() / 2.0;
-        println!(
+        info!(
             "world radius is {:?} meters, world center is at {:?}",
             radius, center
         );
-        if lights.len() == 0 {
-            println!("the world had no lights, so force-setting env_sampling_probability to 1.0");
+        if lights.is_empty() {
+            warn!("the world had no lights, so force-setting env_sampling_probability to 1.0");
             env_sampling_probability = 1.0;
         }
         let world = World {
@@ -101,8 +91,8 @@ impl World {
             center,
         };
         if env_sampling_probability == 1.0 || env_sampling_probability == 0.0 {
-            println!(
-                "warning! env sampling probability is at an extrema of {}",
+            warn!(
+                "env sampling probability is at an extrema of {}",
                 env_sampling_probability
             );
         }
@@ -110,6 +100,9 @@ impl World {
     }
     pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
         // currently just uniform sampling
+        // TODO: change method to take into account the location from which the light is being picked, to allow light trees or other heuristics
+        // i.e. a projected solid angle * power heuristic and pdf
+        // maybe use reservoir sampling?
         let length = self.lights.len();
         if length == 0 {
             None
@@ -131,7 +124,7 @@ impl World {
         }
     }
 
-    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&Camera, usize, PDF)> {
+    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&CameraEnum, usize, PDF)> {
         // currently just uniform sampling
         let length = self.cameras.len();
         if length == 0 {
@@ -164,7 +157,7 @@ impl World {
         self.accelerator.get_primitive(index)
     }
 
-    pub fn get_camera(&self, index: usize) -> &Camera {
+    pub fn get_camera(&self, index: usize) -> &CameraEnum {
         &self.cameras[index]
     }
 
@@ -173,22 +166,14 @@ impl World {
     }
 
     pub fn get_env_sampling_probability(&self) -> f32 {
-        if self.lights.len() > 0 {
+        if !self.lights.is_empty() {
             self.env_sampling_probability
         } else {
             1.0
         }
     }
 
-    pub fn get_world_radius(&self) -> f32 {
-        self.radius
-    }
-
-    pub fn get_center(&self) -> Point3 {
-        self.center
-    }
-
-    pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
+    pub fn assign_cameras(&mut self, cameras: Vec<CameraEnum>, add_and_rebuild_scene: bool) {
         // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
         if add_and_rebuild_scene {
             match &mut self.accelerator {
@@ -197,7 +182,7 @@ impl World {
                         if let Some(camera_surface) = camera.get_surface() {
                             println!("removing camera surface {:?}", &camera_surface);
                             // instances.remove_item(&camera_surface);
-                            let maybe_id = instances.binary_search(&camera_surface);
+                            let maybe_id = instances.binary_search(camera_surface);
                             if let Ok(id) = maybe_id {
                                 instances.remove(id);
                             }
@@ -212,7 +197,7 @@ impl World {
                         if let Some(camera_surface) = camera.get_surface() {
                             println!("removing camera surface {:?}", &camera_surface);
                             // instances.remove_item(&camera_surface);
-                            let maybe_id = instances.binary_search(&camera_surface);
+                            let maybe_id = instances.binary_search(camera_surface);
                             if let Ok(id) = maybe_id {
                                 instances.remove(id);
                             }
