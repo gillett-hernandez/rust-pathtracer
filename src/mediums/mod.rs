@@ -24,10 +24,11 @@ pub trait Medium {
     ) -> (Vec3, PDF);
     // evaluate transmittance along two points.
     fn tr(&self, lambda: f32, p0: Point3, p1: Point3) -> f32;
-    // sample transmittance, i.e. determine how far a ray reaches through this medium
     // if the medium is not homogeneous, the uvw for many points along the ray would be required and some source for the density would also be required, i.e. an openvdb implementation
     // maybe raymarching would be required for this, need to research more.
     // TODO: implement some Point3 -> UVW trait method on potentially a new trait, such that nonhomogeneous mediums can be implemented
+    // sample transmittance, i.e. determine how far a ray reaches through this medium
+    // returns the point, the extinction along this path
     fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, f32, bool);
     // typically, a medium has a few parameters that need to be taken into account.
     // sigma_s == scattering cross section, a parameter that represents how strongly the material out-scatters light

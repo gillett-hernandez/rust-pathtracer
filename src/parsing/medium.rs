@@ -31,7 +31,7 @@ pub fn parse_medium(data: MediumData, curves: &HashMap<String, Curve>) -> Option
                 HenyeyGreensteinHomogeneous {
                     g,
                     sigma_s,
-                    sigma_t,
+                    sigma_a: sigma_t,
                 },
             ))
         }

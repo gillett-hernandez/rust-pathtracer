@@ -129,7 +129,7 @@ mod test {
         SamplePhase,
     }
     #[test]
-    fn test_sample_p() {
+    fn test_phase() {
         let width = 500usize;
         let height = 500usize;
         let bounds = BOUNDED_VISIBLE_RANGE;
@@ -146,7 +146,7 @@ mod test {
 
         #[rustfmt::skip]
         let medium = Rayleigh::new(
-            10.0,
+            23.0,
             air_curve
         );
 
@@ -158,14 +158,15 @@ mod test {
         let converter = Converter::sRGB;
 
         let (samples_per_iteration, exposure): (usize, f32) = match mode {
-            TestMode::ViewPhase => (10, 20.0),
+            TestMode::ViewPhase => (10, 17.0),
             TestMode::SamplePhase => (1000, 10.0),
         };
 
         let test_wo = -wi;
-        let test_lambda = bounds.sample(random());
+        // let test_lambda = bounds.sample(random());
+        let test_lambda = 532.0f32;
 
-        let sigma_s = medium.sigma_s(532.0);
+        let sigma_s = medium.sigma_s(test_lambda);
         println!("sigma_s = {:?}", sigma_s);
 
         let test_phase = medium.p(test_lambda, (0.0, 0.0, 0.0), wi, test_wo);
