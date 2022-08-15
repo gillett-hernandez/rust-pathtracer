@@ -1,17 +1,24 @@
 use crate::prelude::*;
 
-use crate::camera::{CameraEnum, PanoramaCamera, ProjectiveCamera, RealisticCamera};
+use crate::camera::{CameraEnum, PanoramaCamera, ProjectiveCamera};
+
+#[cfg(feature = "realistic_camera")]
+use crate::camera::RealisticCamera;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
-use optics::aperture::{ApertureEnum, CircularAperture, SimpleBladedAperture};
-use optics::parse_lenses_from;
 use serde::Deserialize;
 
 use super::config::{Config, TOMLConfig};
 
+#[cfg(feature = "realistic_camera")]
+use optics::aperture::{ApertureEnum, CircularAperture, SimpleBladedAperture};
+#[cfg(feature = "realistic_camera")]
+use optics::parse_lenses_from;
+
+#[cfg(feature = "realistic_camera")]
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
 pub enum ApertureData {
@@ -23,6 +30,7 @@ pub enum ApertureData {
     Bladed { blades: u8, sharpness: f32 },
 }
 
+#[cfg(feature = "realistic_camera")]
 impl Into<ApertureEnum> for ApertureData {
     fn into(self) -> ApertureEnum {
         match self {
@@ -34,20 +42,7 @@ impl Into<ApertureEnum> for ApertureData {
     }
 }
 
-#[derive(Deserialize, Clone)]
-pub struct SimpleCameraData {
-    pub name: String,
-    pub look_from: [f32; 3],
-    pub look_at: [f32; 3],
-    pub v_up: Option<[f32; 3]>,
-    pub vfov: f32,
-    pub focal_distance: Option<f32>,
-    pub aperture_size: Option<f32>, // in meters
-    pub aperture: Option<ApertureData>, // defaults to Circular
-                                    // pub shutter_open_time: Option<f32>,
-                                    // pub shutter_close_time: Option<f32>,
-}
-
+#[cfg(feature = "realistic_camera")]
 #[derive(Deserialize, Clone)]
 pub struct RealisticCameraData {
     pub name: String,
@@ -68,6 +63,21 @@ pub struct RealisticCameraData {
 }
 
 #[derive(Deserialize, Clone)]
+pub struct SimpleCameraData {
+    pub name: String,
+    pub look_from: [f32; 3],
+    pub look_at: [f32; 3],
+    pub v_up: Option<[f32; 3]>,
+    pub vfov: f32,
+    pub focal_distance: Option<f32>,
+    pub aperture_size: Option<f32>, // in meters
+    #[cfg(feature = "realistic_camera")]
+    pub aperture: Option<ApertureData>, // defaults to Circular
+                                    // pub shutter_open_time: Option<f32>,
+                                    // pub shutter_close_time: Option<f32>,
+}
+
+#[derive(Deserialize, Clone)]
 pub struct PanoramaCameraData {
     pub name: String,
     pub look_from: [f32; 3],
@@ -80,16 +90,18 @@ pub struct PanoramaCameraData {
 #[serde(tag = "type")]
 pub enum CameraSettings {
     SimpleCamera(SimpleCameraData),
-    RealisticCamera(RealisticCameraData),
     PanoramaCamera(PanoramaCameraData),
+    #[cfg(feature = "realistic_camera")]
+    RealisticCamera(RealisticCameraData),
 }
 
 impl CameraSettings {
     pub fn get_name(&self) -> &str {
         match self {
             CameraSettings::SimpleCamera(data) => &data.name,
-            CameraSettings::RealisticCamera(data) => &data.name,
             CameraSettings::PanoramaCamera(data) => &data.name,
+            #[cfg(feature = "realistic_camera")]
+            CameraSettings::RealisticCamera(data) => &data.name,
         }
     }
 }
@@ -139,6 +151,7 @@ pub fn parse_config_and_cameras(settings: TOMLConfig) -> (Config, Vec<CameraEnum
                     cam.fov[1],
                 )),
             ),
+            #[cfg(feature = "realistic_camera")]
             CameraSettings::RealisticCamera(cam) => {
                 let mut camera_file = File::open(&cam.lens_spec).unwrap();
                 let mut camera_spec = String::new();

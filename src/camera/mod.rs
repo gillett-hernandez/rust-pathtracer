@@ -1,9 +1,11 @@
 mod panorama_camera;
 mod projective_camera;
+#[cfg(feature = "realistic_camera")]
 mod realistic_camera;
 
 pub use panorama_camera::PanoramaCamera;
 pub use projective_camera::ProjectiveCamera;
+#[cfg(feature = "realistic_camera")]
 pub use realistic_camera::RealisticCamera;
 
 use crate::geometry::*;
@@ -113,4 +115,7 @@ macro_rules! generate_camera {
     };
 }
 
+#[cfg(not(feature = "realistic_camera"))]
+generate_camera! {CameraEnum, ProjectiveCamera, PanoramaCamera}
+#[cfg(feature = "realistic_camera")]
 generate_camera! {CameraEnum, ProjectiveCamera, PanoramaCamera, RealisticCamera}

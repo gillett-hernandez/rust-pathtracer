@@ -10,6 +10,7 @@ visualize_importance_map=[]
 notification=[]
 sort_mesh_aabb_hits = []
 gui = ["eframe", "egui_extras", "egui"]
+realistic_camera = ["rust_optics"]
 
 
 [dependencies]
@@ -31,13 +32,13 @@ rayon = "1.5.0"
 serde = { version = "1.0.120", features = ["derive"] }
 tobj = "3.2.0"
 toml = "0.5"
-math =  { git = "https://github.com/gillett-hernandez/rust_cg_math" }
-rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics" }
+math =  { tag = "v1.0.0", git = "https://github.com/gillett-hernandez/rust_cg_math" }
 structopt = "0.3.26"
 paste = "1.0.7"
 eframe = {version = "*", optional = true}
 egui = {version = "*", optional = true}
 egui_extras = {version = "*", optional = true}
+rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics", optional=true }
 
 [target.'cfg(windows)'.dependencies]
 win32_notification = "0.1.0"
