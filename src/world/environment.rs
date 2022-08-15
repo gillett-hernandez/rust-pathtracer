@@ -186,12 +186,13 @@ impl EnvironmentMap {
     pub fn pdf_for(&self, uv: (f32, f32)) -> PDF {
         // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
         match self {
-            EnvironmentMap::Constant { .. } => PDF::from(1.0 / 4.0 / PI),
+            EnvironmentMap::Constant { .. } => (4.0 * PI).recip().into(),
             EnvironmentMap::Sun {
                 angular_diameter,
                 sun_direction,
                 ..
             } => {
+                // TODO: verify this pdf integrates to one over the sphere
                 let direction = uv_to_direction(uv);
                 let cos = *sun_direction * direction;
                 let sin = (1.0 - cos * cos).sqrt();

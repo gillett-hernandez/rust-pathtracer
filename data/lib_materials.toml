@@ -338,3 +338,8 @@ sharpness = 4.0
 emit_color = "fluorescent_x5"
 bounce_color = "flat_78"
 
+[isotropic_uniform_dense_bright]
+type = "PassthroughFilter"
+color = "flat_one"
+inner_medium_id = "isotropic_uniform_dense_bright"
+outer_medium_id = ""

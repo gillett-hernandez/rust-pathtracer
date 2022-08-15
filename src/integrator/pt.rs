@@ -6,7 +6,6 @@ use crate::integrator::*;
 
 use crate::world::World;
 
-
 use std::f32::INFINITY;
 use std::sync::Arc;
 
@@ -412,7 +411,6 @@ impl SamplerIntegrator for PathTracingIntegrator {
             profile,
             true,
         );
-        // sum.energy += additional_contribution.unwrap_or(0.0.into());
 
         for (index, vertex) in path.iter().enumerate().skip(1) {
             let prev_vertex = path[index - 1];

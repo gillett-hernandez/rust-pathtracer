@@ -156,7 +156,7 @@ look_from = [ -5.0, 0.0, 1.0]
 look_at = [0.0, 0.0, 0.0]
 aperture_size = 0.1
 focal_distance = 5.0
-vfov = 30.8
+vfov = 80.8
 
 # somewhat focused
 [[cameras]]
@@ -260,19 +260,19 @@ selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "panorama test"
+filename = "medium test"
 min_samples = 128
 min_bounces = 1
 max_bounces = 12
-hwss = false
+hwss = true
 # camera_id = "debug"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
-camera_id = "panorama"
-# camera_id = "cornell camera"
+# camera_id = "panorama"
+camera_id = "cornell camera"
 # camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
