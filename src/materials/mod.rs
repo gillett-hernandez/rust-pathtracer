@@ -2,8 +2,20 @@ use crate::prelude::*;
 
 use std::marker::{Send, Sync};
 
+mod diffuse_light;
+mod ggx;
+mod lambertian;
+mod passthrough;
+mod sharp_light;
+
+pub use diffuse_light::DiffuseLight;
+pub use ggx::{reflect, refract, GGX};
+pub use lambertian::Lambertian;
+pub use passthrough::PassthroughFilter;
+pub use sharp_light::SharpLight;
+
 #[allow(unused_variables)]
-pub trait Material: Send + Sync {
+pub trait Material<L: Field, E: Field>: Send + Sync {
     // provide default implementations
 
     // methods for sampling the bsdf, not related to the light itself
@@ -11,23 +23,30 @@ pub trait Material: Send + Sync {
     // evaluate bsdf
     fn bsdf(
         &self,
-        lambda: f32,
+        lambda: L,
         uv: (f32, f32),
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
-        (SingleEnergy::new(0.0), 0.0.into())
-    }
+    ) -> (E, PDF<E, SolidAngle>);
+    fn generate_and_evaluate(
+        &self,
+        lambda: L,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> (E, Option<Vec3>, PDF<E, SolidAngle>);
     fn generate(
         &self,
-        lambda: f32,
+        lambda: L,
         uv: (f32, f32),
         transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,
     ) -> Option<Vec3> {
-        None
+        self.generate_and_evaluate(lambda, uv, transport_mode, s, wi)
+            .1
     }
 
     fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
@@ -46,7 +65,12 @@ pub trait Material: Send + Sync {
         wavelength_range: Bounds1D,
         scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
+    ) -> Option<(
+        Ray,
+        SingleWavelength,
+        PDF<f32, SolidAngle>,
+        PDF<f32, Uniform01>,
+    )> {
         None
     }
 
@@ -57,8 +81,8 @@ pub trait Material: Send + Sync {
         uv: (f32, f32),
         transport_mode: TransportMode,
         wi: Vec3,
-    ) -> SingleEnergy {
-        SingleEnergy::ZERO
+    ) -> f32 {
+        0.0
     }
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
@@ -67,7 +91,7 @@ pub trait Material: Send + Sync {
         uv: (f32, f32),
         transport_mode: TransportMode,
         wo: Vec3,
-    ) -> PDF {
+    ) -> PDF<f32, SolidAngle> {
         // hit is passed in to access the UV.
         0.0.into()
     }
@@ -78,25 +102,13 @@ pub trait Material: Send + Sync {
         uv: (f32, f32),
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> Option<(f32, PDF)> {
+    ) -> Option<(f32, PDF<f32, Uniform01>)> {
         None
     }
 }
 
-mod diffuse_light;
-mod ggx;
-mod lambertian;
-mod passthrough;
-mod sharp_light;
-
-pub use diffuse_light::DiffuseLight;
-pub use ggx::{reflect, refract, GGX};
-pub use lambertian::Lambertian;
-pub use passthrough::PassthroughFilter;
-pub use sharp_light::SharpLight;
-
 // type required for an id into the Material Table
-// pub type MaterialId = u8;
+
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum MaterialId {
     Material(u16),
@@ -128,7 +140,7 @@ impl From<MaterialId> for usize {
 
 #[macro_export]
 macro_rules! generate_enum {
-    ( $name:ident, $( $s:ident),+) => {
+    ( $name:ident, $l: ty, $e: ty, $( $s:ident),+) => {
 
         #[derive(Clone)]
         pub enum $name {
@@ -152,9 +164,9 @@ macro_rules! generate_enum {
             }
         }
 
-        impl Material for $name {
+        impl Material<$l, $e> for $name {
             fn generate(&self,
-                lambda: f32,
+                lambda: $l,
                 uv: (f32, f32),
                 transport_mode: TransportMode,
                 s: Sample2D,
@@ -171,7 +183,7 @@ macro_rules! generate_enum {
                 wavelength_range: Bounds1D,
                 scatter_sample: Sample2D,
                 wavelength_sample: Sample1D,
-            ) -> Option<(Ray, SingleWavelength, PDF, PDF)>  {
+            ) -> Option<(Ray, WavelengthEnergy<$l, $e>, PDF<$e, SolidAngle>, PDF<$e, Uniform01>)>  {
                 match self {
                     $($name::$s(inner) => inner.sample_emission(point, normal, wavelength_range, scatter_sample, wavelength_sample),)+
                 }
@@ -179,12 +191,12 @@ macro_rules! generate_enum {
 
             fn bsdf(
                 &self,
-                lambda: f32,
+                lambda: $l,
                 uv: (f32, f32),
                 transport_mode: TransportMode,
                 wi: Vec3,
                 wo: Vec3,
-            ) -> (SingleEnergy, PDF) {
+            ) -> ($e, PDF<$e, SolidAngle>) {
                 debug_assert!(lambda > 0.0, "{}", lambda);
                 debug_assert!(wi.0.is_finite().all());
                 debug_assert!(wo.0.is_finite().all());
@@ -195,11 +207,11 @@ macro_rules! generate_enum {
             }
             fn emission(
                 &self,
-                lambda: f32,
+                lambda: $l,
                 uv: (f32, f32),
                 transport_mode: TransportMode,
                 wi: Vec3,
-            ) -> SingleEnergy {
+            ) -> $e {
                 debug_assert!(lambda > 0.0, "{}", lambda);
                 match self {
                     $($name::$s(inner) => inner.emission(lambda, uv, transport_mode, wi),)+
@@ -222,9 +234,11 @@ macro_rules! generate_enum {
                 uv: (f32, f32),
                 wavelength_range: Bounds1D,
                 wavelength_sample: Sample1D,
-            ) -> Option<(f32, PDF)> {
+            ) -> Option<($l, PDF<$e, Uniform01>)> {
                 match self {
-                    $($name::$s(inner) => inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample),)+
+                    $(
+                        $name::$s(inner) => inner.sample_emission_spectra(uv, wavelength_range, wavelength_sample),
+                    )+
                 }
             }
         }
@@ -234,6 +248,8 @@ macro_rules! generate_enum {
 
 generate_enum!(
     MaterialEnum,
+    f32,
+    f32,
     GGX,
     Lambertian,
     DiffuseLight,

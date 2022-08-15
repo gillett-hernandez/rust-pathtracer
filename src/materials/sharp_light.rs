@@ -1,8 +1,9 @@
+use math::Sidedness;
+
 use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct SharpLight {
-
     pub bounce_color: Curve,
     pub emit_color: CurveWithCDF,
     pub sharpness: f32,
@@ -10,7 +11,12 @@ pub struct SharpLight {
 }
 
 impl SharpLight {
-    pub fn new(bounce_color: Curve, emit_color: CurveWithCDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+    pub fn new(
+        bounce_color: Curve,
+        emit_color: CurveWithCDF,
+        sharpness: f32,
+        sidedness: Sidedness,
+    ) -> SharpLight {
         SharpLight {
             bounce_color,
             emit_color,
@@ -51,7 +57,7 @@ fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
     (dist_top - dist_bottom) / (2.0 * PI)
 }
 
-impl Material for SharpLight {
+impl Material<f32, f32> for SharpLight {
     // don't implement the other functions, since the fallback default implementation does the exact same thing
 
     fn sample_emission(
@@ -97,7 +103,7 @@ impl Material for SharpLight {
             .normalized();
         // let directional_pdf = local_wo.z().abs() / PI;
         // debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
-        let (sw, pdf) = self
+        let (sw, wavelength_pdf) = self
             .emit_color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         // fac both affects the power of the emitted light and the pdf.
@@ -105,7 +111,7 @@ impl Material for SharpLight {
             Ray::new(point, object_wo),
             sw.with_energy(sw.energy * fac),
             PDF::from(fac),
-            pdf,
+            wavelength_pdf,
         ))
     }
 

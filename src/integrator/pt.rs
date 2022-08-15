@@ -393,7 +393,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             (0.0, 0.0),
             MaterialId::Camera(0),
             0,
-            SingleEnergy::from(throughput_and_pdf.0),
+            throughput_and_pdf.0,
             100.0,
             0.0,
             1.0,

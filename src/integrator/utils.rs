@@ -32,36 +32,36 @@ impl From<TransportMode> for VertexType {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct SurfaceVertex {
+pub struct SurfaceVertex<L: Field, E: Field> {
     pub vertex_type: VertexType,
     pub time: f32,
-    pub lambda: f32,
+    pub lambda: L,
     pub local_wi: Vec3,
     pub point: Point3,
     pub normal: Vec3,
     pub uv: (f32, f32),
     pub material_id: MaterialId,
     pub instance_id: usize,
-    pub throughput: SingleEnergy,
-    pub pdf_forward: f32,
-    pub pdf_backward: f32,
+    pub throughput: E,
+    pub pdf_forward: PDF<E, ProjectedSolidAngle>,
+    pub pdf_backward: PDF<E, ProjectedSolidAngle>,
     pub veach_g: f32,
 }
 
-impl SurfaceVertex {
+impl<L: Field, E: Field> SurfaceVertex<L, E> {
     pub fn new(
         vertex_type: VertexType,
         time: f32,
-        lambda: f32,
+        lambda: L,
         local_wi: Vec3,
         point: Point3,
         normal: Vec3,
         uv: (f32, f32),
         material_id: MaterialId,
         instance_id: usize,
-        throughput: SingleEnergy,
-        pdf_forward: f32,
-        pdf_backward: f32,
+        throughput: E,
+        pdf_forward: PDF<E, ProjectedSolidAngle>,
+        pdf_backward: PDF<E, ProjectedSolidAngle>,
         veach_g: f32,
     ) -> Self {
         SurfaceVertex {
@@ -92,7 +92,7 @@ impl SurfaceVertex {
             (0.0, 0.0),
             MaterialId::Material(0),
             0,
-            SingleEnergy::ZERO,
+            E::ZERO,
             0.0,
             0.0,
             0.0,
@@ -135,24 +135,20 @@ pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
 }
 
-pub fn random_walk(
+pub fn random_walk<L: Field, E: Field>(
     mut ray: Ray,
-    lambda: f32,
+    lambda: L,
     bounce_limit: u16,
-    start_throughput: SingleEnergy,
+    start_throughput: E,
     trace_type: TransportMode,
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
-    vertices: &mut Vec<SurfaceVertex>,
+    vertices: &mut Vec<SurfaceVertex<L, E>>,
     russian_roulette_start_index: u16,
     profile: &mut Profile,
     ignore_backward: bool,
 ) {
     let mut beta = start_throughput;
-    // let mut last_bsdf_pdf = PDF::from(0.0);
-    // let mut additional_contribution = SingleEnergy::ZERO;
-    // additional contributions from emission from hit objects that support bsdf sampling? review veach paper.
-    // let mut last_vertex: Option<SurfaceVertex> = None;
     for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
             hit.lambda = lambda;
@@ -163,7 +159,7 @@ pub fn random_walk(
             let mut vertex = SurfaceVertex::new(
                 trace_type.into(),
                 hit.time,
-                hit.lambda,
+                lambda,
                 wi,
                 hit.point,
                 hit.normal,

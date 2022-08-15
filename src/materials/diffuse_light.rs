@@ -1,3 +1,5 @@
+use math::Sidedness;
+
 use crate::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -23,7 +25,7 @@ impl DiffuseLight {
     pub const NAME: &'static str = "DiffuseLight";
 }
 
-impl Material for DiffuseLight {
+impl Material<f32, f32> for DiffuseLight {
     fn bsdf(
         &self,
         lambda: f32,
@@ -31,7 +33,7 @@ impl Material for DiffuseLight {
         _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF) {
         // copy from lambertian
         if wo.z() * wi.z() > 0.0 {
             (

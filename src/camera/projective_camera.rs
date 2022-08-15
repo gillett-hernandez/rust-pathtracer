@@ -89,7 +89,7 @@ impl ProjectiveCamera {
     }
 }
 
-impl Camera for ProjectiveCamera {
+impl Camera<f32, f32> for ProjectiveCamera {
     fn get_ray(&self, sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // circular aperture/lens
         let rd: Vec3 = self.lens_radius * random_in_unit_disk(sampler.draw_2d());
@@ -165,7 +165,13 @@ impl Camera for ProjectiveCamera {
         }
     }
 
-    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+    fn eval_we(
+        &self,
+        lambda: f32,
+        normal: Vec3,
+        from: Point3,
+        to: Point3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
         // TODO
         todo!()
     }
@@ -175,7 +181,7 @@ impl Camera for ProjectiveCamera {
         film_sample: Sample2D,
         sampler: &mut Box<dyn Sampler>,
         lambda: f32,
-    ) -> (Ray, Vec3, PDF) {
+    ) -> (Ray, Vec3, PDF<f32, SolidAngle>) {
         let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
         (ray, self.direction, tau.into())
     }
@@ -187,7 +193,7 @@ unsafe impl Sync for ProjectiveCamera {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use math::{RandomSampler, Sample2D};
+    use math::prelude::*;
 
     #[test]
     fn test_camera() {
@@ -200,8 +206,8 @@ mod tests {
             0.08,
         )
         .with_aspect_ratio(0.6);
-        let s = random();
-        let t = random();
+        let s = debug_random();
+        let t = debug_random();
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
@@ -228,8 +234,8 @@ mod tests {
         .with_aspect_ratio(width as f32 / height as f32);
         let px = (0.99 * width) as usize;
         let py = (0.99 * height) as usize;
-        let s = (px as f32) / width + random() / width;
-        let t = (py as f32) / height + random() / height;
+        let s = (px as f32) / width + debug_random() / width;
+        let t = (py as f32) / height + debug_random() / height;
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);

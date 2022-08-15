@@ -37,7 +37,7 @@ impl HenyeyGreensteinHomogeneous {
     }
 }
 
-impl Medium for HenyeyGreensteinHomogeneous {
+impl Medium<f32, f32> for HenyeyGreensteinHomogeneous {
     fn p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
         let cos_theta = wi * wo;
 
@@ -56,7 +56,13 @@ impl Medium for HenyeyGreensteinHomogeneous {
         );
         v
     }
-    fn sample_p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, PDF) {
+    fn sample_p(
+        &self,
+        lambda: f32,
+        _uvw: (f32, f32, f32),
+        wi: Vec3,
+        s: Sample2D,
+    ) -> (Vec3, PDF<f32, SolidAngle>) {
         let g = self.g.evaluate_power(lambda) + 0.001 - 1.0;
         let cos_theta = if g.abs() < 0.001 {
             1.0 - 2.0 * s.x
@@ -176,10 +182,10 @@ mod test {
                                 let p = (idx % width, idx / width);
                                 for i in 0..samples_per_iteration {
                                     let uv = (
-                                        (p.0 as f32 + random()) / width as f32,
-                                        (p.1 as f32 + random()) / height as f32,
+                                        (p.0 as f32 + debug_random()) / width as f32,
+                                        (p.1 as f32 + debug_random()) / height as f32,
                                     );
-                                    let lambda = bounds.sample(random());
+                                    let lambda = bounds.sample(debug_random());
                                     let wo = uv_to_direction(uv);
                                     let phase = medium.p(lambda, (0.0, 0.0, 0.0), wi, wo);
 
@@ -195,7 +201,7 @@ mod test {
                     TestMode::SamplePhase => {
                         for i in 0..samples_per_iteration {
                             let sample = Sample2D::new_random_sample();
-                            let lambda = bounds.sample(random());
+                            let lambda = bounds.sample(debug_random());
                             let (wo, pdf) = medium.sample_p(lambda, (0.0, 0.0, 0.0), wi, sample);
 
                             let uv = direction_to_uv(wo);

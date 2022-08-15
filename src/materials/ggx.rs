@@ -395,7 +395,7 @@ impl GGX {
     pub const NAME: &'static str = "GGX";
 }
 
-impl Material for GGX {
+impl Material<f32, f32> for GGX {
     fn generate(
         &self,
         lambda: f32,
@@ -483,7 +483,7 @@ impl Material for GGX {
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         self.eval_pdf(lambda, wi, wo, transport_mode)
     }
     fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {

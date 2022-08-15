@@ -1,6 +1,8 @@
+use math::prelude::Curve;
+use math::{spectral::BOUNDED_VISIBLE_RANGE, Sidedness};
+
 use crate::materials::*;
 use crate::texture::TexStack;
-use math::{spectral::BOUNDED_VISIBLE_RANGE, Curve, Sidedness};
 
 use serde::{Deserialize, Serialize};
 

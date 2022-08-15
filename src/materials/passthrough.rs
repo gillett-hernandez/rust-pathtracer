@@ -19,7 +19,7 @@ impl PassthroughFilter {
 }
 
 // essentially a pseudo-transparent film material. does not alter the direction when scattering, and
-impl Material for PassthroughFilter {
+impl Material<f32, f32> for PassthroughFilter {
     fn generate(
         &self,
         _lambda: f32,
@@ -37,13 +37,10 @@ impl Material for PassthroughFilter {
         _transport_mode: TransportMode,
         _wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         // TODO: maybe have this switch between wo and wi based on transport_mode?
         // TODO: assess whether this pdf needs to be 0 if wi != -wo
-        (
-            SingleEnergy::from(self.color.evaluate(lambda) / wo.z().abs()),
-            1.0.into(),
-        )
+        (self.color.evaluate(lambda) / wo.z().abs(), 1.0.into())
     }
     fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
         self.outer_medium_id

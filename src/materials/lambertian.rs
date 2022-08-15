@@ -12,7 +12,7 @@ impl Lambertian {
     pub const NAME: &'static str = "Lambertian";
 }
 
-impl Material for Lambertian {
+impl Material<f32, f32> for Lambertian {
     fn generate(
         &self,
         _lambda: f32,
@@ -36,10 +36,10 @@ impl Material for Lambertian {
         _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF) {
         if wo.z() * wi.z() > 0.0 {
             (
-                SingleEnergy::new(self.texture.eval_at(lambda, uv).min(1.0) / PI),
+                (self.texture.eval_at(lambda, uv).min(1.0) / PI),
                 (wo.z().abs() / PI).into(),
             )
         } else {

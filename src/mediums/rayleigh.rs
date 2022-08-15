@@ -40,7 +40,7 @@ impl Rayleigh {
     // TODO: figure out if rayleigh mediums have a sigma_a at all, or if sigma_t == sigma_s
 }
 
-impl Medium for Rayleigh {
+impl Medium<f32, f32> for Rayleigh {
     fn p(&self, lambda: f32, _uvw: (f32, f32, f32), wi: Vec3, wo: Vec3) -> f32 {
         // I = I_0 * (1+cos^2(theta)) / 2R^2 * (2pi/lambda)^4 * ((n^2-1) / (n^2 + 2))^2 * (d/2)^6
         // where:
@@ -62,7 +62,7 @@ impl Medium for Rayleigh {
         _uvw: (f32, f32, f32),
         wi: Vec3,
         sample: Sample2D,
-    ) -> (Vec3, PDF) {
+    ) -> (Vec3, PDF<f32, SolidAngle>) {
         // let vec = random_on_unit_sphere(sample);
         // let pdf = (4.0 * PI).recip();
 
@@ -199,10 +199,10 @@ mod test {
                                 let p = (idx % width, idx / width);
                                 for i in 0..samples_per_iteration {
                                     let uv = (
-                                        (p.0 as f32 + random()) / width as f32,
-                                        (p.1 as f32 + random()) / height as f32,
+                                        (p.0 as f32 + debug_random()) / width as f32,
+                                        (p.1 as f32 + debug_random()) / height as f32,
                                     );
-                                    let lambda = bounds.sample(random());
+                                    let lambda = bounds.sample(debug_random());
                                     let wo = uv_to_direction(uv);
                                     let phase = medium.p(lambda, (0.0, 0.0, 0.0), wi, wo);
 
@@ -218,7 +218,7 @@ mod test {
                     TestMode::SamplePhase => {
                         for i in 0..samples_per_iteration {
                             let sample = Sample2D::new_random_sample();
-                            let lambda = bounds.sample(random());
+                            let lambda = bounds.sample(debug_random());
                             let (wo, pdf) = medium.sample_p(lambda, (0.0, 0.0, 0.0), wi, sample);
 
                             let uv = direction_to_uv(wo);

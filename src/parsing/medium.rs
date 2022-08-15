@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::mediums::*;
+use math::prelude::Curve;
 
-use math::Curve;
 use serde::{Deserialize, Serialize};
 
 use super::CurveDataOrReference;

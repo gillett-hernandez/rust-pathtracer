@@ -7,7 +7,6 @@ use crate::integrator::{
 };
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
-use math::Bounds1D;
 
 use std::collections::HashMap;
 // use std::io::Write;

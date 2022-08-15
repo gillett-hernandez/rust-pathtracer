@@ -51,12 +51,12 @@ impl EnvironmentMap {
     // evaluate env map given a uv and wavelength
     // used when a camera ray with a given wavelength intersects the environment map
 
-    pub fn emission(&self, uv: (f32, f32), lambda: f32) -> SingleEnergy {
+    pub fn emission(&self, uv: (f32, f32), lambda: f32) -> f32 {
         // evaluate emission at uv coordinate and wavelength
         match self {
             EnvironmentMap::Constant { color, strength } => {
                 debug_assert!(lambda > 0.0);
-                SingleEnergy::new(color.evaluate_power(lambda) * strength)
+                color.evaluate_power(lambda) * strength
             }
             EnvironmentMap::Sun {
                 color,
@@ -69,9 +69,9 @@ impl EnvironmentMap {
                 let sin = (1.0 - cos * cos).sqrt();
                 if sin.abs() < (*angular_diameter / 2.0).sin() && cos > 0.0 {
                     // within solid angle
-                    SingleEnergy::new(color.evaluate_power(lambda) * *strength)
+                    color.evaluate_power(lambda) * *strength
                 } else {
-                    SingleEnergy::ZERO
+                    f32::ZERO
                 }
             }
             EnvironmentMap::HDR {
@@ -98,7 +98,12 @@ impl EnvironmentMap {
         direction_sample: Sample2D,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> (Ray, SingleWavelength, PDF, PDF) {
+    ) -> (
+        Ray,
+        SingleWavelength,
+        PDF<f32, SolidAngle>,
+        PDF<f32, Uniform01>,
+    ) {
         // sample env map cdf to get light ray, based on env map strength
         match self {
             EnvironmentMap::Constant { color, strength } => {
@@ -183,7 +188,7 @@ impl EnvironmentMap {
         }
     }
 
-    pub fn pdf_for(&self, uv: (f32, f32)) -> PDF {
+    pub fn pdf_for(&self, uv: (f32, f32)) -> PDF<f32, SolidAngle> {
         // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
         match self {
             EnvironmentMap::Constant { .. } => (4.0 * PI).recip().into(),
@@ -245,7 +250,11 @@ impl EnvironmentMap {
         }
     }
 
-    pub fn sample_direction_given_wavelength(&self, sample: Sample2D, lambda: f32) -> (Vec3, PDF) {
+    pub fn sample_direction_given_wavelength(
+        &self,
+        sample: Sample2D,
+        lambda: f32,
+    ) -> (Vec3, PDF<f32, SolidAngle>) {
         let (uv, pdf) = self.sample_env_uv_given_wavelength(sample, lambda);
         let direction = uv_to_direction(uv);
 
@@ -257,7 +266,7 @@ impl EnvironmentMap {
         _sample: Sample2D,
         _wavelength_range: Bounds1D,
         _wavelength_sample: Sample1D,
-    ) -> (Vec3, PDF) {
+    ) -> (Vec3, PDF<f32, SolidAngle>) {
         // TODO
         todo!()
     }
@@ -268,7 +277,7 @@ impl EnvironmentMap {
         &self,
         sample: Sample2D,
         _lambda: f32,
-    ) -> ((f32, f32), PDF) {
+    ) -> ((f32, f32), PDF<f32, SolidAngle>) {
         match self {
             EnvironmentMap::Constant { .. } => self.sample_env_uv(sample),
             EnvironmentMap::Sun { .. } => self.sample_env_uv(sample),
@@ -279,7 +288,7 @@ impl EnvironmentMap {
     }
 
     // sample env UV, based on env luminosity CDF (w/o prescribed wavelength)
-    pub fn sample_env_uv(&self, sample: Sample2D) -> ((f32, f32), PDF) {
+    pub fn sample_env_uv(&self, sample: Sample2D) -> ((f32, f32), PDF<f32, SolidAngle>) {
         // samples env CDF to find bright luminosity spikes. returns UV of those spots.
         // CDF for this situation can be stored as the Y values of the XYZ representation, as a greyscale image potentially.
         // consider summed area table as well.
@@ -317,7 +326,7 @@ impl EnvironmentMap {
                     (
                         uv,
                         PDF::from(
-                            row_pdf.0 * column_pdf.0 * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
+                            *row_pdf * *column_pdf * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
                                 + 0.001,
                         ),
                     )

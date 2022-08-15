@@ -33,7 +33,6 @@ use config::*;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
-use math::Transform3;
 use medium::*;
 use serde::de::DeserializeOwned;
 use texture::*;

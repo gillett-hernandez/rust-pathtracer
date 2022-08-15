@@ -237,7 +237,10 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
-    pub fn sample_uv(&self, sample: Sample2D) -> ((f32, f32), (PDF, PDF)) {
+    pub fn sample_uv(
+        &self,
+        sample: Sample2D,
+    ) -> ((f32, f32), (PDF<f32, Uniform01>, PDF<f32, Uniform01>)) {
         match self {
             Self::Baked {
                 data, marginal_cdf, ..
@@ -297,7 +300,7 @@ mod test {
             if (x as f32 - 200.0).powi(2) + (y as f32 - 200.0).powi(2) < 400.0 {
                 *pixel += 1000.0;
             }
-            *pixel += random();
+            *pixel += debug_random();
         }
 
         let texture = TexStack {

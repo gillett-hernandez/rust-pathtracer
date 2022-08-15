@@ -10,7 +10,8 @@ use std::collections::HashMap;
 // use std::io::{self, BufWriter, Write};
 // use std::path::Path;
 
-use math::{Transform3, Vec3, PI};
+use crate::prelude::PI;
+use math::prelude::{Transform3, Vec3};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone)]

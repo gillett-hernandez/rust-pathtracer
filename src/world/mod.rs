@@ -15,7 +15,6 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
-
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
@@ -98,7 +97,7 @@ impl World {
         }
         world
     }
-    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
+    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF<f32, Uniform01>)> {
         // currently just uniform sampling
         // TODO: change method to take into account the location from which the light is being picked, to allow light trees or other heuristics
         // i.e. a projected solid angle * power heuristic and pdf
@@ -124,7 +123,10 @@ impl World {
         }
     }
 
-    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&CameraEnum, usize, PDF)> {
+    pub fn pick_random_camera(
+        &self,
+        s: Sample1D,
+    ) -> Option<(&CameraEnum, usize, PDF<f32, Uniform01>)> {
         // currently just uniform sampling
         let length = self.cameras.len();
         if length == 0 {
