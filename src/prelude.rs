@@ -10,10 +10,11 @@ pub use crate::renderer::Film;
 pub use crate::texture::TexStack;
 pub use crate::tonemap::{Converter, Tonemapper};
 
+pub use math::prelude::*;
 pub use math::spectral::{BOUNDED_VISIBLE_RANGE, EXTENDED_VISIBLE_RANGE};
-pub use math::*;
 
 pub use std::f32::consts::{PI, SQRT_2, TAU};
+pub use std::f32::{EPSILON, INFINITY};
 
 // mauve. universal sign of danger
 pub const MAUVE: XYZColor = XYZColor::new(0.5199467, 51.48687, 1.0180528);
