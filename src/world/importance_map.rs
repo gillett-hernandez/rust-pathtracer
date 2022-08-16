@@ -4,7 +4,6 @@ use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
 
-
 use crate::prelude::*;
 
 use minifb::{Scale, Window, WindowOptions};
@@ -281,7 +280,7 @@ mod test {
 
     use super::*;
     use crate::renderer::Film;
-    use crate::tonemap::{Clamp, Converter, Tonemapper};
+    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -842,5 +841,128 @@ mod test {
             estimate, true_value, err
         );
         assert!(err < 0.0001);
+    }
+
+    #[test]
+    fn test_adaptive_sampling() {
+        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let env = &world.environment;
+
+        let wavelength_range = BOUNDED_VISIBLE_RANGE;
+
+        // let mut sum = 0.0;
+        let width = 512;
+        let height = 256;
+
+        let mut window = Window::new(
+            "Preview",
+            width,
+            height,
+            WindowOptions {
+                scale: Scale::X2,
+                ..WindowOptions::default()
+            },
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
+        let mut buffer = vec![0u32; width * height];
+        let converter = Converter::sRGB;
+
+        let mut tonemapper = Reinhard1x3::new(0.001, 40.0, true);
+        // let mut tonemapper = Clamp::new(-10.0, true, true);
+
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
+        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut sample_squared_film = Film::new(width, height, XYZColor::BLACK);
+
+        let variance_fraction = 0.1;
+
+        let max_samples = 1000;
+        let mut pb = ProgressBar::new(max_samples as u64);
+        let variance_samples = (max_samples as f32 * variance_fraction) as i32;
+        for idx in 0..variance_samples {
+            film.buffer
+                .par_iter_mut()
+                .zip(sample_squared_film.buffer.par_iter_mut())
+                .enumerate()
+                .for_each(|(i, (pixel, squared_pixel))| {
+                    let u = (i % width) as f32 / width as f32;
+                    let v = (i / width) as f32 / height as f32;
+                    let uv = (u, v);
+
+                    let pdf = env.pdf_for(uv);
+
+                    let wavelength_sample = Sample1D::new_random_sample();
+                    let (sw, wavelength_pdf) = (
+                        SingleWavelength::new_from_range(wavelength_sample.x, wavelength_range),
+                        1.0 / wavelength_range.span(),
+                    );
+
+                    let energy = env.emission(uv, sw.lambda).0;
+
+                    if pdf.0 == 0.0 {
+                        return;
+                    }
+                    *pixel += XYZColor::from(SingleWavelength::new(
+                        sw.lambda,
+                        (energy / wavelength_pdf / (pdf.0)).into(),
+                    ));
+                    *squared_pixel +=
+                        XYZColor::from(SingleWavelength::new(sw.lambda, (energy * energy).into()))
+                            / wavelength_pdf
+                            / (pdf.0);
+                });
+            pb.inc();
+
+            tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
+            buffer
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(pixel_idx, v)| {
+                    let y: usize = pixel_idx / width;
+                    let x: usize = pixel_idx - width * y;
+                    let [r, g, b, _]: [f32; 4] = converter
+                        .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
+                        .into();
+                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                });
+            window.update_with_buffer(&buffer, width, height).unwrap();
+        }
+        // done with variance estimation phase,
+        // now for the actual full phase
+        let mut variance_visualization = film.clone();
+        variance_visualization
+            .buffer
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(i, e)| {
+                let sum = film.buffer[i];
+                let sum_of_squares = sample_squared_film.buffer[i];
+                let denom = variance_samples as f32;
+                *e = XYZColor::from_raw(
+                    (sum_of_squares.0 / denom - (sum.0 / denom).powf(f32x4::splat(2.0))).abs(),
+                );
+            });
+        while window.is_open() {
+            tonemapper.initialize(&variance_visualization, 1.0 / 100.0);
+            buffer
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(pixel_idx, v)| {
+                    let y: usize = pixel_idx / width;
+                    let x: usize = pixel_idx - width * y;
+                    let [r, g, b, _]: [f32; 4] = converter
+                        .transfer_function(
+                            tonemapper.map(&variance_visualization, (x as usize, y as usize)),
+                            false,
+                        )
+                        .into();
+                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                });
+            window.update_with_buffer(&buffer, width, height).unwrap();
+        }
+        let mul = 1.0 - variance_fraction;
     }
 }
