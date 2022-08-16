@@ -15,7 +15,7 @@ fn evaluate_direct_importance(
     camera_pick: Sample1D,
     lens_sample: Sample2D,
     lambda: f32,
-    beta: SingleEnergy,
+    beta: f32,
     material: &MaterialEnum,
     wi: Vec3,
     hit: &HitRecord,
@@ -29,8 +29,8 @@ fn evaluate_direct_importance(
     if let Some(camera_surface) = camera.get_surface() {
         let (point_on_lens, lens_normal, pdf) = camera_surface.sample_surface(lens_sample);
         // maybe resample to a better direction, if we had a outer->inner lens acceleration structure
-        let camera_pdf = pdf * camera_pick_pdf;
-        if camera_pdf.0 == 0.0 {
+        let camera_pdf = pdf * *camera_pick_pdf;
+        if *camera_pdf == 0.0 {
             // go to next pick
             return;
         }
@@ -47,7 +47,7 @@ fn evaluate_direct_importance(
         // println!("hit {:?}", &hit);
         profile.shadow_rays += 1;
         if veach_v(world, point_on_lens, hit.point) {
-            let weight = power_heuristic(camera_pdf.0, scatter_pdf_into_camera.0);
+            let weight = power_heuristic(*camera_pdf, *scatter_pdf_into_camera);
 
             // correctly connected.
             let candidate_camera_ray = Ray::new(point_on_lens, -direction);
@@ -67,8 +67,8 @@ fn evaluate_direct_importance(
                     weight
                 );
                 let energy =
-                    reflectance * beta * wo_to_camera.z().abs() * we * weight / camera_pdf.0;
-                debug_assert!(energy.0.is_finite());
+                    reflectance * beta * wo_to_camera.z().abs() * we * weight / *camera_pdf;
+                debug_assert!(energy.is_finite());
                 let sample = XYZColor::from(SingleWavelength::new(lambda, energy));
 
                 // println!("adding camera sample to splatting list");
@@ -162,8 +162,8 @@ impl GenericIntegrator for LightTracingIntegrator {
         let light_ray = sampled.0;
         let lambda = sampled.1.lambda;
         let radiance = sampled.1.energy;
-        if radiance.0 == 0.0 {
-            return XYZColor::from(SingleWavelength::BLACK);
+        if radiance == 0.0 {
+            return XYZColor::BLACK;
         }
         let light_pdf = sampled.2;
         let lambda_pdf = sampled.3;
@@ -181,9 +181,9 @@ impl GenericIntegrator for LightTracingIntegrator {
             (0.0, 0.0),
             MaterialId::Light(0),
             0,
-            radiance,
-            light_pdf.0 * lambda_pdf.0,
-            0.0,
+            radiance / *lambda_pdf,
+            light_pdf,
+            PDF::new(0.0),
             light_g_term,
         ));
         random_walk(
@@ -284,7 +284,7 @@ impl GenericIntegrator for LightTracingIntegrator {
                             );
                             if let Some(uv) = pixel_uv {
                                 let energy = beta * we;
-                                debug_assert!(energy.0.is_finite());
+                                debug_assert!(energy.is_finite());
                                 let sample = XYZColor::from(SingleWavelength::new(lambda, energy));
 
                                 // println!("adding camera sample to splatting list");
@@ -307,6 +307,6 @@ impl GenericIntegrator for LightTracingIntegrator {
                 VertexType::Eye => unreachable!(),
             }
         }
-        XYZColor::from(SingleWavelength::BLACK)
+        XYZColor::BLACK
     }
 }

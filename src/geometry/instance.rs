@@ -127,7 +127,7 @@ impl Hittable for Instance {
             None
         }
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         if let Some(transform) = self.transform {
             let (vec, pdf) = self.aggregate.sample(s, transform.to_local(from));
             (transform.to_world(vec).normalized(), pdf)
@@ -135,7 +135,7 @@ impl Hittable for Instance {
             self.aggregate.sample(s, from)
         }
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         if let Some(transform) = self.transform {
             let (point, normal, pdf) = self.aggregate.sample_surface(s);
             (
@@ -147,13 +147,21 @@ impl Hittable for Instance {
             self.aggregate.sample_surface(s)
         }
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
         let (from, to) = if let Some(transform) = self.transform {
+            // TODO: check why this is to_world instead of to_local.
+            // (transform.to_local(from), transform.to_local(to))
             (transform.to_world(from), transform.to_world(to))
         } else {
             (from, to)
         };
-        self.aggregate.psa_pdf(cos_o, from, to)
+        self.aggregate.psa_pdf(cos_o, cos_i, from, to)
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {

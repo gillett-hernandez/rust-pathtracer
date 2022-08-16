@@ -20,16 +20,6 @@ impl PassthroughFilter {
 
 // essentially a pseudo-transparent film material. does not alter the direction when scattering, and
 impl Material<f32, f32> for PassthroughFilter {
-    fn generate(
-        &self,
-        _lambda: f32,
-        _uv: (f32, f32),
-        _transport_mode: TransportMode,
-        _s: Sample2D,
-        wi: Vec3,
-    ) -> Option<Vec3> {
-        Some(-wi)
-    }
     fn bsdf(
         &self,
         lambda: f32,
@@ -42,11 +32,36 @@ impl Material<f32, f32> for PassthroughFilter {
         // TODO: assess whether this pdf needs to be 0 if wi != -wo
         (self.color.evaluate(lambda) / wo.z().abs(), 1.0.into())
     }
+    fn generate(
+        &self,
+        _lambda: f32,
+        _uv: (f32, f32),
+        _transport_mode: TransportMode,
+        _s: Sample2D,
+        wi: Vec3,
+    ) -> Option<Vec3> {
+        Some(-wi)
+    }
     fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
         self.outer_medium_id
     }
     fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
         self.inner_medium_id
+    }
+
+    fn generate_and_evaluate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
+        (
+            self.color.evaluate(lambda) / wi.z().abs(),
+            Some(-wi),
+            1.0.into(),
+        )
     }
 }
 

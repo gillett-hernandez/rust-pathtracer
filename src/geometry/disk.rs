@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{convert_to, prelude::*};
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
@@ -60,7 +60,7 @@ impl Hittable for Disk {
             None,
         ))
     }
-    fn sample_surface(&self, mut s: Sample2D) -> (Point3, Vec3, PDF) {
+    fn sample_surface(&self, mut s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         let mut normal = Vec3::Z;
         // if dual sided, randomly pick the opposite side when sampling
         if self.two_sided {
@@ -73,28 +73,34 @@ impl Hittable for Disk {
         let area = PI * self.radius * self.radius;
         (point, normal, (1.0 / area).into())
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         let (point, normal, area_pdf) = self.sample_surface(s);
         debug_assert!(point.0.is_finite().all());
         debug_assert!(normal.0.is_finite().all());
-        debug_assert!(area_pdf.0.is_finite());
+        debug_assert!(area_pdf.is_finite());
         let direction = point - from;
         let cos_i = normal * direction.normalized();
 
-        let pdf = area_pdf * direction.norm_squared() / cos_i.abs();
-        if !pdf.0.is_finite() {
+        let pdf = area_pdf.convert_to_solid_angle(cos_i, direction.norm_squared());
+        if !(*pdf).is_finite() {
             println!("pdf was inf, {:?}", direction);
             (direction.normalized(), 0.0.into())
         } else {
             (direction.normalized(), pdf)
         }
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
         let direction = to - from;
 
         let area = PI * self.radius * self.radius;
         let distance_squared = direction.norm_squared();
-        PDF::from(distance_squared / ((cos_o.abs() + 0.00001) * area))
+        PDF::new(distance_squared / ((cos_o.abs() * cos_i.abs() + 0.00001) * area))
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {

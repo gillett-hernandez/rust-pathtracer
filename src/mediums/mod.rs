@@ -38,11 +38,11 @@ pub trait Medium<L: Field, E: Field> {
 
     // evaluate emission at some uvw. assuming homogeneity, uvw can be discarded.
     fn emission(&self, lambda: L, wo: Vec3, uvw: (f32, f32, f32)) -> E {
-        0.0.into()
+        E::ZERO
     }
     // sample emission to exit the material for use in bdpt. again, assuming homogeneity, uvw can be ignored.
     fn sample_emission(&self, lambda: L, uvw: (f32, f32, f32)) -> (Vec3, E) {
-        (Vec3::ZERO, 0.0.into())
+        (Vec3::ZERO, E::ZERO)
     }
 }
 

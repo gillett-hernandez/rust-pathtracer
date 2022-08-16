@@ -185,8 +185,8 @@ pub struct GGX {
     pub eta: Curve,
     pub eta_o: Curve,
     pub kappa: Curve,
-    pub permeability: f32,
     pub outer_medium_id: usize,
+    metallic: bool,
 }
 
 impl GGX {
@@ -195,22 +195,23 @@ impl GGX {
         eta: Curve,
         eta_o: Curve,
         kappa: Curve,
-        permeability: f32,
         outer_medium_id: usize,
     ) -> Self {
         debug_assert!(roughness > 0.0);
+
+        let metallic = kappa.evaluate_integral(BOUNDED_VISIBLE_RANGE, 100, false) > 0.0;
         GGX {
             alpha: roughness,
             eta,
             eta_o,
             kappa,
-            permeability,
+            metallic,
             outer_medium_id,
         }
     }
 
     fn reflectance(&self, eta_outer: f32, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
-        if self.permeability > 0.0 {
+        if !self.metallic {
             fresnel_dielectric(eta_outer, eta_inner, cos_theta_i)
         // if cos_theta_i >= 0.0 {
         // fresnel_dielectric(eta_inner, eta_outer, cos_theta_i)
@@ -232,7 +233,7 @@ impl GGX {
         kappa: f32,
         cos_theta_i: f32,
     ) -> f32 {
-        if self.permeability > 0.0 {
+        if !self.metallic {
             // fresnel_dielectric(self.eta_o, eta_i, wi.z())
             (self.permeability * self.reflectance(eta_outer, eta_inner, kappa, cos_theta_i) + 1.0
                 - self.permeability)
@@ -251,26 +252,31 @@ impl GGX {
 }
 
 impl GGX {
-    fn eval_pdf(
+    pub const NAME: &'static str = "GGX";
+}
+
+impl Material<f32, f32> for GGX {
+    fn bsdf(
         &self,
         lambda: f32,
+        _uv: (f32, f32),
+        transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-        transport_mode: TransportMode,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         let wi = wi.normalized();
         let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
 
         if g == 0.0 {
-            return (SingleEnergy::ZERO, 0.0.into());
+            return (f32::ZERO, 0.0.into());
         }
 
         let cos_i = wi.z();
 
-        let mut glossy = SingleEnergy::ZERO;
-        let mut transmission = SingleEnergy::ZERO;
+        let mut glossy = f32::ZERO;
+        let mut transmission = f32::ZERO;
         let mut glossy_pdf = 0.0;
         let mut transmission_pdf = 0.0;
         let eta_inner = self.eta.evaluate_power(lambda);
@@ -392,18 +398,14 @@ impl GGX {
         );
         (f, pdf.into())
     }
-    pub const NAME: &'static str = "GGX";
-}
-
-impl Material<f32, f32> for GGX {
-    fn generate(
+    fn generate_and_evaluate(
         &self,
         lambda: f32,
-        _uv: (f32, f32),
-        _transport_mode: TransportMode,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
         sample: Sample2D,
         wi: Vec3,
-    ) -> Option<Vec3> {
+    ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
         // debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         // let eta_inner = self.eta.evaluate_power(lambda);
         // debug_assert!(eta_inner.is_finite(), "{}", lambda);
@@ -439,9 +441,10 @@ impl Material<f32, f32> for GGX {
         //     } */
         //     return wo;
         // }
-        debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         let eta_inner = self.eta.evaluate_power(lambda);
         let eta_outer = self.eta_o.evaluate_power(lambda);
+
+        debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
         debug_assert!(eta_inner.is_finite(), "{}", lambda);
         // let eta_rel = self.eta_rel(eta_inner, wi);
         // only enable metal effects if permeability is 0
@@ -476,29 +479,19 @@ impl Material<f32, f32> for GGX {
             wo
         }
     }
-    fn bsdf(
-        &self,
-        lambda: f32,
-        _uv: (f32, f32),
-        transport_mode: TransportMode,
-        wi: Vec3,
-        wo: Vec3,
-    ) -> (f32, PDF<f32, SolidAngle>) {
-        self.eval_pdf(lambda, wi, wo, transport_mode)
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
+        self.outer_medium_id
     }
     fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
         0
-    }
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
-        self.outer_medium_id
     }
 }
 
 #[cfg(test)]
 mod tests {
 
+    use math::spectral::BOUNDED_VISIBLE_RANGE;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
-    use spectral::BOUNDED_VISIBLE_RANGE;
 
     use super::*;
     use crate::curves;

@@ -100,8 +100,8 @@ impl<L: Field, E: Field> SurfaceVertex<L, E> {
     }
 }
 
-impl From<SurfaceVertex> for HitRecord {
-    fn from(data: SurfaceVertex) -> Self {
+impl<L: Field, E: Field> From<SurfaceVertex<L, E>> for HitRecord {
+    fn from(data: SurfaceVertex<L, E>) -> Self {
         let transport_mode = match data.vertex_type {
             VertexType::Light | VertexType::LightSource(_) => TransportMode::Radiance,
             VertexType::Camera | VertexType::Eye => TransportMode::Importance,
@@ -110,7 +110,7 @@ impl From<SurfaceVertex> for HitRecord {
             data.time,
             data.point,
             data.uv,
-            data.lambda,
+            data.lambda.reduce_to_scalar(),
             data.normal,
             data.material_id,
             data.instance_id,
@@ -135,7 +135,7 @@ pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
 }
 
-pub fn random_walk<L: Field, E: Field>(
+pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
     mut ray: Ray,
     lambda: L,
     bounce_limit: u16,
@@ -167,8 +167,8 @@ pub fn random_walk<L: Field, E: Field>(
                 hit.material,
                 hit.instance_id,
                 beta,
-                1.0,
-                1.0,
+                PDF::new(1.0),
+                PDF::new(1.0),
                 1.0,
             );
 
@@ -307,368 +307,368 @@ pub fn random_walk<L: Field, E: Field>(
     }
     profile.bounce_rays += vertices.len();
 }
+// #[derive(Debug, Copy, Clone, PartialEq)]
+// pub struct HeroEnergy(pub f32x4);
+
+// impl HeroEnergy {
+//     pub const ZERO: Self = HeroEnergy(f32x4::splat(0.0));
+// }
+
+// impl AddAssign for HeroEnergy {
+//     fn add_assign(&mut self, rhs: HeroEnergy) {
+//         self.0 += rhs.0;
+//     }
+// }
+
+// #[derive(Debug, Copy, Clone, PartialEq)]
+// pub struct HeroSurfaceVertex {
+//     pub vertex_type: VertexType,
+//     pub time: f32,
+//     pub lambda: f32x4,
+//     pub local_wi: Vec3,
+//     pub point: Point3,
+//     pub normal: Vec3,
+//     pub uv: (f32, f32),
+//     pub material_id: MaterialId,
+//     pub outer_medium_id: usize,
+//     pub inner_medium_id: usize,
+//     pub instance_id: usize,
+//     pub throughput: HeroEnergy,
+//     pub pdf_forward: f32x4,
+//     pub pdf_backward: f32x4,
+//     pub veach_g: f32,
+// }
+
+// impl HeroSurfaceVertex {
+//     pub fn new(
+//         vertex_type: VertexType,
+//         time: f32,
+//         lambda: f32x4,
+//         local_wi: Vec3,
+//         point: Point3,
+//         normal: Vec3,
+//         uv: (f32, f32),
+//         material_id: MaterialId,
+//         instance_id: usize,
+//         throughput: HeroEnergy,
+//         pdf_forward: f32x4,
+//         pdf_backward: f32x4,
+//         veach_g: f32,
+//     ) -> Self {
+//         HeroSurfaceVertex {
+//             vertex_type,
+//             time,
+//             lambda,
+//             local_wi,
+//             point,
+//             normal,
+//             uv,
+//             material_id,
+//             outer_medium_id: 0,
+//             inner_medium_id: 0,
+//             instance_id,
+//             throughput,
+//             pdf_forward,
+//             pdf_backward,
+//             veach_g,
+//         }
+//     }
+
+//     pub fn default() -> Self {
+//         HeroSurfaceVertex::new(
+//             VertexType::Eye,
+//             0.0,
+//             f32x4::splat(0.0),
+//             Vec3::ZERO,
+//             Point3::ORIGIN,
+//             Vec3::ZERO,
+//             (0.0, 0.0),
+//             MaterialId::Material(0),
+//             0,
+//             HeroEnergy::ZERO,
+//             f32x4::splat(0.0),
+//             f32x4::splat(0.0),
+//             0.0,
+//         )
+//     }
+//     pub fn transport_mode(&self) -> TransportMode {
+//         match self.vertex_type {
+//             VertexType::Light | VertexType::LightSource(_) => TransportMode::Radiance,
+//             VertexType::Camera | VertexType::Eye => TransportMode::Importance,
+//         }
+//     }
+//     pub fn into_hit_w_lane(&self, lane: usize) -> HitRecord {
+//         HitRecord::new(
+//             self.time,
+//             self.point,
+//             self.uv,
+//             self.lambda.extract(lane),
+//             self.normal,
+//             self.material_id,
+//             self.instance_id,
+//             Some(self.transport_mode()),
+//         )
+//     }
+// }
+
+// pub fn random_walk_hero(
+//     mut ray: Ray,
+//     lambda: f32x4,
+//     bounce_limit: u16,
+//     start_throughput: f32x4,
+//     trace_type: TransportMode,
+//     sampler: &mut Box<dyn Sampler>,
+//     world: &Arc<World>,
+//     vertices: &mut Vec<SurfaceVertex>,
+//     russian_roulette_start_index: u16,
+//     profile: &mut Profile,
+// ) {
+//     let mut beta = start_throughput;
+//     // let mut last_bsdf_pdf = PDF::from(0.0);
+//     for bounce in 0..bounce_limit {
+//         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
+//             hit.lambda = lambda.extract(0);
+//             hit.transport_mode = trace_type;
+//             let mut vertex = HeroSurfaceVertex::new(
+//                 trace_type.into(),
+//                 hit.time,
+//                 lambda,
+//                 -ray.direction,
+//                 hit.point,
+//                 hit.normal,
+//                 hit.uv,
+//                 hit.material,
+//                 hit.instance_id,
+//                 HeroEnergy(beta),
+//                 f32x4::splat(1.0),
+//                 f32x4::splat(1.0),
+//                 1.0,
+//             );
+
+//             let frame = TangentFrame::from_normal(hit.normal);
+//             let wi = frame.to_local(&-ray.direction).normalized();
+
+//             if let MaterialId::Camera(_camera_id) = hit.material {
+//                 if trace_type == TransportMode::Radiance {
+//                     // if hit camera directly while tracing a light path
+//                     vertex.vertex_type = VertexType::Camera;
+//                     vertices.push(vertex);
+//                 }
+//                 break;
+//             } else {
+//                 // if directly hit a light while tracing a camera path.
+//                 if let MaterialId::Light(_light_id) = hit.material {
+//                     // TODO: handle this
+//                 }
+//             }
+
+//             let material = world.get_material(hit.material);
+
+//             // consider accumulating emission in some other form for trace_type == TransportMode::Importance situations, as mentioned in veach.
+//             let maybe_wo: Option<Vec3> = material.generate(
+//                 hit.lambda,
+//                 hit.uv,
+//                 hit.transport_mode,
+//                 sampler.draw_2d(),
+//                 wi,
+//             );
+
+//             // what to do in this situation, where there is a wo and there's also emission?
+//             let multi_emission = HeroEnergy(f32x4::new(
+//                 material
+//                     .emission(lambda.extract(0), hit.uv, hit.transport_mode, wi)
+//                     .0,
+//                 material
+//                     .emission(lambda.extract(1), hit.uv, hit.transport_mode, wi)
+//                     .0,
+//                 material
+//                     .emission(lambda.extract(2), hit.uv, hit.transport_mode, wi)
+//                     .0,
+//                 material
+//                     .emission(lambda.extract(3), hit.uv, hit.transport_mode, wi)
+//                     .0,
+//             ));
+
+//             // wo is generated in tangent space.
+
+//             if let Some(wo) = maybe_wo {
+//                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
+//                 let (multi_f, multi_pdf) = {
+//                     let (f0, pdf0) =
+//                         material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wi, wo);
+//                     let (f1, pdf1) =
+//                         material.bsdf(lambda.extract(1), hit.uv, hit.transport_mode, wi, wo);
+//                     let (f2, pdf2) =
+//                         material.bsdf(lambda.extract(2), hit.uv, hit.transport_mode, wi, wo);
+//                     let (f3, pdf3) =
+//                         material.bsdf(lambda.extract(3), hit.uv, hit.transport_mode, wi, wo);
+//                     (
+//                         f32x4::new(f0.0, f1.0, f2.0, f3.0),
+//                         f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
+//                     )
+//                 };
+//                 let (_reverse_multi_f, reverse_multi_pdf) = {
+//                     let (f0, pdf0) =
+//                         material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wo, wi);
+//                     let (f1, pdf1) =
+//                         material.bsdf(lambda.extract(1), hit.uv, hit.transport_mode, wo, wi);
+//                     let (f2, pdf2) =
+//                         material.bsdf(lambda.extract(2), hit.uv, hit.transport_mode, wo, wi);
+//                     let (f3, pdf3) =
+//                         material.bsdf(lambda.extract(3), hit.uv, hit.transport_mode, wo, wi);
+//                     (
+//                         f32x4::new(f0.0, f1.0, f2.0, f3.0),
+//                         f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
+//                     )
+//                 };
+//                 let cos_i = wo.z().abs();
+//                 let cos_o = wi.z().abs();
+//                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
+//                 // if emission.0 > 0.0 {
+
+//                 // }
+
+//                 let hero_f = multi_f.extract(0);
+//                 let hero_pdf = multi_pdf.extract(0);
+//                 debug_assert!(hero_pdf >= 0.0, "pdf was less than 0 {:?}", hero_pdf);
+//                 if hero_pdf < 0.00000001 || hero_pdf.is_nan() {
+//                     break;
+//                 }
+//                 let rr_continue_prob = if bounce >= russian_roulette_start_index {
+//                     (hero_f / hero_pdf).min(1.0)
+//                 } else {
+//                     1.0
+//                 };
+//                 let russian_roulette_sample = sampler.draw_1d();
+//                 if russian_roulette_sample.x > rr_continue_prob {
+//                     break;
+//                 }
+//                 beta *= multi_f * cos_i.abs() / (rr_continue_prob * hero_pdf);
+//                 vertex.pdf_forward = rr_continue_prob * multi_pdf / cos_i;
+
+//                 // consider handling delta distributions differently here, if deltas are ever added.
+//                 // eval pdf in reverse direction
+//                 vertex.pdf_backward = rr_continue_prob * reverse_multi_pdf / cos_o;
+
+//                 debug_assert!(
+//                     vertex.pdf_forward.extract(0) > 0.0 && vertex.pdf_forward.is_finite().all(),
+//                     "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
+//                     material.get_name(),
+//                     vertex,
+//                     wi,
+//                     wo,
+//                     cos_o,
+//                     cos_i,
+//                     rr_continue_prob,
+//                 );
+//                 // debug_assert!(
+//                 //     vertex.pdf_backward >= 0.0 && vertex.pdf_backward.is_finite(),
+//                 //     "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
+//                 //     material.get_name(),
+//                 //     vertex,
+//                 //     wi,
+//                 //     wo,
+//                 //     cos_o,
+//                 //     cos_i,
+//                 //     rr_continue_prob,
+//                 // );
+
+//                 vertices.push(vertex);
+
+//                 // let beta_before_hit = beta;
+//                 // last_bsdf_pdf = pdf;
+
+//                 debug_assert!(
+//                     !beta.extract(0).is_nan(),
+//                     "{:?} {:?} {} {:?}",
+//                     beta,
+//                     multi_f,
+//                     cos_i,
+//                     multi_pdf
+//                 );
+
+//                 // add normal to avoid self intersection
+//                 // also convert wo back to world space when spawning the new ray
+//                 ray = Ray::new(
+//                     hit.point + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
+//                     frame.to_world(&wo).normalized(),
+//                 );
+//             } else {
+//                 // hit a surface and didn't bounce.
+//                 if multi_emission.0.gt(f32x4::splat(0.0)).any() {
+//                     vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
+//                     vertex.pdf_forward = f32x4::splat(0.0);
+//                     vertex.pdf_backward = f32x4::splat(1.0);
+//                     vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
+//                     vertices.push(vertex);
+//                 } else {
+//                     // this happens when the backside of a light is hit.
+//                 }
+//                 break;
+//             }
+//         } else {
+//             // add a vertex when a camera ray hits the environment
+//             if trace_type == TransportMode::Importance {
+//                 let ray_direction = ray.direction;
+//                 let world_radius = world.radius;
+//                 let at_env = ray_direction * world_radius;
+//                 let vertex = HeroSurfaceVertex::new(
+//                     VertexType::LightSource(LightSourceType::Environment),
+//                     ray.time,
+//                     lambda,
+//                     ray.direction,
+//                     Point3::from(at_env),
+//                     ray.direction,
+//                     (0.0, 0.0),
+//                     MaterialId::Light(0),
+//                     0,
+//                     HeroEnergy(beta),
+//                     f32x4::splat(0.0),
+//                     f32x4::splat(1.0 / (4.0 * PI)),
+//                     1.0,
+//                 );
+//                 debug_assert!(vertex.point.0.is_finite().all());
+//                 // println!("sampling env and setting pdf_forward to 0");
+//                 vertices.push(vertex);
+//             }
+//             break;
+//         }
+//     }
+//     profile.bounce_rays += vertices.len();
+// }
+
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct HeroEnergy(pub f32x4);
-
-impl HeroEnergy {
-    pub const ZERO: Self = HeroEnergy(f32x4::splat(0.0));
-}
-
-impl AddAssign for HeroEnergy {
-    fn add_assign(&mut self, rhs: HeroEnergy) {
-        self.0 += rhs.0;
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct HeroSurfaceVertex {
+pub struct MediumVertex<L: Field, E: Field> {
     pub vertex_type: VertexType,
     pub time: f32,
-    pub lambda: f32x4,
-    pub local_wi: Vec3,
-    pub point: Point3,
-    pub normal: Vec3,
-    pub uv: (f32, f32),
-    pub material_id: MaterialId,
-    pub outer_medium_id: usize,
-    pub inner_medium_id: usize,
-    pub instance_id: usize,
-    pub throughput: HeroEnergy,
-    pub pdf_forward: f32x4,
-    pub pdf_backward: f32x4,
-    pub veach_g: f32,
-}
-
-impl HeroSurfaceVertex {
-    pub fn new(
-        vertex_type: VertexType,
-        time: f32,
-        lambda: f32x4,
-        local_wi: Vec3,
-        point: Point3,
-        normal: Vec3,
-        uv: (f32, f32),
-        material_id: MaterialId,
-        instance_id: usize,
-        throughput: HeroEnergy,
-        pdf_forward: f32x4,
-        pdf_backward: f32x4,
-        veach_g: f32,
-    ) -> Self {
-        HeroSurfaceVertex {
-            vertex_type,
-            time,
-            lambda,
-            local_wi,
-            point,
-            normal,
-            uv,
-            material_id,
-            outer_medium_id: 0,
-            inner_medium_id: 0,
-            instance_id,
-            throughput,
-            pdf_forward,
-            pdf_backward,
-            veach_g,
-        }
-    }
-
-    pub fn default() -> Self {
-        HeroSurfaceVertex::new(
-            VertexType::Eye,
-            0.0,
-            f32x4::splat(0.0),
-            Vec3::ZERO,
-            Point3::ORIGIN,
-            Vec3::ZERO,
-            (0.0, 0.0),
-            MaterialId::Material(0),
-            0,
-            HeroEnergy::ZERO,
-            f32x4::splat(0.0),
-            f32x4::splat(0.0),
-            0.0,
-        )
-    }
-    pub fn transport_mode(&self) -> TransportMode {
-        match self.vertex_type {
-            VertexType::Light | VertexType::LightSource(_) => TransportMode::Radiance,
-            VertexType::Camera | VertexType::Eye => TransportMode::Importance,
-        }
-    }
-    pub fn into_hit_w_lane(&self, lane: usize) -> HitRecord {
-        HitRecord::new(
-            self.time,
-            self.point,
-            self.uv,
-            self.lambda.extract(lane),
-            self.normal,
-            self.material_id,
-            self.instance_id,
-            Some(self.transport_mode()),
-        )
-    }
-}
-
-pub fn random_walk_hero(
-    mut ray: Ray,
-    lambda: f32x4,
-    bounce_limit: u16,
-    start_throughput: f32x4,
-    trace_type: TransportMode,
-    sampler: &mut Box<dyn Sampler>,
-    world: &Arc<World>,
-    vertices: &mut Vec<HeroSurfaceVertex>,
-    russian_roulette_start_index: u16,
-    profile: &mut Profile,
-) {
-    let mut beta = start_throughput;
-    // let mut last_bsdf_pdf = PDF::from(0.0);
-    for bounce in 0..bounce_limit {
-        if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
-            hit.lambda = lambda.extract(0);
-            hit.transport_mode = trace_type;
-            let mut vertex = HeroSurfaceVertex::new(
-                trace_type.into(),
-                hit.time,
-                lambda,
-                -ray.direction,
-                hit.point,
-                hit.normal,
-                hit.uv,
-                hit.material,
-                hit.instance_id,
-                HeroEnergy(beta),
-                f32x4::splat(1.0),
-                f32x4::splat(1.0),
-                1.0,
-            );
-
-            let frame = TangentFrame::from_normal(hit.normal);
-            let wi = frame.to_local(&-ray.direction).normalized();
-
-            if let MaterialId::Camera(_camera_id) = hit.material {
-                if trace_type == TransportMode::Radiance {
-                    // if hit camera directly while tracing a light path
-                    vertex.vertex_type = VertexType::Camera;
-                    vertices.push(vertex);
-                }
-                break;
-            } else {
-                // if directly hit a light while tracing a camera path.
-                if let MaterialId::Light(_light_id) = hit.material {
-                    // TODO: handle this
-                }
-            }
-
-            let material = world.get_material(hit.material);
-
-            // consider accumulating emission in some other form for trace_type == TransportMode::Importance situations, as mentioned in veach.
-            let maybe_wo: Option<Vec3> = material.generate(
-                hit.lambda,
-                hit.uv,
-                hit.transport_mode,
-                sampler.draw_2d(),
-                wi,
-            );
-
-            // what to do in this situation, where there is a wo and there's also emission?
-            let multi_emission = HeroEnergy(f32x4::new(
-                material
-                    .emission(lambda.extract(0), hit.uv, hit.transport_mode, wi)
-                    .0,
-                material
-                    .emission(lambda.extract(1), hit.uv, hit.transport_mode, wi)
-                    .0,
-                material
-                    .emission(lambda.extract(2), hit.uv, hit.transport_mode, wi)
-                    .0,
-                material
-                    .emission(lambda.extract(3), hit.uv, hit.transport_mode, wi)
-                    .0,
-            ));
-
-            // wo is generated in tangent space.
-
-            if let Some(wo) = maybe_wo {
-                // NOTE! cos_i and cos_o seem to have somewhat reversed names.
-                let (multi_f, multi_pdf) = {
-                    let (f0, pdf0) =
-                        material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wi, wo);
-                    let (f1, pdf1) =
-                        material.bsdf(lambda.extract(1), hit.uv, hit.transport_mode, wi, wo);
-                    let (f2, pdf2) =
-                        material.bsdf(lambda.extract(2), hit.uv, hit.transport_mode, wi, wo);
-                    let (f3, pdf3) =
-                        material.bsdf(lambda.extract(3), hit.uv, hit.transport_mode, wi, wo);
-                    (
-                        f32x4::new(f0.0, f1.0, f2.0, f3.0),
-                        f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
-                    )
-                };
-                let (_reverse_multi_f, reverse_multi_pdf) = {
-                    let (f0, pdf0) =
-                        material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wo, wi);
-                    let (f1, pdf1) =
-                        material.bsdf(lambda.extract(1), hit.uv, hit.transport_mode, wo, wi);
-                    let (f2, pdf2) =
-                        material.bsdf(lambda.extract(2), hit.uv, hit.transport_mode, wo, wi);
-                    let (f3, pdf3) =
-                        material.bsdf(lambda.extract(3), hit.uv, hit.transport_mode, wo, wi);
-                    (
-                        f32x4::new(f0.0, f1.0, f2.0, f3.0),
-                        f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
-                    )
-                };
-                let cos_i = wo.z().abs();
-                let cos_o = wi.z().abs();
-                vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
-                // if emission.0 > 0.0 {
-
-                // }
-
-                let hero_f = multi_f.extract(0);
-                let hero_pdf = multi_pdf.extract(0);
-                debug_assert!(hero_pdf >= 0.0, "pdf was less than 0 {:?}", hero_pdf);
-                if hero_pdf < 0.00000001 || hero_pdf.is_nan() {
-                    break;
-                }
-                let rr_continue_prob = if bounce >= russian_roulette_start_index {
-                    (hero_f / hero_pdf).min(1.0)
-                } else {
-                    1.0
-                };
-                let russian_roulette_sample = sampler.draw_1d();
-                if russian_roulette_sample.x > rr_continue_prob {
-                    break;
-                }
-                beta *= multi_f * cos_i.abs() / (rr_continue_prob * hero_pdf);
-                vertex.pdf_forward = rr_continue_prob * multi_pdf / cos_i;
-
-                // consider handling delta distributions differently here, if deltas are ever added.
-                // eval pdf in reverse direction
-                vertex.pdf_backward = rr_continue_prob * reverse_multi_pdf / cos_o;
-
-                debug_assert!(
-                    vertex.pdf_forward.extract(0) > 0.0 && vertex.pdf_forward.is_finite().all(),
-                    "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                    material.get_name(),
-                    vertex,
-                    wi,
-                    wo,
-                    cos_o,
-                    cos_i,
-                    rr_continue_prob,
-                );
-                // debug_assert!(
-                //     vertex.pdf_backward >= 0.0 && vertex.pdf_backward.is_finite(),
-                //     "pdf backward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
-                //     material.get_name(),
-                //     vertex,
-                //     wi,
-                //     wo,
-                //     cos_o,
-                //     cos_i,
-                //     rr_continue_prob,
-                // );
-
-                vertices.push(vertex);
-
-                // let beta_before_hit = beta;
-                // last_bsdf_pdf = pdf;
-
-                debug_assert!(
-                    !beta.extract(0).is_nan(),
-                    "{:?} {:?} {} {:?}",
-                    beta,
-                    multi_f,
-                    cos_i,
-                    multi_pdf
-                );
-
-                // add normal to avoid self intersection
-                // also convert wo back to world space when spawning the new ray
-                ray = Ray::new(
-                    hit.point + hit.normal * NORMAL_OFFSET * if wo.z() > 0.0 { 1.0 } else { -1.0 },
-                    frame.to_world(&wo).normalized(),
-                );
-            } else {
-                // hit a surface and didn't bounce.
-                if multi_emission.0.gt(f32x4::splat(0.0)).any() {
-                    vertex.vertex_type = VertexType::LightSource(LightSourceType::Instance);
-                    vertex.pdf_forward = f32x4::splat(0.0);
-                    vertex.pdf_backward = f32x4::splat(1.0);
-                    vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
-                    vertices.push(vertex);
-                } else {
-                    // this happens when the backside of a light is hit.
-                }
-                break;
-            }
-        } else {
-            // add a vertex when a camera ray hits the environment
-            if trace_type == TransportMode::Importance {
-                let ray_direction = ray.direction;
-                let world_radius = world.radius;
-                let at_env = ray_direction * world_radius;
-                let vertex = HeroSurfaceVertex::new(
-                    VertexType::LightSource(LightSourceType::Environment),
-                    ray.time,
-                    lambda,
-                    ray.direction,
-                    Point3::from(at_env),
-                    ray.direction,
-                    (0.0, 0.0),
-                    MaterialId::Light(0),
-                    0,
-                    HeroEnergy(beta),
-                    f32x4::splat(0.0),
-                    f32x4::splat(1.0 / (4.0 * PI)),
-                    1.0,
-                );
-                debug_assert!(vertex.point.0.is_finite().all());
-                // println!("sampling env and setting pdf_forward to 0");
-                vertices.push(vertex);
-            }
-            break;
-        }
-    }
-    profile.bounce_rays += vertices.len();
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct HeroMediumVertex {
-    pub vertex_type: VertexType,
-    pub time: f32,
-    pub lambda: f32x4,
+    pub lambda: L,
     pub wi: Vec3,
     pub point: Point3,
     pub uvw: (f32, f32, f32),
     pub medium_id: usize,
     pub instance_id: usize,
-    pub throughput: HeroEnergy,
-    pub pdf_forward: f32x4,
-    pub pdf_backward: f32x4,
+    pub throughput: E,
+    pub pdf_forward: PDF<E, SolidAngle>,
+    pub pdf_backward: PDF<E, SolidAngle>,
     pub veach_g: f32,
 }
 
-impl HeroMediumVertex {
+impl<L: Field, E: Field> MediumVertex<L, E> {
     pub fn new(
         vertex_type: VertexType,
         time: f32,
-        lambda: f32x4,
+        lambda: L,
         wi: Vec3,
         point: Point3,
         uvw: (f32, f32, f32),
         medium_id: usize,
         instance_id: usize,
-        throughput: HeroEnergy,
-        pdf_forward: f32x4,
-        pdf_backward: f32x4,
+        throughput: E,
+        pdf_forward: PDF<E, SolidAngle>,
+        pdf_backward: PDF<E, SolidAngle>,
         veach_g: f32,
     ) -> Self {
-        HeroMediumVertex {
+        MediumVertex {
             vertex_type,
             time,
             lambda,
@@ -685,18 +685,18 @@ impl HeroMediumVertex {
     }
 
     pub fn default() -> Self {
-        HeroMediumVertex::new(
+        MediumVertex::new(
             VertexType::Eye,
             0.0,
-            f32x4::splat(0.0),
+            L::ZERO,
             Vec3::ZERO,
             Point3::ORIGIN,
             (0.0, 0.0, 0.0),
             0,
             0,
-            HeroEnergy::ZERO,
-            f32x4::splat(0.0),
-            f32x4::splat(0.0),
+            E::ZERO,
+            PDF::new(E::ZERO),
+            PDF::new(E::ZERO),
             0.0,
         )
     }
@@ -709,41 +709,41 @@ impl HeroMediumVertex {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum HeroVertex {
-    Surface(HeroSurfaceVertex),
-    Medium(HeroMediumVertex),
+pub enum Vertex<L: Field, E: Field> {
+    Surface(SurfaceVertex<L, E>),
+    Medium(MediumVertex<L, E>),
 }
 
-impl HeroVertex {
+impl<L: Field, E: Field> Vertex<L, E> {
     pub fn point(&self) -> Point3 {
         match self {
-            HeroVertex::Medium(v) => v.point,
-            HeroVertex::Surface(v) => v.point,
+            Vertex::Medium(v) => v.point,
+            Vertex::Surface(v) => v.point,
         }
     }
-    pub fn pdf_forward(&self) -> f32x4 {
+    pub fn pdf_forward<S: Scalar>(&self, cos_theta: S) -> PDF<E, ProjectedSolidAngle> {
         match self {
-            HeroVertex::Medium(v) => v.pdf_forward,
-            HeroVertex::Surface(v) => v.pdf_forward,
+            Vertex::Medium(v) => v.pdf_forward.convert_to_projected_solid_angle(cos_theta),
+            Vertex::Surface(v) => v.pdf_forward,
         }
     }
     pub fn cos(&self, vec: Vec3) -> f32 {
         match self {
-            HeroVertex::Medium(_v) => 1.0,
-            HeroVertex::Surface(v) => v.normal * vec,
+            Vertex::Medium(_v) => 1.0,
+            Vertex::Surface(v) => v.normal * vec,
         }
     }
 }
 
-pub fn random_walk_medium_hero(
+pub fn random_walk_medium<L: Field, E: Field + ToScalar<E, f32>>(
     mut ray: Ray,
-    lambda: f32x4,
+    lambda: L,
     bounce_limit: u16,
-    start_throughput: f32x4,
+    start_throughput: E,
     trace_type: TransportMode,
     sampler: &mut Box<dyn Sampler>,
     world: &Arc<World>,
-    vertices: &mut Vec<HeroVertex>,
+    vertices: &mut Vec<Vertex<L, E>>,
     russian_roulette_start_index: u16,
     profile: &mut Profile,
 ) {
@@ -752,9 +752,9 @@ pub fn random_walk_medium_hero(
     let mut tracked_mediums: Vec<usize> = Vec::new();
     for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
-            hit.lambda = lambda.extract(0);
+            hit.lambda = ToScalar::convert(lambda);
             hit.transport_mode = trace_type;
-            let mut surface_vertex = HeroSurfaceVertex::new(
+            let mut surface_vertex = SurfaceVertex::new(
                 trace_type.into(),
                 hit.time,
                 lambda,
@@ -764,13 +764,13 @@ pub fn random_walk_medium_hero(
                 hit.uv,
                 hit.material,
                 hit.instance_id,
-                HeroEnergy(beta),
-                f32x4::splat(1.0),
-                f32x4::splat(1.0),
+                beta,
+                E::ONE,
+                E::ONE,
                 1.0,
             );
 
-            let mut medium_vertex = HeroMediumVertex::new(
+            let mut medium_vertex = MediumVertex::new(
                 trace_type.into(),
                 hit.time,
                 lambda,
@@ -779,59 +779,61 @@ pub fn random_walk_medium_hero(
                 (0.0, 0.0, 0.0),
                 0,
                 hit.instance_id,
-                HeroEnergy(beta),
-                f32x4::splat(1.0),
-                f32x4::splat(1.0),
+                beta,
+                E::ONE,
+                E::ONE,
                 1.0,
             );
 
-            let mut vertex = HeroVertex::Surface(surface_vertex);
+            let mut vertex = Vertex::Surface(surface_vertex);
 
             let mut hero_weight = 1.0;
             let mut hero_tr = 1.0;
             for medium_id in tracked_mediums.iter() {
                 let medium = &world.mediums[*medium_id - 1];
-                let (p, tr, scatter) =
-                    medium.sample(lambda.extract(0), ray, Sample1D::new_random_sample());
+                let (p, tr, scatter) = medium.sample(
+                    ToScalar::convert(lambda),
+                    ray,
+                    Sample1D::new_random_sample(),
+                );
                 if scatter {
                     let t = (p - ray.origin).norm();
                     if t < medium_vertex.time {
                         medium_vertex.time = t;
                         medium_vertex.point = p;
                         hero_weight = tr;
-                        hero_tr = medium.tr(lambda.extract(0), ray.origin, p);
+                        hero_tr = medium.tr(ToScalar::convert(0), ray.origin, p);
                         medium_vertex.medium_id = *medium_id;
                         // println!(
                         //     "overrode surface vertex with medium vertex, p = {:?}",
                         //     medium_vertex.point
                         // );
-                        vertex = HeroVertex::Medium(medium_vertex);
+                        vertex = Vertex::Medium(medium_vertex);
                     }
                 }
             }
             // multiply in hero weight, since it includes some of the hero pdf information and that would be lost if unaccounted for.
             // hero weight also includes tr.
             beta *= hero_weight;
-            for i in 0..4 {
-                let mut combined_throughput = 1.0;
-                for medium_id in tracked_mediums.iter() {
-                    if *medium_id == medium_vertex.medium_id && i == 0 {
-                        // skip hero
-                        continue;
-                    }
-                    let medium = &world.mediums[*medium_id - 1];
-                    combined_throughput *=
-                        medium.tr(lambda.extract(i), ray.origin, medium_vertex.point);
+            let mut combined_throughput = 1.0;
+            for medium_id in tracked_mediums.iter() {
+                if *medium_id == medium_vertex.medium_id && i == 0 {
+                    // skip hero
+                    continue;
                 }
-
-                // divide out hero_tr for all wavelengths, since it was included in overall beta mult.
-                beta = beta.replace(i, beta.extract(i) * combined_throughput / hero_tr);
+                let medium = &world.mediums[*medium_id - 1];
+                combined_throughput *=
+                    medium.tr(lambda.extract(i), ray.origin, medium_vertex.point);
             }
+
+            // divide out hero_tr for all wavelengths, since it was included in overall beta mult.
+            beta *= combined_throughput / hero_tr;
+
             // multiply hero_tr back in for only hero wavelength.
-            beta = beta.replace(0, beta.extract(0) * hero_tr);
+            // beta = beta.replace(0, beta.extract(0) * hero_tr);
 
             match vertex {
-                HeroVertex::Surface(mut vertex) => {
+                Vertex::Surface(mut vertex) => {
                     let frame = TangentFrame::from_normal(hit.normal);
                     let wi = frame.to_local(&-ray.direction).normalized();
 
@@ -839,7 +841,7 @@ pub fn random_walk_medium_hero(
                         if trace_type == TransportMode::Radiance {
                             // if hit camera directly while tracing a light path
                             surface_vertex.vertex_type = VertexType::Camera;
-                            vertices.push(HeroVertex::Surface(surface_vertex));
+                            vertices.push(Vertex::Surface(surface_vertex));
                         }
                         break;
                     } else if matches!(hit.material, MaterialId::Light(_)) {
@@ -862,20 +864,8 @@ pub fn random_walk_medium_hero(
                     );
 
                     // what to do in this situation, where there is a wo and there's also emission?
-                    let multi_emission = HeroEnergy(f32x4::new(
-                        material
-                            .emission(lambda.extract(0), hit.uv, hit.transport_mode, wi)
-                            .0,
-                        material
-                            .emission(lambda.extract(1), hit.uv, hit.transport_mode, wi)
-                            .0,
-                        material
-                            .emission(lambda.extract(2), hit.uv, hit.transport_mode, wi)
-                            .0,
-                        material
-                            .emission(lambda.extract(3), hit.uv, hit.transport_mode, wi)
-                            .0,
-                    ));
+                    let multi_emission: E =
+                        material.emission(lambda, hit.uv, hit.transport_mode, wi);
 
                     // wo is generated in tangent space.
 
@@ -1010,7 +1000,7 @@ pub fn random_walk_medium_hero(
                         //     rr_continue_prob,
                         // );
 
-                        vertices.push(HeroVertex::Surface(vertex));
+                        vertices.push(Vertex::Surface(vertex));
 
                         // let beta_before_hit = beta;
                         // last_bsdf_pdf = pdf;
@@ -1101,14 +1091,14 @@ pub fn random_walk_medium_hero(
                             vertex.pdf_forward = f32x4::splat(0.0);
                             vertex.pdf_backward = f32x4::splat(1.0);
                             vertex.veach_g = veach_g(hit.point, wi.z().abs(), ray.origin, 1.0);
-                            vertices.push(HeroVertex::Surface(vertex));
+                            vertices.push(Vertex::Surface(vertex));
                         } else {
                             // this happens when the backside of a light is hit.
                         }
                         break;
                     }
                 }
-                HeroVertex::Medium(mut vertex) => {
+                Vertex::Medium(mut vertex) => {
                     let medium = &world.mediums[vertex.medium_id - 1];
                     let wi = -ray.direction;
                     let [u, v, w, _] = vertex.point.as_array();
@@ -1124,7 +1114,7 @@ pub fn random_walk_medium_hero(
                     vertex.pdf_forward = f32x4::splat(phase.0);
                     vertex.pdf_backward = f32x4::splat(phase.0); // phase functions are reciprocal
                     vertex.veach_g = veach_g(vertex.point, 1.0, ray.origin, 1.0);
-                    vertices.push(HeroVertex::Medium(vertex));
+                    vertices.push(Vertex::Medium(vertex));
                     // println!(
                     //     "medium interaction {}, wi = {:?}, wo = {:?}",
                     //     vertex.medium_id, wi, wo
@@ -1149,7 +1139,7 @@ pub fn random_walk_medium_hero(
                 let ray_direction = ray.direction;
                 let world_radius = world.radius;
                 let at_env = ray_direction * world_radius;
-                let vertex = HeroSurfaceVertex::new(
+                let vertex = SurfaceVertex::new(
                     VertexType::LightSource(LightSourceType::Environment),
                     ray.time,
                     lambda,
@@ -1159,14 +1149,14 @@ pub fn random_walk_medium_hero(
                     (0.0, 0.0),
                     MaterialId::Light(0),
                     0,
-                    HeroEnergy(beta),
-                    f32x4::splat(0.0),
-                    f32x4::splat(1.0 / (4.0 * PI)),
+                    beta,
+                    E::ZERO,
+                    E::ONE * (1.0 / (4.0 * PI)),
                     1.0,
                 );
                 debug_assert!(vertex.point.0.is_finite().all());
                 // println!("sampling env and setting pdf_forward to 0");
-                vertices.push(HeroVertex::Surface(vertex));
+                vertices.push(Vertex::Surface(vertex));
             }
             break;
         }

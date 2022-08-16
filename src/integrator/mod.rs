@@ -3,7 +3,6 @@ use crate::prelude::*;
 mod bdpt;
 mod lt;
 mod pt;
-// mod sppm;
 pub mod utils;
 
 use crate::parsing::config::{IntegratorKind, RenderSettings};
@@ -15,9 +14,9 @@ use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
 pub use pt::PathTracingIntegrator;
-// pub use sppm::SPPMIntegrator;
 
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 // pub type CameraId = u8;
@@ -53,14 +52,14 @@ impl From<IntegratorKind> for IntegratorType {
     }
 }
 
-pub enum Integrator {
-    PathTracing(PathTracingIntegrator),
+pub enum Integrator<T: Field> {
+    PathTracing(PathTracingIntegrator<T>),
     LightTracing(LightTracingIntegrator),
     BDPT(BDPTIntegrator),
     // SPPM(SPPMIntegrator),
 }
 
-impl Integrator {
+impl<T: Field> Integrator<T> {
     pub fn from_settings_and_world(
         world: Arc<World>,
         integrator_type: IntegratorType,
@@ -100,6 +99,7 @@ impl Integrator {
                     light_samples,
                     only_direct: settings.only_direct.unwrap_or(false),
                     wavelength_bounds: bounds,
+                    field: PhantomData,
                 }))
             }
             _ => {
@@ -112,6 +112,7 @@ impl Integrator {
                     light_samples: 4,
                     only_direct: settings.only_direct.unwrap_or(false),
                     wavelength_bounds: bounds,
+                    field: PhantomData,
                 }))
             }
         }

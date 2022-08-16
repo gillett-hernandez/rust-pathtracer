@@ -167,7 +167,7 @@ impl CLM {
             }
             let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
             throughput *= f.0;
-            path_pdf *= pdf.0;
+            path_pdf *= pdf;
             println!("gs {:?} {:?}", throughput, path_pdf);
 
             index = (index as isize + direction) as usize;

@@ -11,15 +11,15 @@ use std::ops::Index;
 use std::sync::Arc;
 
 pub enum SampleKind {
-    Sampled((SingleEnergy, f32)),
-    Splatted((SingleEnergy, f32)),
+    Sampled((f32, f32)),
+    Splatted((f32, f32)),
 }
 
 pub fn eval_unweighted_contribution(
     world: &Arc<World>,
-    light_path: &[SurfaceVertex],
+    light_path: &[SurfaceVertex<f32, f32>],
     s: usize,
-    eye_path: &[SurfaceVertex],
+    eye_path: &[SurfaceVertex<f32, f32>],
     t: usize,
     _sampler: &mut Box<dyn Sampler>,
     russian_roulette_threshold: f32,
@@ -27,19 +27,19 @@ pub fn eval_unweighted_contribution(
 ) -> SampleKind {
     let lambda = light_path[0].lambda;
     let last_lightpath_vertex_throughput = if s == 0 {
-        SingleEnergy::ONE
+        1.0
     } else {
         light_path[s - 1].throughput
     };
 
     let last_eyepath_vertex_throughput = if t == 0 {
-        SingleEnergy::ONE
+        1.0
     } else {
         eye_path[t - 1].throughput
     };
 
-    let mut c_st: SingleEnergy;
-    let mut sample = SampleKind::Sampled((SingleEnergy::ONE, 0.0));
+    let mut c_st: f32;
+    let mut sample = SampleKind::Sampled((1.0, 0.0));
     let g;
     if s == 0 {
         // since the eye path actually hit the light in this situation, calculate how much light would be transmitted along that eye path
@@ -91,17 +91,15 @@ pub fn eval_unweighted_contribution(
         if let MaterialId::Camera(camera_id) = last_lightpath_vertex.material_id {
             let camera = world.get_camera(camera_id as usize);
             let direction = last_lightpath_vertex.point - second_to_last_lightpath_vertex.point;
-            c_st = SingleEnergy(
-                camera
-                    .eval_we(
-                        lambda,
-                        last_lightpath_vertex.normal,
-                        last_lightpath_vertex.point,
-                        second_to_last_lightpath_vertex.point,
-                    )
-                    .0,
-            );
-            sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
+            c_st = camera
+                .eval_we(
+                    lambda,
+                    last_lightpath_vertex.normal,
+                    last_lightpath_vertex.point,
+                    second_to_last_lightpath_vertex.point,
+                )
+                .0;
+            sample = SampleKind::Splatted((1.0, 0.0));
 
             let (cos_i, cos_o) = (
                 (direction * second_to_last_lightpath_vertex.normal).abs(), // these are cosines relative to their surface normals btw.
@@ -114,7 +112,7 @@ pub fn eval_unweighted_contribution(
                 cos_o,
             );
         } else {
-            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+            return SampleKind::Sampled((0.0, 0.0));
         }
     } else {
         // assume light_path[0] and light_path[1] have had their reflectances fixed to be the light radiance values, as that's what the BDPT algorithm seems to expect.
@@ -145,7 +143,7 @@ pub fn eval_unweighted_contribution(
                     == VertexType::LightSource(LightSourceType::Environment)
                 {
                     // can't connect an environment vertex to another environment vertex.
-                    SingleEnergy::ZERO
+                    0.0
                 } else {
                     // connected to env vertex == llv, however since the point is some finite distance away (and not infinitely far like it would be for an env vertex)
                     // the direction would be off for a connection. so use the original direction that the env vertex would be coming in from in the calculations
@@ -163,7 +161,7 @@ pub fn eval_unweighted_contribution(
                 == VertexType::LightSource(LightSourceType::Environment)
             {
                 // can't connect env vertex to vertex in scene this way, since the env vertex is already at the end of an eyepath
-                SingleEnergy::ZERO
+                0.0
             } else {
                 let hit_light_material = world.get_material(last_lightpath_vertex.material_id);
                 let hit: HitRecord = last_lightpath_vertex.into();
@@ -177,7 +175,7 @@ pub fn eval_unweighted_contribution(
         } else if last_lightpath_vertex.vertex_type
             == VertexType::LightSource(LightSourceType::Environment)
         {
-            SingleEnergy::ZERO
+            0.0
         } else {
             let second_to_last_lightpath_vertex = light_path[s - 2];
             let wi =
@@ -195,8 +193,8 @@ pub fn eval_unweighted_contribution(
                 .0
         };
 
-        if fsl == SingleEnergy::ZERO {
-            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+        if fsl == 0.0 {
+            return SampleKind::Sampled((0.0, 0.0));
         }
 
         // lev means Last Eye Vertex
@@ -208,24 +206,22 @@ pub fn eval_unweighted_contribution(
             // connected to surface of camera
             if let MaterialId::Camera(camera_id) = last_eyepath_vertex.material_id {
                 let camera = world.get_camera(camera_id as usize);
-                sample = SampleKind::Splatted((SingleEnergy::ONE, 0.0));
-                SingleEnergy(
-                    camera
-                        .eval_we(
-                            lambda,
-                            lepv_normal,
-                            last_eyepath_vertex.point,
-                            last_lightpath_vertex.point,
-                        )
-                        .0,
-                )
+                sample = SampleKind::Splatted((1.0, 0.0));
+                camera
+                    .eval_we(
+                        lambda,
+                        lepv_normal,
+                        last_eyepath_vertex.point,
+                        last_lightpath_vertex.point,
+                    )
+                    .0
             } else {
-                SingleEnergy(0.0)
+                0.0
             }
         } else if last_eyepath_vertex.vertex_type
             == VertexType::LightSource(LightSourceType::Environment)
         {
-            SingleEnergy::ZERO
+            0.0
         } else {
             let second_to_last_eyepath_vertex = eye_path[t - 2];
             let wi = (second_to_last_eyepath_vertex.point - last_eyepath_vertex.point).normalized();
@@ -243,8 +239,8 @@ pub fn eval_unweighted_contribution(
                 .0
         };
 
-        if fse == SingleEnergy::ZERO {
-            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+        if fse == 0.0 {
+            return SampleKind::Sampled((0.0, 0.0));
         }
 
         let (cos_i, cos_o) = (
@@ -263,7 +259,7 @@ pub fn eval_unweighted_contribution(
             );
         }
         if g == 0.0 {
-            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+            return SampleKind::Sampled((0.0, 0.0));
         }
 
         let sample = _sampler.draw_1d().x;
@@ -277,12 +273,12 @@ pub fn eval_unweighted_contribution(
                 last_lightpath_vertex.point,
             ) {
                 // not visible
-                return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+                return SampleKind::Sampled((0.0, 0.0));
             } else {
                 c_st *= 1.0 / russian_roulette_probability;
             }
         } else {
-            return SampleKind::Sampled((SingleEnergy::ZERO, 0.0));
+            return SampleKind::Sampled((0.0, 0.0));
         }
     }
     match sample {
@@ -299,15 +295,15 @@ pub fn eval_unweighted_contribution(
 
 #[derive(Debug)]
 pub struct CombinedPath<'a> {
-    pub light_path: &'a Vec<SurfaceVertex>,
-    pub eye_path: &'a Vec<SurfaceVertex>,
+    pub light_path: &'a Vec<SurfaceVertex<f32, f32>>,
+    pub eye_path: &'a Vec<SurfaceVertex<f32, f32>>,
     pub s: usize,
     pub t: usize,
     pub connecting_g: f32,
-    pub light_vertex_pdf_forward: f32,
-    pub light_vertex_pdf_backward: f32,
-    pub eye_vertex_pdf_forward: f32,
-    pub eye_vertex_pdf_backward: f32,
+    pub light_vertex_pdf_forward: PDF<f32, ProjectedSolidAngle>,
+    pub light_vertex_pdf_backward: PDF<f32, ProjectedSolidAngle>,
+    pub eye_vertex_pdf_forward: PDF<f32, ProjectedSolidAngle>,
+    pub eye_vertex_pdf_backward: PDF<f32, ProjectedSolidAngle>,
 }
 
 impl<'a> CombinedPath<'a> {
@@ -405,7 +401,7 @@ impl<'a> CombinedPath<'a> {
 }
 
 impl<'a> Index<usize> for CombinedPath<'a> {
-    type Output = SurfaceVertex;
+    type Output = SurfaceVertex<f32, f32>;
     fn index(&self, index: usize) -> &Self::Output {
         if index < self.s {
             debug_assert!(index < self.light_path.len());
@@ -427,9 +423,9 @@ impl<'a> Index<usize> for CombinedPath<'a> {
 
 pub fn eval_mis<F>(
     world: &Arc<World>,
-    light_path: &Vec<SurfaceVertex>,
+    light_path: &Vec<SurfaceVertex<f32, f32>>,
     s: usize,
-    eye_path: &Vec<SurfaceVertex>,
+    eye_path: &Vec<SurfaceVertex<f32, f32>>,
     t: usize,
     connecting_g: f32,
     mis_function: F,
@@ -882,20 +878,3 @@ where
     debug_assert!(result.is_finite());
     result
 }
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_mis_weights_for_short_paths() {
-        // [
-        //      Vertex { kind: LightSource(Instance), time: 0.0, lambda: 603.45825, point: Point3(f32x4(-0.027535105, -0.19972621, 0.9, 1.0)), normal: Vec3(f32x4(0.0, 0.0, -1.0, 0.0)), material_id: Light(3), instance_id: 5, throughput: SingleEnergy(3.0513232), pdf_forward: 0.31831563, pdf_backward: 1.9894367, veach_g: 1.0 },
-        //      Vertex { kind: Camera, time: 5.0592623, lambda: 603.45825, point: Point3(f32x4(-5.0, -0.007217303, -0.013055563, 1.0)), normal: Vec3(f32x4(1.0, -0.0, -0.0, -0.0)), material_id: Camera(0), instance_id: 10, throughput: SingleEnergy(3.0513232), pdf_forward: 1.0, pdf_backward: 1.0, veach_g: 1.0 }
-        // ]
-
-        // [
-        //      Vertex { kind: Camera, time: 0.59899455, lambda: 603.45825, point: Point3(f32x4(-5.0, 0.013205296, -0.0029486567, 1.0)), normal: Vec3(f32x4(0.98173434, -0.06221859, -0.17979613, 0.0)), material_id: Camera(0), instance_id: 0, throughput: SingleEnergy(1.0), pdf_forward: 1.0, pdf_backward: 0.01, veach_g: 1.0 },
-        //      Vertex { kind: Eye, time: 4.5407047, lambda: 603.45825, point: Point3(f32x4(-0.5422344, -0.26931095, -0.81934977, 1.0)), normal: Vec3(f32x4(-0.80744135, 0.4356266, -0.3978293, 0.0)), material_id: Material(4), instance_id: 7, throughput: SingleEnergy(1.0), pdf_forward: 69214.664, pdf_backward: 10360.568, veach_g: 0.035089824 }
-        // ]
-    }
-}*/

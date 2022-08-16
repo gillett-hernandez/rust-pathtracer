@@ -63,8 +63,16 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>);
 
     // method that should implement the projected solid angle pdf of sampling this primitive from Vertex {from, normal}
-    // to is on the surface of the hittable/light
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF<f32, ProjectedSolidAngle>;
+    // `to` is on the surface of the hittable/light
+    // assume `from` and `to` are both in local space
+    // since Instance will transform the points before feeding them in
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle>;
     fn surface_area(&self, transform: &Transform3) -> f32;
 }
 

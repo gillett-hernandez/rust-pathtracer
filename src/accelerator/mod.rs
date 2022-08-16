@@ -3,11 +3,11 @@ mod lbvh;
 
 pub use bvh::{BHShape, BVHNode, BoundingHierarchy, BVH};
 pub use lbvh::FlatBVH;
+use math::prelude::Ray;
 
 use crate::aabb::*;
 use crate::geometry::Instance;
 use crate::hittable::{HitRecord, Hittable};
-use math::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum AcceleratorType {

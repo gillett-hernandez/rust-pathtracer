@@ -167,7 +167,7 @@ impl EnvironmentMap {
                     // 1.0 / wavelength_range.span(),
                     1.0,
                 );
-                sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
+                sw.energy = texture.eval_at(sw.lambda, uv) * strength;
 
                 // NOTE: sample_env_uv already translates uv through `rotation`, so don't do it again here.
                 let direction = uv_to_direction(uv);

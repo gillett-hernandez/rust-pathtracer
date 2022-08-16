@@ -14,7 +14,6 @@ pub use sphere::Sphere;
 
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
 
-
 macro_rules! generate_aggregate {
     ($($e:ident),+) => {
         #[derive(Clone, Debug)]
@@ -56,7 +55,7 @@ impl Hittable for Aggregate {
             )+
         }
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         debug_assert!(from.0.is_finite().all());
         let pair = match self {
             $(
@@ -67,7 +66,7 @@ impl Hittable for Aggregate {
         debug_assert!((pair.1).0.is_finite());
         pair
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         let triplet = match self {
             $(
                 Self::$e(inner) => inner.sample_surface(s),
@@ -78,7 +77,7 @@ impl Hittable for Aggregate {
         debug_assert!((triplet.2).0.is_finite());
         triplet
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF<f32, ProjectedSolidAngle> {
         debug_assert!(cos_o.is_finite());
         debug_assert!(from.0.is_finite().all());
         debug_assert!(to.0.is_finite().all());
@@ -88,13 +87,13 @@ impl Hittable for Aggregate {
             )+
         };
         debug_assert!(
-            pdf.0.is_finite(),
+            pdf.is_finite(),
             "{:?}, {:?}, {:?}, {:?}, {}",
             self,
             cos_o,
             from,
             to,
-            pdf.0
+            pdf
         );
         pdf
     }

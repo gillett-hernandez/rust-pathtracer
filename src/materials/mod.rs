@@ -75,25 +75,19 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
     }
 
     // evaluate the spectral power distribution for the given light and angle
-    fn emission(
-        &self,
-        lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
-        wi: Vec3,
-    ) -> f32 {
-        0.0
+    fn emission(&self, lambda: L, uv: (f32, f32), transport_mode: TransportMode, wi: Vec3) -> E {
+        E::ZERO
     }
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
         &self,
-        lambda: f32,
+        lambda: L,
         uv: (f32, f32),
         transport_mode: TransportMode,
         wo: Vec3,
-    ) -> PDF<f32, SolidAngle> {
+    ) -> PDF<E, SolidAngle> {
         // hit is passed in to access the UV.
-        0.0.into()
+        PDF::new(E::ZERO)
     }
 
     // method to sample the emission spectra at a given uv
@@ -102,7 +96,7 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
         uv: (f32, f32),
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> Option<(f32, PDF<f32, Uniform01>)> {
+    ) -> Option<(L, PDF<E, Uniform01>)> {
         None
     }
 }
@@ -176,7 +170,20 @@ macro_rules! generate_enum {
                     $($name::$s(inner) => inner.generate(lambda, uv, transport_mode, s, wi),)+
                 }
             }
+            fn generate_and_evaluate(&self,
+                lambda: $l,
+                uv: (f32, f32),
+                transport_mode: TransportMode,
+                s: Sample2D,
+                wi: Vec3,
+            ) -> ($e, Option<Vec3>, PDF<$e, SolidAngle>) {
+                match self {
+                    $($name::$s(inner) => inner.generate_and_evaluate(lambda, uv, transport_mode, s, wi),)+
+                }
+            }
 
+            // TODO: change this function definition to take a uv and return a Vec3 and normal, or something
+            // that way you can have a uv dependence for emission, i.e. a textured light
             fn sample_emission( &self,
                 point: Point3,
                 normal: Vec3,

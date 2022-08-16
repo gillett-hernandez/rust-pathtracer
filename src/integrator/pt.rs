@@ -7,9 +7,10 @@ use crate::integrator::*;
 use crate::world::World;
 
 use std::f32::INFINITY;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
-pub struct PathTracingIntegrator {
+pub struct PathTracingIntegrator<T: Field> {
     pub min_bounces: u16,
     pub max_bounces: u16,
     pub world: Arc<World>,
@@ -17,22 +18,23 @@ pub struct PathTracingIntegrator {
     pub light_samples: u16,
     pub only_direct: bool,
     pub wavelength_bounds: Bounds1D,
+    field: PhantomData<T>,
 }
 
 const USE_VEACH_V: bool = false;
 
-impl PathTracingIntegrator {
+impl<T: Field> PathTracingIntegrator<T> {
     fn estimate_direct_illumination(
         &self,
         hit: &HitRecord,
         frame: &TangentFrame,
         wi: Vec3,
         material: &MaterialEnum,
-        throughput: SingleEnergy,
+        throughput: T,
         light_pick_sample: Sample1D,
         additional_light_sample: Sample2D,
         profile: &mut Profile,
-    ) -> SingleEnergy {
+    ) -> T {
         if let Some((light, light_pick_pdf)) = self.world.pick_random_light(light_pick_sample) {
             // TODO: figure out why the hell the USE_VEACH_V branch was so bad.
             if USE_VEACH_V {
@@ -41,9 +43,9 @@ impl PathTracingIntegrator {
                 // sample the primitive from hit_point
                 let (point_on_light, normal, light_area_pdf) =
                     light.sample_surface(additional_light_sample);
-                debug_assert!(light_area_pdf.0.is_finite());
-                if light_area_pdf.0 == 0.0 {
-                    return SingleEnergy::ZERO;
+                debug_assert!(light_area_pdf.is_finite());
+                if *light_area_pdf == 0.0 {
+                    return T::ZERO;
                 }
                 // direction is from shading point to light
                 let direction = (point_on_light - hit.point).normalized();
@@ -54,7 +56,7 @@ impl PathTracingIntegrator {
 
                 let cos_i = light_vertex_wi.z().abs();
                 if cos_i == 0.0 {
-                    return SingleEnergy::ZERO;
+                    return T::ZERO;
                 }
                 // since direction is already in world space, no need to call frame.to_world(direction) in the above line
                 let (reflectance, scatter_pdf_for_light_ray) = material.bsdf(
@@ -78,7 +80,7 @@ impl PathTracingIntegrator {
                 if light_pdf.0 == 0.0 {
                     // println!("light pdf was 0");
                     // go to next pick
-                    return SingleEnergy::ZERO;
+                    return T::ZERO;
                 }
 
                 let light_material = self.world.get_material(light.get_material_id());
@@ -92,7 +94,7 @@ impl PathTracingIntegrator {
                 );
                 // this should be the same as the other method, but maybe not.
                 if emission.0 == 0.0 {
-                    return SingleEnergy::ZERO;
+                    return T::ZERO;
                 }
 
                 profile.shadow_rays += 1;
@@ -186,20 +188,20 @@ impl PathTracingIntegrator {
                 }
             }
         }
-        SingleEnergy::ZERO
+        T::ZERO
     }
 
     fn estimate_direct_illumination_from_world(
         &self,
-        lambda: f32,
+        lambda: T,
         hit: &HitRecord,
         frame: &TangentFrame,
         wi: Vec3,
         material: &MaterialEnum,
-        throughput: SingleEnergy,
+        throughput: T,
         sample: Sample2D,
         profile: &mut Profile,
-    ) -> SingleEnergy {
+    ) -> T {
         let (uv, light_pdf) = self
             .world
             .environment
@@ -238,7 +240,7 @@ impl PathTracingIntegrator {
             // let light_wi = light_frame.to_local(&-direction);
             // let dropoff = light_wi.z().abs();
             // if dropoff == 0.0 {
-            //     return SingleEnergy::ZERO;
+            //     return 0.0;
             // }
             // // if reflectance.0 < 0.00001 {
             // //     // if reflectance is 0 for all components, skip this light sample
@@ -259,12 +261,12 @@ impl PathTracingIntegrator {
             //     );
 
             //     if pdf.0 == 0.0 {
-            //         return SingleEnergy::ZERO;
+            //         return 0.0;
             //     }
             //     let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
             //     reflectance * throughput * dropoff * emission * weight / light_pdf.0
             // } else {
-            //     SingleEnergy::ZERO
+            //     0.0
             // }
         } else {
             // successfully world is visible along this ray
@@ -296,14 +298,14 @@ impl PathTracingIntegrator {
         frame: &TangentFrame,
         wi: Vec3,
         material: &MaterialEnum,
-        throughput: SingleEnergy,
+        throughput: T,
         sampler: &mut Box<dyn Sampler>,
         profile: &mut Profile,
-    ) -> SingleEnergy {
-        let mut light_contribution = SingleEnergy::ZERO;
+    ) -> T {
+        let mut light_contribution = T::ZERO;
         let env_sampling_probability = self.world.get_env_sampling_probability();
         if self.world.lights.is_empty() && env_sampling_probability == 0.0 {
-            return SingleEnergy::ZERO;
+            return T::ZERO;
         }
         for _ in 0..self.light_samples {
             let (light_pick_sample, sample_world) =
@@ -349,7 +351,7 @@ impl PathTracingIntegrator {
     }
 }
 
-impl SamplerIntegrator for PathTracingIntegrator {
+impl SamplerIntegrator for PathTracingIntegrator<f32> {
     fn color(
         &self,
         sampler: &mut Box<dyn Sampler>,
@@ -402,7 +404,7 @@ impl SamplerIntegrator for PathTracingIntegrator {
             camera_ray,
             lambda,
             max_bounces,
-            SingleEnergy::from(throughput_and_pdf.0),
+            throughput_and_pdf.0,
             TransportMode::Importance,
             sampler,
             &self.world,
@@ -421,7 +423,11 @@ impl SamplerIntegrator for PathTracingIntegrator {
                     let wo = vertex.normal;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
-                    let nee_psa_pdf = self.world.environment.pdf_for(uv); // * (prev_vertex.normal * (-wo)).abs(); // * prev_vertex.local_wo.z();
+                    let nee_psa_pdf = self
+                        .world
+                        .environment
+                        .pdf_for(uv)
+                        .convert_to_projected_solid_angle((prev_vertex.normal * wo).abs());
                     let bsdf_psa_pdf = prev_vertex.pdf_forward;
                     let weight = power_heuristic(bsdf_psa_pdf, nee_psa_pdf.0);
 

@@ -216,11 +216,11 @@ mod test {
                                 p.0,
                                 p.1,
                                 pixel
-                                    + SingleWavelength::new(lambda, (pdf.0 / jacobian).into())
+                                    + SingleWavelength::new(lambda, (*pdf / jacobian).into())
                                         .into(),
                             );
                             if i == 0 {
-                                println!("{:?}, {}", wo, pdf.0);
+                                println!("{:?}, {:?}", wo, pdf);
                             }
                         }
                         total_samples += samples_per_iteration;
