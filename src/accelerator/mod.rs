@@ -8,6 +8,7 @@ use math::prelude::Ray;
 use crate::aabb::*;
 use crate::geometry::Instance;
 use crate::hittable::{HitRecord, Hittable};
+use crate::prelude::InstanceId;
 
 #[derive(Clone, Copy, Debug)]
 pub enum AcceleratorType {
@@ -159,10 +160,10 @@ impl Accelerator {
 }
 
 impl Accelerator {
-    pub fn get_primitive(&self, index: usize) -> &Instance {
+    pub fn get_primitive(&self, index: InstanceId) -> &Instance {
         match self {
-            Accelerator::List { instances } => instances.get(index).unwrap(),
-            Accelerator::BVH { instances, bvh: _ } => instances.get(index).unwrap(),
+            Accelerator::List { instances } => instances.get(index as usize).unwrap(),
+            Accelerator::BVH { instances, bvh: _ } => instances.get(index as usize).unwrap(),
         }
     }
 }

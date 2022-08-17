@@ -65,7 +65,8 @@ macro_rules! generate_medium_enum {
                     )+
                 }
             }
-            fn sample_p(&self, lambda: $l, uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, PDF<$e, SolidAngle>) {
+
+            fn sample_p(&self, lambda: f32, uvw: (f32, f32, f32), wi: Vec3, s: Sample2D) -> (Vec3, PDF<$e, SolidAngle>) {
                 match self {
                     $(
                         MediumEnum::$s(inner) => inner.sample_p(lambda, uvw, wi, s),

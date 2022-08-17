@@ -12,7 +12,7 @@ pub struct Instance {
     pub aggregate: Aggregate,
     pub transform: Option<Transform3>,
     pub material_id: Option<MaterialId>,
-    pub instance_id: usize,
+    pub instance_id: InstanceId,
     node_id: usize,
 }
 
@@ -41,7 +41,7 @@ impl Instance {
         aggregate: Aggregate,
         transform: Option<Transform3>,
         material_id: Option<MaterialId>,
-        instance_id: usize,
+        instance_id: InstanceId,
     ) -> Self {
         Instance {
             aggregate,
@@ -175,7 +175,7 @@ impl Hittable for Instance {
 }
 
 impl Instance {
-    pub fn get_instance_id(&self) -> usize {
+    pub fn get_instance_id(&self) -> InstanceId {
         self.instance_id
     }
     pub fn get_material_id(&self) -> MaterialId {

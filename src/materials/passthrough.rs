@@ -3,12 +3,16 @@ use crate::prelude::*;
 #[derive(Clone)]
 pub struct PassthroughFilter {
     pub color: Curve,
-    pub outer_medium_id: usize,
-    pub inner_medium_id: usize,
+    pub outer_medium_id: MediumId,
+    pub inner_medium_id: MediumId,
 }
 
 impl PassthroughFilter {
-    pub fn new(color: Curve, outer_medium_id: usize, inner_medium_id: usize) -> PassthroughFilter {
+    pub fn new(
+        color: Curve,
+        outer_medium_id: MediumId,
+        inner_medium_id: MediumId,
+    ) -> PassthroughFilter {
         PassthroughFilter {
             color,
             outer_medium_id,
@@ -42,10 +46,10 @@ impl Material<f32, f32> for PassthroughFilter {
     ) -> Option<Vec3> {
         Some(-wi)
     }
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> MediumId {
         self.outer_medium_id
     }
-    fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
+    fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
         self.inner_medium_id
     }
 

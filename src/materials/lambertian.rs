@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, texture::EvalAt};
 
 #[derive(Clone)]
 pub struct Lambertian {

@@ -1,10 +1,7 @@
 use super::prelude::*;
 use crate::prelude::*;
 
-use crate::integrator::{
-    BDPTIntegrator, GenericIntegrator, Integrator, IntegratorType, LightTracingIntegrator, Sample,
-    SamplerIntegrator,
-};
+use crate::integrator::*;
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
@@ -258,12 +255,12 @@ impl NaiveRenderer {
             .enumerate()
             .map(
                 |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
-                    if let IntegratorKind::BDPT {
-                        selected_pair: Some((s, t)),
-                    } = settings.integrator
-                    {
-                        println!("rendering specific pair {} {}", s, t);
-                    }
+                    // if let IntegratorKind::BDPT {
+                    //     selected_pair: Some((s, t)),
+                    // } = settings.integrator
+                    // {
+                    //     println!("rendering specific pair {} {}", s, t);
+                    // }
 
                     let profile: Profile = film
                         .buffer
@@ -421,7 +418,7 @@ impl Renderer for NaiveRenderer {
             IntegratorType,
             Vec<(RenderSettings, CameraEnum)>,
         > = HashMap::new();
-        splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
+        // splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
@@ -545,7 +542,7 @@ impl Renderer for NaiveRenderer {
                 }
             }
             match integrator_type {
-                IntegratorType::BDPT => {
+                /* IntegratorType::BDPT => {
                     let (bundled_settings, bundled_cameras): (
                         Vec<RenderSettings>,
                         Vec<CameraEnum>,
@@ -597,6 +594,7 @@ impl Renderer for NaiveRenderer {
                     // );
                     for (mut render_settings, film) in render_splatted_result {
                         // if selected pair, add the pair numbers to the filename automatically
+
                         if let IntegratorKind::BDPT {
                             selected_pair: Some((s, t)),
                         } = render_settings.integrator
@@ -614,7 +612,7 @@ impl Renderer for NaiveRenderer {
                         }
                         output_film(&render_settings, &film, 1.0);
                     }
-                }
+                } */
                 IntegratorType::LightTracing => {
                     let (bundled_settings, bundled_cameras): (
                         Vec<RenderSettings>,

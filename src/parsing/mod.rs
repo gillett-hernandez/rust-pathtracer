@@ -408,7 +408,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
     for (name, medium) in mediums_map {
         let id = mediums.len();
         mediums.push(medium);
-        mediums_to_ids.insert(name, id);
+        mediums_to_ids.insert(name, id as MediumId);
     }
 
     // parse materials from disk or from literal
@@ -506,7 +506,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
                     if !mesh_name.starts_with(&name) {
                         continue;
                     }
-                    let id = instances.len();
+                    let id = instances.len() as InstanceId;
                     mesh.init();
                     let maybe_material_id = instance
                         .material_name
@@ -531,7 +531,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
             }
             _ => {
                 info!("parsing instance and primitive");
-                let id = instances.len();
+                let id = instances.len() as InstanceId;
                 let instance = parse_instance(instance, &material_names_to_ids, &mesh_mapping, id);
                 info!(
                     "done. pushing instance with material {:?} and instance id {}",

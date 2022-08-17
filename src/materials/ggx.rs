@@ -185,7 +185,7 @@ pub struct GGX {
     pub eta: Curve,
     pub eta_o: Curve,
     pub kappa: Curve,
-    pub outer_medium_id: usize,
+    pub outer_medium_id: MediumId,
     metallic: bool,
 }
 
@@ -195,7 +195,7 @@ impl GGX {
         eta: Curve,
         eta_o: Curve,
         kappa: Curve,
-        outer_medium_id: usize,
+        outer_medium_id: MediumId,
     ) -> Self {
         debug_assert!(roughness > 0.0);
 
@@ -475,10 +475,10 @@ impl Material<f32, f32> for GGX {
             (f, wo, pdf)
         }
     }
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> MediumId {
         self.outer_medium_id
     }
-    fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
+    fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
         0
     }
 }

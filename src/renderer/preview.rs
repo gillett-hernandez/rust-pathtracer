@@ -81,7 +81,7 @@ impl Renderer for PreviewRenderer {
                 &render_settings,
             ) {
                 None => {}
-                Some(Integrator::BDPT(mut integrator)) => {
+                /* Som e(Integrator::BDPT(mut integrator)) => {
                     println!("rendering with BDPT integrator");
                     let mut window = Window::new(
                         "Preview",
@@ -381,7 +381,7 @@ impl Renderer for PreviewRenderer {
                         &light_film.lock().unwrap(),
                         1.0,
                     );
-                }
+                } */
                 Some(Integrator::PathTracing(integrator)) => {
                     let mut window = Window::new(
                         "Preview",

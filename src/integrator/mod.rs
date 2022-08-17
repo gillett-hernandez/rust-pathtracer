@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-mod bdpt;
+// mod bdpt;
 mod lt;
 mod pt;
 pub mod utils;
@@ -11,7 +11,7 @@ use crate::profile::Profile;
 use crate::world::World;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
-pub use bdpt::BDPTIntegrator;
+// pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
 pub use pt::PathTracingIntegrator;
 
@@ -25,9 +25,7 @@ use std::sync::Arc;
 pub enum IntegratorType {
     PathTracing,
     LightTracing,
-    BDPT,
-    // SPPM,
-    MLT,
+    // BDPT,
 }
 
 impl IntegratorType {
@@ -35,8 +33,7 @@ impl IntegratorType {
         match string {
             "PT" => IntegratorType::PathTracing,
             "LT" => IntegratorType::LightTracing,
-            "BDPT" => IntegratorType::BDPT,
-            "MLT" => IntegratorType::MLT,
+            // "BDPT" => IntegratorType::BDPT,
             _ => IntegratorType::PathTracing,
         }
     }
@@ -47,7 +44,7 @@ impl From<IntegratorKind> for IntegratorType {
         match data {
             IntegratorKind::PT { .. } => IntegratorType::PathTracing,
             IntegratorKind::LT { .. } => IntegratorType::LightTracing,
-            IntegratorKind::BDPT { .. } => IntegratorType::BDPT,
+            // IntegratorKind::BDPT { .. } => IntegratorType::BDPT,
         }
     }
 }
@@ -55,8 +52,7 @@ impl From<IntegratorKind> for IntegratorType {
 pub enum Integrator<T: Field> {
     PathTracing(PathTracingIntegrator<T>),
     LightTracing(LightTracingIntegrator),
-    BDPT(BDPTIntegrator),
-    // SPPM(SPPMIntegrator),
+    // BDPT(BDPTIntegrator),
 }
 
 impl<T: Field> Integrator<T> {
@@ -74,13 +70,13 @@ impl<T: Field> Integrator<T> {
         let max_bounces = settings.max_bounces.unwrap();
         let russian_roulette = settings.russian_roulette.unwrap_or(true);
         match (integrator_type, settings.integrator) {
-            (IntegratorType::BDPT, IntegratorKind::BDPT { .. }) => {
-                Some(Integrator::BDPT(BDPTIntegrator {
-                    max_bounces,
-                    world,
-                    wavelength_bounds: bounds,
-                }))
-            }
+            // (IntegratorType::BDPT, IntegratorKind::BDPT { .. }) => {
+            //     Some(Integrator::BDPT(BDPTIntegrator {
+            //         max_bounces,
+            //         world,
+            //         wavelength_bounds: bounds,
+            //     }))
+            // }
             (IntegratorType::LightTracing, IntegratorKind::LT { camera_samples }) => {
                 Some(Integrator::LightTracing(LightTracingIntegrator {
                     max_bounces,

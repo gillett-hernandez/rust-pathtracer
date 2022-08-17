@@ -11,7 +11,7 @@ pub struct HitRecord {
     pub lambda: f32,
     pub normal: Vec3,
     pub material: MaterialId,
-    pub instance_id: usize,
+    pub instance_id: InstanceId,
     pub transport_mode: TransportMode,
 }
 
@@ -23,7 +23,7 @@ impl HitRecord {
         lambda: f32,
         normal: Vec3,
         material: MaterialId,
-        instance_id: usize,
+        instance_id: InstanceId,
         transport_mode: Option<TransportMode>,
     ) -> Self {
         HitRecord {

@@ -18,7 +18,7 @@ pub use crate::materials::*;
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
-    pub lights: Vec<usize>,
+    pub lights: Vec<InstanceId>,
     pub cameras: Vec<CameraEnum>,
     pub materials: MaterialTable,
     pub mediums: MediumTable,
@@ -49,7 +49,7 @@ impl World {
                             "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                             id, instance.instance_id
                         );
-                            lights.push(instance.instance_id as usize);
+                            lights.push(instance.instance_id as InstanceId);
                         }
                     }
                 }
@@ -59,7 +59,7 @@ impl World {
                         "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                         id, instance.instance_id
                     );
-                        lights.push(instance.instance_id as usize);
+                        lights.push(instance.instance_id as InstanceId);
                     }
                 }
             }
@@ -146,7 +146,7 @@ impl World {
         }
     }
 
-    pub fn instance_is_light(&self, instance_id: usize) -> bool {
+    pub fn instance_is_light(&self, instance_id: InstanceId) -> bool {
         self.lights.contains(&instance_id)
     }
 
@@ -155,7 +155,7 @@ impl World {
         &self.materials[id]
     }
 
-    pub fn get_primitive(&self, index: usize) -> &Instance {
+    pub fn get_primitive(&self, index: InstanceId) -> &Instance {
         self.accelerator.get_primitive(index)
     }
 
@@ -217,7 +217,7 @@ impl World {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
                         if let Some(surface) = cam.get_surface() {
                             let mut surface = surface.clone();
-                            let id = instances.len();
+                            let id = instances.len() as InstanceId;
                             surface.instance_id = id;
                             surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
@@ -232,7 +232,7 @@ impl World {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
                         if let Some(surface) = cam.get_surface() {
                             let mut surface = surface.clone();
-                            let id = instances.len();
+                            let id = instances.len() as InstanceId;
                             surface.instance_id = id;
                             surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);

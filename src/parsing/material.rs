@@ -62,7 +62,7 @@ impl MaterialData {
         self,
         curve_mapping: &HashMap<String, Curve>,
         texture_mapping: &HashMap<String, TexStack>,
-        medium_id_map: &HashMap<String, usize>,
+        medium_id_map: &HashMap<String, MediumId>,
     ) -> Option<MaterialEnum> {
         match self {
             MaterialData::GGX(data) => {

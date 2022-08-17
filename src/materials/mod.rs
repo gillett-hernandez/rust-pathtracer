@@ -14,6 +14,39 @@ pub use lambertian::Lambertian;
 pub use passthrough::PassthroughFilter;
 pub use sharp_light::SharpLight;
 
+// type required for an id into the Material Table
+
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub enum MaterialId {
+    Material(u16),
+    Light(u16),
+    Camera(u16),
+}
+
+impl Default for MaterialId {
+    fn default() -> Self {
+        MaterialId::Material(0)
+    }
+}
+
+impl From<u16> for MaterialId {
+    fn from(value: u16) -> Self {
+        MaterialId::Material(value)
+    }
+}
+
+impl From<MaterialId> for usize {
+    fn from(value: MaterialId) -> Self {
+        match value {
+            MaterialId::Light(v) => v as usize,
+            MaterialId::Camera(v) => v as usize,
+            MaterialId::Material(v) => v as usize,
+        }
+    }
+}
+
+pub type MediumId = u8;
+
 #[allow(unused_variables)]
 pub trait Material<L: Field, E: Field>: Send + Sync {
     // provide default implementations
@@ -49,10 +82,10 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
             .1
     }
 
-    fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+    fn outer_medium_id(&self, uv: (f32, f32)) -> MediumId {
         0
     }
-    fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+    fn inner_medium_id(&self, uv: (f32, f32)) -> MediumId {
         0
     }
 
@@ -98,37 +131,6 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
         wavelength_sample: Sample1D,
     ) -> Option<(L, PDF<E, Uniform01>)> {
         None
-    }
-}
-
-// type required for an id into the Material Table
-
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-pub enum MaterialId {
-    Material(u16),
-    Light(u16),
-    Camera(u16),
-}
-
-impl Default for MaterialId {
-    fn default() -> Self {
-        MaterialId::Material(0)
-    }
-}
-
-impl From<u16> for MaterialId {
-    fn from(value: u16) -> Self {
-        MaterialId::Material(value)
-    }
-}
-
-impl From<MaterialId> for usize {
-    fn from(value: MaterialId) -> Self {
-        match value {
-            MaterialId::Light(v) => v as usize,
-            MaterialId::Camera(v) => v as usize,
-            MaterialId::Material(v) => v as usize,
-        }
     }
 }
 
@@ -205,13 +207,13 @@ macro_rules! generate_enum {
                 }
             }
 
-            fn outer_medium_id(&self, uv: (f32, f32)) -> usize {
+            fn outer_medium_id(&self, uv: (f32, f32)) -> u8 {
                 match self {
                     $($name::$s(inner) => inner.outer_medium_id(uv),)+
                 }
             }
 
-            fn inner_medium_id(&self, uv: (f32, f32)) -> usize {
+            fn inner_medium_id(&self, uv: (f32, f32)) -> u8 {
                 match self {
                     $($name::$s(inner) => inner.inner_medium_id(uv),)+
                 }

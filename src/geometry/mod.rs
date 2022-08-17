@@ -113,4 +113,6 @@ impl Hittable for Aggregate {
 
 type Triangle = MeshTriangleRef;
 
+pub type InstanceId = u32;
+
 generate_aggregate! {AARect, Sphere, Disk, Mesh, Triangle}
