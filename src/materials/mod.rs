@@ -134,29 +134,9 @@ impl From<MaterialId> for usize {
 
 #[macro_export]
 macro_rules! generate_enum {
-    ( $name:ident, $l: ty, $e: ty, $( $s:ident),+) => {
 
-        #[derive(Clone)]
-        pub enum $name {
-            $(
-                $s($s),
-            )+
-        }
-        $(
-            impl From<$s> for $name {
-                fn from(value: $s) -> Self {
-                    $name::$s(value)
-                }
-            }
-        )+
+    ( $name:ident, ($l: ty, $e: ty), $( $s:ident),+) => {
 
-        impl $name {
-            pub fn get_name(&self) -> &str {
-                match self {
-                    $($name::$s(_) => $s::NAME,)+
-                }
-            }
-        }
 
         impl Material<$l, $e> for $name {
             fn generate(&self,
@@ -249,20 +229,61 @@ macro_rules! generate_enum {
                 }
             }
         }
+    };
+    ( $name:ident, $( $s:ident),+) => {
+        #[derive(Clone)]
+        pub enum $name {
+            $(
+                $s($s),
+            )+
+        }
+        $(
+            impl From<$s> for $name {
+                fn from(value: $s) -> Self {
+                    $name::$s(value)
+                }
+            }
+        )+
 
+        impl $name {
+            pub fn get_name(&self) -> &str {
+                match self {
+                    $($name::$s(_) => $s::NAME,)+
+                }
+            }
+        }
     };
 }
 
 generate_enum!(
     MaterialEnum,
-    f32,
-    f32,
     GGX,
     Lambertian,
     DiffuseLight,
     SharpLight,
     PassthroughFilter
 );
+
+generate_enum!(
+    MaterialEnum,
+    (f32, f32),
+    GGX,
+    Lambertian,
+    DiffuseLight,
+    SharpLight,
+    PassthroughFilter
+);
+
+// avoid implementing f32x4 for now, since it needs to be implemented for each constituent Material
+// generate_enum!(
+//     MaterialEnum,
+//     (f32x4, f32x4),
+//     GGX,
+//     Lambertian,
+//     DiffuseLight,
+//     SharpLight,
+//     PassthroughFilter
+// );
 
 pub type MaterialTable = Vec<MaterialEnum>;
 

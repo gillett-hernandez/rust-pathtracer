@@ -338,7 +338,7 @@ impl<T: Field> PathTracingIntegrator<T> {
                 );
             }
             debug_assert!(
-                light_contribution.0.is_finite(),
+                light_contribution.is_finite(),
                 "{:?}, {}, {:?}, {:?}, {:?}",
                 light_contribution,
                 sample_world,

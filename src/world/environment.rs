@@ -1,5 +1,7 @@
 use crate::prelude::*;
+use crate::texture::EvalAt;
 use crate::world::importance_map::ImportanceMap;
+use std::ops::Mul;
 
 #[derive(Clone)]
 pub enum EnvironmentMap {
@@ -51,12 +53,17 @@ impl EnvironmentMap {
     // evaluate env map given a uv and wavelength
     // used when a camera ray with a given wavelength intersects the environment map
 
-    pub fn emission(&self, uv: (f32, f32), lambda: f32) -> f32 {
+    pub fn emission<T: Field + Mul<f32, Output = T>>(&self, uv: (f32, f32), lambda: T) -> T
+    where
+        CurveWithCDF: SpectralPowerDistributionFunction<T>,
+        TexStack: EvalAt<T>,
+    {
+        // how to express trait bounds for this?
+        // CurveWithCDF needs to implement SPDF, which it does for f32 and f32x4.
         // evaluate emission at uv coordinate and wavelength
         match self {
             EnvironmentMap::Constant { color, strength } => {
-                debug_assert!(lambda > 0.0);
-                color.evaluate_power(lambda) * strength
+                color.evaluate_power(lambda) * *strength
             }
             EnvironmentMap::Sun {
                 color,
@@ -71,7 +78,7 @@ impl EnvironmentMap {
                     // within solid angle
                     color.evaluate_power(lambda) * *strength
                 } else {
-                    f32::ZERO
+                    T::ZERO
                 }
             }
             EnvironmentMap::HDR {
@@ -84,8 +91,8 @@ impl EnvironmentMap {
                 // use to_local to transform ray direction to "uv space"
                 let new_direction = rotation.to_local(direction);
                 let uv = direction_to_uv(new_direction);
-                let result = texture.eval_at(lambda, uv) * strength;
-                result.into()
+                let result = texture.eval_at(lambda, uv) * *strength;
+                result
             }
         }
     }

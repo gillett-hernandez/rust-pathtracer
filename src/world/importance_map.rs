@@ -283,6 +283,7 @@ mod test {
 
     use super::*;
     use crate::renderer::Film;
+    use crate::texture::EvalAt;
     use crate::tonemap::{Clamp, Converter, Tonemapper};
 
     use crate::world::environment::*;
@@ -359,7 +360,7 @@ mod test {
                 sample
             };
             let (uv, pdf) = map.sample_uv(sample);
-            let pdf = (pdf.0 * pdf.1);
+            let pdf = pdf.0 * pdf.1;
 
             // estimate of env map luminance will have unacceptable bias depending on the actual size of the env map texture.
             // need to downsample to retain size information in importance map so that the pdf can be adjusted.

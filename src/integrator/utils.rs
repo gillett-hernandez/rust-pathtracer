@@ -31,8 +31,10 @@ impl From<TransportMode> for VertexType {
     }
 }
 
+// TODO: maybe instead of adding the ToScalar trait bound with f32, we could generalize HitRecord.
+// TODO: actually, just refactor HitRecord completely.
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct SurfaceVertex<L: Field, E: Field> {
+pub struct SurfaceVertex<L: Field + ToScalar<L, f32>, E: Field> {
     pub vertex_type: VertexType,
     pub time: f32,
     pub lambda: L,
@@ -43,12 +45,12 @@ pub struct SurfaceVertex<L: Field, E: Field> {
     pub material_id: MaterialId,
     pub instance_id: usize,
     pub throughput: E,
-    pub pdf_forward: PDF<E, ProjectedSolidAngle>,
-    pub pdf_backward: PDF<E, ProjectedSolidAngle>,
+    pub pdf_forward: PDF<E, Throughput>,
+    pub pdf_backward: PDF<E, Throughput>,
     pub veach_g: f32,
 }
 
-impl<L: Field, E: Field> SurfaceVertex<L, E> {
+impl<L: Field + ToScalar<L, f32>, E: Field> SurfaceVertex<L, E> {
     pub fn new(
         vertex_type: VertexType,
         time: f32,
@@ -60,8 +62,8 @@ impl<L: Field, E: Field> SurfaceVertex<L, E> {
         material_id: MaterialId,
         instance_id: usize,
         throughput: E,
-        pdf_forward: PDF<E, ProjectedSolidAngle>,
-        pdf_backward: PDF<E, ProjectedSolidAngle>,
+        pdf_forward: PDF<E, Throughput>,
+        pdf_backward: PDF<E, Throughput>,
         veach_g: f32,
     ) -> Self {
         SurfaceVertex {
@@ -93,14 +95,14 @@ impl<L: Field, E: Field> SurfaceVertex<L, E> {
             MaterialId::Material(0),
             0,
             E::ZERO,
-            0.0,
-            0.0,
+            E::ZERO.into(),
+            E::ZERO.into(),
             0.0,
         )
     }
 }
 
-impl<L: Field, E: Field> From<SurfaceVertex<L, E>> for HitRecord {
+impl<L: Field + ToScalar<L, f32>, E: Field> From<SurfaceVertex<L, E>> for HitRecord {
     fn from(data: SurfaceVertex<L, E>) -> Self {
         let transport_mode = match data.vertex_type {
             VertexType::Light | VertexType::LightSource(_) => TransportMode::Radiance,
@@ -110,7 +112,7 @@ impl<L: Field, E: Field> From<SurfaceVertex<L, E>> for HitRecord {
             data.time,
             data.point,
             data.uv,
-            data.lambda.reduce_to_scalar(),
+            data.lambda.convert(),
             data.normal,
             data.material_id,
             data.instance_id,
@@ -135,7 +137,7 @@ pub fn veach_g(point0: Point3, cos_i: f32, point1: Point3, cos_o: f32) -> f32 {
     (cos_i * cos_o).abs() / (point1 - point0).norm_squared()
 }
 
-pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
+pub fn random_walk<L: Field + ToScalar<L, f32>, E: Field>(
     mut ray: Ray,
     lambda: L,
     bounce_limit: u16,
@@ -201,7 +203,8 @@ pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
             // wo is generated in tangent space.
 
             if let Some(wo) = maybe_wo {
-                let (f, pdf) = material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, wo);
+                // Material::bsdf(&material, hit, lambda, uv, transport_mode, wi, wo)
+                let (f, pdf) = material.bsdf(lambda, hit.uv, hit.transport_mode, wi, wo);
                 let cos_o = wo.z().abs();
                 let cos_i = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
@@ -215,20 +218,32 @@ pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
                     );
                 }
 
-                debug_assert!(pdf >= 0.0, "pdf was less than 0 {:?}", pdf);
+                debug_assert!(
+                    matches!(
+                        MyPartialOrd::partial_cmp(&*pdf, &E::ZERO),
+                        Some(std::cmp::Ordering::Greater)
+                    ),
+                    "pdf was less than 0 {:?}",
+                    pdf
+                );
                 if pdf.is_nan() {
                     break;
                 }
 
                 // TODO: confirm whether russian roulette is solely based on f/pdf or if it can take into account beta.
-                let rr_continue_prob = if bounce >= russian_roulette_start_index {
-                    (f / pdf).min(1.0)
+                let rr_continue_prob: PDF<_, Uniform01> = if bounce >= russian_roulette_start_index
+                {
+                    // f/pdf % probability of continuing, i.e. high throughput = high chance of continuing
+                    (f / *pdf).min(1.0).into()
                 } else {
-                    1.0
+                    // 100% probability of continuing
+                    1.0.into()
                 };
 
                 // consider handling delta distributions differently here, if deltas are ever added.
-                vertex.pdf_forward = rr_continue_prob * pdf / cos_o;
+                // dividing by cos_o seems to imply that this pdf is a SolidAngle pdf
+                //
+                vertex.pdf_forward = pdf * rr_continue_prob / cos_o;
 
                 // eval pdf in reverse direction
                 // FIXME: confirm that transport mode doesn't need to be flipped
@@ -709,12 +724,12 @@ impl<L: Field, E: Field> MediumVertex<L, E> {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum Vertex<L: Field, E: Field> {
+pub enum Vertex<L: Field + ToScalar<L, f32>, E: Field> {
     Surface(SurfaceVertex<L, E>),
     Medium(MediumVertex<L, E>),
 }
 
-impl<L: Field, E: Field> Vertex<L, E> {
+impl<L: Field + ToScalar<L, f32>, E: Field> Vertex<L, E> {
     pub fn point(&self) -> Point3 {
         match self {
             Vertex::Medium(v) => v.point,
@@ -735,7 +750,7 @@ impl<L: Field, E: Field> Vertex<L, E> {
     }
 }
 
-pub fn random_walk_medium<L: Field, E: Field + ToScalar<E, f32>>(
+pub fn random_walk_medium<L: Field + ToScalar<L, f32>, E: Field + ToScalar<E, f32>>(
     mut ray: Ray,
     lambda: L,
     bounce_limit: u16,
@@ -817,13 +832,8 @@ pub fn random_walk_medium<L: Field, E: Field + ToScalar<E, f32>>(
             beta *= hero_weight;
             let mut combined_throughput = 1.0;
             for medium_id in tracked_mediums.iter() {
-                if *medium_id == medium_vertex.medium_id && i == 0 {
-                    // skip hero
-                    continue;
-                }
                 let medium = &world.mediums[*medium_id - 1];
-                combined_throughput *=
-                    medium.tr(lambda.extract(i), ray.origin, medium_vertex.point);
+                combined_throughput *= medium.tr(lambda.convert(), ray.origin, medium_vertex.point);
             }
 
             // divide out hero_tr for all wavelengths, since it was included in overall beta mult.

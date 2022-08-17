@@ -1,4 +1,5 @@
 pub use packed_simd::f32x4;
+pub use rayon::prelude::*;
 
 pub use crate::camera::{Camera, CameraEnum, CameraId};
 pub use crate::curves::*;
