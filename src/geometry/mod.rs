@@ -63,7 +63,7 @@ impl Hittable for Aggregate {
             )+
         };
         debug_assert!((pair.0).0.is_finite().all(), "{:?} {:?}", self, pair.0);
-        debug_assert!((pair.1).0.is_finite());
+        debug_assert!((*pair.1).is_finite());
         pair
     }
     fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
@@ -74,21 +74,21 @@ impl Hittable for Aggregate {
         };
         debug_assert!((triplet.0).0.is_finite().all());
         debug_assert!((triplet.1).0.is_finite().all());
-        debug_assert!((triplet.2).0.is_finite());
+        debug_assert!((*triplet.2).is_finite());
         triplet
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF<f32, ProjectedSolidAngle> {
+    fn psa_pdf(&self, cos_o: f32, cos_i: f32, from: Point3, to: Point3) -> PDF<f32, ProjectedSolidAngle> {
         debug_assert!(cos_o.is_finite());
         debug_assert!(from.0.is_finite().all());
         debug_assert!(to.0.is_finite().all());
         let pdf = match self {
             $(
-                Self::$e(inner) => inner.psa_pdf(cos_o, from, to),
+                Self::$e(inner) => inner.psa_pdf(cos_o, cos_i, from, to),
             )+
         };
         debug_assert!(
             pdf.is_finite(),
-            "{:?}, {:?}, {:?}, {:?}, {}",
+            "{:?}, {:?}, {:?}, {:?}, {:?}",
             self,
             cos_o,
             from,

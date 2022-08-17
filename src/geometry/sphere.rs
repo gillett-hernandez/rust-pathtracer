@@ -122,12 +122,20 @@ impl Hittable for Sphere {
             (direction.normalized(), pdf)
         }
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF<f32, ProjectedSolidAngle> {
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
-        let pdf = distance_squared / (cos_o.abs() * self.radius * self.radius * 4.0 * PI);
+        let area_pdf: PDF<_, Area> = (self.radius * self.radius * 4.0 * PI).recip().into();
+        // let pdf = distance_squared / (cos_o.abs() * self.radius * self.radius * 4.0 * PI);
+        let pdf = area_pdf.convert_to_projected_solid_angle(cos_i, cos_o, distance_squared);
         debug_assert!(
-            pdf.is_finite() && pdf >= 0.0,
+            (*pdf).is_finite() && *pdf >= 0.0,
             "{:?} {:?} {:?}",
             distance_squared,
             cos_o,

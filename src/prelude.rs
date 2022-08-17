@@ -13,6 +13,7 @@ pub use crate::{
 
 pub use math::prelude::*;
 pub use math::spectral::{BOUNDED_VISIBLE_RANGE, EXTENDED_VISIBLE_RANGE};
+pub use math::traits::{CheckInf, CheckNAN, CheckResult};
 
 pub use std::f32::consts::{PI, SQRT_2, TAU};
 pub use std::f32::{EPSILON, INFINITY};

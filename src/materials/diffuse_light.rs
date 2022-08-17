@@ -114,7 +114,7 @@ impl Material<f32, f32> for DiffuseLight {
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
             Ray::new(point, object_wo),
-            sw.with_energy(sw.energy / PI),
+            sw.replace_energy(sw.energy / PI),
             PDF::from(directional_pdf),
             pdf,
         ))

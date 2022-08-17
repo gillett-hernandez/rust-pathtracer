@@ -58,8 +58,6 @@ fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
 }
 
 impl Material<f32, f32> for SharpLight {
-
-
     fn bsdf(
         &self,
         lambda: f32,
@@ -136,7 +134,7 @@ impl Material<f32, f32> for SharpLight {
         // fac both affects the power of the emitted light and the pdf.
         Some((
             Ray::new(point, object_wo),
-            sw.with_energy(sw.energy * fac),
+            sw.replace_energy(sw.energy * fac),
             PDF::from(fac),
             wavelength_pdf,
         ))
@@ -219,17 +217,18 @@ mod test {
     fn test_sampling_direction() {
         let light = SharpLight::new(
             curves::void(),
-            curves::blackbody(5000.0, 1.0),
+            curves::blackbody(5000.0, 1.0).to_cdf(EXTENDED_VISIBLE_RANGE, 100),
+            1.0,
             Sidedness::Forward,
         );
 
         let (width, height) = (500, 500);
-        let mut film = Film::new(width, height, XYZColor);
+        let mut film = Film::new(width, height, XYZColor::BLACK);
         for _ in 0..10000 {
             let out = light.sample_emission(
                 Point3::ORIGIN,
                 Vec3::Z,
-                EXTENDED_VISIBLE_RANGE,
+                BOUNDED_VISIBLE_RANGE,
                 Sample2D::new_random_sample(),
                 Sample1D::new_random_sample(),
             );

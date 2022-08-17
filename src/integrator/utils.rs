@@ -167,8 +167,8 @@ pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
                 hit.material,
                 hit.instance_id,
                 beta,
-                PDF::new(1.0),
-                PDF::new(1.0),
+                PDF::new(E::ONE),
+                PDF::new(E::ONE),
                 1.0,
             );
 
@@ -215,20 +215,20 @@ pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
                     );
                 }
 
-                debug_assert!(pdf.0 >= 0.0, "pdf was less than 0 {:?}", pdf);
+                debug_assert!(pdf >= 0.0, "pdf was less than 0 {:?}", pdf);
                 if pdf.is_nan() {
                     break;
                 }
 
                 // TODO: confirm whether russian roulette is solely based on f/pdf or if it can take into account beta.
                 let rr_continue_prob = if bounce >= russian_roulette_start_index {
-                    (f.0 / pdf.0).min(1.0)
+                    (f / pdf).min(1.0)
                 } else {
                     1.0
                 };
 
                 // consider handling delta distributions differently here, if deltas are ever added.
-                vertex.pdf_forward = rr_continue_prob * pdf.0 / cos_o;
+                vertex.pdf_forward = rr_continue_prob * pdf / cos_o;
 
                 // eval pdf in reverse direction
                 // FIXME: confirm that transport mode doesn't need to be flipped
@@ -238,18 +238,18 @@ pub fn random_walk<L: Field, E: Field + ToScalar<E, f32>>(
                         * material
                             .bsdf(hit.lambda, hit.uv, hit.transport_mode, wo, wi)
                             .1
-                             .0
                         / cos_i;
                 }
                 // last_vertex = Some(vertex);
                 vertices.push(vertex);
 
-                beta *= f / vertex.pdf_forward;
-                if vertex.pdf_forward == 0.0 {
-                    beta.0 = 0.0;
+                beta *= f / *vertex.pdf_forward;
+                // figure out a better way to express this condition, since it might not apply in this exact way if E is f32x4
+                if *vertex.pdf_forward == E::ZERO {
+                    beta = E::ZERO;
                 }
-                debug_assert!(!beta.0.is_nan(), "{:?} {:?} {} {:?}", beta.0, f, cos_o, pdf);
-                if beta.0 == 0.0 {
+                debug_assert!(!beta.is_nan(), "{:?} {:?} {} {:?}", beta, f, cos_o, pdf);
+                if beta == E::ZERO {
                     break;
                 }
 

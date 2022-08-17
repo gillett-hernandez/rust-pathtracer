@@ -321,9 +321,7 @@ impl Hittable for Mesh {
                     // let hit0_t1 = a.2;
                     // let hit1_t1 = b.2;
                     // let sign = (hit1_t1-hit0_t1).signum();
-                    (aabb_hit_end_time0)
-                        .partial_cmp(aabb_hit_end_time1)
-                        .unwrap()
+                    PartialOrd::partial_cmp(aabb_hit_end_time0, aabb_hit_end_time1).unwrap()
                 },
             );
         }

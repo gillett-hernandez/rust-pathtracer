@@ -277,8 +277,13 @@ mod tests {
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);
         let to = transform.to_world(Point3::ORIGIN);
-        let result2 =
-            camera_surface.psa_pdf(Vec3::X * (to - sample_from).normalized(), sample_from, to);
+        let direction = (to - sample_from).normalized();
+        let result2 = camera_surface.psa_pdf(
+            (Vec3::X * direction).abs(),
+            (Vec3::Z * direction).abs(),
+            sample_from,
+            to,
+        );
         println!("{:?}", result2);
     }
 }

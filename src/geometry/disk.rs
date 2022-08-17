@@ -1,4 +1,4 @@
-use crate::{convert_to, prelude::*};
+use crate::{ prelude::*};
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};

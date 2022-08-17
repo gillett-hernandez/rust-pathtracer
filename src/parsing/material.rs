@@ -77,7 +77,6 @@ impl MaterialData {
                         eta,
                         eta_o,
                         kappa,
-                        data.permeability,
                         data.outer_medium_id
                             .map(|name| medium_id_map.get(&name).cloned())
                             .flatten()
