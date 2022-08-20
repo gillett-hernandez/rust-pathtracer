@@ -17,7 +17,7 @@ use tonemap::{Converter, Tonemapper};
 
 use math::{
     prelude::{XYZColor, PDF},
-    traits::{Area, Field, SolidAngle},
+    traits::{Area, Field, SolidAngle, ToScalar},
 };
 
 pub mod aabb;
@@ -106,4 +106,12 @@ pub fn update_window_buffer(
                 .into();
             *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
         });
+}
+
+pub fn power_heuristic_generic<T>(a: T, b: T) -> T
+where
+    T: Field + ToScalar<f32>,
+{
+    let w = a / (a + b);
+    w
 }

@@ -158,90 +158,90 @@ aperture_size = 0.1
 focal_distance = 5.0
 vfov = 80.8
 
-# somewhat focused
-[[cameras]]
-type="RealisticCamera"
-name = "petzval kodak"
-lens_spec = "data/cameras/petzval_kodak.txt"
-look_from = [5.0, -10.0, 0.1]
-look_at = [0.0, 0.0, 0.0]
-focal_adjustment = 27.0
-fstop = 4.0
-sensor_size = 35.0
-radial_bins = 512
-wavelength_bins = 512
-[cameras.aperture]
-type = "Bladed"
-blades = 6
-sharpness = 2.0
+# # somewhat focused
+# [[cameras]]
+# type="RealisticCamera"
+# name = "petzval kodak"
+# lens_spec = "data/cameras/petzval_kodak.txt"
+# look_from = [5.0, -10.0, 0.1]
+# look_at = [0.0, 0.0, 0.0]
+# focal_adjustment = 27.0
+# fstop = 4.0
+# sensor_size = 35.0
+# radial_bins = 512
+# wavelength_bins = 512
+# [cameras.aperture]
+# type = "Bladed"
+# blades = 6
+# sharpness = 2.0
 
-[[cameras]]
-type="RealisticCamera"
-name = "petzval kodak cornell"
-lens_spec = "data/cameras/petzval_kodak.txt"
-look_from = [ -3.8, 0.278, 0.273]
-look_at = [0.0, 0.278, 0.273]
-focal_adjustment = 23.0
-fstop = 4.0
-sensor_size = 35.0
-radial_bins = 512
-wavelength_bins = 512
-[cameras.aperture]
-type = "Bladed"
-blades = 6
-sharpness = 2.0
-
-
-[[cameras]]
-type="RealisticCamera"
-name = "wideangle 2"
-lens_spec = "data/cameras/wideangle_2.txt"
-look_from = [-35.0, 0.0, -0.5]
-look_at = [0.0, 0.0, -0.5]
-focal_adjustment = 0.0
-fstop = 6.0
-sensor_size = 35.0
-radial_bins = 512
-wavelength_bins = 512
-[cameras.aperture]
-type = "Bladed"
-blades = 6
-sharpness = 2.0
+# [[cameras]]
+# type="RealisticCamera"
+# name = "petzval kodak cornell"
+# lens_spec = "data/cameras/petzval_kodak.txt"
+# look_from = [ -3.8, 0.278, 0.273]
+# look_at = [0.0, 0.278, 0.273]
+# focal_adjustment = 23.0
+# fstop = 4.0
+# sensor_size = 35.0
+# radial_bins = 512
+# wavelength_bins = 512
+# [cameras.aperture]
+# type = "Bladed"
+# blades = 6
+# sharpness = 2.0
 
 
-# seems really hard to focus
-[[cameras]]
-type="RealisticCamera"
-name = "simple 2"
-lens_spec = "data/cameras/simple_2.txt"
-look_from = [-2.0, 0.0, 0.0]
-look_at = [0.0, 0.0, -0.5]
-focal_adjustment = 5.0
-fstop = 6.0
-sensor_size = 35.0
-radial_bins = 512
-wavelength_bins = 512
-[cameras.aperture]
-type = "Bladed"
-blades = 6
-sharpness = 2.0
+# [[cameras]]
+# type="RealisticCamera"
+# name = "wideangle 2"
+# lens_spec = "data/cameras/wideangle_2.txt"
+# look_from = [-35.0, 0.0, -0.5]
+# look_at = [0.0, 0.0, -0.5]
+# focal_adjustment = 0.0
+# fstop = 6.0
+# sensor_size = 35.0
+# radial_bins = 512
+# wavelength_bins = 512
+# [cameras.aperture]
+# type = "Bladed"
+# blades = 6
+# sharpness = 2.0
 
 
-[[cameras]]
-type="RealisticCamera"
-name = "telephoto"
-lens_spec = "data/cameras/kreitzer_telephoto.txt"
-look_from = [0.0, -20.0, 1.0]
-look_at = [0.0, 0.0, 0.0]
-focal_adjustment = 50.0
-fstop = 10.0
-sensor_size = 100.0
-radial_bins = 256
-wavelength_bins = 256
-[cameras.aperture]
-type = "Bladed"
-blades = 6
-sharpness = 2.0
+# # seems really hard to focus
+# [[cameras]]
+# type="RealisticCamera"
+# name = "simple 2"
+# lens_spec = "data/cameras/simple_2.txt"
+# look_from = [-2.0, 0.0, 0.0]
+# look_at = [0.0, 0.0, -0.5]
+# focal_adjustment = 5.0
+# fstop = 6.0
+# sensor_size = 35.0
+# radial_bins = 512
+# wavelength_bins = 512
+# [cameras.aperture]
+# type = "Bladed"
+# blades = 6
+# sharpness = 2.0
+
+
+# [[cameras]]
+# type="RealisticCamera"
+# name = "telephoto"
+# lens_spec = "data/cameras/kreitzer_telephoto.txt"
+# look_from = [0.0, -20.0, 1.0]
+# look_at = [0.0, 0.0, 0.0]
+# focal_adjustment = 50.0
+# fstop = 10.0
+# sensor_size = 100.0
+# radial_bins = 256
+# wavelength_bins = 256
+# [cameras.aperture]
+# type = "Bladed"
+# blades = 6
+# sharpness = 2.0
 
 
 [[cameras]]
@@ -264,15 +264,15 @@ filename = "medium test"
 min_samples = 128
 min_bounces = 1
 max_bounces = 12
-hwss = true
+hwss = false
 # camera_id = "debug"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
-# camera_id = "panorama"
-camera_id = "cornell camera"
+camera_id = "panorama"
+# camera_id = "cornell camera"
 # camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"

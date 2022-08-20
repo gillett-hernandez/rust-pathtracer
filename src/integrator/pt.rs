@@ -1,4 +1,5 @@
-use crate::prelude::*;
+use crate::texture::EvalAt;
+use crate::{power_heuristic_generic, prelude::*};
 
 use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::{random_walk, veach_v, LightSourceType, SurfaceVertex, VertexType};
@@ -8,6 +9,7 @@ use crate::world::World;
 
 use std::f32::INFINITY;
 use std::marker::PhantomData;
+use std::ops::Mul;
 use std::sync::Arc;
 
 pub struct PathTracingIntegrator<T: Field> {
@@ -18,14 +20,21 @@ pub struct PathTracingIntegrator<T: Field> {
     pub light_samples: u16,
     pub only_direct: bool,
     pub wavelength_bounds: Bounds1D,
-    field: PhantomData<T>,
+    pub field: PhantomData<T>,
 }
 
 const USE_VEACH_V: bool = false;
 
-impl<T: Field> PathTracingIntegrator<T> {
+impl<T> PathTracingIntegrator<T>
+where
+    MaterialEnum: Material<T, T>,
+    T: ToScalar<f32> + Field + FromScalar<f32> + Mul<f32, Output = T>,
+    CurveWithCDF: SpectralPowerDistributionFunction<T>,
+    TexStack: EvalAt<T>,
+{
     fn estimate_direct_illumination(
         &self,
+        lambda: T,
         hit: &HitRecord,
         frame: &TangentFrame,
         wi: Vec3,
@@ -59,8 +68,9 @@ impl<T: Field> PathTracingIntegrator<T> {
                     return T::ZERO;
                 }
                 // since direction is already in world space, no need to call frame.to_world(direction) in the above line
-                let (reflectance, scatter_pdf_for_light_ray) = material.bsdf(
-                    hit.lambda,
+                let (reflectance, scatter_pdf_for_light_ray) = Material::<T, T>::bsdf(
+                    material,
+                    lambda,
                     hit.uv,
                     hit.transport_mode,
                     wi,
@@ -71,13 +81,10 @@ impl<T: Field> PathTracingIntegrator<T> {
                 //     continue;
                 // }
 
-                let pdf = light.psa_pdf(
-                    hit.normal * (point_on_light - hit.point).normalized(),
-                    hit.point,
-                    point_on_light,
-                );
-                let light_pdf = pdf * light_pick_pdf; // / light_vertex_wi.z().abs();
-                if light_pdf.0 == 0.0 {
+                let pdf =
+                    light.psa_pdf(local_light_direction.z(), cos_i, hit.point, point_on_light);
+                let light_pdf = pdf * *light_pick_pdf; // / light_vertex_wi.z().abs();
+                if *light_pdf == 0.0 {
                     // println!("light pdf was 0");
                     // go to next pick
                     return T::ZERO;
@@ -86,33 +93,38 @@ impl<T: Field> PathTracingIntegrator<T> {
                 let light_material = self.world.get_material(light.get_material_id());
                 // FIXME: why are we using hit.uv for this, since hit.uv is the uv for the hit on the material, not on the light
 
-                let emission = light_material.emission(
-                    hit.lambda,
+                let emission = Material::<T, T>::emission(
+                    light_material,
+                    lambda,
                     hit.uv,
                     hit.transport_mode,
                     light_vertex_wi,
                 );
                 // this should be the same as the other method, but maybe not.
-                if emission.0 == 0.0 {
+                if emission.partial_cmp(&T::ZERO) == Some(Ordering::Equal) {
                     return T::ZERO;
                 }
 
                 profile.shadow_rays += 1;
                 if veach_v(&self.world, point_on_light, hit.point) {
-                    let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+                    let weight = power_heuristic_generic(
+                        T::from_scalar(*light_pdf),
+                        *scatter_pdf_for_light_ray,
+                    );
 
-                    debug_assert!(emission.0 >= 0.0);
+                    debug_assert!(emission.to_scalar() >= 0.0);
                     // successful_light_samples += 1;
-                    let v = reflectance * throughput * cos_i * emission * weight / light_pdf.0;
+                    let v =
+                        reflectance * throughput * cos_i * emission * weight * (*light_pdf).recip();
                     debug_assert!(
-                        v.0.is_finite(),
+                        !v.check_inf().coerce(true),
                         "{:?},{:?},{:?},{:?},{:?},{:?},",
                         reflectance,
                         throughput,
                         cos_i,
                         emission,
                         weight,
-                        light_pdf.0
+                        light_pdf
                     );
                     return v;
                     // debug_assert!(
@@ -130,15 +142,21 @@ impl<T: Field> PathTracingIntegrator<T> {
             } else {
                 // light direction is in world space, and is from hit.point
                 let (light_direction, light_pdf) = light.sample(additional_light_sample, hit.point);
-                let light_pdf = light_pdf * light_pick_pdf;
+                let light_pdf = light_pdf * *light_pick_pdf;
 
-                if light_pdf.0 == 0.0 {
-                    return 0.0.into();
+                if *light_pdf == 0.0 {
+                    return T::ZERO;
                 }
                 let bsdf_wo = frame.to_local(&light_direction);
-                let (reflectance, bounce_pdf) =
-                    material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, bsdf_wo);
-                let weight = power_heuristic(light_pdf.0, bounce_pdf.0);
+                let (reflectance, bounce_pdf) = Material::<T, T>::bsdf(
+                    material,
+                    lambda,
+                    hit.uv,
+                    hit.transport_mode,
+                    wi,
+                    bsdf_wo,
+                );
+                let weight = power_heuristic_generic(T::from_scalar(*light_pdf), *bounce_pdf);
 
                 let shadow_ray = Ray::new(
                     hit.point + hit.normal * NORMAL_OFFSET * bsdf_wo.z().signum(),
@@ -152,8 +170,9 @@ impl<T: Field> PathTracingIntegrator<T> {
                         let light_local_frame = TangentFrame::from_normal(shadow_hit.normal);
                         let light_local_wi = light_local_frame.to_local(&-light_direction);
 
-                        let light_emission = light_material.emission(
-                            hit.lambda,
+                        let light_emission = Material::<T, T>::emission(
+                            light_material,
+                            lambda,
                             shadow_hit.uv,
                             hit.transport_mode,
                             light_local_wi,
@@ -170,10 +189,10 @@ impl<T: Field> PathTracingIntegrator<T> {
                             * cos_o
                             * light_emission
                             * weight
-                            / light_pdf.0;
+                            / T::from_scalar(*light_pdf);
 
                         debug_assert!(
-                            v.0.is_finite(),
+                            !v.check_inf().coerce(true),
                             "{:?},{:?},{:?},{:?},{:?},{:?},{:?},",
                             reflectance,
                             throughput,
@@ -181,7 +200,7 @@ impl<T: Field> PathTracingIntegrator<T> {
                             cos_o,
                             light_emission,
                             weight,
-                            light_pdf.0
+                            *light_pdf
                         );
                         return v;
                     }
@@ -213,11 +232,11 @@ impl<T: Field> PathTracingIntegrator<T> {
         let local_cosine_theta = local_wo.z();
         // return 0 if hemisphere doesn't match.
         if local_cosine_theta <= 0.0 {
-            return 0.0.into();
+            return T::ZERO;
         }
 
         let (reflectance, scatter_pdf_for_light_ray) =
-            material.bsdf(hit.lambda, hit.uv, hit.transport_mode, wi, local_wo);
+            Material::<T, T>::bsdf(material, lambda, hit.uv, hit.transport_mode, wi, local_wo);
 
         profile.shadow_rays += 1;
         // TODO: add support for passthrough material, such that it doesn't fully interfere with direct illumination
@@ -230,7 +249,7 @@ impl<T: Field> PathTracingIntegrator<T> {
             INFINITY,
         ) {
             // TODO: handle case where we intended to hit the world with the shadow ray but instead hit a light.
-            0.0.into()
+            T::ZERO
 
             // light_hit.lambda = lambda;
             // let material = self.world.get_material(light_hit.material);
@@ -246,7 +265,7 @@ impl<T: Field> PathTracingIntegrator<T> {
             // //     // if reflectance is 0 for all components, skip this light sample
             // //     continue;
             // // }
-            // let emission = material.emission(
+            // let emission = Material::<L, E>::emission(material,
             //     light_hit.lambda,
             //     light_hit.uv,
             //     light_hit.transport_mode,
@@ -273,19 +292,24 @@ impl<T: Field> PathTracingIntegrator<T> {
             let emission = self.world.environment.emission(uv, lambda);
 
             // calculate weight
-            let weight = power_heuristic(light_pdf.0, scatter_pdf_for_light_ray.0);
+            let weight =
+                power_heuristic_generic(T::from_scalar(*light_pdf), *scatter_pdf_for_light_ray);
             // include
-            let v = weight * throughput * reflectance * emission * local_cosine_theta.abs()
-                / light_pdf.0;
+            let v = throughput
+                * weight
+                * reflectance
+                * emission
+                * local_cosine_theta.abs()
+                * (*light_pdf).recip();
             debug_assert!(
-                v.0.is_finite(),
+                !v.check_inf().coerce(true),
                 "{:?},{:?},{:?},{:?},{:?},{:?},",
                 reflectance,
                 local_cosine_theta,
                 throughput,
                 emission,
                 weight,
-                light_pdf.0
+                light_pdf
             );
             v
         }
@@ -293,7 +317,7 @@ impl<T: Field> PathTracingIntegrator<T> {
 
     pub fn estimate_direct_illumination_with_loop(
         &self,
-        lambda: f32,
+        lambda: T,
         hit: &HitRecord,
         frame: &TangentFrame,
         wi: Vec3,
@@ -327,6 +351,7 @@ impl<T: Field> PathTracingIntegrator<T> {
                 );
             } else {
                 light_contribution += self.estimate_direct_illumination(
+                    lambda,
                     hit,
                     frame,
                     wi,
@@ -338,7 +363,7 @@ impl<T: Field> PathTracingIntegrator<T> {
                 );
             }
             debug_assert!(
-                light_contribution.is_finite(),
+                !light_contribution.check_inf().coerce(true),
                 "{:?}, {}, {:?}, {:?}, {:?}",
                 light_contribution,
                 sample_world,
@@ -374,7 +399,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
         let (camera_ray, _lens_normal, throughput_and_pdf) =
             camera.sample_we(film_sample, sampler, sum.lambda);
         let camera_pdf = throughput_and_pdf;
-        if camera_pdf.0 == 0.0 {
+        if *camera_pdf == 0.0 {
             return XYZColor::BLACK;
         }
 
@@ -383,7 +408,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
         } else {
             self.max_bounces
         };
-        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + max_bounces as usize);
+        let mut path: Vec<SurfaceVertex<f32, f32>> = Vec::with_capacity(1 + max_bounces as usize);
 
         path.push(SurfaceVertex::new(
             VertexType::Camera,
@@ -395,16 +420,18 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
             (0.0, 0.0),
             MaterialId::Camera(0),
             0,
-            throughput_and_pdf.0,
-            100.0,
-            0.0,
+            *throughput_and_pdf,
+            100.0.into(),
+            0.0.into(),
             1.0,
+            0,
+            0,
         ));
         random_walk(
             camera_ray,
             lambda,
             max_bounces,
-            throughput_and_pdf.0,
+            *throughput_and_pdf,
             TransportMode::Importance,
             sampler,
             &self.world,
@@ -423,13 +450,16 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                     let wo = vertex.normal;
                     let uv = direction_to_uv(wo);
                     let emission = self.world.environment.emission(uv, lambda);
+                    let cos_i = (prev_vertex.normal * wo).abs();
                     let nee_psa_pdf = self
                         .world
                         .environment
                         .pdf_for(uv)
-                        .convert_to_projected_solid_angle((prev_vertex.normal * wo).abs());
-                    let bsdf_psa_pdf = prev_vertex.pdf_forward;
-                    let weight = power_heuristic(bsdf_psa_pdf, nee_psa_pdf.0);
+                        .convert_to_projected_solid_angle(cos_i);
+                    let bsdf_psa_pdf = prev_vertex
+                        .pdf_forward
+                        .convert_to_projected_solid_angle(cos_i);
+                    let weight = power_heuristic(*bsdf_psa_pdf, *nee_psa_pdf);
 
                     profile.env_hits += 1;
                     sum.energy += weight * vertex.throughput * emission;
@@ -449,7 +479,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                     let emission =
                         material.emission(vertex.lambda, vertex.uv, TransportMode::Importance, wi);
 
-                    if emission.0 > 0.0 {
+                    if emission > 0.0 {
                         if self.light_samples == 0
                             || matches!(prev_vertex.vertex_type, VertexType::Camera)
                         {
@@ -458,14 +488,15 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                         } else {
                             let hit_primitive = self.world.get_primitive(vertex.instance_id);
 
+                            let nee_direction = (vertex.point - prev_vertex.point).normalized();
                             let hypothetical_nee_pdf = hit_primitive.psa_pdf(
-                                prev_vertex.normal
-                                    * (vertex.point - prev_vertex.point).normalized(),
+                                prev_vertex.normal * nee_direction,
+                                vertex.normal * nee_direction,
                                 prev_vertex.point,
                                 vertex.point,
                             );
                             let weight =
-                                power_heuristic(prev_vertex.pdf_forward, hypothetical_nee_pdf.0);
+                                power_heuristic(*prev_vertex.pdf_forward, *hypothetical_nee_pdf);
 
                             // info!(
                             //     "{:?}, {:?} ---- {:?}, {:?}, {:?}",
@@ -501,7 +532,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
 
                 let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
 
-                if emission.0 > 0.0 {
+                if emission > 0.0 {
                     // this will likely never get triggered, since hitting a light source is handled in the above branch
                     panic!(
                         "material should not be emissive, {}, {:?}",

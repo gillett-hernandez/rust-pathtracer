@@ -17,7 +17,7 @@ pub trait Medium<L: Field, E: Field> {
     // analogous to sampling the bsdf
     fn sample_p(
         &self,
-        lambda: L,
+        lambda: f32,
         uvw: (f32, f32, f32),
         wi: Vec3,
         sample: Sample2D,
@@ -29,7 +29,7 @@ pub trait Medium<L: Field, E: Field> {
     // TODO: implement some Point3 -> UVW trait method on potentially a new trait, such that nonhomogeneous mediums can be implemented
     // sample transmittance, i.e. determine how far a ray reaches through this medium
     // returns the point, the extinction along this path, and whether we scattered off the medium or not.
-    fn sample(&self, lambda: L, ray: Ray, s: Sample1D) -> (Point3, E, bool);
+    fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, E, bool);
     // typically, a medium has a few parameters that need to be taken into account.
     // sigma_s == scattering cross section, a parameter that represents how strongly the material out-scatters light
     // sigma_a == absorbtion cross section, a parameter that represents how strongly the material absorbs light
@@ -71,10 +71,9 @@ macro_rules! generate_medium_enum {
                     $(
                         MediumEnum::$s(inner) => inner.sample_p(lambda, uvw, wi, s),
                     )+
-
                 }
             }
-            fn sample(&self, lambda: $l, ray: Ray, s: Sample1D) -> (Point3, $e, bool) {
+            fn sample(&self, lambda: f32, ray: Ray, s: Sample1D) -> (Point3, $e, bool) {
                 match self {
                     $(
                         MediumEnum::$s(inner)  => inner.sample(lambda, ray, s),

@@ -172,10 +172,10 @@ pub fn replace_channel(tex4: &mut Texture4, tex1: Texture1, channel: u8) {
             // technically reachable but
             panic!("bad channel for call to replace_channel. should be less than 4");
         }
+        _ => {}
     }
     let channel = channel as usize;
 
-    tex4.curves[channel] = tex1.curve;
     tex4.texture
         .buffer
         .par_iter_mut()
@@ -184,6 +184,7 @@ pub fn replace_channel(tex4: &mut Texture4, tex1: Texture1, channel: u8) {
             // safety: function literally panics if channel is >= 4
             *pixel = pixel.replace_unchecked(channel, tex1.texture.buffer[idx]);
         });
+    tex4.curves[channel] = tex1.curve;
 }
 
 #[derive(Clone)]

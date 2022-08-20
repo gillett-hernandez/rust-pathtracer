@@ -53,10 +53,11 @@ impl EnvironmentMap {
     // evaluate env map given a uv and wavelength
     // used when a camera ray with a given wavelength intersects the environment map
 
-    pub fn emission<T: Field + Mul<f32, Output = T>>(&self, uv: (f32, f32), lambda: T) -> T
+    pub fn emission<T>(&self, uv: (f32, f32), lambda: T) -> T
     where
         CurveWithCDF: SpectralPowerDistributionFunction<T>,
         TexStack: EvalAt<T>,
+        T: Field + Mul<f32, Output = T>,
     {
         // how to express trait bounds for this?
         // CurveWithCDF needs to implement SPDF, which it does for f32 and f32x4.
@@ -280,11 +281,16 @@ impl EnvironmentMap {
 
     // sample env UV given a wavelength, based on env CDF for a specific wavelength. might be hard to evaluate, or nearly impossible.
     // would be used when sampling the environment from an eye path, such as in PT or BDPT, given a wavelength
-    pub fn sample_env_uv_given_wavelength(
+    pub fn sample_env_uv_given_wavelength<T>(
         &self,
         sample: Sample2D,
-        _lambda: f32,
-    ) -> ((f32, f32), PDF<f32, SolidAngle>) {
+        lambda: T,
+    ) -> ((f32, f32), PDF<f32, SolidAngle>)
+    where
+        CurveWithCDF: SpectralPowerDistributionFunction<T>,
+        TexStack: EvalAt<T>,
+        T: Field + Mul<f32, Output = T>,
+    {
         match self {
             EnvironmentMap::Constant { .. } => self.sample_env_uv(sample),
             EnvironmentMap::Sun { .. } => self.sample_env_uv(sample),

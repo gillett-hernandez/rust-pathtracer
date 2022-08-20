@@ -136,7 +136,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             sampled = (
                 tmp_sampled.0,
                 tmp_sampled.1,
-                tmp_sampled.2 * pick_pdf * area_pdf,
+                tmp_sampled.2 * *pick_pdf * *area_pdf, // should be a throughput pdf i think. since it's projected solid angle * area
                 tmp_sampled.3,
             );
             light_type = LightSourceType::Instance;
@@ -169,7 +169,8 @@ impl GenericIntegrator for LightTracingIntegrator {
         let lambda_pdf = sampled.3;
 
         // light loop here
-        let mut path: Vec<SurfaceVertex> = Vec::with_capacity(1 + self.max_bounces as usize);
+        let mut path: Vec<SurfaceVertex<f32, f32>> =
+            Vec::with_capacity(1 + self.max_bounces as usize);
 
         path.push(SurfaceVertex::new(
             VertexType::LightSource(light_type),
@@ -185,12 +186,14 @@ impl GenericIntegrator for LightTracingIntegrator {
             light_pdf,
             PDF::new(0.0),
             light_g_term,
+            0,
+            0,
         ));
         random_walk(
             light_ray,
             lambda,
             self.max_bounces,
-            radiance / light_pdf.0 / lambda_pdf.0,
+            radiance / *light_pdf / *lambda_pdf,
             // radiance ,
             TransportMode::Radiance,
             sampler,

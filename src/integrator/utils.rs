@@ -749,8 +749,12 @@ pub fn random_walk_medium<L, E>(
             for medium_id in tracked_mediums.iter() {
                 debug_assert!(*medium_id > 0);
                 let medium = &world.mediums[(*medium_id - 1) as usize];
-                let (p, tr, scatter) =
-                    medium.sample(lambda.to_scalar(), ray, Sample1D::new_random_sample());
+                let (p, tr, scatter) = Medium::<L, E>::sample(
+                    medium,
+                    lambda.to_scalar(),
+                    ray,
+                    Sample1D::new_random_sample(),
+                );
                 if scatter {
                     let t = (p - ray.origin).norm();
                     if t < medium_vertex.time {
@@ -1027,8 +1031,8 @@ pub fn random_walk_medium<L, E>(
                     // TODO: figure this out, maybe have p return two values, one being the unnormalized phase and the other being the normalized phase
                     // do russian roulette?
 
-                    vertex.pdf_forward = PDF::new(E::from_scalar(*phase));
-                    vertex.pdf_backward = PDF::new(E::from_scalar(*phase)); // phase functions are reciprocal
+                    vertex.pdf_forward = phase;
+                    vertex.pdf_backward = phase; // phase functions are reciprocal
                     vertex.veach_g = veach_g(vertex.point, 1.0, ray.origin, 1.0);
                     vertices.push(Vertex::Medium(vertex));
                     // println!(
