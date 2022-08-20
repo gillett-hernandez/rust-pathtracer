@@ -86,23 +86,29 @@ impl<T: Field> Integrator<T> {
                     wavelength_bounds: bounds,
                 }))
             }
-            (IntegratorType::PathTracing, IntegratorKind::PT { light_samples }) => {
-                Some(Integrator::PathTracing(PathTracingIntegrator {
-                    min_bounces: settings.min_bounces.unwrap_or(4),
-                    max_bounces,
-                    world,
-                    russian_roulette,
+            (
+                IntegratorType::PathTracing,
+                IntegratorKind::PT {
                     light_samples,
-                    only_direct: settings.only_direct.unwrap_or(false),
-                    wavelength_bounds: bounds,
-                    field: PhantomData,
-                }))
-            }
+                    medium_aware,
+                },
+            ) => Some(Integrator::PathTracing(PathTracingIntegrator {
+                min_bounces: settings.min_bounces.unwrap_or(4),
+                max_bounces,
+                medium_aware,
+                world,
+                russian_roulette,
+                light_samples,
+                only_direct: settings.only_direct.unwrap_or(false),
+                wavelength_bounds: bounds,
+                field: PhantomData,
+            })),
             _ => {
                 warn!("constructing pathtracing integrator as fallback, since IntegratorType did not match any supported integrators");
                 Some(Integrator::PathTracing(PathTracingIntegrator {
                     min_bounces: settings.min_bounces.unwrap_or(4),
                     max_bounces,
+                    medium_aware: false,
                     world,
                     russian_roulette,
                     light_samples: 4,

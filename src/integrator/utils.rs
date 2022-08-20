@@ -238,14 +238,20 @@ pub fn random_walk<L, E>(
                     );
                 }
 
-                debug_assert!(
-                    matches!(
-                        MyPartialOrd::partial_cmp(&*pdf, &E::ZERO),
-                        Some(std::cmp::Ordering::Greater)
-                    ),
-                    "pdf was less than 0 {:?}",
-                    pdf
-                );
+                if !matches!(
+                    MyPartialOrd::partial_cmp(&*pdf, &E::ZERO),
+                    Some(std::cmp::Ordering::Greater)
+                ) {
+                    trace!(
+                        "pdf was <= 0. {:?}. {:?} -> {:?}, at {:?}, material {}",
+                        pdf,
+                        wi,
+                        wo,
+                        hit.point,
+                        material.get_name()
+                    );
+                }
+
                 if pdf.check_nan().coerce(true) {
                     break;
                 }

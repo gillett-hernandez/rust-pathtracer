@@ -53,7 +53,7 @@ impl Hittable for Aggregate {
         match self {
             $(
                 Self::$e(inner) => {
-                    trace!("attempting hit at variant {:?}, ray {:?}, t0 {:?}, t1 {:?}", inner, r, t0, t1);
+                    // trace!("attempting hit at variant {:?}, ray {:?}, t0 {:?}, t1 {:?}", inner, r, t0, t1);
                     inner.hit(r, t0, t1)
                 },
             )+

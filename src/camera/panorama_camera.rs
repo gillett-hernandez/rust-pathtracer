@@ -78,7 +78,7 @@ impl Camera<f32, f32> for PanoramaCamera {
             let (sin_x, cos_x) = angle_x.sin_cos();
             let (sin_y, cos_y) = angle_y.sin_cos();
             let vec = Vec3::new(sin_x * cos_y, sin_y, cos_x * cos_y);
-            trace!("{:?}", vec);
+            // trace!("{:?}", vec);
             self.transform.to_world(vec)
         };
 

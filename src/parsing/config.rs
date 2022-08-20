@@ -15,11 +15,16 @@ pub struct Resolution {
 #[derive(Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
 pub enum IntegratorKind {
-    PT { light_samples: u16 },
+    PT {
+        light_samples: u16,
+        medium_aware: bool,
+    },
     // BDPT {
     //     selected_pair: Option<(usize, usize)>,
     // },
-    LT { camera_samples: u16 },
+    LT {
+        camera_samples: u16,
+    },
 }
 
 #[derive(Deserialize, Clone)]

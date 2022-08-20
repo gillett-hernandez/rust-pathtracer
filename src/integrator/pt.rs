@@ -15,6 +15,7 @@ use std::sync::Arc;
 pub struct PathTracingIntegrator<T: Field> {
     pub min_bounces: u16,
     pub max_bounces: u16,
+    pub medium_aware: bool,
     pub world: Arc<World>,
     pub russian_roulette: bool,
     pub light_samples: u16,
@@ -427,6 +428,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
             0,
             0,
         ));
+        
         random_walk(
             camera_ray,
             lambda,

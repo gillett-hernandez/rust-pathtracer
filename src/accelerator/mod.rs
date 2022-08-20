@@ -86,7 +86,7 @@ impl Accelerator {
     pub fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
         match self {
             Accelerator::List { instances } => {
-                trace!("List: calling hit with {:?}, {}, {}", r, t0, t1);
+                // trace!("List: calling hit with {:?}, {}, {}", r, t0, t1);
                 // let mut hit_anything = false;
                 let mut closest_so_far: f32 = t1;
                 let mut hit_record: Option<HitRecord> = None;
@@ -105,7 +105,7 @@ impl Accelerator {
                 hit_record
             }
             Accelerator::BVH { instances, bvh } => {
-                trace!("BVH:  calling hit with {:?}, {}, {}", r, t0, t1);
+                // trace!("BVH:  calling hit with {:?}, {}, {}", r, t0, t1);
                 let possible_hit_instances = bvh.traverse(&r, instances);
                 // possible_hit_instances.sort_unstable_by(|a, b| {
                 //     // let hit0_t1 = a.2;
@@ -143,24 +143,24 @@ impl Accelerator {
                 for (instance, t0_aabb_hit, t1_aabb_hit) in possible_hit_instances {
                     if t1_aabb_hit < t0 || t0_aabb_hit > t1 {
                         // if bounding box hit was outside of prescribed hit time bounds
-                        trace!("skipping {} -> {} as one the aabb time span is outside of the given bounds", t0_aabb_hit, t1_aabb_hit);
+                        // trace!("skipping {} -> {} as one the aabb time span is outside of the given bounds", t0_aabb_hit, t1_aabb_hit);
                         continue;
                     }
 
                     let tmp_hit_record = instance.hit(r, t0, closest_so_far);
-                    trace!(
-                        "instance {} hit: {:?}",
-                        instance.instance_id,
-                        tmp_hit_record
-                    );
+                    // trace!(
+                    //     "instance {} hit: {:?}",
+                    //     instance.instance_id,
+                    //     tmp_hit_record
+                    // );
                     if let Some(hit) = &tmp_hit_record {
                         closest_so_far = hit.time;
                         hit_record = tmp_hit_record;
-                        trace!(
-                            "found closer hit record, {}, {:?}",
-                            closest_so_far,
-                            hit_record
-                        );
+                        // trace!(
+                        //     "found closer hit record, {}, {:?}",
+                        //     closest_so_far,
+                        //     hit_record
+                        // );
                     } else {
                         continue;
                     }
