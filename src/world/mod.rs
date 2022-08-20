@@ -252,3 +252,45 @@ impl HasBoundingBox for World {
         self.accelerator.aabb()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::{fs::File, path::PathBuf};
+
+    use log::LevelFilter;
+    use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
+
+    use crate::parsing::construct_world;
+
+    use super::*;
+    #[test]
+    fn test_world_intersection() {
+        CombinedLogger::init(vec![
+            TermLogger::new(
+                LevelFilter::Trace,
+                simplelog::Config::default(),
+                TerminalMode::Mixed,
+                ColorChoice::Auto,
+            ),
+            WriteLogger::new(
+                LevelFilter::Trace,
+                simplelog::Config::default(),
+                File::create("test.log").unwrap(),
+            ),
+        ])
+        .unwrap();
+        let world = construct_world(PathBuf::from("data/scenes/test_lighting_north.toml")).unwrap();
+
+        let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
+        let ray = Ray::new(Point3::new(0.0, 0.0, 7.0), -Vec3::Z);
+
+        let aabb = world.aabb();
+        println!("{:?}", aabb);
+
+        let maybe_hit = world.hit(ray, 0.0, INFINITY);
+        assert!(maybe_hit.is_some());
+        let intersection = maybe_hit.unwrap();
+
+        println!("{:?}", intersection);
+    }
+}

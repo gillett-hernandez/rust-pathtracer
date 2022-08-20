@@ -161,6 +161,7 @@ mod test {
 
         let test_transmittance = medium.tr(test_lambda, Point3::new(0.0, 0.0, 1.0), Point3::ORIGIN);
 
+        println!("{:?}", test_transmittance);
         let test_transmittance =
             medium.tr(test_lambda, Point3::new(0.0, 0.0, 10.0), Point3::ORIGIN);
         println!("{:?}", test_transmittance);
@@ -180,7 +181,7 @@ mod test {
                             .for_each(|(idx, pixel)| {
                                 let mut local_sum = XYZColor::BLACK;
                                 let p = (idx % width, idx / width);
-                                for i in 0..samples_per_iteration {
+                                for _ in 0..samples_per_iteration {
                                     let uv = (
                                         (p.0 as f32 + debug_random()) / width as f32,
                                         (p.1 as f32 + debug_random()) / height as f32,

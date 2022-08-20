@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use math::prelude::*;
 
 use crate::camera::{CameraEnum, PanoramaCamera, ProjectiveCamera};
 

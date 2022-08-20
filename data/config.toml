@@ -260,9 +260,9 @@ selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 22
-filename = "medium test"
+filename = "cornell"
 min_samples = 128
-min_bounces = 1
+min_bounces = 3
 max_bounces = 12
 hwss = false
 # camera_id = "debug"
@@ -271,9 +271,9 @@ hwss = false
 # camera_id = "sun test camera"
 # camera_id = "blackbox camera"
 # camera_id = "closeup camera"
-camera_id = "panorama"
+# camera_id = "panorama"
 # camera_id = "cornell camera"
-# camera_id = "true cornell camera"
+camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
 # camera_id = "wideangle sun test camera side"
@@ -284,13 +284,13 @@ camera_id = "panorama"
 # camera_id = "petzval kodak"
 # camera_id = "petzval kodak cornell"
 russian_roulette = true
-only_direct = false
+only_direct = true
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
-key_value = 0.01
+key_value = 1.0
 white_point = 10.0
 luminance_only = false
 [render_settings.integrator]
@@ -310,7 +310,7 @@ light_samples = 4
 [render_settings.resolution]
 # width = 3840
 # height = 2160
-width = 1000
-height = 500
+width = 1080
+height = 1080
 # width = 4096
 # height = 2048

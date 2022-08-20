@@ -44,6 +44,7 @@ macro_rules! generate_aggregate {
 
 impl Hittable for Aggregate {
     fn hit(&self, r: Ray, t0: f32, t1: f32) -> Option<HitRecord> {
+
         debug_assert!(r.origin.0.is_finite().all());
         debug_assert!(r.direction.0.is_finite().all());
         debug_assert!(t0.is_finite());
@@ -51,7 +52,10 @@ impl Hittable for Aggregate {
 
         match self {
             $(
-                Self::$e(inner) => inner.hit(r, t0, t1),
+                Self::$e(inner) => {
+                    trace!("attempting hit at variant {:?}, ray {:?}, t0 {:?}, t1 {:?}", inner, r, t0, t1);
+                    inner.hit(r, t0, t1)
+                },
             )+
         }
     }

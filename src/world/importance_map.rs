@@ -10,7 +10,6 @@ use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
 
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 
 // equirectangular importance map.
 // maybe refactor this to another submodule under or separate from src/world so that more importance map types can be defined.

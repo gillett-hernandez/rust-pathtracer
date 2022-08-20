@@ -16,7 +16,6 @@ use crossbeam::channel::unbounded;
 // use crossbeam::channel::{bounded};
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 
 #[derive(Default)]
 pub struct NaiveRenderer {}
@@ -32,7 +31,7 @@ impl NaiveRenderer {
         _camera: &CameraEnum,
     ) -> Film<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
-        println!("starting render with film resolution {}x{}", width, height);
+        warn!("starting render with film resolution {}x{}", width, height);
         let min_camera_rays = width * height * settings.min_samples as usize;
         println!(
             "minimum samples per pixel: {}",
@@ -83,6 +82,7 @@ impl NaiveRenderer {
                 for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
 
+                    // box filter
                     let camera_uv = (
                         (x as f32 + sample.x) / (settings.resolution.width as f32),
                         (y as f32 + sample.y) / (settings.resolution.height as f32),
@@ -493,7 +493,7 @@ impl Renderer for NaiveRenderer {
                             render_settings,
                         )
                     {
-                        println!("rendering with PathTracing integrator");
+                        warn!("rendering with PathTracing integrator");
                         let (render_settings, film) = (
                             render_settings.clone(),
                             NaiveRenderer::render_sampled(

@@ -21,7 +21,7 @@ use pbr::ProgressBar;
 
 use minifb::{Key, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
+
 
 #[derive(Default)]
 pub struct PreviewRenderer {}
@@ -81,7 +81,7 @@ impl Renderer for PreviewRenderer {
                 &render_settings,
             ) {
                 None => {}
-                /* Som e(Integrator::BDPT(mut integrator)) => {
+                /* Some(Integrator::BDPT(mut integrator)) => {
                     println!("rendering with BDPT integrator");
                     let mut window = Window::new(
                         "Preview",

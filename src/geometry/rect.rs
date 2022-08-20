@@ -159,7 +159,6 @@ impl Hittable for AARect {
         let area_pdf = PDF::new(1.0 / self.surface_area());
 
         let direction = to - from;
-        let distance_squared = direction.norm_squared();
 
         let psa_pdf = area_pdf
             .convert_to_solid_angle(cos_i, direction.norm_squared())

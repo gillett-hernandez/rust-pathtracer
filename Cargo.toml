@@ -67,7 +67,7 @@ name = "main"
 path = "src/bin/main.rs"
 
 [profile.dev]
-opt-level = 0
+opt-level = 2
 panic='abort'
 debug=true
 

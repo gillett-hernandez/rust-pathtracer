@@ -284,7 +284,7 @@ impl EnvironmentMap {
     pub fn sample_env_uv_given_wavelength<T>(
         &self,
         sample: Sample2D,
-        lambda: T,
+        _lambda: T,
     ) -> ((f32, f32), PDF<f32, SolidAngle>)
     where
         CurveWithCDF: SpectralPowerDistributionFunction<T>,

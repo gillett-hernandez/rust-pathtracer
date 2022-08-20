@@ -10,14 +10,13 @@ extern crate image;
 extern crate minifb;
 
 use minifb::{Key, Window, WindowOptions};
-use packed_simd::f32x4;
 use rayon::prelude::*;
 use renderer::Film;
 use tonemap::{Converter, Tonemapper};
 
 use math::{
-    prelude::{XYZColor, PDF},
-    traits::{Area, Field, SolidAngle, ToScalar},
+    prelude::XYZColor,
+    traits::{Field, ToScalar},
 };
 
 pub mod aabb;

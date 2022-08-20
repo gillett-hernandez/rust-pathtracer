@@ -116,10 +116,13 @@ fn main() {
 
     #[cfg(all(target_os = "windows", feature = "notification"))]
     let time = Instant::now();
+
+    println!("constructing renderer");
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
 
     if !opts.dry_run {
         renderer.render(world.unwrap(), cameras, &config);
+        println!("render done");
     }
 
     #[cfg(all(target_os = "windows", feature = "notification"))]

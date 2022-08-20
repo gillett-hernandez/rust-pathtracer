@@ -197,7 +197,7 @@ mod test {
                             .for_each(|(idx, pixel)| {
                                 let mut local_sum = XYZColor::BLACK;
                                 let p = (idx % width, idx / width);
-                                for i in 0..samples_per_iteration {
+                                for _ in 0..samples_per_iteration {
                                     let uv = (
                                         (p.0 as f32 + debug_random()) / width as f32,
                                         (p.1 as f32 + debug_random()) / height as f32,
