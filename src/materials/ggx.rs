@@ -190,6 +190,7 @@ pub struct GGX {
 }
 
 impl GGX {
+    pub const NAME: &'static str = "GGX";
     pub fn new(
         roughness: f32,
         eta: Curve,
@@ -237,16 +238,15 @@ impl GGX {
         }
     }
     fn eta_rel(&self, eta_outer: f32, eta_inner: f32, wi: Vec3) -> f32 {
+        // TODO: determine if this should take cos_i rather than wi,
+        // so that we can pass in ndotv instead of wi, allowing the choice of eta_rel to take into account
+        // what wh * wi looks like
         if wi.z() < 0.0 {
             eta_outer / eta_inner
         } else {
             eta_inner / eta_outer
         }
     }
-}
-
-impl GGX {
-    pub const NAME: &'static str = "GGX";
 }
 
 impl Material<f32, f32> for GGX {
@@ -338,8 +338,10 @@ impl Material<f32, f32> for GGX {
             let mut dwh_dwo1 = ndotl / (sqrt_denom * sqrt_denom); // dwh_dwo w/o etas
             let dwh_dwo2 = eta_rel2 * dwh_dwo1; // dwh_dwo w/etas
 
+            // FIXME: determine if this is correct, based on Veach(1998), section 5.2.2.1 (page 143)
             // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
             // in importance_mode, it is scaled by eta^2.
+            //
             if transport_mode == TransportMode::Importance {
                 dwh_dwo1 = dwh_dwo2;
             }
@@ -381,13 +383,6 @@ impl Material<f32, f32> for GGX {
         }
 
         let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, cos_i);
-        // println!("glossy: {:?}, transmission: {:?}", glossy, transmission);
-        // println!(
-        //     "glossy_pdf: {:?}, transmission_pdf: {:?}, refl_prob: {:?}",
-        //     glossy_pdf, transmission_pdf, refl_prob
-        // );
-        // println!("cos_i: {:?}", cos_i);
-        // println!();
 
         let f = glossy + transmission;
         let pdf = refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf;
@@ -398,17 +393,6 @@ impl Material<f32, f32> for GGX {
             glossy_pdf,
             transmission_pdf
         );
-        // if pdf == 0.0 {
-        //     trace!(
-        //         "{:?}->{:?}\n {} {} {}, same_hemi: {}",
-        //         wi,
-        //         wo,
-        //         refl_prob,
-        //         glossy_pdf,
-        //         transmission_pdf,
-        //         same_hemisphere
-        //     );
-        // }
         (f, pdf.into())
     }
     fn generate_and_evaluate(
@@ -419,41 +403,6 @@ impl Material<f32, f32> for GGX {
         sample: Sample2D,
         wi: Vec3,
     ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
-        // debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
-        // let eta_inner = self.eta.evaluate_power(lambda);
-        // debug_assert!(eta_inner.is_finite(), "{}", lambda);
-        // // let eta_rel = self.eta_rel(eta_inner, wi);
-        // let kappa = if self.permeability > 0.0 {
-        //     0.0
-        // } else {
-        //     self.kappa.evaluate_power(lambda)
-        // };
-        // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
-        // debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
-        // if refl_prob == 1.0 || sample.x < refl_prob {
-        //     // rescale sample x value to 0 to 1 range
-        //     sample.x = sample.x / refl_prob;
-        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
-        //     // reflection
-        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
-        //     let wo = reflect(wi, wh);
-        //     return Some(wo);
-        // } else {
-        //     // rescale sample x value to 0 to 1 range
-        //     sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
-        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
-        //     // transmission
-        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
-
-        //     let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
-
-        //     let wo = refract(wi, wh, eta_rel);
-        //     /* if wo.is_none() {
-        //         println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
-        //         //     wo = Some(reflect(wi, -wh));
-        //     } */
-        //     return wo;
-        // }
         let eta_inner = self.eta.evaluate_power(lambda);
         let eta_outer = self.eta_o.evaluate_power(lambda);
 
@@ -499,7 +448,7 @@ impl Material<f32, f32> for GGX {
             return (f32::ZERO, Some(wo), 0.0.into());
         }
 
-        let cos_i = wi * wh;
+        let cos_i;
 
         let mut glossy = f32::ZERO;
         let mut transmission = f32::ZERO;
@@ -508,25 +457,23 @@ impl Material<f32, f32> for GGX {
         let eta_inner = self.eta.evaluate_power(lambda);
         let eta_outer = self.eta_o.evaluate_power(lambda);
         if did_reflect {
-            // normal invert mark
-
-            let ndotv = wi * wh;
-            let refl = self.reflectance(eta_outer, eta_inner, kappa, ndotv);
+            cos_i = wi * wh;
+            let refl = self.reflectance(eta_outer, eta_inner, kappa, cos_i);
             debug_assert!(wh.0.is_finite().all());
             let ggxd = ggx_d(self.alpha, wh);
             let ggxg = ggx_g(self.alpha, wi, wo);
             glossy = refl * (0.25 / g) * ggxd * ggxg;
-            if ndotv.abs() == 0.0 {
+            if cos_i.abs() == 0.0 {
                 glossy_pdf = 0.0;
             } else {
-                glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
+                glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / cos_i.abs();
             }
-            debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
+            debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, cos_i);
             if glossy_pdf == 0.0 {
                 trace!(
                     "same hemisphere, {:?} ndv: {} refl: {} d:{} g:{}, g:{} p:{}",
                     wh,
-                    ndotv,
+                    cos_i,
                     refl,
                     ggxd,
                     ggxg,
@@ -534,10 +481,16 @@ impl Material<f32, f32> for GGX {
                     glossy_pdf,
                 );
             }
-        } else if !self.metallic {
+        } else {
             let eta_rel = self.eta_rel(eta_outer, eta_inner, wi);
 
             let ggxg = ggx_g(self.alpha, wi, wo);
+            // let mut wh = (wi + eta_rel * wo).normalized();
+            // normal invert mark
+            if wh.z() < 0.0 {
+                wh = -wh;
+            }
+            cos_i = wi * wh;
             debug_assert!(
                 wi.0.is_finite().all() && wo.0.is_finite().all(),
                 "{:?} {:?} {:?} {:?}",
@@ -546,11 +499,6 @@ impl Material<f32, f32> for GGX {
                 ggxg,
                 cos_i
             );
-            // let mut wh = (wi + eta_rel * wo).normalized();
-            // normal invert mark
-            if wh.z() < 0.0 {
-                wh = -wh;
-            }
 
             let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
             let ndotv = wi * wh;
@@ -647,7 +595,7 @@ impl Material<f32, f32> for GGX {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
 
     use math::spectral::BOUNDED_VISIBLE_RANGE;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};

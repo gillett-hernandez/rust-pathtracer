@@ -15,8 +15,8 @@ use renderer::Film;
 use tonemap::{Converter, Tonemapper};
 
 use math::{
-    prelude::XYZColor,
-    traits::{Field, ToScalar},
+    prelude::{XYZColor, PDF},
+    traits::{Area, Field, Measure, ProjectedSolidAngle, Throughput, ToScalar},
 };
 
 pub mod aabb;
@@ -114,3 +114,4 @@ where
     let w = a / (a + b);
     w
 }
+
