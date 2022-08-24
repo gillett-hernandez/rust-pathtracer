@@ -12,6 +12,8 @@ use std::marker::PhantomData;
 use std::ops::Mul;
 use std::sync::Arc;
 
+use super::utils::{random_walk_medium, Vertex};
+
 pub struct PathTracingIntegrator<T: Field> {
     pub min_bounces: u16,
     pub max_bounces: u16,
@@ -409,9 +411,9 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
         } else {
             self.max_bounces
         };
-        let mut path: Vec<SurfaceVertex<f32, f32>> = Vec::with_capacity(1 + max_bounces as usize);
+        let mut path: Vec<Vertex<f32, f32>> = Vec::with_capacity(1 + max_bounces as usize);
 
-        path.push(SurfaceVertex::new(
+        path.push(Vertex::Surface(SurfaceVertex::new(
             VertexType::Camera,
             camera_ray.time,
             lambda,
@@ -427,9 +429,9 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
             1.0,
             0,
             0,
-        ));
-        
-        random_walk(
+        )));
+
+        random_walk_medium(
             camera_ray,
             lambda,
             max_bounces,
@@ -440,148 +442,304 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
             &mut path,
             self.min_bounces,
             profile,
-            true,
         );
-
-        for (index, vertex) in path.iter().enumerate().skip(1) {
+        for (index, vertex_variant) in path.iter().enumerate().skip(1) {
             let prev_vertex = path[index - 1];
-            // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
-            if let VertexType::LightSource(light_source) = vertex.vertex_type {
-                if light_source == LightSourceType::Environment {
-                    // ray direction is stored in vertex.normal
-                    let wo = vertex.normal;
-                    let uv = direction_to_uv(wo);
-                    let emission = self.world.environment.emission(uv, lambda);
-                    let cos_i = (prev_vertex.normal * wo).abs();
-                    let nee_psa_pdf = self
-                        .world
-                        .environment
-                        .pdf_for(uv)
-                        .convert_to_projected_solid_angle(cos_i);
-                    let bsdf_psa_pdf = prev_vertex
-                        .pdf_forward
-                        .convert_to_projected_solid_angle(cos_i);
-                    let weight = power_heuristic(*bsdf_psa_pdf, *nee_psa_pdf);
+            match vertex_variant {
+                Vertex::Surface(vertex) => {
+                    // handle light MIS
+                    if let VertexType::LightSource(light_source) = vertex.vertex_type {
+                        if light_source == LightSourceType::Environment {
+                            // ray direction is stored in vertex.normal
+                            let wo = vertex.normal;
+                            let uv = direction_to_uv(wo);
+                            let emission = self.world.environment.emission(uv, lambda);
+                            let cos_i = (prev_vertex.normal * wo).abs();
+                            let nee_psa_pdf = self
+                                .world
+                                .environment
+                                .pdf_for(uv)
+                                .convert_to_projected_solid_angle(cos_i);
+                            let bsdf_psa_pdf = prev_vertex
+                                .pdf_forward
+                                .convert_to_projected_solid_angle(cos_i);
+                            let weight = power_heuristic(*bsdf_psa_pdf, *nee_psa_pdf);
 
-                    profile.env_hits += 1;
-                    sum.energy += weight * vertex.throughput * emission;
-                    debug_assert!(
-                        !sum.energy.is_nan(),
-                        "{:?} {:?} {:?}",
-                        weight,
-                        vertex.throughput,
-                        emission
-                    );
-                } else {
-                    // let hit = HitRecord::from(*vertex);
-
-                    let wi = vertex.local_wi;
-                    let material = self.world.get_material(vertex.material_id);
-
-                    let emission =
-                        material.emission(vertex.lambda, vertex.uv, TransportMode::Importance, wi);
-
-                    if emission > 0.0 {
-                        if self.light_samples == 0
-                            || matches!(prev_vertex.vertex_type, VertexType::Camera)
-                        {
-                            sum.energy += vertex.throughput * emission;
-                            debug_assert!(!sum.energy.is_nan());
-                        } else {
-                            let hit_primitive = self.world.get_primitive(vertex.instance_id);
-
-                            let nee_direction = (vertex.point - prev_vertex.point).normalized();
-                            let hypothetical_nee_pdf = hit_primitive.psa_pdf(
-                                prev_vertex.normal * nee_direction,
-                                vertex.normal * nee_direction,
-                                prev_vertex.point,
-                                vertex.point,
-                            );
-                            let weight =
-                                power_heuristic(*prev_vertex.pdf_forward, *hypothetical_nee_pdf);
-
-                            // info!(
-                            //     "{:?}, {:?} ---- {:?}, {:?}, {:?}",
-                            //     prev_vertex.pdf_forward,
-                            //     hypothetical_nee_pdf.0,
-                            //     weight,
-                            //     vertex.throughput,
-                            //     emission
-                            // );
-
-                            debug_assert!(
-                                !hypothetical_nee_pdf.is_nan() && !weight.is_nan(),
-                                "{:?}, {}",
-                                hypothetical_nee_pdf,
-                                weight
-                            );
-                            // NOTE: not dividing by prev_vertex.pdf_forward because vertex.throughput already factors that in, due to how random walk works
+                            profile.env_hits += 1;
                             sum.energy += weight * vertex.throughput * emission;
+                            debug_assert!(
+                                !sum.energy.is_nan(),
+                                "{:?} {:?} {:?}",
+                                weight,
+                                vertex.throughput,
+                                emission
+                            );
+                        } else {
+                            // let hit = HitRecord::from(*vertex);
 
-                            debug_assert!(!sum.energy.is_nan());
+                            let wi = vertex.local_wi;
+                            let material = self.world.get_material(vertex.material_id);
+
+                            let emission = material.emission(
+                                vertex.lambda,
+                                vertex.uv,
+                                TransportMode::Importance,
+                                wi,
+                            );
+
+                            if emission > 0.0 {
+                                if self.light_samples == 0
+                                    || matches!(prev_vertex.vertex_type, VertexType::Camera)
+                                {
+                                    sum.energy += vertex.throughput * emission;
+                                    debug_assert!(!sum.energy.is_nan());
+                                } else {
+                                    let hit_primitive =
+                                        self.world.get_primitive(vertex.instance_id);
+
+                                    let nee_direction =
+                                        (vertex.point - prev_vertex.point).normalized();
+                                    let hypothetical_nee_pdf = hit_primitive.psa_pdf(
+                                        prev_vertex.normal * nee_direction,
+                                        vertex.normal * nee_direction,
+                                        prev_vertex.point,
+                                        vertex.point,
+                                    );
+                                    let weight = power_heuristic(
+                                        *prev_vertex.pdf_forward,
+                                        *hypothetical_nee_pdf,
+                                    );
+
+                                    // info!(
+                                    //     "{:?}, {:?} ---- {:?}, {:?}, {:?}",
+                                    //     prev_vertex.pdf_forward,
+                                    //     hypothetical_nee_pdf.0,
+                                    //     weight,
+                                    //     vertex.throughput,
+                                    //     emission
+                                    // );
+
+                                    debug_assert!(
+                                        !hypothetical_nee_pdf.is_nan() && !weight.is_nan(),
+                                        "{:?}, {}",
+                                        hypothetical_nee_pdf,
+                                        weight
+                                    );
+                                    // NOTE: not dividing by prev_vertex.pdf_forward because vertex.throughput already factors that in, due to how random walk works
+                                    sum.energy += weight * vertex.throughput * emission;
+
+                                    debug_assert!(!sum.energy.is_nan());
+                                }
+                            }
+                        }
+                    } else {
+                        let hit = HitRecord::from(*vertex);
+                        let frame = TangentFrame::from_normal(hit.normal);
+                        let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
+                        let _maybe_dir_to_next = path
+                            .get(index + 1)
+                            .map(|v| (v.point - vertex.point).normalized());
+                        let wi = frame.to_local(&dir_to_prev);
+                        let material = self.world.get_material(vertex.material_id);
+
+                        let emission =
+                            material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
+
+                        if emission > 0.0 {
+                            // this will likely never get triggered, since hitting a light source is handled in the above branch
+                            panic!(
+                                "material should not be emissive, {}, {:?}",
+                                material.get_name(),
+                                vertex.material_id
+                            );
+                            // if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
+                            //     sum.energy += vertex.throughput * emission;
+                            //     debug_assert!(!sum.energy.is_nan());
+                            // } else {
+                            //     let hit_primitive = self.world.get_primitive(hit.instance_id);
+                            //     // // println!("{:?}", hit);
+                            //     let pdf = hit_primitive.psa_pdf(
+                            //         prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
+                            //         prev_vertex.point,
+                            //         hit.point,
+                            //     );
+                            //     let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+                            //     debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+                            //     sum.energy += weight * vertex.throughput * emission;
+                            //     debug_assert!(!sum.energy.is_nan());
+                            // }
+                        }
+
+                        if self.light_samples > 0 {
+                            let light_contribution = self.estimate_direct_illumination_with_loop(
+                                sum.lambda,
+                                &hit,
+                                &frame,
+                                wi,
+                                material,
+                                vertex.throughput,
+                                sampler,
+                                profile,
+                            );
+                            // println!("light contribution: {:?}", light_contribution);
+                            sum.energy += light_contribution / (self.light_samples as f32);
+                            debug_assert!(
+                                !sum.energy.is_nan(),
+                                "{:?} {:?}",
+                                light_contribution,
+                                self.light_samples
+                            );
                         }
                     }
                 }
-            } else {
-                let hit = HitRecord::from(*vertex);
-                let frame = TangentFrame::from_normal(hit.normal);
-                let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
-                let _maybe_dir_to_next = path
-                    .get(index + 1)
-                    .map(|v| (v.point - vertex.point).normalized());
-                let wi = frame.to_local(&dir_to_prev);
-                let material = self.world.get_material(vertex.material_id);
-
-                let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
-
-                if emission > 0.0 {
-                    // this will likely never get triggered, since hitting a light source is handled in the above branch
-                    panic!(
-                        "material should not be emissive, {}, {:?}",
-                        material.get_name(),
-                        vertex.material_id
-                    );
-                    // if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
-                    //     sum.energy += vertex.throughput * emission;
-                    //     debug_assert!(!sum.energy.is_nan());
-                    // } else {
-                    //     let hit_primitive = self.world.get_primitive(hit.instance_id);
-                    //     // // println!("{:?}", hit);
-                    //     let pdf = hit_primitive.psa_pdf(
-                    //         prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
-                    //         prev_vertex.point,
-                    //         hit.point,
-                    //     );
-                    //     let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
-                    //     debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
-                    //     sum.energy += weight * vertex.throughput * emission;
-                    //     debug_assert!(!sum.energy.is_nan());
-                    // }
-                }
-
-                if self.light_samples > 0 {
-                    let light_contribution = self.estimate_direct_illumination_with_loop(
-                        sum.lambda,
-                        &hit,
-                        &frame,
-                        wi,
-                        material,
-                        vertex.throughput,
-                        sampler,
-                        profile,
-                    );
-                    // println!("light contribution: {:?}", light_contribution);
-                    sum.energy += light_contribution / (self.light_samples as f32);
-                    debug_assert!(
-                        !sum.energy.is_nan(),
-                        "{:?} {:?}",
-                        light_contribution,
-                        self.light_samples
-                    );
+                Vertex::Medium(inner) => {
+                    // since we currently don't support emissive mediums, ignore light MIS if the vertex is a medium vertex
                 }
             }
         }
-
         XYZColor::from(sum)
     }
 }
+
+//         for (index, vertex) in path.iter().enumerate().skip(1) {
+//             let prev_vertex = path[index - 1];
+//             // for every vertex past the 1st one (which is on the camera), evaluate the direct illumination at that vertex, and if it hits a light evaluate the added energy
+//             if let VertexType::LightSource(light_source) = vertex.vertex_type {
+//                 if light_source == LightSourceType::Environment {
+//                     // ray direction is stored in vertex.normal
+//                     let wo = vertex.normal;
+//                     let uv = direction_to_uv(wo);
+//                     let emission = self.world.environment.emission(uv, lambda);
+//                     let cos_i = (prev_vertex.normal * wo).abs();
+//                     let nee_psa_pdf = self
+//                         .world
+//                         .environment
+//                         .pdf_for(uv)
+//                         .convert_to_projected_solid_angle(cos_i);
+//                     let bsdf_psa_pdf = prev_vertex
+//                         .pdf_forward
+//                         .convert_to_projected_solid_angle(cos_i);
+//                     let weight = power_heuristic(*bsdf_psa_pdf, *nee_psa_pdf);
+
+//                     profile.env_hits += 1;
+//                     sum.energy += weight * vertex.throughput * emission;
+//                     debug_assert!(
+//                         !sum.energy.is_nan(),
+//                         "{:?} {:?} {:?}",
+//                         weight,
+//                         vertex.throughput,
+//                         emission
+//                     );
+//                 } else {
+//                     // let hit = HitRecord::from(*vertex);
+
+//                     let wi = vertex.local_wi;
+//                     let material = self.world.get_material(vertex.material_id);
+
+//                     let emission =
+//                         material.emission(vertex.lambda, vertex.uv, TransportMode::Importance, wi);
+
+//                     if emission > 0.0 {
+//                         if self.light_samples == 0
+//                             || matches!(prev_vertex.vertex_type, VertexType::Camera)
+//                         {
+//                             sum.energy += vertex.throughput * emission;
+//                             debug_assert!(!sum.energy.is_nan());
+//                         } else {
+//                             let hit_primitive = self.world.get_primitive(vertex.instance_id);
+
+//                             let nee_direction = (vertex.point - prev_vertex.point).normalized();
+//                             let hypothetical_nee_pdf = hit_primitive.psa_pdf(
+//                                 prev_vertex.normal * nee_direction,
+//                                 vertex.normal * nee_direction,
+//                                 prev_vertex.point,
+//                                 vertex.point,
+//                             );
+//                             let weight =
+//                                 power_heuristic(*prev_vertex.pdf_forward, *hypothetical_nee_pdf);
+
+//                             // info!(
+//                             //     "{:?}, {:?} ---- {:?}, {:?}, {:?}",
+//                             //     prev_vertex.pdf_forward,
+//                             //     hypothetical_nee_pdf.0,
+//                             //     weight,
+//                             //     vertex.throughput,
+//                             //     emission
+//                             // );
+
+//                             debug_assert!(
+//                                 !hypothetical_nee_pdf.is_nan() && !weight.is_nan(),
+//                                 "{:?}, {}",
+//                                 hypothetical_nee_pdf,
+//                                 weight
+//                             );
+//                             // NOTE: not dividing by prev_vertex.pdf_forward because vertex.throughput already factors that in, due to how random walk works
+//                             sum.energy += weight * vertex.throughput * emission;
+
+//                             debug_assert!(!sum.energy.is_nan());
+//                         }
+//                     }
+//                 }
+//             } else {
+//                 let hit = HitRecord::from(*vertex);
+//                 let frame = TangentFrame::from_normal(hit.normal);
+//                 let dir_to_prev = (prev_vertex.point - vertex.point).normalized();
+//                 let _maybe_dir_to_next = path
+//                     .get(index + 1)
+//                     .map(|v| (v.point - vertex.point).normalized());
+//                 let wi = frame.to_local(&dir_to_prev);
+//                 let material = self.world.get_material(vertex.material_id);
+
+//                 let emission = material.emission(hit.lambda, hit.uv, hit.transport_mode, wi);
+
+//                 if emission > 0.0 {
+//                     // this will likely never get triggered, since hitting a light source is handled in the above branch
+//                     panic!(
+//                         "material should not be emissive, {}, {:?}",
+//                         material.get_name(),
+//                         vertex.material_id
+//                     );
+//                     // if prev_vertex.pdf_forward <= 0.0 || self.light_samples == 0 {
+//                     //     sum.energy += vertex.throughput * emission;
+//                     //     debug_assert!(!sum.energy.is_nan());
+//                     // } else {
+//                     //     let hit_primitive = self.world.get_primitive(hit.instance_id);
+//                     //     // // println!("{:?}", hit);
+//                     //     let pdf = hit_primitive.psa_pdf(
+//                     //         prev_vertex.normal * (hit.point - prev_vertex.point).normalized(),
+//                     //         prev_vertex.point,
+//                     //         hit.point,
+//                     //     );
+//                     //     let weight = power_heuristic(prev_vertex.pdf_forward, pdf.0);
+//                     //     debug_assert!(!pdf.is_nan() && !weight.is_nan(), "{:?}, {}", pdf, weight);
+//                     //     sum.energy += weight * vertex.throughput * emission;
+//                     //     debug_assert!(!sum.energy.is_nan());
+//                     // }
+//                 }
+
+//                 if self.light_samples > 0 {
+//                     let light_contribution = self.estimate_direct_illumination_with_loop(
+//                         sum.lambda,
+//                         &hit,
+//                         &frame,
+//                         wi,
+//                         material,
+//                         vertex.throughput,
+//                         sampler,
+//                         profile,
+//                     );
+//                     // println!("light contribution: {:?}", light_contribution);
+//                     sum.energy += light_contribution / (self.light_samples as f32);
+//                     debug_assert!(
+//                         !sum.energy.is_nan(),
+//                         "{:?} {:?}",
+//                         light_contribution,
+//                         self.light_samples
+//                     );
+//                 }
+//             }
+//         }
+
+//         XYZColor::from(sum)
+//     }
+// }
