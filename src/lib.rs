@@ -115,3 +115,25 @@ where
     w
 }
 
+#[cfg(test)]
+pub fn log_test_setup() {
+    use simplelog::{
+        ColorChoice, CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+    };
+    use std::fs::File;
+
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Trace,
+            simplelog::Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Trace,
+            simplelog::Config::default(),
+            File::create("test.log").unwrap(),
+        ),
+    ])
+    .unwrap();
+}

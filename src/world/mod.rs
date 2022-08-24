@@ -255,30 +255,14 @@ impl HasBoundingBox for World {
 
 #[cfg(test)]
 mod test {
-    use std::{fs::File, path::PathBuf};
-
-    use log::LevelFilter;
-    use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
+    use std::{path::PathBuf};
 
     use crate::parsing::construct_world;
 
     use super::*;
     #[test]
     fn test_world_intersection() {
-        CombinedLogger::init(vec![
-            TermLogger::new(
-                LevelFilter::Trace,
-                simplelog::Config::default(),
-                TerminalMode::Mixed,
-                ColorChoice::Auto,
-            ),
-            WriteLogger::new(
-                LevelFilter::Trace,
-                simplelog::Config::default(),
-                File::create("test.log").unwrap(),
-            ),
-        ])
-        .unwrap();
+        crate::log_test_setup();
         let world = construct_world(PathBuf::from("data/scenes/test_lighting_north.toml")).unwrap();
 
         let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
