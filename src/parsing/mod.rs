@@ -274,6 +274,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
                 eta_o,
                 kappa,
                 outer_medium_id,
+                inner_medium_id,
                 ..
             }) => {
                 for curve in &[eta, eta_o, kappa] {
@@ -284,22 +285,25 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
                 if let Some(name) = outer_medium_id {
                     used_mediums.insert(name.clone());
                 }
+                if let Some(name) = inner_medium_id {
+                    used_mediums.insert(name.clone());
+                }
             }
             MaterialData::Lambertian(LambertianData { texture_id: name }) => {
                 used_textures.insert(name.clone());
             }
-            MaterialData::PassthroughFilter(PassthroughFilterData {
-                color,
-                inner_medium_id,
-                outer_medium_id,
-            }) => {
-                if let Some(name) = color.get_name() {
-                    used_curves.insert(name.to_string());
-                }
+            // MaterialData::PassthroughFilter(PassthroughFilterData {
+            //     color,
+            //     inner_medium_id,
+            //     outer_medium_id,
+            // }) => {
+            //     if let Some(name) = color.get_name() {
+            //         used_curves.insert(name.to_string());
+            //     }
 
-                used_mediums.insert(inner_medium_id.clone());
-                used_mediums.insert(outer_medium_id.clone());
-            }
+            //     used_mediums.insert(inner_medium_id.clone());
+            //     used_mediums.insert(outer_medium_id.clone());
+            // }
             MaterialData::SharpLight(SharpLightData {
                 bounce_color,
                 emit_color,
@@ -630,7 +634,7 @@ mod test {
                 MaterialEnum::Lambertian(_) => "lambertian",
                 MaterialEnum::GGX(_) => "GGX",
                 MaterialEnum::SharpLight(_) => "sharp_light",
-                MaterialEnum::PassthroughFilter(_) => "passthrough filter",
+                // MaterialEnum::PassthroughFilter(_) => "passthrough filter",
             };
             println!("{}", name);
         }

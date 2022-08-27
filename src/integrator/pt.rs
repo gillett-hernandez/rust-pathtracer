@@ -159,6 +159,7 @@ where
                     wi,
                     bsdf_wo,
                 );
+                
                 let weight = power_heuristic_generic(T::from_scalar(*light_pdf), *bounce_pdf);
 
                 let shadow_ray = Ray::new(
@@ -195,8 +196,9 @@ where
                             / T::from_scalar(*light_pdf);
 
                         debug_assert!(
-                            !v.check_inf().coerce(true),
-                            "{:?},{:?},{:?},{:?},{:?},{:?},{:?},",
+                            !(v.check_inf().coerce(true) || v.check_nan().coerce(true)),
+                            "{:?} = {:?}*{:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
+                            v,
                             reflectance,
                             throughput,
                             cos_i,
@@ -366,7 +368,8 @@ where
                 );
             }
             debug_assert!(
-                !light_contribution.check_inf().coerce(true),
+                !(light_contribution.check_inf().coerce(true)
+                    || light_contribution.check_nan().coerce(true)),
                 "{:?}, {}, {:?}, {:?}, {:?}",
                 light_contribution,
                 sample_world,
@@ -499,7 +502,6 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                                 emission
                             );
                         } else {
-
                             let wi = vertex.local_wi;
                             let material = self.world.get_material(vertex.material_id);
 

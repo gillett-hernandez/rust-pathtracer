@@ -181,11 +181,12 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
 
 #[derive(Debug, Clone)]
 pub struct GGX {
-    pub alpha: f32,
+    pub alpha: f32, // todo: let this be controlled by a texture
     pub eta: Curve,
     pub eta_o: Curve,
     pub kappa: Curve,
     pub outer_medium_id: MediumId,
+    pub inner_medium_id: MediumId,
     metallic: bool,
 }
 
@@ -197,6 +198,7 @@ impl GGX {
         eta_o: Curve,
         kappa: Curve,
         outer_medium_id: MediumId,
+        inner_medium_id: MediumId,
     ) -> Self {
         debug_assert!(roughness > 0.0);
 
@@ -212,6 +214,7 @@ impl GGX {
             kappa,
             metallic,
             outer_medium_id,
+            inner_medium_id,
         }
     }
 
@@ -590,7 +593,7 @@ impl Material<f32, f32> for GGX {
         self.outer_medium_id
     }
     fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
-        0
+        self.inner_medium_id
     }
 }
 
@@ -626,7 +629,7 @@ mod test {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
         let flat_one = curves::cie_e(1.0);
-        GGX::new(roughness, glass, flat_one, flat_zero, 0)
+        GGX::new(roughness, glass, flat_one, flat_zero, 0, 0)
     }
 
     #[test]

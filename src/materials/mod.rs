@@ -5,13 +5,13 @@ use std::marker::{Send, Sync};
 mod diffuse_light;
 mod ggx;
 mod lambertian;
-mod passthrough;
+// mod passthrough;
 mod sharp_light;
 
 pub use diffuse_light::DiffuseLight;
 pub use ggx::{reflect, refract, GGX};
 pub use lambertian::Lambertian;
-pub use passthrough::PassthroughFilter;
+// pub use passthrough::PassthroughFilter;
 pub use sharp_light::SharpLight;
 
 // type required for an id into the Material Table
@@ -190,9 +190,12 @@ macro_rules! generate_enum {
                 debug_assert!(wi.0.is_finite().all());
                 debug_assert!(wo.0.is_finite().all());
                 debug_assert!(wo != Vec3::ZERO);
-                match self {
+                let bsdf = match self {
                     $($name::$s(inner) => inner.bsdf(lambda, uv, transport_mode, wi, wo),)+
-                }
+                };
+                debug_assert!(!(bsdf.0.check_inf().coerce(true) || bsdf.0.check_nan().coerce(true)), "{}: {:?}, {:?}, {:?}", self.get_name(), lambda, wi, wo);
+                debug_assert!(!((*bsdf.1).check_nan().coerce(true) || (*bsdf.1).check_inf().coerce(true)), "{}: {:?}, {:?}, {:?}", self.get_name(), lambda, wi, wo);
+                bsdf
             }
             fn emission(
                 &self,
@@ -262,8 +265,8 @@ generate_enum!(
     GGX,
     Lambertian,
     DiffuseLight,
-    SharpLight,
-    PassthroughFilter
+    SharpLight
+    // PassthroughFilter
 );
 
 generate_enum!(
@@ -272,8 +275,8 @@ generate_enum!(
     GGX,
     Lambertian,
     DiffuseLight,
-    SharpLight,
-    PassthroughFilter
+    SharpLight
+    // PassthroughFilter
 );
 
 // avoid implementing f32x4 for now, since it needs to be implemented for each constituent Material

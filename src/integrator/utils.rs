@@ -767,12 +767,8 @@ pub fn random_walk_medium<L, E>(
                         medium_vertex.time = t;
                         medium_vertex.point = p;
                         hero_weight = tr;
-                        // hero_tr = medium.tr(ToScalar::convert(0), ray.origin, p);
+                        hero_tr = medium.tr(lambda, ray.origin, p);
                         medium_vertex.medium_id = *medium_id;
-                        // println!(
-                        //     "overrode surface vertex with medium vertex, p = {:?}",
-                        //     medium_vertex.point
-                        // );
                         vertex = Vertex::Medium(medium_vertex);
                     }
                 }

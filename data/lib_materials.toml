@@ -339,7 +339,12 @@ emit_color = "fluorescent_x5"
 bounce_color = "flat_78"
 
 [isotropic_uniform_dense_bright]
-type = "PassthroughFilter"
-color = "flat_one"
+type = "GGX"
+alpha = 0.0004
+permeability = 1.0
+eta_o = "air_ior"
+eta = {type = "Flat", strength = 1.03}
+# eta = "air_ior"
+kappa = "flat_zero"
 inner_medium_id = "isotropic_uniform_dense_bright"
-outer_medium_id = ""
+# outer_medium_id = ""
