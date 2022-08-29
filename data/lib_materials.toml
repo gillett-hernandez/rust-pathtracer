@@ -17,6 +17,10 @@ texture_id = "lambertian_green"
 type = "Lambertian"
 texture_id = "lambertian_red"
 
+[lambertian_blue]
+type = "Lambertian"
+texture_id = "lambertian_blue"
+
 # passes white furnace test
 [ggx_glass]
 type = "GGX"
@@ -251,6 +255,12 @@ interpolation_mode = "Cubic"
 x_scale = 1000.0
 
 
+[diffuse_light_flat_x5]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "E5"
+bounce_color = "flat_78"
+
 [diffuse_light_flat_x10]
 type = "DiffuseLight"
 sidedness = "Dual"
@@ -290,7 +300,6 @@ type = "DiffuseLight"
 sidedness = "Dual"
 emit_color = "540THz"
 bounce_color = "flat_zero"
-
 
 
 [diffuse_light_cornell]
@@ -344,7 +353,5 @@ alpha = 0.0004
 permeability = 1.0
 eta_o = "air_ior"
 eta = {type = "Flat", strength = 1.03}
-# eta = "air_ior"
 kappa = "flat_zero"
 inner_medium_id = "isotropic_uniform_dense_bright"
-# outer_medium_id = ""

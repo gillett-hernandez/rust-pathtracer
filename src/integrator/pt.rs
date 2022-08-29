@@ -47,6 +47,8 @@ where
         additional_light_sample: Sample2D,
         profile: &mut Profile,
     ) -> T {
+        // TODO: for medium aware integrators, this function needs to somehow know about all the tracked mediums.
+        // consider adding a bitvec for tracked mediums and stuff to the vertex
         if let Some((light, light_pick_pdf)) = self.world.pick_random_light(light_pick_sample) {
             // TODO: figure out why the hell the USE_VEACH_V branch was so bad.
             if USE_VEACH_V {
@@ -159,7 +161,7 @@ where
                     wi,
                     bsdf_wo,
                 );
-                
+
                 let weight = power_heuristic_generic(T::from_scalar(*light_pdf), *bounce_pdf);
 
                 let shadow_ray = Ray::new(

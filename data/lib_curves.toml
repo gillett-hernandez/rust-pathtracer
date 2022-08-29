@@ -12,6 +12,10 @@ strength = 1.0
 type = "Flat"
 strength = 1.0
 
+[E5]
+type = "Flat"
+strength = 5.0
+
 [E10]
 type = "Flat"
 strength = 10.0
@@ -83,6 +87,14 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
+
+[cornell_blue]
+type = "SimpleSpike"
+lambda= 450.0
+left_taper= 50.0
+right_taper= 50.0
+strength= 0.55
+
 
 [blackbody_5000k]
 type = "Blackbody"
