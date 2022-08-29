@@ -1,0 +1,46 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+
+env_sampling_probability = 0.0
+[environment]
+type="Sun"
+strength = 0.0
+angular_diameter = 0.0565
+sun_direction = [0.0, 0.0, 1.0]
+color = "D65"
+
+
+[[instances]]
+material_name = "diffuse_light_flat_x10"
+[instances.aggregate]
+type = "Sphere"
+radius = 2.0
+origin = [-1.0, -3.0, 5.0]
+
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Sphere"
+radius = 1.0
+origin = [0.0, 0.0, 0.0]
+
+
+[[instances]]
+material_name = "lambertian_red"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.3
+origin = [-1.0, 0.2, -0.7]
+
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [5, 5]
+origin = [0.0, 0.0, -1.0]
+normal = "Z"
+two_sided = true
