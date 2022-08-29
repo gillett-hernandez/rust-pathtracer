@@ -86,7 +86,7 @@ two_sided = true
 material_name = "isotropic_uniform_dense_bright"
 [instances.aggregate]
 type = "Sphere"
-radius = 0.8
+radius = 3.0
 origin = [0.0, 0.0, 0.0]
 
 # sphere on top
