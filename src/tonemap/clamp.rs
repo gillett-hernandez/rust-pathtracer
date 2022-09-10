@@ -100,4 +100,7 @@ impl Tonemapper for Clamp {
                 .max(f32x4::splat(0.0))
         }
     }
+    fn get_name(&self) -> &str {
+        "clamp"
+    }
 }

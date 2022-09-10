@@ -110,6 +110,10 @@ impl Tonemapper for Reinhard1 {
 
         scaling_factor * cie_xyz_color.0
     }
+
+    fn get_name(&self) -> &str {
+        "reinhard1"
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -220,5 +224,9 @@ impl Tonemapper for Reinhard1x3 {
             mapped = MAUVE.0;
         }
         mapped
+    }
+
+    fn get_name(&self) -> &str {
+        "reinhard1x3"
     }
 }

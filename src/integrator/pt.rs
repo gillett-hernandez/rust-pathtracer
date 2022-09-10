@@ -162,7 +162,12 @@ where
                     bsdf_wo,
                 );
 
-                let weight = power_heuristic_generic(T::from_scalar(*light_pdf), *bounce_pdf);
+                let weight = if self.only_direct {
+                    // only direct, so no bsdf sampling takes place.
+                    T::ONE
+                } else {
+                    power_heuristic_generic(T::from_scalar(*light_pdf), *bounce_pdf)
+                };
 
                 let shadow_ray = Ray::new(
                     hit.point + hit.normal * NORMAL_OFFSET * bsdf_wo.z().signum(),
@@ -299,8 +304,12 @@ where
             let emission = self.world.environment.emission(uv, lambda);
 
             // calculate weight
-            let weight =
-                power_heuristic_generic(T::from_scalar(*light_pdf), *scatter_pdf_for_light_ray);
+            let weight = if self.only_direct {
+                // only direct, so no bsdf sampling takes place.
+                T::ONE
+            } else {
+                power_heuristic_generic(T::from_scalar(*light_pdf), *scatter_pdf_for_light_ray)
+            };
             // include
             let v = throughput
                 * weight
@@ -518,9 +527,12 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                                 if self.light_samples == 0
                                     || matches!(prev_vertex.vertex_type, VertexType::Camera)
                                 {
+                                    // bsdf only
                                     sum.energy += vertex.throughput * emission;
                                     debug_assert!(!sum.energy.is_nan());
+                                } else if self.only_direct {
                                 } else {
+                                    // do MIS
                                     let hit_primitive =
                                         self.world.get_primitive(vertex.instance_id);
 

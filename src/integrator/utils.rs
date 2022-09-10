@@ -261,6 +261,9 @@ pub fn random_walk<L, E>(
                     if bounce >= russian_roulette_start_index {
                         // f/pdf % probability of continuing, i.e. high throughput = high chance of continuing
                         (f.to_scalar() / (*pdf).to_scalar()).min(1.0).into()
+                        // (beta.to_scalar() * f.to_scalar() / (*pdf).to_scalar())
+                        //     .min(1.0)
+                        //     .into()
                     } else {
                         // 100% probability of continuing
                         1.0.into()
@@ -269,6 +272,7 @@ pub fn random_walk<L, E>(
                 // consider handling delta distributions differently here, if deltas are ever added.
                 // dividing by cos_o seems to imply that this pdf is a SolidAngle pdf
                 //
+
                 vertex.pdf_forward = pdf * (*rr_continue_prob / cos_o);
 
                 // eval pdf in reverse direction

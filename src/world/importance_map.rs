@@ -534,10 +534,11 @@ mod test {
                 estimate2 / limit as f32
             );
 
+            let boxed: Box<dyn Tonemapper> = Box::new(tonemapper);
             converter
                 .write_to_files(
                     &film,
-                    Box::new(tonemapper),
+                    &boxed,
                     "env_map_sampling_test.exr",
                     "env_map_sampling_test.png",
                 )

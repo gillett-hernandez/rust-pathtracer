@@ -261,10 +261,10 @@ selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 12
-filename = "nee test,nee"
-min_samples = 512
+filename = "test_bsdf"
+min_samples = 0
 min_bounces = 1
-max_bounces = 6
+max_bounces = 2
 hwss = false
 camera_id = "debug"
 # camera_id = "caustic test camera"
@@ -285,18 +285,18 @@ camera_id = "debug"
 # camera_id = "petzval kodak"
 # camera_id = "petzval kodak cornell"
 russian_roulette = true
-only_direct = true
+only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
-key_value = 0.28
-white_point = 1.0
+key_value = 0.18
+white_point = 5.0
 luminance_only = false
 [render_settings.integrator]
 type = "PT"
-light_samples = 1
+light_samples = 0
 medium_aware = false
 # type = "LT"
 # camera_samples = 25

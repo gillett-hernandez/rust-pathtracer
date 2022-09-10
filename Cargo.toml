@@ -10,6 +10,7 @@ visualize_importance_map=[]
 notification=[]
 sort_mesh_aabb_hits = []
 gui = ["eframe", "egui_extras", "egui"]
+color-grad = ["colorgrad"]
 realistic_camera = ["rust_optics"]
 
 
@@ -38,6 +39,7 @@ paste = "1.0.7"
 eframe = {version = "*", optional = true}
 egui = {version = "*", optional = true}
 egui_extras = {version = "*", optional = true}
+colorgrad = {version = "*", optional = true}
 rust_optics =  { git = "https://github.com/gillett-hernandez/rust_optics", optional=true }
 
 [target.'cfg(windows)'.dependencies]
@@ -52,6 +54,12 @@ path = "src/lib.rs"
 [[bin]]
 name = "clm_test"
 path = "src/bin/clm_test.rs"
+
+
+[[bin]]
+name = "compare_exr"
+path = "src/bin/compare_exr.rs"
+required-features = ["color-grad"]
 
 [[bin]]
 name = "medium_test"

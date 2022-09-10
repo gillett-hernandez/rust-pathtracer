@@ -22,7 +22,6 @@ use pbr::ProgressBar;
 use minifb::{Key, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 
-
 #[derive(Default)]
 pub struct PreviewRenderer {}
 
@@ -398,10 +397,14 @@ impl Renderer for PreviewRenderer {
                     // Limit to max ~60 fps update rate
                     window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
                     let mut buffer = vec![0u32; width * height];
+
+                    let max_samples = render_settings
+                        .max_samples
+                        .unwrap_or(render_settings.min_samples);
                     let min_camera_rays = width * height * render_settings.min_samples as usize;
                     println!("minimum total samples: {}", min_camera_rays);
 
-                    let mut pb = ProgressBar::new((width * height) as u64);
+                    let mut pb = ProgressBar::new((max_samples as usize * width * height) as u64);
 
                     let total_pixels = width * height;
 
@@ -420,7 +423,10 @@ impl Renderer for PreviewRenderer {
 
                     let mut s = 0;
                     loop {
-                        if !window.is_open() || window.is_key_down(Key::Escape) {
+                        if !window.is_open()
+                            || window.is_key_down(Key::Escape)
+                            || (s > max_samples && max_samples > 0)
+                        {
                             break;
                         }
                         let now = Instant::now();
@@ -461,13 +467,13 @@ impl Renderer for PreviewRenderer {
                                     temp_color
                                 );
 
-                                pixel_count.fetch_add(1, Ordering::Relaxed);
-
                                 *pixel_ref += temp_color;
 
                                 profile
                             })
                             .reduce(Profile::default, |a, b| a.combine(b));
+
+                        pixel_count.fetch_add(width * height, Ordering::Relaxed);
                         // stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         println!();
                         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
@@ -490,6 +496,7 @@ impl Renderer for PreviewRenderer {
                         );
                     }
                     output_film(&render_settings, &films[film_idx], 1.0 / (s as f32 + 1.0));
+                    println!("total samples: {}", s);
                 }
                 Some(Integrator::LightTracing(mut integrator)) => {
                     println!("rendering with LT integrator");

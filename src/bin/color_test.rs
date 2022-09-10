@@ -443,8 +443,8 @@ impl View {
         update_window_buffer(
             &mut self.buffer,
             &self.film,
-            &mut self.tonemapper,
-            converter,
+            self.tonemapper.as_mut(),
+            Converter::sRGB,
             1.0,
         );
         self.window

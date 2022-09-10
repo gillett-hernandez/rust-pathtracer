@@ -39,6 +39,7 @@ pub trait Tonemapper: Send + Sync {
     fn initialize(&mut self, film: &Film<XYZColor>, factor: f32);
     // should tonemap a pixel from hdr to ldr
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4;
+    fn get_name(&self) -> &str;
 }
 
 #[allow(non_camel_case_types)]
@@ -71,7 +72,7 @@ impl Converter {
     pub fn write_to_files(
         &self,
         film: &Film<XYZColor>,
-        tonemapper: Box<dyn Tonemapper>,
+        tonemapper: &Box<dyn Tonemapper>,
         exr_filename: &str,
         png_filename: &str,
     ) -> Result<(), Box<dyn Error>> {

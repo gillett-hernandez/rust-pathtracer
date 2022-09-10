@@ -1,4 +1,3 @@
-
 use crate::prelude::*;
 
 use crate::geometry::*;
@@ -220,7 +219,8 @@ unsafe impl Sync for RealisticCamera {}
 
 #[cfg(test)]
 mod test {
-    use math::{RandomSampler, Sample2D, Sampler};
+    // use math::{RandomSampler, Sample2D, Sampler};
+    use math::prelude::*;
     use std::{fs::File, io::Read};
 
     use optics::{aperture::CircularAperture, parse_lenses_from};
