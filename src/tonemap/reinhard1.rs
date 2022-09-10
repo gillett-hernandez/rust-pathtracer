@@ -75,7 +75,7 @@ impl Tonemapper for Reinhard1 {
                 l_w,
                 sum_of_log / total_pixels as f64
             );
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance
@@ -187,7 +187,7 @@ impl Tonemapper for Reinhard1x3 {
                 l_w,
                 sum_of_log / total_pixels as f32
             );
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance

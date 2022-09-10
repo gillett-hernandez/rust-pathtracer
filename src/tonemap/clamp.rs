@@ -65,7 +65,7 @@ impl Tonemapper for Clamp {
 
         let _avg_luminance = total_luminance / (total_pixels as f32);
         if !self.silenced {
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance

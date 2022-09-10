@@ -539,6 +539,7 @@ mod test {
                 .write_to_files(
                     &film,
                     &boxed,
+                    1.0,
                     "env_map_sampling_test.exr",
                     "env_map_sampling_test.png",
                 )

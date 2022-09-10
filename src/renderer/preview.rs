@@ -476,8 +476,7 @@ impl Renderer for PreviewRenderer {
                         pixel_count.fetch_add(width * height, Ordering::Relaxed);
                         // stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         println!();
-                        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-                        println!("fps {}", 1.0 / elapsed);
+                        let elapsed_calc = (now.elapsed().as_millis() as f32) / 1000.0;
 
                         update_window_buffer(
                             &mut buffer,
@@ -487,6 +486,15 @@ impl Renderer for PreviewRenderer {
                             1.0 / (s as f32 + 1.0),
                         );
                         window.update_with_buffer(&buffer, width, height).unwrap();
+
+                        let elapsed_total = (now.elapsed().as_millis() as f32) / 1000.0;
+                        let elapsed_tonemap_update = elapsed_total - elapsed_calc;
+                        println!(
+                            "fps {}, num samples {}. % time taken by tonemap_and_update: {}",
+                            1.0 / elapsed_total,
+                            s,
+                            100.0 * elapsed_tonemap_update / elapsed_total
+                        );
                         s += 1;
                     }
                     if let Err(panic) = thread.join() {
