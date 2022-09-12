@@ -265,14 +265,14 @@ impl eframe::App for Controller {
                 }
             }
 
-            use egui::plot::{Line, Plot, Value, Values};
+            use egui::plot::{Line, Plot, PlotPoints};
             let n_samples = 100;
-            let color = (0..n_samples).map(|i| {
-                let x01 = i as f32 / n_samples as f32;
-                let lambda = self.wavelength_bounds.sample(x01);
-                Value::new(lambda as f64, self.color.evaluate(lambda) as f64)
-            });
-            let line = Line::new(Values::from_values_iter(color));
+            let cloned = self.color.clone();
+            let color = move |lambda: f64|{
+                 cloned.evaluate(lambda as f32) as f64
+            };
+            let line = Line::new(PlotPoints::from_explicit_callback(color, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+
             let response = Plot::new("color")
                 .include_x(self.wavelength_bounds.lower)
                 .include_x(self.wavelength_bounds.upper)
@@ -324,12 +324,13 @@ impl eframe::App for Controller {
                     .unwrap();
             }
 
-            let illuminant = (0..n_samples).map(|i| {
-                let x01 = i as f32 / n_samples as f32;
-                let lambda = self.wavelength_bounds.sample(x01);
-                Value::new(lambda as f64, self.illuminant.evaluate(lambda) as f64)
-            });
-            let line = Line::new(Values::from_values_iter(illuminant));
+            let cloned = self.illuminant.clone();
+            let illuminant = move |lambda: f64| {
+                 cloned.evaluate(lambda as f32) as f64
+            };
+
+
+            let line = Line::new(PlotPoints::from_explicit_callback(illuminant, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
             Plot::new("illuminant")
                 .include_x(self.wavelength_bounds.lower)
                 .include_x(self.wavelength_bounds.upper)
@@ -345,13 +346,11 @@ impl eframe::App for Controller {
                     (Op::Mul, self.illuminant.clone()),
                 ],
             };
-            let multiplied = (0..n_samples).map(|i| {
-                let x01 = i as f32 / n_samples as f32;
-                let lambda = self.wavelength_bounds.sample(x01);
-
-                Value::new(lambda as f64, new_temp_curve.evaluate(lambda) as f64)
-            });
-            let line = Line::new(Values::from_values_iter(multiplied));
+            let multiplied = move |lambda| {
+                new_temp_curve.evaluate(lambda as f32) as f64
+            };
+            // let line = Line::new(Values::from_values_iter(multiplied));
+            let line = Line::new(PlotPoints::from_explicit_callback(multiplied, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
             Plot::new("combined")
                 .include_x(self.wavelength_bounds.lower)
                 .include_x(self.wavelength_bounds.upper)

@@ -9,15 +9,6 @@ look_at = [0, 0, 0]
 aperture_size = 0.03
 vfov = 20
 
-[[cameras]]
-type="SimpleCamera"
-name = "simple camera"
-look_from = [-5, 0, 0]
-look_at = [0, 0, 0]
-aperture_size = 0.04
-focal_distance = 5.0
-vfov = 27.4
-
 
 
 [[cameras]]
@@ -253,6 +244,15 @@ look_from = [0.0, 0.0, -0.5]
 look_at = [1.0, 0.0, -0.5]
 fov = [360, 180]
 
+[[cameras]]
+type="SimpleCamera"
+name = "simple camera"
+look_from = [-5, 0, 0]
+look_at = [0, 0, 0]
+aperture_size = 0.01
+focal_distance = 5.0
+vfov = 30.0
+
 
 [renderer]
 # type="Naive"
@@ -261,12 +261,12 @@ selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 12
-filename = "test_bsdf"
+filename = "test_nonuniform_scale_30_deg_fov"
 min_samples = 0
 min_bounces = 1
 max_bounces = 2
 hwss = false
-camera_id = "debug"
+camera_id = "simple camera"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
@@ -292,11 +292,11 @@ only_direct = false
 type = "Reinhard1"
 # exposure = -2.0
 key_value = 0.18
-white_point = 5.0
+white_point = 1.0
 luminance_only = false
 [render_settings.integrator]
 type = "PT"
-light_samples = 0
+light_samples = 2
 medium_aware = false
 # type = "LT"
 # camera_samples = 25

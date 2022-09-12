@@ -101,7 +101,7 @@ impl Hittable for Instance {
                 debug_assert!(hit.uv.0 <= 1.0 && hit.uv.1 <= 1.0, "{:?}", hit);
                 debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
                 Some(HitRecord {
-                    normal: transform.to_world(hit.normal).normalized(),
+                    normal: (transform.reverse.transpose() * hit.normal).normalized(),
                     point: transform.to_world(hit.point),
                     instance_id: self.instance_id,
                     material: self.material_id.unwrap_or(hit.material),
@@ -140,7 +140,7 @@ impl Hittable for Instance {
             let (point, normal, pdf) = self.aggregate.sample_surface(s);
             (
                 transform.to_world(point),
-                transform.to_world(normal).normalized(),
+                (transform.reverse.transpose() * normal).normalized(),
                 pdf,
             )
         } else {
@@ -157,6 +157,7 @@ impl Hittable for Instance {
         let (from, to) = if let Some(transform) = self.transform {
             // TODO: check why this is to_world instead of to_local.
             // (transform.to_local(from), transform.to_local(to))
+            // FIXME: figure out how the transform might affect cos_i and cos_o
             (transform.to_world(from), transform.to_world(to))
         } else {
             (from, to)

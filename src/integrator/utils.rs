@@ -299,11 +299,12 @@ pub fn random_walk<L, E>(
                 }
                 debug_assert!(
                     !beta.check_nan().coerce(true),
-                    "{:?} {:?} {} {:?}",
+                    "{:?} {:?} {} {:?}, {:?}",
                     beta,
                     f,
                     cos_o,
-                    pdf
+                    pdf,
+                    vertex.pdf_forward
                 );
                 if beta == E::ZERO {
                     break;

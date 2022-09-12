@@ -41,7 +41,7 @@ impl From<Transform3Data> for Transform3 {
                     Vec3::from(rotation.axis).normalized(),
                     PI * rotation.angle / 180.0,
                 );
-                info!("parsed rotate");
+                info!("parsed rotate {:?} {}", rotation.axis, rotation.angle);
                 if base.is_none() {
                     base = Some(transform);
                 } else {

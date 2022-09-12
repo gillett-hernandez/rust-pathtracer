@@ -1,0 +1,29 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+
+env_sampling_probability = 0.9
+[environment]
+type="HDRI"
+strength = 1.0
+texture_name = "autumn_park_8k"
+[environment.importance_map]
+# width = 2048
+# height = 2048
+width = 1024
+height = 1024
+
+
+[[instances]]
+material_name = "ggx_iron"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.5
+origin = [0.0, 0.0, 0.0]
+[instances.transform]
+scale = [1, 1, 2]
+translate = [0.0, 0.0, 0.0]
+[[instances.transform.rotate]]
+axis = [1.0, 0.0, 0.0]
+angle = 20
