@@ -208,22 +208,22 @@ impl Hittable for MeshTriangleRef {
         (s * (s - d01) * (s - d12) * (s - d02)).sqrt()
     }
 
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         // TODO
         todo!("mesh light sampling is unimplemented")
     }
 
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         // TODO
         todo!("mesh light sampling is unimplemented")
     }
 
     fn psa_pdf(
         &self,
-        cos_o: f32,
-        cos_i: f32,
-        from: Point3,
-        to: Point3,
+        _cos_o: f32,
+        _cos_i: f32,
+        _from: Point3,
+        _to: Point3,
     ) -> PDF<f32, ProjectedSolidAngle> {
         // TODO
         todo!("mesh light sampling is unimplemented")
@@ -351,22 +351,22 @@ impl Hittable for Mesh {
         hit_record
     }
 
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         // TODO
         todo!("mesh light sampling is unimplemented")
     }
 
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         // TODO
         todo!("mesh light sampling is unimplemented")
     }
 
     fn psa_pdf(
         &self,
-        cos_o: f32,
-        cos_i: f32,
-        from: Point3,
-        to: Point3,
+        _cos_o: f32,
+        _cos_i: f32,
+        _from: Point3,
+        _to: Point3,
     ) -> PDF<f32, ProjectedSolidAngle> {
         // TODO
         todo!("mesh light sampling is unimplemented")

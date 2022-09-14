@@ -16,7 +16,8 @@ pub struct ProjectiveCamera {
     u: Vec3,
     v: Vec3,
     w: Vec3,
-    lens_radius: f32,
+    // TODO: change this to aperture from rust_optics crate
+    aperture_radius: f32,
 }
 
 impl ProjectiveCamera {
@@ -81,7 +82,7 @@ impl ProjectiveCamera {
             u,
             v,
             w,
-            lens_radius: aperture / 2.0,
+            aperture_radius: aperture / 2.0,
         }
     }
     pub fn get_surface(&self) -> Option<&Instance> {
@@ -92,7 +93,7 @@ impl ProjectiveCamera {
 impl Camera<f32, f32> for ProjectiveCamera {
     fn get_ray(&self, sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // circular aperture/lens
-        let rd: Vec3 = self.lens_radius * random_in_unit_disk(sampler.draw_2d());
+        let rd: Vec3 = self.aperture_radius * random_in_unit_disk(sampler.draw_2d());
         let offset = self.u * rd.x() + self.v * rd.y();
         let ray_origin: Point3 = self.origin + offset;
 
@@ -167,10 +168,10 @@ impl Camera<f32, f32> for ProjectiveCamera {
 
     fn eval_we(
         &self,
-        lambda: f32,
-        normal: Vec3,
-        from: Point3,
-        to: Point3,
+        _lambda: f32,
+        _normal: Vec3,
+        _from: Point3,
+        _to: Point3,
     ) -> (f32, PDF<f32, SolidAngle>) {
         // TODO
         todo!()

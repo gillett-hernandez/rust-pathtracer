@@ -606,12 +606,12 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                         }
                     }
                 }
-                (Vertex::Medium(prev_vertex), Vertex::Medium(vertex)) => {
-                    // since we currently don't support emissive mediums, ignore light MIS if the vertex is a medium vertex
-                    // depending on how this is handled and how we sample lights, lights outside of the current medium's boundary might not be able to be directly sampled.
-                }
-                (Vertex::Medium(prev_vertex), Vertex::Surface(vertex)) => {}
-                (Vertex::Surface(prev_vertex), Vertex::Medium(vertex)) => {}
+                _ => {} // (Vertex::Medium(prev_vertex), Vertex::Medium(vertex)) => {
+                        //     // since we currently don't support emissive mediums, ignore light MIS if the vertex is a medium vertex
+                        //     // depending on how this is handled and how we sample lights, lights outside of the current medium's boundary might not be able to be directly sampled.
+                        // }
+                        // (Vertex::Medium(prev_vertex), Vertex::Surface(vertex)) => {}
+                        // (Vertex::Surface(prev_vertex), Vertex::Medium(vertex)) => {}
             }
         }
         XYZColor::from(sum)

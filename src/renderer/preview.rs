@@ -1,7 +1,7 @@
 use super::prelude::*;
 use crate::prelude::*;
 
-use crate::parsing::config::{Config, IntegratorKind, RenderSettings, RendererType, Resolution};
+use crate::parsing::config::{Config, RenderSettings, RendererType, Resolution};
 // use crate::integrator::*;
 
 use crate::integrator::{GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator};

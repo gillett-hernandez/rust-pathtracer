@@ -12,7 +12,6 @@ texture_id = "test_texture"
 type = "Lambertian"
 texture_id = "lambertian_green"
 
-
 [lambertian_red]
 type = "Lambertian"
 texture_id = "lambertian_red"
@@ -20,6 +19,11 @@ texture_id = "lambertian_red"
 [lambertian_blue]
 type = "Lambertian"
 texture_id = "lambertian_blue"
+
+
+[lambertian_yellow]
+type = "Lambertian"
+texture_id = "lambertian_yellow"
 
 # passes white furnace test
 [ggx_glass]
@@ -32,6 +36,18 @@ eta_o = "air_ior"
 type = "Cauchy"
 a = 1.4
 b = 4500.0
+
+[ggx_air_glass]
+type = "GGX"
+permeability = 1.0
+alpha = 0.0004
+kappa = "flat_zero"
+eta = "air_ior"
+[ggx_air_glass.eta_o]
+type = "Cauchy"
+a = 1.4
+b = 4500.0
+
 
 
 [ggx_glass_rough]

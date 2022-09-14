@@ -261,10 +261,10 @@ selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 12
-filename = "test_nonuniform_scale_30_deg_fov"
+filename = "beauty"
 min_samples = 0
 min_bounces = 1
-max_bounces = 2
+max_bounces = 12
 hwss = false
 camera_id = "simple camera"
 # camera_id = "caustic test camera"

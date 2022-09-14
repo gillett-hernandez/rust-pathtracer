@@ -100,10 +100,10 @@ impl Camera<f32, f32> for PanoramaCamera {
 
     fn eval_we(
         &self,
-        lambda: f32,
-        normal: Vec3,
-        from: Point3,
-        to: Point3,
+        _lambda: f32,
+        _normal: Vec3,
+        _from: Point3,
+        _to: Point3,
     ) -> (f32, PDF<f32, SolidAngle>) {
         // pdf is projected solid angle wrt `to` point unless (from - self.origin).norm_squared() > self.radius * self.radius
         // if radius is very small, then the projected solid angle becomes very small

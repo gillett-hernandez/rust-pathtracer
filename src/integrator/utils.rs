@@ -210,7 +210,7 @@ pub fn random_walk<L, E>(
             }
 
             // consider accumulating emission in some other form for trace_type == TransportMode::Importance situations, as mentioned in veach.
-            let maybe_wo: Option<Vec3> = Material::<L, E>::generate(
+            let (f, maybe_wo, pdf) = Material::<L, E>::generate_and_evaluate(
                 material,
                 lambda,
                 hit.uv,
@@ -223,8 +223,8 @@ pub fn random_walk<L, E>(
 
             if let Some(wo) = maybe_wo {
                 // Material::bsdf(&material, hit, lambda, uv, transport_mode, wi, wo)
-                let (f, pdf) =
-                    Material::<L, E>::bsdf(material, lambda, hit.uv, hit.transport_mode, wi, wo);
+                // let (f, pdf) =
+                //     Material::<L, E>::bsdf(material, lambda, hit.uv, hit.transport_mode, wi, wo);
                 let cos_o = wo.z().abs();
                 let cos_i = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
@@ -848,7 +848,7 @@ pub fn random_walk_medium<L, E>(
                             wi,
                             wo,
                         );
-                        let (reverse_f, reverse_pdf) = Material::<L, E>::bsdf(
+                        let (_, reverse_pdf) = Material::<L, E>::bsdf(
                             material,
                             lambda,
                             hit.uv,

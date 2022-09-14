@@ -15,8 +15,8 @@ use renderer::Film;
 use tonemap::{Converter, Tonemapper};
 
 use math::{
-    prelude::{XYZColor, PDF},
-    traits::{Area, Field, Measure, ProjectedSolidAngle, Throughput, ToScalar},
+    prelude::XYZColor,
+    traits::{Field, ToScalar},
 };
 
 pub mod aabb;

@@ -55,7 +55,6 @@ impl Hittable for Sphere {
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
                 normal = (point - self.origin) / self.radius;
-                // trace!("returning {:?} {:?} from sphere", point, normal);
                 return Some(HitRecord::new(
                     time,
                     point,
@@ -68,18 +67,11 @@ impl Hittable for Sphere {
                 ));
             }
             time = (-b + discriminant_sqrt) / a;
-            // trace!(
-            //     "tracing sphere, time = {}, needs to be in [{}, {}]",
-            //     time,
-            //     t0,
-            //     t1.min(r.tmax)
-            // );
             if time < t1 && time > t0 && time < r.tmax {
                 point = r.point_at_parameter(time);
                 debug_assert!((point.w() - 1.0).abs() < 0.000001, "{:?}", point);
                 debug_assert!((self.origin.w() - 1.0).abs() < 0.000001);
                 normal = (point - self.origin) / self.radius;
-                // trace!("returning {:?} {:?} from sphere", point, normal);
                 return Some(HitRecord::new(
                     time,
                     point,

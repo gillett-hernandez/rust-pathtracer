@@ -52,6 +52,12 @@ impl Instance {
         }
     }
 
+    pub fn get_instance_id(&self) -> InstanceId {
+        self.instance_id
+    }
+    pub fn get_material_id(&self) -> MaterialId {
+        self.material_id.unwrap_or(MaterialId::Material(0u16))
+    }
     // fn with_transform(&mut self, transform: Transform3) {
     //     // replaces this instance's transform with a new one
     //     self.transform = Some(transform);
@@ -172,15 +178,6 @@ impl Hittable for Instance {
         } else {
             self.aggregate.surface_area(transform)
         }
-    }
-}
-
-impl Instance {
-    pub fn get_instance_id(&self) -> InstanceId {
-        self.instance_id
-    }
-    pub fn get_material_id(&self) -> MaterialId {
-        self.material_id.unwrap_or(MaterialId::Material(0u16))
     }
 }
 
