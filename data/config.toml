@@ -1,4 +1,4 @@
-default_scene_file = "data/scenes/cornell_box_diamond_arrangement.toml"
+default_scene_file = "data/scenes/cornell_box.toml"
 
 
 [[cameras]]
@@ -255,18 +255,18 @@ vfov = 30.0
 
 
 [renderer]
-# type="Naive"
-type="Preview"
-selected_preview_film_id = 0
+type="Naive"
+# type="Preview"
+# selected_preview_film_id = 0
 
 [[render_settings]]
 threads = 12
 filename = "beauty"
-min_samples = 0
+min_samples = 128
 min_bounces = 1
 max_bounces = 12
 hwss = false
-camera_id = "simple camera"
+# camera_id = "simple camera"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
@@ -274,7 +274,7 @@ camera_id = "simple camera"
 # camera_id = "closeup camera"
 # camera_id = "panorama"
 # camera_id = "cornell camera"
-# camera_id = "true cornell camera"
+camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
 # camera_id = "wideangle sun test camera side"
