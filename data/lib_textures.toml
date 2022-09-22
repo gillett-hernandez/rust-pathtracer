@@ -43,6 +43,18 @@ type = "Texture1"
 filename = "data/textures/single_pixel.png"
 curve = "cornell_red"
 
+[[lambertian_blue]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+curve = "simple_blue"
+
+
+[[lambertian_yellow]]
+type = "Texture1"
+filename = "data/textures/single_pixel.png"
+curve = "simple_yellow"
+
+
 # layered colored cloud texture
 [[test_texture]]
 type = "Texture4"

@@ -30,7 +30,9 @@ pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, fact
     let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
     tonemapper.initialize(film, factor);
 
-    if let Err(inner) = converter.write_to_files(film, tonemapper, &exr_filename, &png_filename) {
+    if let Err(inner) =
+        converter.write_to_files(film, &tonemapper, factor, &exr_filename, &png_filename)
+    {
         error!("failed to write files");
         error!("{:?}", inner.to_string());
         panic!();

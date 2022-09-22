@@ -176,7 +176,7 @@ impl GenericIntegrator for BDPTIntegrator {
             (0.0, 0.0),
             MaterialId::Camera(camera_id as u16),
             0,
-            SingleEnergy::ONE,
+            1.0,
             camera_pdf.0,
             0.0,
             1.0,
@@ -195,7 +195,7 @@ impl GenericIntegrator for BDPTIntegrator {
             camera_ray,
             lambda,
             tp1 as u16,
-            SingleEnergy::ONE,
+            1.0,
             TransportMode::Importance,
             sampler,
             &self.world,
@@ -252,7 +252,7 @@ impl GenericIntegrator for BDPTIntegrator {
                 //         == VertexType::LightSource(LightSourceType::Environment)
                 // {
                 //     // skip this contribution, since it causes visual issues when the camera directly detects light from the virtual env light disk
-                //     return XYZColor::from(SingleWavelength::BLACK);
+                //     return XYZColor::BLACK;
                 // }
                 let res = eval_unweighted_contribution(
                     &self.world,
@@ -267,8 +267,8 @@ impl GenericIntegrator for BDPTIntegrator {
 
                 match res {
                     SampleKind::Sampled((factor, g)) => {
-                        if g == 0.0 || factor == SingleEnergy::ZERO {
-                            return XYZColor::from(SingleWavelength::BLACK);
+                        if g == 0.0 || factor == 0.0 {
+                            return XYZColor::BLACK;
                         }
 
                         let weight = if MIS_ENABLED {
@@ -292,8 +292,8 @@ impl GenericIntegrator for BDPTIntegrator {
 
                     SampleKind::Splatted((factor, g)) => {
                         // println!("should be splatting0 {:?} and {}", factor, g);
-                        if g == 0.0 || factor == SingleEnergy::ZERO {
-                            return XYZColor::from(SingleWavelength::BLACK);
+                        if g == 0.0 || factor == 0.0 {
+                            return XYZColor::BLACK;
                         }
 
                         let weight = if MIS_ENABLED {
@@ -348,8 +348,8 @@ impl GenericIntegrator for BDPTIntegrator {
             return XYZColor::BLACK;
         }
 
-        let mut sum = SingleEnergy::ZERO;
-        // sum += additional_contribution.unwrap_or(SingleEnergy::ZERO);
+        let mut sum = 0.0;
+        // sum += additional_contribution.unwrap_or(0.0);
         for path_length in 1..(1 + self.max_bounces as usize) {
             let path_vertex_count = path_length + 1;
             for s in 0..(path_vertex_count as usize) {
@@ -385,7 +385,7 @@ impl GenericIntegrator for BDPTIntegrator {
                     SampleKind::Sampled((factor, g)) => (factor, g, false),
                     SampleKind::Splatted((factor, g)) => (factor, g, true),
                 };
-                if factor == SingleEnergy::ZERO || g == 0.0 {
+                if factor == 0.0 || g == 0.0 {
                     continue;
                 }
 

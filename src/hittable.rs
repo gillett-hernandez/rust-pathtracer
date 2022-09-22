@@ -11,7 +11,7 @@ pub struct HitRecord {
     pub lambda: f32,
     pub normal: Vec3,
     pub material: MaterialId,
-    pub instance_id: usize,
+    pub instance_id: InstanceId,
     pub transport_mode: TransportMode,
 }
 
@@ -23,7 +23,7 @@ impl HitRecord {
         lambda: f32,
         normal: Vec3,
         material: MaterialId,
-        instance_id: usize,
+        instance_id: InstanceId,
         transport_mode: Option<TransportMode>,
     ) -> Self {
         HitRecord {
@@ -57,14 +57,22 @@ pub trait Hittable: Send + Sync + HasBoundingBox {
     // methods related to when the Hittable is an Emissive
     // method that should implement sampling a direction subtended by the solid angle of Self from point P
     // returns the solid angle PDF.
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF);
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>);
     // method that should implement randomly sampling a point and normal on the surface of the object in object space
     // returns a point on the surface, the normal at that point, and the probability of that Point being chosen
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF);
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>);
 
     // method that should implement the projected solid angle pdf of sampling this primitive from Vertex {from, normal}
-    // to is on the surface of the hittable/light
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF;
+    // `to` is on the surface of the hittable/light
+    // assume `from` and `to` are both in local space
+    // since Instance will transform the points before feeding them in
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle>;
     fn surface_area(&self, transform: &Transform3) -> f32;
 }
 

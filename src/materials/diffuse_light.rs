@@ -1,3 +1,5 @@
+use math::Sidedness;
+
 use crate::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -23,7 +25,7 @@ impl DiffuseLight {
     pub const NAME: &'static str = "DiffuseLight";
 }
 
-impl Material for DiffuseLight {
+impl Material<f32, f32> for DiffuseLight {
     fn bsdf(
         &self,
         lambda: f32,
@@ -31,11 +33,10 @@ impl Material for DiffuseLight {
         _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
-        // copy from lambertian
+    ) -> (f32, PDF<f32, SolidAngle>) {
         if wo.z() * wi.z() > 0.0 {
             (
-                SingleEnergy::new(self.bounce_color.evaluate_clamped(lambda) / PI),
+                self.bounce_color.evaluate_clamped(lambda) / PI,
                 (wo.z().abs() / PI).into(),
             )
         } else {
@@ -55,6 +56,24 @@ impl Material for DiffuseLight {
         let d = random_cosine_direction(s) * wi.z().signum();
         Some(d)
     }
+
+    fn generate_and_evaluate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
+        let wi_z = wi.z();
+        let d = random_cosine_direction(s) * wi_z.signum();
+        let wo_z = d.z();
+        (
+            self.bounce_color.evaluate_clamped(lambda) / PI,
+            Some(d),
+            (wo_z.abs() / PI).into(),
+        )
+    }
     fn sample_emission(
         &self,
         point: Point3,
@@ -62,7 +81,12 @@ impl Material for DiffuseLight {
         wavelength_range: Bounds1D,
         mut scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
+    ) -> Option<(
+        Ray,
+        SingleWavelength,
+        PDF<f32, SolidAngle>,
+        PDF<f32, Uniform01>,
+    )> {
         // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
@@ -90,22 +114,10 @@ impl Material for DiffuseLight {
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         Some((
             Ray::new(point, object_wo),
-            sw.with_energy(sw.energy / PI),
+            sw.replace_energy(sw.energy / PI),
             PDF::from(directional_pdf),
             pdf,
         ))
-    }
-
-    fn sample_emission_spectra(
-        &self,
-        _uv: (f32, f32),
-        wavelength_range: Bounds1D,
-        wavelength_sample: Sample1D,
-    ) -> Option<(f32, PDF)> {
-        let (sw, pdf) = self
-            .emit_color
-            .sample_power_and_pdf(wavelength_range, wavelength_sample);
-        Some((sw.lambda, pdf))
     }
 
     fn emission(
@@ -114,15 +126,15 @@ impl Material for DiffuseLight {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         wi: Vec3,
-    ) -> SingleEnergy {
+    ) -> f32 {
         let cosine = wi.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            SingleEnergy::new(self.emit_color.evaluate_power(lambda) / PI)
+            self.emit_color.evaluate_power(lambda) / PI
         } else {
-            SingleEnergy::ZERO
+            0.0
         }
     }
 
@@ -132,15 +144,29 @@ impl Material for DiffuseLight {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         wo: Vec3,
-    ) -> PDF {
+    ) -> PDF<f32, SolidAngle> {
         let cosine = wo.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
+            // TODO: verify output is correct for given pdf measure
+            // PI.recip().into()
             (cosine / PI).into()
         } else {
             0.0.into()
         }
+    }
+
+    fn sample_emission_spectra(
+        &self,
+        _uv: (f32, f32),
+        wavelength_range: Bounds1D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(f32, PDF<f32, Uniform01>)> {
+        let (sw, pdf) = self
+            .emit_color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        Some((sw.lambda, pdf))
     }
 }

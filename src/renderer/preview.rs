@@ -1,13 +1,10 @@
-use crate::prelude::*;
 use super::prelude::*;
+use crate::prelude::*;
 
-use crate::parsing::config::{Config, IntegratorKind, RenderSettings, RendererType, Resolution};
+use crate::parsing::config::{Config, RenderSettings, RendererType, Resolution};
 // use crate::integrator::*;
 
-use crate::integrator::{
-    GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator,
-};
-
+use crate::integrator::{GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator};
 
 use crate::parsing::parse_tonemapper;
 use crate::profile::Profile;
@@ -24,7 +21,6 @@ use pbr::ProgressBar;
 
 use minifb::{Key, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 
 #[derive(Default)]
 pub struct PreviewRenderer {}
@@ -84,7 +80,7 @@ impl Renderer for PreviewRenderer {
                 &render_settings,
             ) {
                 None => {}
-                Some(Integrator::BDPT(mut integrator)) => {
+                /* Some(Integrator::BDPT(mut integrator)) => {
                     println!("rendering with BDPT integrator");
                     let mut window = Window::new(
                         "Preview",
@@ -233,29 +229,19 @@ impl Renderer for PreviewRenderer {
                                     (*local_total_splats) += 1usize;
                                 }
                             }
-
+                            // let srgb_tonemapper = sRGB::new(
+                            //     &film,
+                            //     render_settings_copy.exposure.unwrap_or(1.0),
+                            //     false,
+                            // );
                             {
-                                tonemapper2.initialize(film, 1.0);
-                                light_buffer_ref
-                                    .lock()
-                                    .unwrap()
-                                    .par_iter_mut()
-                                    .enumerate()
-                                    .for_each(|(pixel_idx, v)| {
-                                        let y: usize = pixel_idx / width;
-                                        let x: usize = pixel_idx - width * y;
-                                        let [r, g, b, _]: [f32; 4] = converter
-                                            .transfer_function(
-                                                tonemapper2.map(film, (x as usize, y as usize)),
-                                                false,
-                                            )
-                                            .into();
-                                        *v = rgb_to_u32(
-                                            (255.0 * r) as u8,
-                                            (255.0 * g) as u8,
-                                            (255.0 * b) as u8,
-                                        );
-                                    });
+                                update_window_buffer(
+                                    &mut light_buffer_ref.lock().unwrap(),
+                                    &film,
+                                    tonemapper2.as_mut(),
+                                    converter,
+                                    1.0,
+                                );
                             }
                             if !local_stop_splatting && stop_splatting_ref.load(Ordering::Relaxed) {
                                 local_stop_splatting = true;
@@ -302,7 +288,7 @@ impl Renderer for PreviewRenderer {
                                 let mut sampler: Box<dyn Sampler> =
                                     Box::new(StratifiedSampler::new(20, 20, 10));
                                 // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                                // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                                // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
                                 let mut local_additional_splats: Vec<(Sample, CameraId)> =
                                     Vec::new();
                                 // use with capacity to preallocate
@@ -342,25 +328,13 @@ impl Renderer for PreviewRenderer {
                                 }
                             },
                         );
-                        tonemapper.initialize(&films[film_idx], 1.0 / (s as f32 + 1.0));
-                        buffer
-                            .par_iter_mut()
-                            .enumerate()
-                            .for_each(|(pixel_idx, v)| {
-                                let y: usize = pixel_idx / width;
-                                let x: usize = pixel_idx - width * y;
-                                let [r, g, b, _]: [f32; 4] = converter
-                                    .transfer_function(
-                                        tonemapper.map(&films[film_idx], (x as usize, y as usize)),
-                                        false,
-                                    )
-                                    .into();
-                                *v = rgb_to_u32(
-                                    (255.0 * r) as u8,
-                                    (255.0 * g) as u8,
-                                    (255.0 * b) as u8,
-                                );
-                            });
+                        update_window_buffer(
+                            &mut buffer,
+                            &films[film_idx],
+                            tonemapper.as_mut(),
+                            converter,
+                            1.0 / (s as f32 + 1.0),
+                        );
                         window.update_with_buffer(&buffer, width, height).unwrap();
 
                         light_window
@@ -406,7 +380,7 @@ impl Renderer for PreviewRenderer {
                         &light_film.lock().unwrap(),
                         1.0,
                     );
-                }
+                } */
                 Some(Integrator::PathTracing(integrator)) => {
                     let mut window = Window::new(
                         "Preview",
@@ -423,10 +397,14 @@ impl Renderer for PreviewRenderer {
                     // Limit to max ~60 fps update rate
                     window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
                     let mut buffer = vec![0u32; width * height];
+
+                    let max_samples = render_settings
+                        .max_samples
+                        .unwrap_or(render_settings.min_samples);
                     let min_camera_rays = width * height * render_settings.min_samples as usize;
                     println!("minimum total samples: {}", min_camera_rays);
 
-                    let mut pb = ProgressBar::new((width * height) as u64);
+                    let mut pb = ProgressBar::new((max_samples as usize * width * height) as u64);
 
                     let total_pixels = width * height;
 
@@ -445,7 +423,10 @@ impl Renderer for PreviewRenderer {
 
                     let mut s = 0;
                     loop {
-                        if !window.is_open() || window.is_key_down(Key::Escape) {
+                        if !window.is_open()
+                            || window.is_key_down(Key::Escape)
+                            || (s > max_samples && max_samples > 0)
+                        {
                             break;
                         }
                         let now = Instant::now();
@@ -457,7 +438,7 @@ impl Renderer for PreviewRenderer {
                                 let mut profile = Profile::default();
                                 // let clone = pixel_count.clone();
                                 let y: usize = pixel_index / width;
-                                let x: usize = pixel_index - width * y;
+                                let x: usize = pixel_index % width;
                                 // gen ray for pixel x, y
 
                                 let mut temp_color = XYZColor::BLACK;
@@ -486,37 +467,34 @@ impl Renderer for PreviewRenderer {
                                     temp_color
                                 );
 
-                                pixel_count.fetch_add(1, Ordering::Relaxed);
-
                                 *pixel_ref += temp_color;
 
                                 profile
                             })
                             .reduce(Profile::default, |a, b| a.combine(b));
+
+                        pixel_count.fetch_add(width * height, Ordering::Relaxed);
                         // stats.pretty_print(elapsed, render_settings.threads.unwrap() as usize);
                         println!();
-                        let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
-                        println!("fps {}", 1.0 / elapsed);
-                        tonemapper.initialize(&films[film_idx], 1.0 / (s as f32 + 1.0));
-                        buffer
-                            .par_iter_mut()
-                            .enumerate()
-                            .for_each(|(pixel_idx, v)| {
-                                let y: usize = pixel_idx / width;
-                                let x: usize = pixel_idx - width * y;
-                                let [r, g, b, _]: [f32; 4] = converter
-                                    .transfer_function(
-                                        tonemapper.map(&films[film_idx], (x as usize, y as usize)),
-                                        false,
-                                    )
-                                    .into();
-                                *v = rgb_to_u32(
-                                    (256.0 * r) as u8,
-                                    (256.0 * g) as u8,
-                                    (256.0 * b) as u8,
-                                );
-                            });
+                        let elapsed_calc = (now.elapsed().as_millis() as f32) / 1000.0;
+
+                        update_window_buffer(
+                            &mut buffer,
+                            &films[film_idx],
+                            tonemapper.as_mut(),
+                            converter,
+                            1.0 / (s as f32 + 1.0),
+                        );
                         window.update_with_buffer(&buffer, width, height).unwrap();
+
+                        let elapsed_total = (now.elapsed().as_millis() as f32) / 1000.0;
+                        let elapsed_tonemap_update = elapsed_total - elapsed_calc;
+                        println!(
+                            "fps {}, num samples {}. % time taken by tonemap_and_update: {}",
+                            1.0 / elapsed_total,
+                            s,
+                            100.0 * elapsed_tonemap_update / elapsed_total
+                        );
                         s += 1;
                     }
                     if let Err(panic) = thread.join() {
@@ -526,6 +504,7 @@ impl Renderer for PreviewRenderer {
                         );
                     }
                     output_film(&render_settings, &films[film_idx], 1.0 / (s as f32 + 1.0));
+                    println!("total samples: {}", s);
                 }
                 Some(Integrator::LightTracing(mut integrator)) => {
                     println!("rendering with LT integrator");
@@ -618,27 +597,13 @@ impl Renderer for PreviewRenderer {
 
                             {
                                 let owned = local_total_splats.to_owned();
-                                tonemapper2.initialize(film, 1.0 / ((owned as f32).sqrt() + 1.0));
-                                light_buffer_ref
-                                    .lock()
-                                    .unwrap()
-                                    .par_iter_mut()
-                                    .enumerate()
-                                    .for_each(|(pixel_idx, v)| {
-                                        let y: usize = pixel_idx / width;
-                                        let x: usize = pixel_idx % width;
-                                        let [r, g, b, _]: [f32; 4] = converter
-                                            .transfer_function(
-                                                tonemapper2.map(film, (x as usize, y as usize)),
-                                                false,
-                                            )
-                                            .into();
-                                        *v = rgb_to_u32(
-                                            (255.0 * r) as u8,
-                                            (255.0 * g) as u8,
-                                            (255.0 * b) as u8,
-                                        );
-                                    });
+                                update_window_buffer(
+                                    &mut light_buffer_ref.lock().unwrap(),
+                                    &film,
+                                    tonemapper2.as_mut(),
+                                    converter,
+                                    1.0 / ((owned as f32).sqrt() + 1.0),
+                                );
                                 println!(
                                     "total splats {}, {} per second, avg: {}",
                                     owned,

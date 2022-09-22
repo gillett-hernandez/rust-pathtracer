@@ -16,7 +16,8 @@ pub struct ProjectiveCamera {
     u: Vec3,
     v: Vec3,
     w: Vec3,
-    lens_radius: f32,
+    // TODO: change this to aperture from rust_optics crate
+    aperture_radius: f32,
 }
 
 impl ProjectiveCamera {
@@ -81,7 +82,7 @@ impl ProjectiveCamera {
             u,
             v,
             w,
-            lens_radius: aperture / 2.0,
+            aperture_radius: aperture / 2.0,
         }
     }
     pub fn get_surface(&self) -> Option<&Instance> {
@@ -89,10 +90,10 @@ impl ProjectiveCamera {
     }
 }
 
-impl Camera for ProjectiveCamera {
+impl Camera<f32, f32> for ProjectiveCamera {
     fn get_ray(&self, sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // circular aperture/lens
-        let rd: Vec3 = self.lens_radius * random_in_unit_disk(sampler.draw_2d());
+        let rd: Vec3 = self.aperture_radius * random_in_unit_disk(sampler.draw_2d());
         let offset = self.u * rd.x() + self.v * rd.y();
         let ray_origin: Point3 = self.origin + offset;
 
@@ -165,7 +166,13 @@ impl Camera for ProjectiveCamera {
         }
     }
 
-    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+    fn eval_we(
+        &self,
+        _lambda: f32,
+        _normal: Vec3,
+        _from: Point3,
+        _to: Point3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
         // TODO
         todo!()
     }
@@ -175,7 +182,7 @@ impl Camera for ProjectiveCamera {
         film_sample: Sample2D,
         sampler: &mut Box<dyn Sampler>,
         lambda: f32,
-    ) -> (Ray, Vec3, PDF) {
+    ) -> (Ray, Vec3, PDF<f32, SolidAngle>) {
         let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
         (ray, self.direction, tau.into())
     }
@@ -187,7 +194,7 @@ unsafe impl Sync for ProjectiveCamera {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use math::{RandomSampler, Sample2D};
+    use math::prelude::*;
 
     #[test]
     fn test_camera() {
@@ -200,8 +207,8 @@ mod tests {
             0.08,
         )
         .with_aspect_ratio(0.6);
-        let s = random();
-        let t = random();
+        let s = debug_random();
+        let t = debug_random();
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
@@ -228,8 +235,8 @@ mod tests {
         .with_aspect_ratio(width as f32 / height as f32);
         let px = (0.99 * width) as usize;
         let py = (0.99 * height) as usize;
-        let s = (px as f32) / width + random() / width;
-        let t = (py as f32) / height + random() / height;
+        let s = (px as f32) / width + debug_random() / width;
+        let t = (py as f32) / height + debug_random() / height;
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
@@ -271,8 +278,13 @@ mod tests {
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);
         let to = transform.to_world(Point3::ORIGIN);
-        let result2 =
-            camera_surface.psa_pdf(Vec3::X * (to - sample_from).normalized(), sample_from, to);
+        let direction = (to - sample_from).normalized();
+        let result2 = camera_surface.psa_pdf(
+            (Vec3::X * direction).abs(),
+            (Vec3::Z * direction).abs(),
+            sample_from,
+            to,
+        );
         println!("{:?}", result2);
     }
 }

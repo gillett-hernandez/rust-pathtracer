@@ -41,9 +41,14 @@ impl Hittable for Sphere {
         let discriminant_sqrt = discriminant.sqrt();
         if discriminant > 0.0 {
             let mut time: f32 = (-b - discriminant_sqrt) / a;
+            // trace!(
+            //     "tracing sphere, time = {}, needs to be in [{}, {}]",
+            //     time,
+            //     t0,
+            //     t1.min(r.tmax)
+            // );
             let point: Point3;
             let normal: Vec3;
-            // time = r.time + (-b - discriminant_sqrt) / a;
 
             if time < t1 && time > t0 && time < r.tmax {
                 point = r.point_at_parameter(time);
@@ -61,7 +66,6 @@ impl Hittable for Sphere {
                     None,
                 ));
             }
-            // time = r.time + (-b + discriminant_sqrt) / a;
             time = (-b + discriminant_sqrt) / a;
             if time < t1 && time > t0 && time < r.tmax {
                 point = r.point_at_parameter(time);
@@ -82,14 +86,14 @@ impl Hittable for Sphere {
         }
         None
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         let normal = random_on_unit_sphere(s);
         let point_on_sphere = self.origin + self.radius * normal;
         let surface_area = self.radius * self.radius * 4.0 * PI;
 
         (point_on_sphere, normal, PDF::from(1.0 / surface_area))
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         // TODO: replace this with perfect hemisphere sampling
         // i.e. https://schuttejoe.github.io/post/arealightsampling/
         // or https://momentsingraphics.de/Media/I3D2019/Peters2019-SamplingSphericalCaps.pdf
@@ -104,8 +108,12 @@ impl Hittable for Sphere {
         );
 
         let normal_dot_direction = (normal * direction.normalized()).abs();
-        let pdf = area_pdf * direction.norm_squared() / normal_dot_direction;
-        if !pdf.0.is_finite() {
+        // Coerce pdf tag. note that this is not the projected solid angle pdf
+        // because the normal dot direction is wrt the surface of the light at the sampled point,
+        // rather than the surface at point `from`
+        let pdf: PDF<f32, SolidAngle> =
+            PDF::new(*area_pdf * direction.norm_squared() / normal_dot_direction);
+        if !(*pdf).is_finite() {
             warn_once!(
                 "pdf was inf, {:?}, area_pdf: {:?}, n * d: {:?}",
                 pdf,
@@ -118,12 +126,20 @@ impl Hittable for Sphere {
             (direction.normalized(), pdf)
         }
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
         let direction = to - from;
         let distance_squared = direction.norm_squared();
-        let pdf = distance_squared / (cos_o.abs() * self.radius * self.radius * 4.0 * PI);
+        let area_pdf: PDF<_, Area> = (self.radius * self.radius * 4.0 * PI).recip().into();
+        // let pdf = distance_squared / (cos_o.abs() * self.radius * self.radius * 4.0 * PI);
+        let pdf = area_pdf.convert_to_projected_solid_angle(cos_i, cos_o, distance_squared);
         debug_assert!(
-            pdf.is_finite() && pdf >= 0.0,
+            (*pdf).is_finite() && *pdf >= 0.0,
             "{:?} {:?} {:?}",
             distance_squared,
             cos_o,

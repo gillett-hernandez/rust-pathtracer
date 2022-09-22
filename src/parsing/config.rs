@@ -17,16 +17,14 @@ pub struct Resolution {
 pub enum IntegratorKind {
     PT {
         light_samples: u16,
+        medium_aware: bool,
     },
-    BDPT {
-        selected_pair: Option<(usize, usize)>,
-    },
+    // BDPT {
+    //     selected_pair: Option<(usize, usize)>,
+    // },
     LT {
         camera_samples: u16,
     },
-    // SPPM {
-    //     photon_cache_size: usize,
-    // },
 }
 
 #[derive(Deserialize, Clone)]

@@ -15,11 +15,10 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
-
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
-    pub lights: Vec<usize>,
+    pub lights: Vec<InstanceId>,
     pub cameras: Vec<CameraEnum>,
     pub materials: MaterialTable,
     pub mediums: MediumTable,
@@ -50,7 +49,7 @@ impl World {
                             "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                             id, instance.instance_id
                         );
-                            lights.push(instance.instance_id as usize);
+                            lights.push(instance.instance_id as InstanceId);
                         }
                     }
                 }
@@ -60,7 +59,7 @@ impl World {
                         "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                         id, instance.instance_id
                     );
-                        lights.push(instance.instance_id as usize);
+                        lights.push(instance.instance_id as InstanceId);
                     }
                 }
             }
@@ -98,7 +97,7 @@ impl World {
         }
         world
     }
-    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
+    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF<f32, Uniform01>)> {
         // currently just uniform sampling
         // TODO: change method to take into account the location from which the light is being picked, to allow light trees or other heuristics
         // i.e. a projected solid angle * power heuristic and pdf
@@ -124,7 +123,10 @@ impl World {
         }
     }
 
-    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&CameraEnum, usize, PDF)> {
+    pub fn pick_random_camera(
+        &self,
+        s: Sample1D,
+    ) -> Option<(&CameraEnum, usize, PDF<f32, Uniform01>)> {
         // currently just uniform sampling
         let length = self.cameras.len();
         if length == 0 {
@@ -144,7 +146,7 @@ impl World {
         }
     }
 
-    pub fn instance_is_light(&self, instance_id: usize) -> bool {
+    pub fn instance_is_light(&self, instance_id: InstanceId) -> bool {
         self.lights.contains(&instance_id)
     }
 
@@ -153,7 +155,7 @@ impl World {
         &self.materials[id]
     }
 
-    pub fn get_primitive(&self, index: usize) -> &Instance {
+    pub fn get_primitive(&self, index: InstanceId) -> &Instance {
         self.accelerator.get_primitive(index)
     }
 
@@ -215,7 +217,7 @@ impl World {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
                         if let Some(surface) = cam.get_surface() {
                             let mut surface = surface.clone();
-                            let id = instances.len();
+                            let id = instances.len() as InstanceId;
                             surface.instance_id = id;
                             surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
@@ -230,7 +232,7 @@ impl World {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
                         if let Some(surface) = cam.get_surface() {
                             let mut surface = surface.clone();
-                            let id = instances.len();
+                            let id = instances.len() as InstanceId;
                             surface.instance_id = id;
                             surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
@@ -248,5 +250,31 @@ impl World {
 impl HasBoundingBox for World {
     fn aabb(&self) -> AABB {
         self.accelerator.aabb()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{path::PathBuf};
+
+    use crate::parsing::construct_world;
+
+    use super::*;
+    #[test]
+    fn test_world_intersection() {
+        crate::log_test_setup();
+        let world = construct_world(PathBuf::from("data/scenes/test_lighting_north.toml")).unwrap();
+
+        let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
+        let ray = Ray::new(Point3::new(0.0, 0.0, 7.0), -Vec3::Z);
+
+        let aabb = world.aabb();
+        println!("{:?}", aabb);
+
+        let maybe_hit = world.hit(ray, 0.0, INFINITY);
+        assert!(maybe_hit.is_some());
+        let intersection = maybe_hit.unwrap();
+
+        println!("{:?}", intersection);
     }
 }

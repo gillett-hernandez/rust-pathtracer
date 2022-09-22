@@ -51,6 +51,9 @@ impl AARect {
             normal,
         }
     }
+    fn surface_area(&self) -> f32 {
+        self.size.0 * self.size.1
+    }
 }
 
 impl HasBoundingBox for AARect {
@@ -108,7 +111,28 @@ impl Hittable for AARect {
             None,
         ))
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
+        // NOTE: it's up to the callee to handle when the normal and sampled direction are not in the same hemisphere.
+        // since lights can be reverse sided, and such.
+        let (point, normal, area_pdf) = self.sample_surface(s);
+        let direction = point - from;
+        let cos_i = normal * direction.normalized();
+        // if !self.two_sided {
+        //     if cos_i < 0.0 {
+        //         return (direction.normalized(), 0.0.into());
+        //     }
+        // }
+        // if two sided, then normal being flipped doesn't matter because we take the abs of cos_i
+        let pdf = area_pdf.convert_to_solid_angle(cos_i, direction.norm_squared());
+
+        if !pdf.is_finite() || pdf.is_nan() {
+            warn_once!("pdf was inf or nan, {:?}, {:?}", direction, cos_i);
+            (direction.normalized(), 0.0.into())
+        } else {
+            (direction.normalized(), pdf)
+        }
+    }
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         let Sample2D { mut x, y } = s;
         let mut normal = Vec3::from_axis(self.normal);
         // if two sided, randomly choose which side to "emit" from.
@@ -122,43 +146,26 @@ impl Hittable for AARect {
                 Vec3::new((x - 0.5) * self.size.0, (y - 0.5) * self.size.1, 0.0),
                 &self.normal,
             );
-        let area = self.size.0 * self.size.1;
+        let area = self.surface_area();
         (point, normal, (1.0 / area).into())
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
-        // NOTE: it's up to the callee to handle when the normal and sampled direction are not in the same hemisphere.
-        // since lights can be reverse sided, and such.
-        let (point, normal, area_pdf) = self.sample_surface(s);
-        let direction = point - from;
-        let cos_i = normal * direction.normalized();
-        // if !self.two_sided {
-        //     if cos_i < 0.0 {
-        //         return (direction.normalized(), 0.0.into());
-        //     }
-        // }
-        // if two sided, then normal being flipped doesn't matter because we take the abs of cos_i
-        let pdf = area_pdf * direction.norm_squared() / cos_i.abs();
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
+        let area_pdf = PDF::new(1.0 / self.surface_area());
 
-        if !pdf.0.is_finite() || pdf.0.is_nan() {
-            warn_once!("pdf was inf or nan, {:?}, {:?}", direction, cos_i);
-            (direction.normalized(), 0.0.into())
-        } else {
-            (direction.normalized(), pdf)
-        }
-    }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
         let direction = to - from;
 
-        let area = self.size.0 * self.size.1;
+        let psa_pdf = area_pdf
+            .convert_to_solid_angle(cos_i, direction.norm_squared())
+            .convert_to_projected_solid_angle(cos_o);
+        // let pdf = PDF::new(cos_o.abs() * *solid_angle_pdf);
 
-        let distance_squared = direction.norm_squared();
-
-        let denominator = cos_o.abs() * area;
-        if denominator == 0.0 {
-            0.0.into()
-        } else {
-            PDF::from(distance_squared / denominator)
-        }
+        psa_pdf
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {
@@ -168,6 +175,6 @@ impl Hittable for AARect {
             Axis::Y => transformed_axes.0.norm() * transformed_axes.2.norm(),
             Axis::Z => transformed_axes.0.norm() * transformed_axes.1.norm(),
         };
-        transform_multiplier * self.size.0 * self.size.1
+        transform_multiplier * self.surface_area()
     }
 }

@@ -64,7 +64,7 @@ impl PanoramaCamera {
     }
 }
 
-impl Camera for PanoramaCamera {
+impl Camera<f32, f32> for PanoramaCamera {
     fn get_ray(&self, _sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // spherical aperture, though of zero size at the moment. see TODO in struct definition
         // let offset: Vec3 = self.radius * random_in_unit_sphere(sampler.draw_2d());
@@ -78,7 +78,7 @@ impl Camera for PanoramaCamera {
             let (sin_x, cos_x) = angle_x.sin_cos();
             let (sin_y, cos_y) = angle_y.sin_cos();
             let vec = Vec3::new(sin_x * cos_y, sin_y, cos_x * cos_y);
-            trace!("{:?}", vec);
+            // trace!("{:?}", vec);
             self.transform.to_world(vec)
         };
 
@@ -98,7 +98,13 @@ impl Camera for PanoramaCamera {
         todo!()
     }
 
-    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
+    fn eval_we(
+        &self,
+        _lambda: f32,
+        _normal: Vec3,
+        _from: Point3,
+        _to: Point3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
         // pdf is projected solid angle wrt `to` point unless (from - self.origin).norm_squared() > self.radius * self.radius
         // if radius is very small, then the projected solid angle becomes very small
         // becomes a delta distribution
@@ -111,7 +117,7 @@ impl Camera for PanoramaCamera {
         film_sample: Sample2D,
         sampler: &mut Box<dyn Sampler>,
         lambda: f32,
-    ) -> (Ray, Vec3, PDF) {
+    ) -> (Ray, Vec3, PDF<f32, SolidAngle>) {
         let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
         (ray, ray.direction, tau.into())
     }

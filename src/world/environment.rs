@@ -1,5 +1,7 @@
 use crate::prelude::*;
+use crate::texture::EvalAt;
 use crate::world::importance_map::ImportanceMap;
+use std::ops::Mul;
 
 #[derive(Clone)]
 pub enum EnvironmentMap {
@@ -25,7 +27,7 @@ pub enum EnvironmentMap {
 }
 
 impl EnvironmentMap {
-    // pub const fn new(color: SPD, strength: f32) -> Self {
+    // pub const fn new(color: Curve, strength: f32) -> Self {
     //     EnvironmentMap { color, strength }
     // }
 
@@ -51,12 +53,18 @@ impl EnvironmentMap {
     // evaluate env map given a uv and wavelength
     // used when a camera ray with a given wavelength intersects the environment map
 
-    pub fn emission(&self, uv: (f32, f32), lambda: f32) -> SingleEnergy {
+    pub fn emission<T>(&self, uv: (f32, f32), lambda: T) -> T
+    where
+        CurveWithCDF: SpectralPowerDistributionFunction<T>,
+        TexStack: EvalAt<T>,
+        T: Field + Mul<f32, Output = T>,
+    {
+        // how to express trait bounds for this?
+        // CurveWithCDF needs to implement SPDF, which it does for f32 and f32x4.
         // evaluate emission at uv coordinate and wavelength
         match self {
             EnvironmentMap::Constant { color, strength } => {
-                debug_assert!(lambda > 0.0);
-                SingleEnergy::new(color.evaluate_power(lambda) * strength)
+                color.evaluate_power(lambda) * *strength
             }
             EnvironmentMap::Sun {
                 color,
@@ -69,9 +77,9 @@ impl EnvironmentMap {
                 let sin = (1.0 - cos * cos).sqrt();
                 if sin.abs() < (*angular_diameter / 2.0).sin() && cos > 0.0 {
                     // within solid angle
-                    SingleEnergy::new(color.evaluate_power(lambda) * *strength)
+                    color.evaluate_power(lambda) * *strength
                 } else {
-                    SingleEnergy::ZERO
+                    T::ZERO
                 }
             }
             EnvironmentMap::HDR {
@@ -84,13 +92,12 @@ impl EnvironmentMap {
                 // use to_local to transform ray direction to "uv space"
                 let new_direction = rotation.to_local(direction);
                 let uv = direction_to_uv(new_direction);
-                let result = texture.eval_at(lambda, uv) * strength;
-                result.into()
+                let result = texture.eval_at(lambda, uv) * *strength;
+                result
             }
         }
     }
 
-    // sample a ray and wavelength based on env map CDF
     pub fn sample_emission(
         &self,
         world_radius: f32,
@@ -99,7 +106,12 @@ impl EnvironmentMap {
         direction_sample: Sample2D,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
-    ) -> (Ray, SingleWavelength, PDF, PDF) {
+    ) -> (
+        Ray,
+        SingleWavelength,
+        PDF<f32, SolidAngle>,
+        PDF<f32, Uniform01>,
+    ) {
         // sample env map cdf to get light ray, based on env map strength
         match self {
             EnvironmentMap::Constant { color, strength } => {
@@ -163,7 +175,7 @@ impl EnvironmentMap {
                     // 1.0 / wavelength_range.span(),
                     1.0,
                 );
-                sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
+                sw.energy = texture.eval_at(sw.lambda, uv) * strength;
 
                 // NOTE: sample_env_uv already translates uv through `rotation`, so don't do it again here.
                 let direction = uv_to_direction(uv);
@@ -184,15 +196,16 @@ impl EnvironmentMap {
         }
     }
 
-    // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
-    pub fn pdf_for(&self, uv: (f32, f32)) -> PDF {
+    pub fn pdf_for(&self, uv: (f32, f32)) -> PDF<f32, SolidAngle> {
+        // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
         match self {
-            EnvironmentMap::Constant { .. } => PDF::from(1.0 / 4.0 / PI),
+            EnvironmentMap::Constant { .. } => (4.0 * PI).recip().into(),
             EnvironmentMap::Sun {
                 angular_diameter,
                 sun_direction,
                 ..
             } => {
+                // TODO: verify this pdf integrates to one over the sphere
                 let direction = uv_to_direction(uv);
                 let cos = *sun_direction * direction;
                 let sin = (1.0 - cos * cos).sqrt();
@@ -245,7 +258,11 @@ impl EnvironmentMap {
         }
     }
 
-    pub fn sample_direction_given_wavelength(&self, sample: Sample2D, lambda: f32) -> (Vec3, PDF) {
+    pub fn sample_direction_given_wavelength(
+        &self,
+        sample: Sample2D,
+        lambda: f32,
+    ) -> (Vec3, PDF<f32, SolidAngle>) {
         let (uv, pdf) = self.sample_env_uv_given_wavelength(sample, lambda);
         let direction = uv_to_direction(uv);
 
@@ -257,18 +274,23 @@ impl EnvironmentMap {
         _sample: Sample2D,
         _wavelength_range: Bounds1D,
         _wavelength_sample: Sample1D,
-    ) -> (Vec3, PDF) {
+    ) -> (Vec3, PDF<f32, SolidAngle>) {
         // TODO
         todo!()
     }
 
     // sample env UV given a wavelength, based on env CDF for a specific wavelength. might be hard to evaluate, or nearly impossible.
     // would be used when sampling the environment from an eye path, such as in PT or BDPT, given a wavelength
-    pub fn sample_env_uv_given_wavelength(
+    pub fn sample_env_uv_given_wavelength<T>(
         &self,
         sample: Sample2D,
-        _lambda: f32,
-    ) -> ((f32, f32), PDF) {
+        _lambda: T,
+    ) -> ((f32, f32), PDF<f32, SolidAngle>)
+    where
+        CurveWithCDF: SpectralPowerDistributionFunction<T>,
+        TexStack: EvalAt<T>,
+        T: Field + Mul<f32, Output = T>,
+    {
         match self {
             EnvironmentMap::Constant { .. } => self.sample_env_uv(sample),
             EnvironmentMap::Sun { .. } => self.sample_env_uv(sample),
@@ -279,7 +301,7 @@ impl EnvironmentMap {
     }
 
     // sample env UV, based on env luminosity CDF (w/o prescribed wavelength)
-    pub fn sample_env_uv(&self, sample: Sample2D) -> ((f32, f32), PDF) {
+    pub fn sample_env_uv(&self, sample: Sample2D) -> ((f32, f32), PDF<f32, SolidAngle>) {
         // samples env CDF to find bright luminosity spikes. returns UV of those spots.
         // CDF for this situation can be stored as the Y values of the XYZ representation, as a greyscale image potentially.
         // consider summed area table as well.
@@ -317,7 +339,7 @@ impl EnvironmentMap {
                     (
                         uv,
                         PDF::from(
-                            row_pdf.0 * column_pdf.0 * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
+                            *row_pdf * *column_pdf * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
                                 + 0.001,
                         ),
                     )

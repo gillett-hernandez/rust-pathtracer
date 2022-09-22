@@ -1,13 +1,9 @@
 use super::prelude::*;
 use crate::prelude::*;
 
-use crate::integrator::{
-    BDPTIntegrator, GenericIntegrator, Integrator, IntegratorType, LightTracingIntegrator, Sample,
-    SamplerIntegrator,
-};
+use crate::integrator::*;
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
-use math::Bounds1D;
 
 use std::collections::HashMap;
 // use std::io::Write;
@@ -20,7 +16,6 @@ use crossbeam::channel::unbounded;
 // use crossbeam::channel::{bounded};
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 
 #[derive(Default)]
 pub struct NaiveRenderer {}
@@ -36,7 +31,7 @@ impl NaiveRenderer {
         _camera: &CameraEnum,
     ) -> Film<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
-        println!("starting render with film resolution {}x{}", width, height);
+        warn!("starting render with film resolution {}x{}", width, height);
         let min_camera_rays = width * height * settings.min_samples as usize;
         println!(
             "minimum samples per pixel: {}",
@@ -87,6 +82,7 @@ impl NaiveRenderer {
                 for s in 0..settings.min_samples {
                     let sample = sampler.draw_2d();
 
+                    // box filter
                     let camera_uv = (
                         (x as f32 + sample.x) / (settings.resolution.width as f32),
                         (y as f32 + sample.y) / (settings.resolution.height as f32),
@@ -259,12 +255,12 @@ impl NaiveRenderer {
             .enumerate()
             .map(
                 |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
-                    if let IntegratorKind::BDPT {
-                        selected_pair: Some((s, t)),
-                    } = settings.integrator
-                    {
-                        println!("rendering specific pair {} {}", s, t);
-                    }
+                    // if let IntegratorKind::BDPT {
+                    //     selected_pair: Some((s, t)),
+                    // } = settings.integrator
+                    // {
+                    //     println!("rendering specific pair {} {}", s, t);
+                    // }
 
                     let profile: Profile = film
                         .buffer
@@ -280,7 +276,7 @@ impl NaiveRenderer {
                             let mut sampler: Box<dyn Sampler> =
                                 Box::new(StratifiedSampler::new(20, 20, 10));
                             // let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                            // idea: use SPD::Tabulated to collect all the data for a single pixel as a SPD, then convert that whole thing to XYZ.
+                            // idea: use Curve::Tabulated to collect all the data for a single pixel as a Curve, then convert that whole thing to XYZ.
                             let mut local_additional_splats: Vec<(Sample, CameraId)> = Vec::new();
                             // use with capacity to preallocate
                             for s in 0..settings.min_samples {
@@ -373,8 +369,8 @@ impl NaiveRenderer {
                 .par_iter_mut()
                 .enumerate()
                 .for_each(|(pixel_index, pixel_ref)| {
+                    let x: usize = pixel_index % render_settings.resolution.width;
                     let y: usize = pixel_index / render_settings.resolution.width;
-                    let x: usize = pixel_index - render_settings.resolution.width * y;
                     let light_color = light_film.at(x, y);
                     *pixel_ref += light_color / (render_settings.min_samples as f32);
                 });
@@ -422,7 +418,7 @@ impl Renderer for NaiveRenderer {
             IntegratorType,
             Vec<(RenderSettings, CameraEnum)>,
         > = HashMap::new();
-        splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
+        // splatting_renders_and_cameras.insert(IntegratorType::BDPT, Vec::new());
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
@@ -497,7 +493,7 @@ impl Renderer for NaiveRenderer {
                             render_settings,
                         )
                     {
-                        println!("rendering with PathTracing integrator");
+                        warn!("rendering with PathTracing integrator");
                         let (render_settings, film) = (
                             render_settings.clone(),
                             NaiveRenderer::render_sampled(
@@ -546,7 +542,7 @@ impl Renderer for NaiveRenderer {
                 }
             }
             match integrator_type {
-                IntegratorType::BDPT => {
+                /* IntegratorType::BDPT => {
                     let (bundled_settings, bundled_cameras): (
                         Vec<RenderSettings>,
                         Vec<CameraEnum>,
@@ -598,6 +594,7 @@ impl Renderer for NaiveRenderer {
                     // );
                     for (mut render_settings, film) in render_splatted_result {
                         // if selected pair, add the pair numbers to the filename automatically
+
                         if let IntegratorKind::BDPT {
                             selected_pair: Some((s, t)),
                         } = render_settings.integrator
@@ -615,7 +612,7 @@ impl Renderer for NaiveRenderer {
                         }
                         output_film(&render_settings, &film, 1.0);
                     }
-                }
+                } */
                 IntegratorType::LightTracing => {
                     let (bundled_settings, bundled_cameras): (
                         Vec<RenderSettings>,

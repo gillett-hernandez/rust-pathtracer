@@ -1,9 +1,8 @@
 use crate::prelude::*;
 
-mod bdpt;
+// mod bdpt;
 mod lt;
 mod pt;
-// mod sppm;
 pub mod utils;
 
 use crate::parsing::config::{IntegratorKind, RenderSettings};
@@ -12,12 +11,12 @@ use crate::profile::Profile;
 use crate::world::World;
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
-pub use bdpt::BDPTIntegrator;
+// pub use bdpt::BDPTIntegrator;
 pub use lt::LightTracingIntegrator;
 pub use pt::PathTracingIntegrator;
-// pub use sppm::SPPMIntegrator;
 
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 // pub type CameraId = u8;
@@ -26,9 +25,7 @@ use std::sync::Arc;
 pub enum IntegratorType {
     PathTracing,
     LightTracing,
-    BDPT,
-    // SPPM,
-    MLT,
+    // BDPT,
 }
 
 impl IntegratorType {
@@ -36,8 +33,7 @@ impl IntegratorType {
         match string {
             "PT" => IntegratorType::PathTracing,
             "LT" => IntegratorType::LightTracing,
-            "BDPT" => IntegratorType::BDPT,
-            "MLT" => IntegratorType::MLT,
+            // "BDPT" => IntegratorType::BDPT,
             _ => IntegratorType::PathTracing,
         }
     }
@@ -48,19 +44,18 @@ impl From<IntegratorKind> for IntegratorType {
         match data {
             IntegratorKind::PT { .. } => IntegratorType::PathTracing,
             IntegratorKind::LT { .. } => IntegratorType::LightTracing,
-            IntegratorKind::BDPT { .. } => IntegratorType::BDPT,
+            // IntegratorKind::BDPT { .. } => IntegratorType::BDPT,
         }
     }
 }
 
-pub enum Integrator {
-    PathTracing(PathTracingIntegrator),
+pub enum Integrator<T: Field> {
+    PathTracing(PathTracingIntegrator<T>),
     LightTracing(LightTracingIntegrator),
-    BDPT(BDPTIntegrator),
-    // SPPM(SPPMIntegrator),
+    // BDPT(BDPTIntegrator),
 }
 
-impl Integrator {
+impl<T: Field> Integrator<T> {
     pub fn from_settings_and_world(
         world: Arc<World>,
         integrator_type: IntegratorType,
@@ -75,13 +70,13 @@ impl Integrator {
         let max_bounces = settings.max_bounces.unwrap();
         let russian_roulette = settings.russian_roulette.unwrap_or(true);
         match (integrator_type, settings.integrator) {
-            (IntegratorType::BDPT, IntegratorKind::BDPT { .. }) => {
-                Some(Integrator::BDPT(BDPTIntegrator {
-                    max_bounces,
-                    world,
-                    wavelength_bounds: bounds,
-                }))
-            }
+            // (IntegratorType::BDPT, IntegratorKind::BDPT { .. }) => {
+            //     Some(Integrator::BDPT(BDPTIntegrator {
+            //         max_bounces,
+            //         world,
+            //         wavelength_bounds: bounds,
+            //     }))
+            // }
             (IntegratorType::LightTracing, IntegratorKind::LT { camera_samples }) => {
                 Some(Integrator::LightTracing(LightTracingIntegrator {
                     max_bounces,
@@ -91,27 +86,35 @@ impl Integrator {
                     wavelength_bounds: bounds,
                 }))
             }
-            (IntegratorType::PathTracing, IntegratorKind::PT { light_samples }) => {
-                Some(Integrator::PathTracing(PathTracingIntegrator {
-                    min_bounces: settings.min_bounces.unwrap_or(4),
-                    max_bounces,
-                    world,
-                    russian_roulette,
+            (
+                IntegratorType::PathTracing,
+                IntegratorKind::PT {
                     light_samples,
-                    only_direct: settings.only_direct.unwrap_or(false),
-                    wavelength_bounds: bounds,
-                }))
-            }
+                    medium_aware,
+                },
+            ) => Some(Integrator::PathTracing(PathTracingIntegrator {
+                min_bounces: settings.min_bounces.unwrap_or(4),
+                max_bounces,
+                medium_aware,
+                world,
+                russian_roulette,
+                light_samples,
+                only_direct: settings.only_direct.unwrap_or(false),
+                wavelength_bounds: bounds,
+                field: PhantomData,
+            })),
             _ => {
                 warn!("constructing pathtracing integrator as fallback, since IntegratorType did not match any supported integrators");
                 Some(Integrator::PathTracing(PathTracingIntegrator {
                     min_bounces: settings.min_bounces.unwrap_or(4),
                     max_bounces,
+                    medium_aware: false,
                     world,
                     russian_roulette,
                     light_samples: 4,
                     only_direct: settings.only_direct.unwrap_or(false),
                     wavelength_bounds: bounds,
+                    field: PhantomData,
                 }))
             }
         }

@@ -181,47 +181,48 @@ fn sample_wh(alpha: f32, wi: Vec3, sample: Sample2D) -> Vec3 {
 
 #[derive(Debug, Clone)]
 pub struct GGX {
-    pub alpha: f32,
+    pub alpha: f32, // todo: let this be controlled by a texture
     pub eta: Curve,
     pub eta_o: Curve,
     pub kappa: Curve,
-    pub permeability: f32,
-    pub outer_medium_id: usize,
+    pub outer_medium_id: MediumId,
+    pub inner_medium_id: MediumId,
+    metallic: bool,
 }
 
 impl GGX {
+    pub const NAME: &'static str = "GGX";
     pub fn new(
         roughness: f32,
         eta: Curve,
         eta_o: Curve,
         kappa: Curve,
-        permeability: f32,
-        outer_medium_id: usize,
+        outer_medium_id: MediumId,
+        inner_medium_id: MediumId,
     ) -> Self {
         debug_assert!(roughness > 0.0);
+
+        let metallic = kappa.evaluate_integral(BOUNDED_VISIBLE_RANGE, 100, false) > 0.0;
+        warn!(
+            "constructing new ggx with metallic bool set to {}",
+            metallic
+        );
         GGX {
             alpha: roughness,
             eta,
             eta_o,
             kappa,
-            permeability,
+            metallic,
             outer_medium_id,
+            inner_medium_id,
         }
     }
 
     fn reflectance(&self, eta_outer: f32, eta_inner: f32, kappa: f32, cos_theta_i: f32) -> f32 {
-        if self.permeability > 0.0 {
+        if !self.metallic {
             fresnel_dielectric(eta_outer, eta_inner, cos_theta_i)
-        // if cos_theta_i >= 0.0 {
-        // fresnel_dielectric(eta_inner, eta_outer, cos_theta_i)
-        // } else {
-        // }
         } else {
             fresnel_conductor(eta_outer, eta_inner, kappa, cos_theta_i)
-            // fresnel_conductor(eta_inner, eta_outer, kappa, cos_theta_i)
-            // if cos_theta_i >= 0.0 {
-            // } else {
-            // }
         }
     }
 
@@ -232,16 +233,17 @@ impl GGX {
         kappa: f32,
         cos_theta_i: f32,
     ) -> f32 {
-        if self.permeability > 0.0 {
-            // fresnel_dielectric(self.eta_o, eta_i, wi.z())
-            (self.permeability * self.reflectance(eta_outer, eta_inner, kappa, cos_theta_i) + 1.0
-                - self.permeability)
+        if !self.metallic {
+            self.reflectance(eta_outer, eta_inner, kappa, cos_theta_i)
                 .clamp(0.0, 1.0)
         } else {
             1.0
         }
     }
     fn eta_rel(&self, eta_outer: f32, eta_inner: f32, wi: Vec3) -> f32 {
+        // TODO: determine if this should take cos_i rather than wi,
+        // so that we can pass in ndotv instead of wi, allowing the choice of eta_rel to take into account
+        // what wh * wi looks like
         if wi.z() < 0.0 {
             eta_outer / eta_inner
         } else {
@@ -250,35 +252,36 @@ impl GGX {
     }
 }
 
-impl GGX {
-    fn eval_pdf(
+impl Material<f32, f32> for GGX {
+    fn bsdf(
         &self,
         lambda: f32,
+        _uv: (f32, f32),
+        transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
-        transport_mode: TransportMode,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         let wi = wi.normalized();
         let same_hemisphere = wi.z() * wo.z() > 0.0;
 
         let g = (wi.z() * wo.z()).abs();
 
         if g == 0.0 {
-            return (SingleEnergy::ZERO, 0.0.into());
+            return (f32::ZERO, 0.0.into());
         }
 
         let cos_i = wi.z();
 
-        let mut glossy = SingleEnergy::ZERO;
-        let mut transmission = SingleEnergy::ZERO;
+        let mut glossy = f32::ZERO;
+        let mut transmission = f32::ZERO;
         let mut glossy_pdf = 0.0;
         let mut transmission_pdf = 0.0;
         let eta_inner = self.eta.evaluate_power(lambda);
         let eta_outer = self.eta_o.evaluate_power(lambda);
-        let kappa = if self.permeability > 0.0 {
-            0.0
-        } else {
+        let kappa = if self.metallic {
             self.kappa.evaluate_power(lambda)
+        } else {
+            0.0
         };
         if same_hemisphere {
             let mut wh = (wo + wi).normalized();
@@ -290,14 +293,28 @@ impl GGX {
             let ndotv = wi * wh;
             let refl = self.reflectance(eta_outer, eta_inner, kappa, ndotv);
             debug_assert!(wh.0.is_finite().all());
-            glossy.0 = refl * (0.25 / g) * ggx_d(self.alpha, wh) * ggx_g(self.alpha, wi, wo);
+            let ggxd = ggx_d(self.alpha, wh);
+            let ggxg = ggx_g(self.alpha, wi, wo);
+            glossy = refl * (0.25 / g) * ggxd * ggxg;
             if ndotv.abs() == 0.0 {
                 glossy_pdf = 0.0;
             } else {
                 glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / ndotv.abs();
             }
             debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, ndotv);
-        } else if self.permeability > 0.0 {
+            if glossy_pdf == 0.0 {
+                trace!(
+                    "same hemisphere, {:?} ndv: {} refl: {} d:{} g:{}, g:{} p:{}",
+                    wh,
+                    ndotv,
+                    refl,
+                    ggxd,
+                    ggxg,
+                    glossy,
+                    glossy_pdf,
+                );
+            }
+        } else if !self.metallic {
             let eta_rel = self.eta_rel(eta_outer, eta_inner, wi);
 
             let ggxg = ggx_g(self.alpha, wi, wo);
@@ -314,6 +331,177 @@ impl GGX {
             if wh.z() < 0.0 {
                 wh = -wh;
             }
+
+            let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
+            let ndotv = wi * wh;
+            let ndotl = wo * wh;
+
+            let sqrt_denom = ndotv + eta_rel * ndotl;
+            let eta_rel2 = eta_rel * eta_rel;
+            let mut dwh_dwo1 = ndotl / (sqrt_denom * sqrt_denom); // dwh_dwo w/o etas
+            let dwh_dwo2 = eta_rel2 * dwh_dwo1; // dwh_dwo w/etas
+
+            // FIXME: determine if this is correct, based on Veach(1998), section 5.2.2.1 (page 143)
+            // in radiance mode, the reflectance/transmittance is not scaled by eta^2.
+            // in importance_mode, it is scaled by eta^2.
+            //
+            if transport_mode == TransportMode::Importance {
+                dwh_dwo1 = dwh_dwo2;
+            }
+            debug_assert!(
+                wh.0.is_finite().all(),
+                "{:?} {:?} {:?} {:?}",
+                eta_rel,
+                ndotv,
+                ndotl,
+                sqrt_denom
+            );
+            let ggxd = ggx_d(self.alpha, wh);
+            let weight = ggxd * ggxg * ndotv * dwh_dwo1 / g;
+            transmission_pdf = (ggxd * partial * dwh_dwo2).abs();
+
+            let inv_reflectance = 1.0 - self.reflectance(eta_outer, eta_inner, kappa, ndotv);
+            transmission = if self.metallic {
+                0.0
+            } else {
+                inv_reflectance * weight.abs()
+            };
+
+            debug_assert!(
+                !transmission.is_nan(),
+                "transmission was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
+                self,
+                lambda,
+                wi,
+                wo
+            );
+            debug_assert!(
+                !transmission_pdf.is_nan(),
+                "pdf was nan, self: {:?}, lambda:{:?}, wi:{:?}, wo:{:?}",
+                self,
+                lambda,
+                wi,
+                wo
+            );
+        }
+
+        let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, cos_i);
+
+        let f = glossy + transmission;
+        let pdf = refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf;
+        debug_assert!(
+            !pdf.is_nan() && !f.is_nan(),
+            "{} {} {}",
+            refl_prob,
+            glossy_pdf,
+            transmission_pdf
+        );
+        (f, pdf.into())
+    }
+    fn generate_and_evaluate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        sample: Sample2D,
+        wi: Vec3,
+    ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
+        let eta_inner = self.eta.evaluate_power(lambda);
+        let eta_outer = self.eta_o.evaluate_power(lambda);
+
+        debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
+        debug_assert!(eta_inner.is_finite(), "{}", lambda);
+        // let eta_rel = self.eta_rel(eta_inner, wi);
+        // only enable metal effects if permeability is 0
+        let kappa = if !self.metallic {
+            0.0
+        } else {
+            self.kappa.evaluate_power(lambda)
+        };
+
+        let mut wh = sample_wh(self.alpha, wi, sample).normalized();
+        let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, wh * wi);
+        debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wh * wi);
+        let mut did_reflect = false;
+        let wo;
+        if sample.x <= refl_prob {
+            // rescale sample x value to 0 to 1 range
+            // sample.x = sample.x / refl_prob;
+            // debug_assert!(sample.x.is_finite(), "{}", refl_prob);
+            // reflection
+            did_reflect = true;
+            wo = reflect(wi, wh);
+        } else {
+            // rescale sample x value to 0 to 1 range
+            // sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
+            // transmission
+
+            let eta_rel = 1.0 / self.eta_rel(eta_outer, eta_inner, wi);
+
+            wo = refract(wi, wh, eta_rel).unwrap_or_else(|| {
+                did_reflect = true;
+                reflect(wi, wh)
+            });
+        }
+
+        let g = (wi.z() * wo.z()).abs();
+
+        if g == 0.0 {
+            return (f32::ZERO, Some(wo), 0.0.into());
+        }
+
+        let cos_i;
+
+        let mut glossy = f32::ZERO;
+        let mut transmission = f32::ZERO;
+        let mut glossy_pdf = 0.0;
+        let mut transmission_pdf = 0.0;
+        let eta_inner = self.eta.evaluate_power(lambda);
+        let eta_outer = self.eta_o.evaluate_power(lambda);
+        if did_reflect {
+            cos_i = wi * wh;
+            let refl = self.reflectance(eta_outer, eta_inner, kappa, cos_i);
+            debug_assert!(wh.0.is_finite().all());
+            let ggxd = ggx_d(self.alpha, wh);
+            let ggxg = ggx_g(self.alpha, wi, wo);
+            glossy = refl * (0.25 / g) * ggxd * ggxg;
+            if cos_i.abs() == 0.0 {
+                glossy_pdf = 0.0;
+            } else {
+                glossy_pdf = ggx_vnpdf(self.alpha, wi, wh) * 0.25 / cos_i.abs();
+            }
+            debug_assert!(glossy_pdf.is_finite(), "{:?} {}", self.alpha, cos_i);
+            if glossy_pdf == 0.0 {
+                trace!(
+                    "same hemisphere, {:?} ndv: {} refl: {} d:{} g:{}, g:{} p:{}",
+                    wh,
+                    cos_i,
+                    refl,
+                    ggxd,
+                    ggxg,
+                    glossy,
+                    glossy_pdf,
+                );
+            }
+        } else {
+            let eta_rel = self.eta_rel(eta_outer, eta_inner, wi);
+
+            let ggxg = ggx_g(self.alpha, wi, wo);
+            // let mut wh = (wi + eta_rel * wo).normalized();
+            // normal invert mark
+            if wh.z() < 0.0 {
+                wh = -wh;
+            }
+            cos_i = wi * wh;
+            debug_assert!(
+                wi.0.is_finite().all() && wo.0.is_finite().all(),
+                "{:?} {:?} {:?} {:?}",
+                wi,
+                wo,
+                ggxg,
+                cos_i
+            );
 
             let partial = ggx_vnpdf_no_d(self.alpha, wi, wh);
             let ndotv = wi * wh;
@@ -342,17 +530,11 @@ impl GGX {
             transmission_pdf = (ggxd * partial * dwh_dwo2).abs();
 
             let inv_reflectance = 1.0 - self.reflectance(eta_outer, eta_inner, kappa, ndotv);
-            transmission.0 = self.permeability * inv_reflectance * weight.abs();
-            // println!("{:?}, {:?}, {:?}", eta_inner, kappa, ndotv);
-            // println!(
-            //     "transmission = {:?} = {:?}*{:?}*{:?}*{:?}*{:?}/{:?}",
-            //     transmission, inv_reflectance, ggxd, ggxg, ndotv, dwh_dwo1, g
-            // );
-
-            // println!(
-            //     "transmission_pdf = {:?} = {:?}*{:?}*{:?}",
-            //     transmission_pdf, ggxd, partial, dwh_dwo1
-            // );
+            transmission = if self.metallic {
+                0.0
+            } else {
+                inv_reflectance * weight.abs()
+            };
 
             debug_assert!(
                 !transmission.is_nan(),
@@ -373,13 +555,6 @@ impl GGX {
         }
 
         let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, cos_i);
-        // println!("glossy: {:?}, transmission: {:?}", glossy, transmission);
-        // println!(
-        //     "glossy_pdf: {:?}, transmission_pdf: {:?}, refl_prob: {:?}",
-        //     glossy_pdf, transmission_pdf, refl_prob
-        // );
-        // println!("cos_i: {:?}", cos_i);
-        // println!();
 
         let f = glossy + transmission;
         let pdf = refl_prob * glossy_pdf + (1.0 - refl_prob) * transmission_pdf;
@@ -390,115 +565,43 @@ impl GGX {
             glossy_pdf,
             transmission_pdf
         );
-        (f, pdf.into())
-    }
-    pub const NAME: &'static str = "GGX";
-}
-
-impl Material for GGX {
-    fn generate(
-        &self,
-        lambda: f32,
-        _uv: (f32, f32),
-        _transport_mode: TransportMode,
-        sample: Sample2D,
-        wi: Vec3,
-    ) -> Option<Vec3> {
-        // debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
-        // let eta_inner = self.eta.evaluate_power(lambda);
-        // debug_assert!(eta_inner.is_finite(), "{}", lambda);
-        // // let eta_rel = self.eta_rel(eta_inner, wi);
-        // let kappa = if self.permeability > 0.0 {
-        //     0.0
-        // } else {
-        //     self.kappa.evaluate_power(lambda)
-        // };
-        // let refl_prob = self.reflectance_probability(eta_inner, kappa, wi.z());
-        // debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wi.z());
-        // if refl_prob == 1.0 || sample.x < refl_prob {
-        //     // rescale sample x value to 0 to 1 range
-        //     sample.x = sample.x / refl_prob;
-        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
-        //     // reflection
-        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
-        //     let wo = reflect(wi, wh);
-        //     return Some(wo);
-        // } else {
-        //     // rescale sample x value to 0 to 1 range
-        //     sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
-        //     debug_assert!(sample.x.is_finite(), "{}", refl_prob);
-        //     // transmission
-        //     let wh = sample_wh(self.alpha, wi, sample).normalized();
-
-        //     let eta_rel = 1.0 / self.eta_rel(eta_inner, wi);
-
-        //     let wo = refract(wi, wh, eta_rel);
-        //     /* if wo.is_none() {
-        //         println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
-        //         //     wo = Some(reflect(wi, -wh));
-        //     } */
-        //     return wo;
-        // }
-        debug_assert!(sample.x.is_finite() && sample.y.is_finite(), "{:?}", sample);
-        let eta_inner = self.eta.evaluate_power(lambda);
-        let eta_outer = self.eta_o.evaluate_power(lambda);
-        debug_assert!(eta_inner.is_finite(), "{}", lambda);
-        // let eta_rel = self.eta_rel(eta_inner, wi);
-        // only enable metal effects if permeability is 0
-        let kappa = if self.permeability > 0.0 {
-            0.0
-        } else {
-            self.kappa.evaluate_power(lambda)
-        };
-        let wh = sample_wh(self.alpha, wi, sample).normalized();
-        let refl_prob = self.reflectance_probability(eta_outer, eta_inner, kappa, wh * wi);
-        debug_assert!(sample.x.is_finite(), "{}", refl_prob);
-        debug_assert!(refl_prob.is_finite(), "{} {} {}", eta_inner, kappa, wh * wi);
-        if refl_prob == 1.0 || sample.x < refl_prob {
-            // rescale sample x value to 0 to 1 range
-            // sample.x = sample.x / refl_prob;
-            // debug_assert!(sample.x.is_finite(), "{}", refl_prob);
-            // reflection
-            let wo = reflect(wi, wh);
-            Some(wo)
-        } else {
-            // rescale sample x value to 0 to 1 range
-            // sample.x = (sample.x - refl_prob) / (1.0 - refl_prob);
-            // transmission
-
-            let eta_rel = 1.0 / self.eta_rel(eta_outer, eta_inner, wi);
-
-            let mut wo = refract(wi, wh, eta_rel);
-            if wo.is_none() {
-                // println!("wo was none, because refract returned none (should have been total internal reflection but fresnel was {} and eta_rel was {})", refl_prob, eta_rel);
-                wo = Some(reflect(wi, wh));
-            }
-            wo
+        if pdf <= 0.0 {
+            trace!(
+                "{:?}->{:?}\n {:?} {:?} {:?}",
+                wi,
+                wo,
+                refl_prob,
+                glossy_pdf,
+                transmission_pdf,
+            );
         }
+        // generated this direction just now, so pdf should be nonzero and f should be nonzero
+        debug_assert!(
+            f > 0.0 && pdf > 0.0,
+            "{:?}, {:?}, {:?} -> {:?}, wh = {:?}, did_reflect: {}",
+            f,
+            pdf,
+            wi,
+            wo,
+            wh,
+            did_reflect
+        );
+        (f, Some(wo), pdf.into())
     }
-    fn bsdf(
-        &self,
-        lambda: f32,
-        _uv: (f32, f32),
-        transport_mode: TransportMode,
-        wi: Vec3,
-        wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
-        self.eval_pdf(lambda, wi, wo, transport_mode)
-    }
-    fn inner_medium_id(&self, _uv: (f32, f32)) -> usize {
-        0
-    }
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> usize {
+
+    fn outer_medium_id(&self, _uv: (f32, f32)) -> MediumId {
         self.outer_medium_id
+    }
+    fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+        self.inner_medium_id
     }
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
 
+    use math::spectral::BOUNDED_VISIBLE_RANGE;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
-    use spectral::BOUNDED_VISIBLE_RANGE;
 
     use super::*;
     use crate::curves;
@@ -522,15 +625,18 @@ mod tests {
         println!("fr1 is {}, fr2 is {}", fr_1, fr_2);
     }
 
-    #[test]
-    fn test_ggx_functions() {
+    fn ggx_glass(roughness: f32) -> GGX {
         let glass = curves::cauchy(1.5, 10000.0);
         let flat_zero = curves::void();
         let flat_one = curves::cie_e(1.0);
-        let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
+        GGX::new(roughness, glass, flat_one, flat_zero, 0, 0)
+    }
 
+    #[test]
+    fn test_ggx_functions() {
         let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
 
+        let ggx_glass = ggx_glass(0.001);
         let lambda = 500.0;
         let fake_hit_record: HitRecord = HitRecord::new(
             0.0,
@@ -583,10 +689,10 @@ mod tests {
                     wi,
                     wo,
                 );
-                assert!(sampled_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                assert!(sampled_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                assert!(orig_f.0 > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
-                assert!(orig_pdf.0 >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(sampled_f > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(*sampled_pdf >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(orig_f > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+                assert!(*orig_pdf >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
                 succeeded += 1;
             } /* else {
                   print!("x");
@@ -611,7 +717,7 @@ mod tests {
             wo,
         );
         assert!(
-            sampled_f.0 >= 0.0,
+            sampled_f >= 0.0,
             "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
             orig_f,
             orig_pdf,
@@ -621,7 +727,7 @@ mod tests {
             wo
         );
         assert!(
-            sampled_pdf.0 >= 0.0,
+            *sampled_pdf >= 0.0,
             "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
             orig_f,
             orig_pdf,
@@ -631,7 +737,7 @@ mod tests {
             wo
         );
         assert!(
-            orig_f.0 >= 0.0,
+            orig_f >= 0.0,
             "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
             orig_f,
             orig_pdf,
@@ -641,7 +747,7 @@ mod tests {
             wo
         );
         assert!(
-            orig_pdf.0 >= 0.0,
+            *orig_pdf >= 0.0,
             "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
             orig_f,
             orig_pdf,
@@ -658,56 +764,42 @@ mod tests {
         let wi = Vec3::new(0.073927574, -0.9872729, 0.1408083);
         let wo = Vec3::new(0.048132252, 0.5836164, -0.81060183);
 
-        let glass = curves::cauchy(1.45, 3540.0);
-        let flat_zero = curves::void();
-        let flat_one = curves::cie_e(1.0);
-        let ggx_glass = GGX::new(0.01, glass, flat_one, flat_zero, 1.0, 0);
+        let ggx_glass = ggx_glass(0.001);
 
-        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
+        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("{:?} {:?}", f, pdf);
     }
     //wi: Vec3(f32x4(0.48507738, 0.4317013, -0.76048267, -0.0)), wo: Vec3(f32x4(-0.7469567, -0.66481555, 0.00871551, 0.0))
     #[test]
     fn test_failure_case2() {
         let lambda = 500.0;
-
-        let glass = curves::cauchy(1.5, 10000.0);
-        let flat_zero = curves::void();
-        let flat_one = curves::cie_e(1.0);
-        let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
+        let ggx_glass = ggx_glass(0.01);
 
         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
         let wo = Vec3::new(-0.7469567, -0.66481555, 0.00871551);
 
-        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
-        println!("{:?} {:?}", f, pdf);
-        let (f, pdf) = ggx_glass.eval_pdf(lambda, wo, wi, TransportMode::Importance);
-        println!("{:?} {:?}", f, pdf);
+        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        println!("normal   {:?} {:?}", f, pdf);
+        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wo, wi);
+        println!("reversed {:?} {:?}", f, pdf);
     }
     #[test]
     fn test_extremely_low_roughness() {
         let lambda = 762.2971;
         let wi = Vec3::new(0.073927574, -0.9872729, 0.1408083);
         let wo = Vec3::new(0.048132252, 0.5836164, -0.81060183);
+        let ggx_glass = ggx_glass(0.01);
 
-        let glass = curves::cauchy(1.45, 3540.0);
-        let flat_zero = curves::void();
-
-        let flat_one = curves::cie_e(1.0);
-        let ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
-
-        let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
+        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("{:?} {:?}", f, pdf);
     }
 
     #[test]
     fn test_integral() {
         let visible_bounds = BOUNDED_VISIBLE_RANGE;
-        let glass = curves::cauchy(1.45, 3540.0);
-        let flat_zero = curves::void();
-        let flat_one = curves::cie_e(1.0);
-        let ggx_glass = GGX::new(0.1, glass, flat_one, flat_zero, 1.0, 0);
+        let mut ggx_glass = ggx_glass(0.1);
+
         let n = 10000000;
         let sum: f32 = (0..n)
             .into_par_iter()
@@ -730,11 +822,12 @@ mod tests {
                         wi,
                     )
                     .unwrap();
-                let (f, pdf) = ggx_glass.eval_pdf(lambda, wi, wo, TransportMode::Importance);
-                if pdf.0 == 0.0 {
+                let (f, pdf) =
+                    ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+                if *pdf == 0.0 {
                     0.0
                 } else {
-                    wi.z() * f.0 / pdf.0
+                    wi.z() * f / *pdf
                 }
             })
             .sum();

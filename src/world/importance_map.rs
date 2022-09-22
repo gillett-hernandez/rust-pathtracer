@@ -10,7 +10,6 @@ use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
 
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 
 // equirectangular importance map.
 // maybe refactor this to another submodule under or separate from src/world so that more importance map types can be defined.
@@ -78,9 +77,9 @@ impl ImportanceMap {
 
         let mut total_luminance = 0.0;
 
-        // let mut machine = SPD::Machine {
+        // let mut machine = Curve::Machine {
         //     seed: 1.0,
-        //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, SPD::Const(0.0))],
+        //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, Curve::Const(0.0))],
         // };
 
         let (mut window, mut buffer, mut maybe_cdf) = if cfg!(feature = "visualize_importance_map")
@@ -237,7 +236,10 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
-    pub fn sample_uv(&self, sample: Sample2D) -> ((f32, f32), (PDF, PDF)) {
+    pub fn sample_uv(
+        &self,
+        sample: Sample2D,
+    ) -> ((f32, f32), (PDF<f32, Uniform01>, PDF<f32, Uniform01>)) {
         match self {
             Self::Baked {
                 data, marginal_cdf, ..
@@ -280,7 +282,8 @@ mod test {
 
     use super::*;
     use crate::renderer::Film;
-    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
+    use crate::texture::EvalAt;
+    use crate::tonemap::{Clamp, Converter, Tonemapper, Reinhard1x3};
 
     use crate::world::environment::*;
     use crate::{
@@ -297,7 +300,7 @@ mod test {
             if (x as f32 - 200.0).powi(2) + (y as f32 - 200.0).powi(2) < 400.0 {
                 *pixel += 1000.0;
             }
-            *pixel += random();
+            *pixel += debug_random();
         }
 
         let texture = TexStack {
@@ -356,7 +359,7 @@ mod test {
                 sample
             };
             let (uv, pdf) = map.sample_uv(sample);
-            let pdf = (pdf.0 * pdf.1).0;
+            let pdf = pdf.0 * pdf.1;
 
             // estimate of env map luminance will have unacceptable bias depending on the actual size of the env map texture.
             // need to downsample to retain size information in importance map so that the pdf can be adjusted.
@@ -367,37 +370,28 @@ mod test {
                     1.0,
                 );
 
-                sw.energy.0 = texture.eval_at(sw.lambda, uv);
+                sw.energy = texture.eval_at(sw.lambda, uv);
 
-                // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
-                estimate += y_bar(sw.lambda * 10.0) * sw.energy.0 / pdf;
+                // sum += y_bar(sw.lambda * 10.0) * sw.energy;
+                estimate += y_bar(sw.lambda * 10.0) * sw.energy / *pdf;
                 let (px, py) = (
                     (uv.0 * width as f32) as usize,
                     (uv.1 * height as f32) as usize,
                 );
 
                 // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
-                film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy.0 / pdf;
+                film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / *pdf;
             }
 
             if idx % 100 == 0 {
                 pb.add(100);
-                tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-
-                        let [r, g, b, _]: [f32; 4] = converter
-                            .transfer_function(
-                                tonemapper.map(&film, (x as usize, y as usize)),
-                                false,
-                            )
-                            .into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                update_window_buffer(
+                    &mut buffer,
+                    &film,
+                    &mut tonemapper,
+                    converter,
+                    1.0 / (idx as f32 + 1.0),
+                );
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -488,8 +482,8 @@ mod test {
                     sample
                 };
                 // println!("{} {}", sample.x, sample.y);
-                let (uv, pdf) = env.sample_env_uv(sample);
-                let pdf_for_result = env.pdf_for(uv).0 + 0.01;
+                let (uv, pdf_solid_angle_0) = env.sample_env_uv(sample);
+                let pdf_solid_angle_1 = *env.pdf_for(uv) + 0.01;
 
                 for _ in 0..4 {
                     let wavelength_sample = if false {
@@ -503,13 +497,14 @@ mod test {
                         1.0 / wavelength_range.span(),
                     );
 
-                    sw.energy.0 = texture.eval_at(sw.lambda, uv) * strength;
+                    sw.energy = texture.eval_at(sw.lambda, uv) * strength;
 
-                    // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
-                    estimate +=
-                        y_bar(sw.lambda * 10.0) * sw.energy.0 / (pdf.0 + 0.01) / wavelength_pdf;
+                    // sum += y_bar(sw.lambda * 10.0) * sw.energy;
+                    estimate += y_bar(sw.lambda * 10.0) * sw.energy
+                        / (*pdf_solid_angle_0 + 0.01)
+                        / wavelength_pdf;
                     estimate2 +=
-                        y_bar(sw.lambda * 10.0) * sw.energy.0 / pdf_for_result / wavelength_pdf;
+                        y_bar(sw.lambda * 10.0) * sw.energy / pdf_solid_angle_1 / wavelength_pdf;
                     let (px, py) = (
                         (uv.0 * width as f32) as usize,
                         (uv.1 * height as f32) as usize,
@@ -517,27 +512,19 @@ mod test {
 
                     // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
                     film.buffer[px + width * py] +=
-                        XYZColor::from(sw) / (pdf_for_result) / wavelength_pdf;
+                        XYZColor::from(sw) / pdf_solid_angle_1 / wavelength_pdf;
                 }
 
                 if idx % 100 == 0 {
                     pb.add(100);
                     tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
-                    buffer
-                        .par_iter_mut()
-                        .enumerate()
-                        .for_each(|(pixel_idx, v)| {
-                            let y: usize = pixel_idx / width;
-                            let x: usize = pixel_idx - width * y;
-                            let [r, g, b, _]: [f32; 4] = converter
-                                .transfer_function(
-                                    tonemapper.map(&film, (x as usize, y as usize)),
-                                    false,
-                                )
-                                .into();
-                            *v =
-                                rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                        });
+                    update_window_buffer(
+                        &mut buffer,
+                        &film,
+                        &mut tonemapper,
+                        converter,
+                        1.0 / (idx as f32 + 1.0),
+                    );
                     window.update_with_buffer(&buffer, width, height).unwrap();
                 }
             }
@@ -547,10 +534,12 @@ mod test {
                 estimate2 / limit as f32
             );
 
+            let boxed: Box<dyn Tonemapper> = Box::new(tonemapper);
             converter
                 .write_to_files(
                     &film,
-                    Box::new(tonemapper),
+                    &boxed,
+                    1.0,
                     "env_map_sampling_test.exr",
                     "env_map_sampling_test.png",
                 )
@@ -622,35 +611,26 @@ mod test {
                     1.0 / wavelength_range.span(),
                 );
 
-                sw.energy.0 = env.emission(uv, sw.lambda).0;
+                sw.energy = env.emission(uv, sw.lambda);
 
-                // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
-                estimate += y_bar(sw.lambda * 10.0) * sw.energy.0 / wavelength_pdf;
+                // sum += y_bar(sw.lambda * 10.0) * sw.energy;
+                estimate += y_bar(sw.lambda * 10.0) * sw.energy / wavelength_pdf;
                 let (px, py) = (
                     (uv.0 * width as f32) as usize,
                     (uv.1 * height as f32) as usize,
                 );
-                film.buffer[px + width * py] +=
-                    XYZColor::from(sw) / wavelength_pdf / (pdf.0 + 0.01);
+                film.buffer[px + width * py] += XYZColor::from(sw) / wavelength_pdf / (*pdf + 0.01);
             }
 
             if idx % 100 == 0 {
                 pb.add(100);
-                tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-                        let [r, g, b, _]: [f32; 4] = converter
-                            .transfer_function(
-                                tonemapper.map(&film, (x as usize, y as usize)),
-                                false,
-                            )
-                            .into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                update_window_buffer(
+                    &mut buffer,
+                    &film,
+                    &mut tonemapper,
+                    converter,
+                    1.0 / (idx as f32 + 1.0),
+                );
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -687,7 +667,7 @@ mod test {
                 wavelength_bounds,
                 wavelength_sample,
             );
-            integral += XYZColor::from(le / pdf.0 / wavelength_pdf.0);
+            integral += XYZColor::from(le.replace_energy(le.energy / *pdf / *wavelength_pdf));
         }
         assert!((integral / n as f32).0.gt(f32x4::splat(0.0)).any());
         println!("{:?}", integral / n as f32);
@@ -789,48 +769,37 @@ mod test {
 
             let (uv, pdf) = importance_map.sample_uv(sample);
             // println!("{} {}", uv.0, uv.1);
-            let pdf = (pdf.0 * pdf.1).0 / sample_jacobian;
+            let pdf = *(pdf.0 * pdf.1) / sample_jacobian;
             // let uv = (uv.0 / 4.0 + 0.5, uv.1 / 4.0 + 0.5);
 
             // estimate of env map luminance will have unacceptable bias depending on the actual size of the env map texture.
             // need to downsample to retain size information in importance map so that the pdf can be adjusted.
 
-            let (mut sw, _) = (
-                SingleWavelength::new_from_range(0.5, BOUNDED_VISIBLE_RANGE),
-                1.0,
-            );
+            let mut sw = SingleWavelength::new_from_range(0.5, BOUNDED_VISIBLE_RANGE);
 
-            sw.energy.0 = func(sample_transform(uv.0), sample_transform(uv.1));
+            sw.energy = func(sample_transform(uv.0), sample_transform(uv.1));
 
-            // sum += y_bar(sw.lambda * 10.0) * sw.energy.0;
-            estimate += sw.energy.0 / pdf / limit as f32;
+            // sum += y_bar(sw.lambda * 10.0) * sw.energy;
+            estimate += sw.energy / pdf / limit as f32;
             let (px, py) = (
                 (uv.0 * width as f32) as usize,
                 (uv.1 * height as f32) as usize,
             );
 
             // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
-            film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy.0 / pdf;
+            film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / pdf;
 
             if idx % 100 == 0 {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
-                tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
-                buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx - width * y;
-                        let [r, g, b, _]: [f32; 4] = converter
-                            .transfer_function(
-                                tonemapper.map(&film, (x as usize, y as usize)),
-                                false,
-                            )
-                            .into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                update_window_buffer(
+                    &mut buffer,
+                    &film,
+                    &mut tonemapper,
+                    converter,
+                    1.0 / (idx as f32 + 1.0),
+                );
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -900,19 +869,19 @@ mod test {
                         1.0 / wavelength_range.span(),
                     );
 
-                    let energy = env.emission(uv, sw.lambda).0;
+                    let energy = env.emission(uv, sw.lambda);
 
-                    if pdf.0 == 0.0 {
+                    if *pdf == 0.0 {
                         return;
                     }
                     *pixel += XYZColor::from(SingleWavelength::new(
                         sw.lambda,
-                        (energy / wavelength_pdf / (pdf.0)).into(),
+                        (energy / wavelength_pdf / (*pdf)).into(),
                     ));
                     *squared_pixel +=
                         XYZColor::from(SingleWavelength::new(sw.lambda, (energy * energy).into()))
                             / wavelength_pdf
-                            / (pdf.0);
+                            / *pdf;
                 });
             pb.inc();
 

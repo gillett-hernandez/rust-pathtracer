@@ -10,7 +10,8 @@ use std::collections::HashMap;
 // use std::io::{self, BufWriter, Write};
 // use std::path::Path;
 
-use math::{Transform3, Vec3, PI};
+use crate::prelude::PI;
+use math::prelude::{Transform3, Vec3};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
@@ -40,7 +41,7 @@ impl From<Transform3Data> for Transform3 {
                     Vec3::from(rotation.axis).normalized(),
                     PI * rotation.angle / 180.0,
                 );
-                info!("parsed rotate");
+                info!("parsed rotate {:?} {}", rotation.axis, rotation.angle);
                 if base.is_none() {
                     base = Some(transform);
                 } else {
@@ -70,7 +71,7 @@ pub fn parse_instance(
     instance_data: InstanceData,
     materials_mapping: &HashMap<String, MaterialId>,
     mesh_map: &HashMap<String, Mesh>,
-    instance_id: usize,
+    instance_id: InstanceId,
 ) -> Instance {
     let aggregate: Aggregate = instance_data.aggregate.parse_with(mesh_map);
     let transform: Option<Transform3> = instance_data

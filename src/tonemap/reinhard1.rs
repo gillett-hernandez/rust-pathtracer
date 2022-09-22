@@ -75,7 +75,7 @@ impl Tonemapper for Reinhard1 {
                 l_w,
                 sum_of_log / total_pixels as f64
             );
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance
@@ -109,6 +109,10 @@ impl Tonemapper for Reinhard1 {
         }
 
         scaling_factor * cie_xyz_color.0
+    }
+
+    fn get_name(&self) -> &str {
+        "reinhard1"
     }
 }
 
@@ -183,7 +187,7 @@ impl Tonemapper for Reinhard1x3 {
                 l_w,
                 sum_of_log / total_pixels as f32
             );
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance
@@ -220,5 +224,9 @@ impl Tonemapper for Reinhard1x3 {
             mapped = MAUVE.0;
         }
         mapped
+    }
+
+    fn get_name(&self) -> &str {
+        "reinhard1x3"
     }
 }

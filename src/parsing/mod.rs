@@ -33,7 +33,6 @@ use config::*;
 use environment::{parse_environment, EnvironmentData};
 use instance::*;
 use material::*;
-use math::Transform3;
 use medium::*;
 use serde::de::DeserializeOwned;
 use texture::*;
@@ -172,6 +171,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
 
     // collect information from instances, materials, and env map data to determine what textures and materials actually need to be parsed and what can be discarded.
 
+    let mut used_mediums = HashSet::new();
     let mut used_materials = HashSet::new();
     let mut used_textures = HashSet::new();
     let mut used_curves = HashSet::new();
@@ -270,22 +270,40 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
     {
         match material {
             MaterialData::GGX(GGXData {
-                eta, eta_o, kappa, ..
+                eta,
+                eta_o,
+                kappa,
+                outer_medium_id,
+                inner_medium_id,
+                ..
             }) => {
                 for curve in &[eta, eta_o, kappa] {
                     if let Some(name) = curve.get_name() {
                         used_curves.insert(name.to_string());
                     }
                 }
+                if let Some(name) = outer_medium_id {
+                    used_mediums.insert(name.clone());
+                }
+                if let Some(name) = inner_medium_id {
+                    used_mediums.insert(name.clone());
+                }
             }
             MaterialData::Lambertian(LambertianData { texture_id: name }) => {
                 used_textures.insert(name.clone());
             }
-            MaterialData::PassthroughFilter(PassthroughFilterData { color, .. }) => {
-                if let Some(name) = color.get_name() {
-                    used_curves.insert(name.to_string());
-                }
-            }
+            // MaterialData::PassthroughFilter(PassthroughFilterData {
+            //     color,
+            //     inner_medium_id,
+            //     outer_medium_id,
+            // }) => {
+            //     if let Some(name) = color.get_name() {
+            //         used_curves.insert(name.to_string());
+            //     }
+
+            //     used_mediums.insert(inner_medium_id.clone());
+            //     used_mediums.insert(outer_medium_id.clone());
+            // }
             MaterialData::SharpLight(SharpLightData {
                 bounce_color,
                 emit_color,
@@ -366,32 +384,6 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
         panic!();
     }
 
-    // parse materials from disk or from literal
-    let mut materials_map: HashMap<String, _> = HashMap::new();
-
-    for (name, data) in materials_data
-        .into_iter()
-        .filter(|(name, _)| used_materials.contains(name))
-    {
-        if let Some(parsed) = data.resolve(&curves, &textures_map) {
-            if materials_map.insert(name.clone(), parsed).is_none() {
-                info!("inserted new material {}", &name);
-            } else {
-                warn!("replaced material {}", &name);
-            }
-        } else {
-            warn!("failed to parse material {}", name);
-        }
-    }
-
-    // add mauve material to indicate errors.
-    // completely black for reflection, emits mauve color
-    let mauve = MaterialEnum::DiffuseLight(DiffuseLight::new(
-        crate::curves::cie_e(0.0),
-        mauve.to_cdf(math::spectral::EXTENDED_VISIBLE_RANGE, 20),
-        math::Sidedness::Dual,
-    ));
-
     // parse mediums from disk or from literal
     let mut mediums_map: HashMap<String, _> = HashMap::new();
     match scene.mediums.map(|e| e.resolve()) {
@@ -412,6 +404,42 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
             info!("no mediums data, continuing")
         }
     }
+
+    // dbg!(material_names_to_ids);
+    // put medium_names_to_ids here
+    let mut mediums_to_ids = HashMap::new();
+    let mut mediums: Vec<MediumEnum> = Vec::new();
+    for (name, medium) in mediums_map {
+        let id = mediums.len();
+        mediums.push(medium);
+        mediums_to_ids.insert(name, id as MediumId);
+    }
+
+    // parse materials from disk or from literal
+    let mut materials_map: HashMap<String, _> = HashMap::new();
+
+    for (name, data) in materials_data
+        .into_iter()
+        .filter(|(name, _)| used_materials.contains(name))
+    {
+        if let Some(parsed) = data.resolve(&curves, &textures_map, &mediums_to_ids) {
+            if materials_map.insert(name.clone(), parsed).is_none() {
+                info!("inserted new material {}", &name);
+            } else {
+                warn!("replaced material {}", &name);
+            }
+        } else {
+            warn!("failed to parse material {}", name);
+        }
+    }
+
+    // add mauve material to indicate errors.
+    // completely black for reflection, emits mauve color
+    let mauve = MaterialEnum::DiffuseLight(DiffuseLight::new(
+        crate::curves::cie_e(0.0),
+        mauve.to_cdf(math::spectral::EXTENDED_VISIBLE_RANGE, 20),
+        math::Sidedness::Dual,
+    ));
 
     // parse instances, and serialize all materials, mediums, and textures into vectors for storage in world.
 
@@ -434,12 +462,6 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
         materials.push(material);
         info!("added material {} as {:?}", &name, id);
         assert!(material_names_to_ids.insert(name, id).is_none());
-    }
-    // dbg!(material_names_to_ids);
-    // put medium_names_to_ids here
-    let mut mediums: Vec<MediumEnum> = Vec::new();
-    for (_, medium) in mediums_map {
-        mediums.push(medium);
     }
 
     // now that materials have been fully parsed and loaded, we can now go into each mesh and convert the dummy material ids
@@ -488,7 +510,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
                     if !mesh_name.starts_with(&name) {
                         continue;
                     }
-                    let id = instances.len();
+                    let id = instances.len() as InstanceId;
                     mesh.init();
                     let maybe_material_id = instance
                         .material_name
@@ -513,7 +535,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
             }
             _ => {
                 info!("parsing instance and primitive");
-                let id = instances.len();
+                let id = instances.len() as InstanceId;
                 let instance = parse_instance(instance, &material_names_to_ids, &mesh_mapping, id);
                 info!(
                     "done. pushing instance with material {:?} and instance id {}",
@@ -612,6 +634,7 @@ mod test {
                 MaterialEnum::Lambertian(_) => "lambertian",
                 MaterialEnum::GGX(_) => "GGX",
                 MaterialEnum::SharpLight(_) => "sharp_light",
+                // MaterialEnum::PassthroughFilter(_) => "passthrough filter",
             };
             println!("{}", name);
         }
