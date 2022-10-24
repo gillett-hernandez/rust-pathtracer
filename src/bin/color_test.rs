@@ -58,7 +58,24 @@ enum Response {
 struct Model {
     receiver: Receiver<Request>,
     sender: Sender<Response>,
+    model_data: ModelData,
+}
 
+enum ModelData {
+    Lightness(LightnessModel),
+    Blending(BlendingModel),
+}
+
+struct LightnessModel {
+    pub bins: usize,
+    pub ev_multiplier: f32,
+    pub ev_offset: f32,
+    pub illuminants: Vec<Curve>,
+    pub color: Curve,
+    pub wavelength_bounds: Bounds1D,
+}
+
+struct BlendingModel {
     pub bins: usize,
     pub ev_multiplier: f32,
     pub ev_offset: f32,
@@ -69,8 +86,68 @@ struct Model {
 
 impl Model {
     pub fn new(
+        model_data: ModelData,
         response_sender: Sender<Response>,
         request_receiver: Receiver<Request>,
+    ) -> Self {
+        Model {
+            model_data,
+            receiver: request_receiver,
+            sender: response_sender,
+        }
+    }
+
+    pub fn data_update(&mut self) {
+        for request in self.receiver.try_iter() {
+            match self.model_data {
+                ModelData::Lightness(lightness_data) => {
+                    info!("{:?}", &request);
+                    match request {
+                        Request::ChangeBins(new) => lightness_data.bins = new,
+                        Request::ChangeEvOffset(new) => lightness_data.ev_offset = new,
+                        Request::ChangeColor(new) => {
+                            println!("changed color");
+                            lightness_data.color = new
+                        }
+                        Request::ChangeIlluminant(index, illuminant) => {
+                            match lightness_data.illuminants.get_mut(index) {
+                                Some(inner) => {
+                                    println!("changed illuminant");
+                                    *inner = illuminant
+                                }
+                                None => {
+                                    println!("failed to change illuminant, index out of range");
+                                }
+                            }
+                        }
+                        Request::ViewIlluminant(index) => {
+                            println!(
+                                "got request, sending back illuminant {} from model (unless out of range)",
+                                index
+                            );
+                            self.sender
+                                .try_send(Response::Illuminant(lightness_data.illuminants.get(index).cloned()))
+                                .unwrap()
+                        }
+                        Request::AppendIlluminant(new_illuminant) => {
+                            lightness_data.illuminants.push(new_illuminant);
+                        }
+                        // Request::IlluminantsCount => self
+                        //     .sender
+                        //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
+                        //     .unwrap(),
+                    }
+                }
+                ModelData::Blending(blending_data) => {
+                    
+                }
+            }
+        }
+    }
+}
+
+impl LightnessModel {
+    pub fn new(
         bins: usize,
         ev_multiplier: f32,
         ev_offset: f32,
@@ -79,54 +156,12 @@ impl Model {
         wavelength_bounds: Bounds1D,
     ) -> Self {
         Self {
-            receiver: request_receiver,
-            sender: response_sender,
             bins,
             ev_multiplier,
             ev_offset,
             illuminants,
             color,
             wavelength_bounds,
-        }
-    }
-    pub fn data_update(&mut self) {
-        for request in self.receiver.try_iter() {
-            info!("{:?}", &request);
-            match request {
-                Request::ChangeBins(new) => self.bins = new,
-                Request::ChangeEvOffset(new) => self.ev_offset = new,
-                Request::ChangeColor(new) => {
-                    println!("changed color");
-                    self.color = new
-                }
-                Request::ChangeIlluminant(index, illuminant) => {
-                    match self.illuminants.get_mut(index) {
-                        Some(inner) => {
-                            println!("changed illuminant");
-                            *inner = illuminant
-                        }
-                        None => {
-                            println!("failed to change illuminant, index out of range");
-                        }
-                    }
-                }
-                Request::ViewIlluminant(index) => {
-                    println!(
-                        "got request, sending back illuminant {} from model (unless out of range)",
-                        index
-                    );
-                    self.sender
-                        .try_send(Response::Illuminant(self.illuminants.get(index).cloned()))
-                        .unwrap()
-                }
-                Request::AppendIlluminant(new_illuminant) => {
-                    self.illuminants.push(new_illuminant);
-                }
-                // Request::IlluminantsCount => self
-                //     .sender
-                //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
-                //     .unwrap(),
-            }
         }
     }
 }
@@ -397,7 +432,7 @@ impl View {
         }
     }
 
-    fn update(&mut self, model: &Model) -> bool {
+    fn update(&mut self, model: &LightnessModel) -> bool {
         let (width, height) = (self.film.width, self.film.height);
 
         for _ in self.per_illuminant_scale.len()..model.illuminants.len() {
@@ -453,7 +488,7 @@ impl View {
     }
 }
 
-fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
+fn mvc(opts: Opt) -> Result<(LightnessModel, Controller), ()> {
     let config: TOMLConfig = match get_settings(opts.config_file) {
         Ok(expr) => expr,
         Err(v) => {
@@ -519,7 +554,7 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
         });
 
     Ok((
-        Model::new(
+        LightnessModel::new(
             res_sender,
             req_receiver,
             bins,
