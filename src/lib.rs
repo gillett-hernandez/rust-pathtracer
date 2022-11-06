@@ -1,4 +1,4 @@
-#![feature(result_option_inspect)]
+#![feature(result_option_inspect, fs_try_exists)]
 
 #[macro_use]
 extern crate log;

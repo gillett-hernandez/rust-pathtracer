@@ -1,3 +1,4 @@
+#![feature(fs_try_exists)]
 extern crate rust_pathtracer as root;
 
 use log::LevelFilter;
@@ -17,6 +18,7 @@ extern crate simplelog;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 
 use std::error::Error;
+use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -118,6 +120,10 @@ fn main() {
     let time = Instant::now();
 
     println!("constructing renderer");
+    if !matches!(fs::try_exists("output"), Ok(true)) {
+        fs::create_dir("output")
+            .expect("failed to create output directory. please create it manually");
+    }
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
 
     if !opts.dry_run {

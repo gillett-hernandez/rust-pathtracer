@@ -300,7 +300,7 @@ where
             //     0.0
             // }
         } else {
-            // successfully world is visible along this ray
+            // world is visible along this ray
             let emission = self.world.environment.emission(uv, lambda);
 
             // calculate weight
@@ -353,6 +353,7 @@ where
                     .draw_1d()
                     .choose(env_sampling_probability, true, false);
             // decide whether to sample the lights or the world
+            // TODO: determine if any pdf needs to be adjusted by 1.0/env_sampling_probability or 1.0/(1.0 - env_sampling_probability)
             if sample_world {
                 // light_contribution += self.world.environment.sample
                 light_contribution += self.estimate_direct_illumination_from_world(

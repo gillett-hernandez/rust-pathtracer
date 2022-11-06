@@ -1,4 +1,6 @@
 use crate::prelude::*;
+use std::fs;
+
 
 mod film;
 mod prelude;
@@ -23,7 +25,10 @@ use crate::world::World;
 pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, factor: f32) {
     assert!(factor > 0.0);
     let filename = render_settings.filename.as_ref();
-    let filename_str = filename.cloned().unwrap_or_else(|| String::from("output"));
+    let filename_str = filename.cloned().unwrap_or_else(|| String::from("beauty"));
+
+
+
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
