@@ -260,7 +260,7 @@ type="Naive"
 # selected_preview_film_id = 0
 
 [[render_settings]]
-threads = 12
+threads = 24
 filename = "beauty"
 min_samples = 128
 min_bounces = 1

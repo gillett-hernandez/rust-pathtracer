@@ -745,4 +745,13 @@ impl Renderer for PreviewRenderer {
             }
         }
     }
+    fn supported_integrators(&self) -> &[IntegratorKind] {
+        &[
+            IntegratorKind::PT {
+                light_samples: 0,
+                medium_aware: false,
+            },
+            IntegratorKind::LT { camera_samples: 0 },
+        ]
+    }
 }

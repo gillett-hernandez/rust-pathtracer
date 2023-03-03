@@ -486,10 +486,10 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
     illuminants.push(curves.get("E").unwrap().clone().into());
     illuminants.push(curves.get("cornell_light").unwrap().clone().into());
     illuminants.push(curves.get("cornell_light_accurate").unwrap().clone().into());
-    illuminants.push(curves.get("blackbody_5000k").unwrap().clone().into());
-    illuminants.push(curves.get("blackbody_3000k").unwrap().clone().into());
-    illuminants.push(curves.get("fluorescent").unwrap().clone().into());
-    illuminants.push(curves.get("xenon").unwrap().clone().into());
+    // illuminants.push(curves.get("blackbody_5000k").unwrap().clone().into());
+    // illuminants.push(curves.get("blackbody_3000k").unwrap().clone().into());
+    // illuminants.push(curves.get("fluorescent").unwrap().clone().into());
+    // illuminants.push(curves.get("xenon").unwrap().clone().into());
 
     let (req_sender, req_receiver) = unbounded();
     let (res_sender, res_receiver) = unbounded();
