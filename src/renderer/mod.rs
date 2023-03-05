@@ -8,13 +8,13 @@ mod prelude;
 mod naive;
 mod preview;
 // mod sppm;
-// mod tiled;
+mod tiled;
 
 pub use film::Film;
 
 pub use naive::NaiveRenderer;
 pub use preview::PreviewRenderer;
-// pub use sppm::SPPMRenderer;
+pub use tiled::TiledRenderer;
 
 use crate::camera::CameraEnum;
 

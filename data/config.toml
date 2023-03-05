@@ -255,12 +255,17 @@ vfov = 30.0
 
 
 [renderer]
-type="Naive"
+# naive is 23.6 mrays/sec
+# type="Naive"
+type="Tiled"
+# tiled at 64 64 is 23.2 mrays/sec
+# tiled at 32 32 is 23.9 mrays/sec
+tile_size = [32, 32]
 # type="Preview"
 # selected_preview_film_id = 0
 
 [[render_settings]]
-threads = 24
+threads = 22
 filename = "beauty"
 min_samples = 128
 min_bounces = 1

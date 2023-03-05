@@ -90,7 +90,7 @@ impl From<TOMLRenderSettings> for RenderSettings {
 pub enum RendererType {
     Naive,
     Preview { selected_preview_film_id: usize },
-    // SPPM,
+    Tiled { tile_size: (u16, u16) },
 }
 
 #[derive(Deserialize, Clone)]

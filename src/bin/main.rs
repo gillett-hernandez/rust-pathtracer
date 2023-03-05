@@ -7,6 +7,7 @@ use root::parsing::cameras::parse_config_and_cameras;
 use root::parsing::config::*;
 use root::parsing::construct_world;
 use root::parsing::get_settings;
+use root::renderer::TiledRenderer;
 use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
 
@@ -52,6 +53,9 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     match config.renderer {
         RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
         RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
+        RendererType::Tiled {
+            tile_size: (width, height),
+        } => Box::new(TiledRenderer::new(width, height)),
     }
 }
 
