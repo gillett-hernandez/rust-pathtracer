@@ -64,6 +64,7 @@ pub fn window_loop<F>(
     height: usize,
     max_framerate: usize,
     options: WindowOptions,
+    clear_buffer: bool,
     mut func: F,
 ) where
     F: FnMut(&Window, &mut Vec<u32>, usize, usize) -> (),
@@ -75,7 +76,9 @@ pub fn window_loop<F>(
 
     let mut film = Film::new(width, height, 0u32);
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        film.buffer.fill(0u32);
+        if clear_buffer {
+            film.buffer.fill(0u32);
+        }
         func(&window, &mut film.buffer, width, height);
 
         window

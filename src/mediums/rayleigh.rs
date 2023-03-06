@@ -188,6 +188,7 @@ mod test {
             height,
             144,
             WindowOptions::default(),
+            true,
             |_, mut window_buffer, width, height| {
                 let factor = match mode {
                     TestMode::ViewPhase => {

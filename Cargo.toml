@@ -86,7 +86,7 @@ opt-level = 3
 opt-level = 3
 
 [profile.test]
-opt-level = 0
+opt-level = 1
 
 [profile.release]
 opt-level = 3

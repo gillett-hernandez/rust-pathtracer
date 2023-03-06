@@ -423,6 +423,7 @@ mod test {
                 borderless: true,
                 ..Default::default()
             },
+            true,
             |window, mut window_buffer, width, height| {
                 update_window_buffer(
                     &mut window_buffer,
@@ -459,13 +460,18 @@ mod test {
 
                     for pixel in iter_pixels(tile) {
                         for _ in 0..100 {
+                            let wavelength = BOUNDED_VISIBLE_RANGE.sample(random::<f32>());
+                            let energy = 0.1;
+                            let center = Vec3::new(width as f32 / 2.0, height as f32 / 2.0, 0.0);
+                            let dist = (Vec3::new(pixel.0 as f32, pixel.1 as f32, 0.0) - center)
+                                .norm_squared();
+                            let diffraction_mult = (dist / wavelength).cos().powi(2);
                             unsafe {
                                 *ptr.0.add(pixel.1 as usize * width + pixel.0 as usize) +=
-                                    XYZColor::new(
-                                        0.1 * random::<f32>(),
-                                        0.1 * random::<f32>(),
-                                        0.1 * random::<f32>(),
-                                    );
+                                    XYZColor::from(SingleWavelength::new(
+                                        wavelength,
+                                        diffraction_mult * energy / dist.sqrt(),
+                                    ));
                             }
                         }
                     }
@@ -482,11 +488,12 @@ mod test {
             window_loop(
                 1920,
                 1080,
-                1,
+                2,
                 WindowOptions {
                     borderless: true,
                     ..Default::default()
                 },
+                false,
                 |window, mut window_buffer, width, height| {
                     // extremely unsafe, do not do this
 
@@ -495,23 +502,17 @@ mod test {
                     let width = film.width;
                     debug_assert!(window_buffer.len() % width == 0);
                     tonemapper.initialize(&film, 1.0);
-                    // window_buffer
-                    //     .par_iter_mut()
-                    //     .enumerate()
-                    //     .for_each(|(pixel_idx, v)| {
-                    //         let y: usize = pixel_idx / width;
-                    //         let x: usize = pixel_idx % width;
-                    //         let [r, g, b, _]: [f32; 4] = Converter::sRGB
-                    //             .transfer_function(
-                    //                 tonemapper.map(&film, (x as usize, y as usize)),
-                    //                 false,
-                    //             )
-                    //             .into();
-                    //         *v =
-                    //             rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    //     });
-                    for (tile, tile_status) in tiles.iter().zip(tile_status.iter()) {
-                        match tile_status.read().unwrap().clone() {
+
+                    // local copy of status's
+
+                    let copy = tile_status
+                        .iter()
+                        .map(|e| e.read().unwrap().clone())
+                        .collect::<Vec<TileStatus>>();
+
+                    for (i, (tile, single_tile_status)) in tiles.iter().zip(copy.iter()).enumerate()
+                    {
+                        match single_tile_status {
                             status @ TileStatus::InProgress
                             | status @ TileStatus::CompletedButNotSynced => {
                                 for (x, y) in iter_pixels(tile) {
@@ -528,7 +529,7 @@ mod test {
                                     );
                                 }
                                 if matches!(status, TileStatus::CompletedButNotSynced) {
-                                    *tile_status.write().unwrap() = TileStatus::Complete;
+                                    *tile_status[i].write().unwrap() = TileStatus::Complete;
                                 }
                             }
                             _ => {}

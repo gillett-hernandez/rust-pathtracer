@@ -261,6 +261,7 @@ mod test {
             height,
             144,
             WindowOptions::default(),
+            true,
             |_, mut window_buffer, width, height| {
                 for i in 0..samples_per_iteration {
                     let out = light.sample_emission(
