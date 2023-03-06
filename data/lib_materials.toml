@@ -37,6 +37,7 @@ type = "Cauchy"
 a = 1.4
 b = 4500.0
 
+
 [ggx_air_glass]
 type = "GGX"
 permeability = 1.0
@@ -47,7 +48,6 @@ eta = "air_ior"
 type = "Cauchy"
 a = 1.4
 b = 4500.0
-
 
 
 [ggx_glass_rough]

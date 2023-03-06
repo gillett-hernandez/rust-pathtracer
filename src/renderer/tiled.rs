@@ -10,7 +10,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 // use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -24,9 +24,14 @@ pub struct TiledRenderer {
     tile_size: (u16, u16),
 }
 
-// trait IterPixels {
-//     fn iter_pixels(&self) -> impl Iterator<Item = (u16, u16)>;
-// }
+#[derive(Clone, Copy, Debug, Hash, Default)]
+pub enum TileStatus {
+    #[default]
+    Incomplete,
+    InProgress,
+    CompletedButNotSynced,
+    Complete,
+}
 
 fn iter_pixels(
     tile: impl Deref<Target = ((u16, u16), (u16, u16))>,
@@ -158,6 +163,7 @@ impl TiledRenderer {
         });
 
         let tiles = self.generate_tiles((width, height));
+
         let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
 
         let stats: Profile = tiles
@@ -353,6 +359,7 @@ unsafe impl Sync for DoNotDoThisEver<XYZColor> {}
 #[cfg(test)]
 mod test {
     use minifb::WindowOptions;
+    use rand::random;
 
     use crate::tonemap::Clamp;
 
@@ -426,5 +433,110 @@ mod test {
                 );
             },
         )
+    }
+
+    #[test]
+    fn test_viewing_while_writing_unsafe_parallel() {
+        let mut film = Film::new(1920, 1080, XYZColor::BLACK);
+        let renderer = TiledRenderer::new(64, 64);
+
+        let tiles = renderer.generate_tiles((film.width, film.height));
+        let width = film.width;
+        let height = film.height;
+        let capacity = film.buffer.capacity();
+        let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
+        let tile_status = (0..tiles.len())
+            .map(|_| RwLock::new(TileStatus::Incomplete))
+            .collect::<Vec<RwLock<TileStatus>>>();
+
+        thread::scope(|s| {
+            let join_handle = s.spawn(|| {
+                tiles.par_iter().enumerate().for_each(|(tile_index, tile)| {
+                    {
+                        let mut locked = tile_status[tile_index].write().unwrap();
+                        *locked = TileStatus::InProgress;
+                    }
+
+                    for pixel in iter_pixels(tile) {
+                        for _ in 0..100 {
+                            unsafe {
+                                *ptr.0.add(pixel.1 as usize * width + pixel.0 as usize) +=
+                                    XYZColor::new(
+                                        0.1 * random::<f32>(),
+                                        0.1 * random::<f32>(),
+                                        0.1 * random::<f32>(),
+                                    );
+                            }
+                        }
+                    }
+                    {
+                        let mut locked = tile_status[tile_index].write().unwrap();
+                        *locked = TileStatus::CompletedButNotSynced;
+                    }
+                })
+            });
+
+            println!("point 1");
+            let mut tonemapper = Clamp::new(0.0, true, true);
+
+            window_loop(
+                1920,
+                1080,
+                1,
+                WindowOptions {
+                    borderless: true,
+                    ..Default::default()
+                },
+                |window, mut window_buffer, width, height| {
+                    // extremely unsafe, do not do this
+
+                    println!("loop");
+
+                    let width = film.width;
+                    debug_assert!(window_buffer.len() % width == 0);
+                    tonemapper.initialize(&film, 1.0);
+                    // window_buffer
+                    //     .par_iter_mut()
+                    //     .enumerate()
+                    //     .for_each(|(pixel_idx, v)| {
+                    //         let y: usize = pixel_idx / width;
+                    //         let x: usize = pixel_idx % width;
+                    //         let [r, g, b, _]: [f32; 4] = Converter::sRGB
+                    //             .transfer_function(
+                    //                 tonemapper.map(&film, (x as usize, y as usize)),
+                    //                 false,
+                    //             )
+                    //             .into();
+                    //         *v =
+                    //             rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    //     });
+                    for (tile, tile_status) in tiles.iter().zip(tile_status.iter()) {
+                        match tile_status.read().unwrap().clone() {
+                            status @ TileStatus::InProgress
+                            | status @ TileStatus::CompletedButNotSynced => {
+                                for (x, y) in iter_pixels(tile) {
+                                    let [r, g, b, _]: [f32; 4] = Converter::sRGB
+                                        .transfer_function(
+                                            tonemapper.map(&film, (x as usize, y as usize)),
+                                            false,
+                                        )
+                                        .into();
+                                    window_buffer[y as usize * width + x as usize] = rgb_to_u32(
+                                        (256.0 * r) as u8,
+                                        (256.0 * g) as u8,
+                                        (256.0 * b) as u8,
+                                    );
+                                }
+                                if matches!(status, TileStatus::CompletedButNotSynced) {
+                                    *tile_status.write().unwrap() = TileStatus::Complete;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                },
+            );
+            let _ = join_handle.join();
+        });
     }
 }
