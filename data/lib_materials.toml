@@ -20,7 +20,6 @@ texture_id = "lambertian_red"
 type = "Lambertian"
 texture_id = "lambertian_blue"
 
-
 [lambertian_yellow]
 type = "Lambertian"
 texture_id = "lambertian_yellow"

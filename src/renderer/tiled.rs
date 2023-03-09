@@ -2,8 +2,10 @@ use super::prelude::*;
 use crate::prelude::*;
 
 use crate::integrator::*;
+use crate::tonemap::Clamp;
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+use minifb::WindowOptions;
 
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -164,53 +166,130 @@ impl TiledRenderer {
 
         let tiles = self.generate_tiles((width, height));
 
+        // extremely unsafe, do not do this
         let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
+        // safety is only preserved by the fact that the tiles are mutually exclusive / non overlapping, and a single thread only touches one tile at a time
 
-        let stats: Profile = tiles
-            .par_iter()
-            .map(|tile| {
-                let mut profile = Profile::default();
+        let tile_statuses = (0..tiles.len())
+            .map(|_| RwLock::new(TileStatus::Incomplete))
+            .collect::<Vec<RwLock<TileStatus>>>();
 
-                // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
-                let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                let mut ct = 0;
-                for (x, y) in iter_pixels(tile) {
-                    let mut temp_color = XYZColor::BLACK;
+        let mut stats = Default::default();
 
-                    for s in 0..settings.min_samples {
-                        let sample = sampler.draw_2d();
+        thread::scope(|s| {
+            let join_handle = s.spawn(|| {
+                stats = tiles
+                    .par_iter()
+                    .enumerate()
+                    .map(|(tile_index, tile)| {
+                        {
+                            let mut locked = tile_statuses[tile_index].write().unwrap();
+                            *locked = TileStatus::InProgress;
+                        }
 
-                        // box filter
-                        let camera_uv = (
-                            (x as f32 + sample.x) / (settings.resolution.width as f32),
-                            (y as f32 + sample.y) / (settings.resolution.height as f32),
-                        );
-                        temp_color += integrator.color(
-                            &mut sampler,
-                            (camera_uv, 0),
-                            s as usize,
-                            &mut profile,
-                        );
+                        let mut profile = Profile::default();
 
-                        debug_assert!(
-                            temp_color.0.is_finite().all(),
-                            "{:?} resulted in {:?}",
-                            camera_uv,
-                            temp_color
-                        );
+                        // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+                        let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
+                        let mut ct = 0;
+                        for (x, y) in iter_pixels(tile) {
+                            let mut temp_color = XYZColor::BLACK;
+
+                            for s in 0..settings.min_samples {
+                                let sample = sampler.draw_2d();
+
+                                // box filter
+                                let camera_uv = (
+                                    (x as f32 + sample.x) / (settings.resolution.width as f32),
+                                    (y as f32 + sample.y) / (settings.resolution.height as f32),
+                                );
+                                temp_color += integrator.color(
+                                    &mut sampler,
+                                    (camera_uv, 0),
+                                    s as usize,
+                                    &mut profile,
+                                );
+
+                                debug_assert!(
+                                    temp_color.0.is_finite().all(),
+                                    "{:?} resulted in {:?}",
+                                    camera_uv,
+                                    temp_color
+                                );
+                            }
+
+                            // extremely unsafe, do not do this
+                            unsafe {
+                                *ptr.0.add(y as usize * width + x as usize) =
+                                    temp_color / (settings.min_samples as f32);
+                            }
+                            ct += 1;
+                        }
+                        pixel_count.fetch_add(ct, Ordering::Relaxed);
+
+                        {
+                            let mut locked = tile_statuses[tile_index].write().unwrap();
+                            *locked = TileStatus::CompletedButNotSynced;
+                        }
+
+                        profile
+                    })
+                    .reduce(Profile::default, |a, b| a.combine(b));
+            });
+
+            // let mut tonemapper = Clamp::new(3.0, true, true);
+            let mut preview_tonemapper = Clamp::new(2.0, true, true);
+
+            window_loop(
+                width,
+                height,
+                2,
+                WindowOptions {
+                    borderless: true,
+                    ..Default::default()
+                },
+                false,
+                |window, mut window_buffer, width, height| {
+                    let width = film.width;
+                    debug_assert!(window_buffer.len() % width == 0);
+                    preview_tonemapper.initialize(&film, 1.0);
+
+                    // local copy of status's
+
+                    let copy = tile_statuses
+                        .iter()
+                        .map(|e| e.read().unwrap().clone())
+                        .collect::<Vec<TileStatus>>();
+
+                    for (i, (tile, single_tile_status)) in tiles.iter().zip(copy.iter()).enumerate()
+                    {
+                        match single_tile_status {
+                            status @ TileStatus::InProgress
+                            | status @ TileStatus::CompletedButNotSynced => {
+                                for (x, y) in iter_pixels(tile) {
+                                    let [r, g, b, _]: [f32; 4] = Converter::sRGB
+                                        .transfer_function(
+                                            preview_tonemapper.map(&film, (x as usize, y as usize)),
+                                            false,
+                                        )
+                                        .into();
+                                    window_buffer[y as usize * width + x as usize] = rgb_to_u32(
+                                        (256.0 * r) as u8,
+                                        (256.0 * g) as u8,
+                                        (256.0 * b) as u8,
+                                    );
+                                }
+                                if matches!(status, TileStatus::CompletedButNotSynced) {
+                                    *tile_statuses[i].write().unwrap() = TileStatus::Complete;
+                                }
+                            }
+                            _ => {}
+                        }
                     }
-
-                    unsafe {
-                        *ptr.0.add(y as usize * width + x as usize) =
-                            temp_color / (settings.min_samples as f32);
-                    }
-                    ct += 1;
-                }
-                pixel_count.fetch_add(ct, Ordering::Relaxed);
-
-                profile
-            })
-            .reduce(Profile::default, |a, b| a.combine(b));
+                },
+            );
+            let _ = join_handle.join();
+        });
 
         if let Err(panic) = thread.join() {
             println!(
@@ -221,7 +300,9 @@ impl TiledRenderer {
         println!();
         let elapsed = (now.elapsed().as_millis() as f32) / 1000.0;
         println!("took {}s", elapsed);
+
         stats.pretty_print(elapsed, settings.threads.unwrap() as usize);
+
         film
     }
     pub fn render_splatted<I: GenericIntegrator>(
@@ -452,7 +533,7 @@ mod test {
         let height = film.height;
         // let capacity = film.buffer.capacity();
         let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
-        let tile_status = (0..tiles.len())
+        let tile_statuses = (0..tiles.len())
             .map(|_| RwLock::new(TileStatus::Incomplete))
             .collect::<Vec<RwLock<TileStatus>>>();
 
@@ -460,13 +541,13 @@ mod test {
             let join_handle = s.spawn(|| {
                 tiles.par_iter().enumerate().for_each(|(tile_index, tile)| {
                     {
-                        let mut locked = tile_status[tile_index].write().unwrap();
+                        let mut locked = tile_statuses[tile_index].write().unwrap();
                         *locked = TileStatus::InProgress;
                     }
 
                     for pixel in iter_pixels(tile) {
                         for _ in 0..num_samples {
-                            let wavelength = BOUNDED_VISIBLE_RANGE.sample(random::<f32>()) ;
+                            let wavelength = BOUNDED_VISIBLE_RANGE.sample(random::<f32>());
                             let energy = 1.0;
                             let center = Vec3::new(width as f32 / 2.0, height as f32 / 2.0, 0.0);
                             let dist_squared = (Vec3::new(pixel.0 as f32, pixel.1 as f32, 0.0)
@@ -488,7 +569,7 @@ mod test {
                         }
                     }
                     {
-                        let mut locked = tile_status[tile_index].write().unwrap();
+                        let mut locked = tile_statuses[tile_index].write().unwrap();
                         *locked = TileStatus::CompletedButNotSynced;
                     }
                 })
@@ -517,7 +598,7 @@ mod test {
 
                     // local copy of status's
 
-                    let copy = tile_status
+                    let copy = tile_statuses
                         .iter()
                         .map(|e| e.read().unwrap().clone())
                         .collect::<Vec<TileStatus>>();
@@ -541,7 +622,7 @@ mod test {
                                     );
                                 }
                                 if matches!(status, TileStatus::CompletedButNotSynced) {
-                                    *tile_status[i].write().unwrap() = TileStatus::Complete;
+                                    *tile_statuses[i].write().unwrap() = TileStatus::Complete;
                                 }
                             }
                             _ => {}
