@@ -438,13 +438,19 @@ mod test {
 
     #[test]
     fn test_viewing_while_writing_unsafe_parallel() {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(16 as usize)
+            .build_global()
+            .unwrap();
+
         let mut film = Film::new(1920, 1080, XYZColor::BLACK);
-        let renderer = TiledRenderer::new(64, 64);
+        let renderer = TiledRenderer::new(32, 32);
+        let num_samples = 1000;
 
         let tiles = renderer.generate_tiles((film.width, film.height));
         let width = film.width;
         let height = film.height;
-        let capacity = film.buffer.capacity();
+        // let capacity = film.buffer.capacity();
         let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
         let tile_status = (0..tiles.len())
             .map(|_| RwLock::new(TileStatus::Incomplete))
@@ -459,18 +465,24 @@ mod test {
                     }
 
                     for pixel in iter_pixels(tile) {
-                        for _ in 0..100 {
-                            let wavelength = BOUNDED_VISIBLE_RANGE.sample(random::<f32>());
-                            let energy = 0.1;
+                        for _ in 0..num_samples {
+                            let wavelength = BOUNDED_VISIBLE_RANGE.sample(random::<f32>()) ;
+                            let energy = 1.0;
                             let center = Vec3::new(width as f32 / 2.0, height as f32 / 2.0, 0.0);
-                            let dist = (Vec3::new(pixel.0 as f32, pixel.1 as f32, 0.0) - center)
+                            let dist_squared = (Vec3::new(pixel.0 as f32, pixel.1 as f32, 0.0)
+                                - center)
                                 .norm_squared();
-                            let diffraction_mult = (dist / wavelength).cos().powi(2);
+                            let diffraction_mult = (dist_squared / wavelength).cos().powi(2);
+
                             unsafe {
                                 *ptr.0.add(pixel.1 as usize * width + pixel.0 as usize) +=
                                     XYZColor::from(SingleWavelength::new(
                                         wavelength,
-                                        diffraction_mult * energy / dist.sqrt(),
+                                        diffraction_mult * energy
+                                            / (1.0
+                                                + 100.0
+                                                    * (dist_squared / (wavelength * wavelength)))
+                                            / num_samples as f32,
                                     ));
                             }
                         }
