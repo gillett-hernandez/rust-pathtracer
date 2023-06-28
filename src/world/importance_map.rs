@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{io::Write, path::Path, sync::Arc};
 
 use math::curves::{InterpolationMode, Op};
 
@@ -236,6 +236,33 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
+    pub fn save_baked<P: AsRef<Path>>(&self, filepath: P) -> Result<(), ()> {
+        match self {
+            ImportanceMap::Baked {
+                data,
+                marginal_cdf,
+                horizontal_resolution,
+                vertical_resolution,
+                luminance_curve,
+            } => {
+                let mut file = std::fs::File::create(filepath).map_err(|_| ())?;
+                let mut bufwriter = std::io::BufWriter::new(file);
+                // do we want to ignore the storage underlying these curves? i.e. "cast" them all to Linearly sampled?
+                // or linear cosine transforms or something like that.
+                Ok(())
+            }
+            _ => {
+                // importance map not baked, so cannot save
+                Err(())
+            }
+        }
+    }
+    pub fn load_baked<P: AsRef<Path>>(filepath: P) -> Option<Self> {
+        let mut file = std::fs::File::open(filepath).ok()?;
+        let mut bufreader = std::io::BufReader::new(file);
+        // need methods to serialize and deserialize CurveWithCDF, and thus Curve
+        None
+    }
     pub fn sample_uv(
         &self,
         sample: Sample2D,
@@ -283,7 +310,7 @@ mod test {
     use super::*;
     use crate::renderer::Film;
     use crate::texture::EvalAt;
-    use crate::tonemap::{Clamp, Converter, Tonemapper, Reinhard1x3};
+    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -488,7 +515,7 @@ mod test {
                 for _ in 0..4 {
                     let wavelength_sample = if false {
                         // pick a constant wavelength to reduce variance
-                        Sample1D::new(0.35)
+                        Sample1D::new(0.55)
                     } else {
                         Sample1D::new_random_sample()
                     };
