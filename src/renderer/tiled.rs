@@ -156,14 +156,10 @@ impl Iterator for TileIndicesIter {
     }
 }
 
-// fn iter_pixels(tile: &Tile<XYZColor>) -> impl Iterator<Item = (u16, u16)> {
-//     let topleft = tile.horizontal_span;
-//     let bottomright = tile.vertical_span;
-//     drop(tile);
-//     (topleft.0..topleft.1)
-//         .into_iter()
-//         .flat_map(move |x| (bottomright.0..bottomright.1).map(move |y| (x, y)))
-// }
+pub struct Tiles<'a> {
+    film: &'a mut Film<XYZColor>,
+    tiles: Vec<Tile<XYZColor>>,
+}
 
 impl TiledRenderer {
     pub fn new(tile_width: u16, tile_height: u16) -> TiledRenderer {
@@ -173,12 +169,12 @@ impl TiledRenderer {
         }
     }
 
-    pub fn generate_tiles(
-        &self,
+    pub fn generate_tiles<'a, 'b>(
+        &'a self,
         film_size: (usize, usize),
-        buffer: &mut Vec<XYZColor>,
-    ) -> Vec<Tile<XYZColor>> {
-        let ptr = buffer.as_mut_ptr();
+        film: &'b mut Film<XYZColor>,
+    ) -> Tiles<'b> {
+        let ptr = film.buffer.as_mut_ptr();
         let tile_size = self.tile_size;
         let full_tile_count = (
             film_size.0 / tile_size.0 as usize,
@@ -256,7 +252,7 @@ impl TiledRenderer {
                 ));
             }
         }
-        tiles
+        Tiles { film, tiles }
     }
 
     pub fn render_sampled<I: SamplerIntegrator>(
@@ -299,7 +295,7 @@ impl TiledRenderer {
             }
         });
 
-        let tiles = self.generate_tiles((width, height), &mut film.buffer);
+        let tiles = self.generate_tiles((width, height), &mut film);
 
         // extremely unsafe, do not do this
         // safety is only preserved by the fact that the tiles are mutually exclusive / non overlapping, and a single thread only touches one tile at a time
@@ -315,9 +311,10 @@ impl TiledRenderer {
         thread::scope(|s| {
             let join_handle = s.spawn(|| {
                 stats = tiles
+                    .tiles
                     .par_iter()
                     .enumerate()
-                    .map(|(tile_index, tile)| {
+                    .map(|(_, tile)| {
                         {
                             // let mut locked = tile_statuses[tile_index].write().unwrap();
                             let mut locked = tile.status.lock().unwrap();
@@ -429,9 +426,9 @@ impl TiledRenderer {
                 },
                 false,
                 |window, mut window_buffer, width, height| {
-                    let width = film.width;
+                    let width = &tiles.film.width;
                     debug_assert!(window_buffer.len() % width == 0);
-                    preview_tonemapper.initialize(&film, 1.0);
+                    preview_tonemapper.initialize(&tiles.film, 1.0);
 
                     // local copy of status's
 
@@ -440,7 +437,7 @@ impl TiledRenderer {
                     //     .map(|e| e.read().unwrap().clone())
                     //     .collect::<Vec<TileStatus>>();
 
-                    for (i, tile) in tiles.iter().enumerate() {
+                    for (i, tile) in tiles.tiles.iter().enumerate() {
                         match tile.status.try_lock().map(|e| e.clone()) {
                             Ok(status @ TileStatus::InProgress)
                             // | Ok(status @ TileStatus::CompletedButNotSynced)
@@ -503,7 +500,7 @@ impl TiledRenderer {
                                 for (x, y) in tile.iter_indices() {
                                     let [r, g, b, _]: [f32; 4] = Converter::sRGB
                                         .transfer_function(
-                                            preview_tonemapper.map(&film, (x as usize, y as usize)),
+                                            preview_tonemapper.map(&tiles.film, (x as usize, y as usize)),
                                             false,
                                         )
                                         .into();
@@ -659,14 +656,6 @@ impl Renderer for TiledRenderer {
         }
     }
 }
-
-struct DoNotDoThisEver<T>(*mut T);
-unsafe impl Send for DoNotDoThisEver<f32> {}
-unsafe impl Sync for DoNotDoThisEver<f32> {}
-unsafe impl Send for DoNotDoThisEver<f32x4> {}
-unsafe impl Sync for DoNotDoThisEver<f32x4> {}
-unsafe impl Send for DoNotDoThisEver<XYZColor> {}
-unsafe impl Sync for DoNotDoThisEver<XYZColor> {}
 
 #[cfg(test)]
 mod test {
