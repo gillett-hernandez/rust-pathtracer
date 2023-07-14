@@ -58,10 +58,10 @@ pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
             x as usize,
             y as usize,
             f32x4::new(
-                r as f32 / 256.0,
-                g as f32 / 256.0,
-                b as f32 / 256.0,
-                a as f32 / 256.0,
+                r as f32 / 255.0,
+                g as f32 / 255.0,
+                b as f32 / 255.0,
+                a as f32 / 255.0,
             ),
         );
     }
@@ -131,7 +131,7 @@ pub fn parse_bitmap(filepath: &str) -> Film<f32> {
     let mut new_film = Film::new(width as usize, height as usize, 0.0);
     for (x, y, pixel) in greyscale.enumerate_pixels() {
         let grey: [u8; 1] = pixel.0;
-        new_film.write_at(x as usize, y as usize, grey[0] as f32 / 256.0);
+        new_film.write_at(x as usize, y as usize, grey[0] as f32 / 255.0);
     }
     new_film
 }

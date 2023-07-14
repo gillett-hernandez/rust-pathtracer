@@ -177,9 +177,9 @@ impl ImportanceMap {
                         .evaluate_power(column as f32 / horizontal_resolution as f32))
                     .clamp(0.0, 1.0 - std::f32::EPSILON);
                     buffer[row * horizontal_resolution + column] = rgb_to_u32(
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
+                        (rgb * 255.0) as u8,
+                        (rgb * 255.0) as u8,
+                        (rgb * 255.0) as u8,
                     );
                 }
             }
@@ -209,9 +209,9 @@ impl ImportanceMap {
                 }
                 let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
                 let u32 = rgb_to_u32(
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
+                    (rgb * 255.0) as u8,
+                    (rgb * 255.0) as u8,
+                    (rgb * 255.0) as u8,
                 );
                 buffer[row * horizontal_resolution] = u32;
                 buffer[row * horizontal_resolution + 1] = u32;
@@ -283,7 +283,7 @@ mod test {
     use super::*;
     use crate::renderer::Film;
     use crate::texture::EvalAt;
-    use crate::tonemap::{Clamp, Converter, Tonemapper, Reinhard1x3};
+    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -895,7 +895,7 @@ mod test {
                     let [r, g, b, _]: [f32; 4] = converter
                         .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
                         .into();
-                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
@@ -928,7 +928,7 @@ mod test {
                             false,
                         )
                         .into();
-                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }

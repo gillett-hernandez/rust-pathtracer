@@ -317,7 +317,7 @@ medium_aware = false
 [render_settings.resolution]
 # width = 3840
 # height = 2160
-width = 1920
-height = 1080
+width = 1024
+height = 1024
 # width = 4096
 # height = 2048

@@ -106,7 +106,7 @@ pub fn update_window_buffer(
             let [r, g, b, _]: [f32; 4] = converter
                 .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
                 .into();
-            *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+            *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
         });
 }
 
