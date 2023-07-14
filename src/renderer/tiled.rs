@@ -34,7 +34,7 @@ pub enum TileStatus {
     #[default]
     Incomplete,
     InProgress,
-    CompletedButNotSynced,
+    // CompletedButNotSynced,
     Complete,
 }
 
@@ -299,7 +299,7 @@ impl TiledRenderer {
             }
         });
 
-        let mut tiles = self.generate_tiles((width, height), &mut film.buffer);
+        let tiles = self.generate_tiles((width, height), &mut film.buffer);
 
         // extremely unsafe, do not do this
         // safety is only preserved by the fact that the tiles are mutually exclusive / non overlapping, and a single thread only touches one tile at a time
@@ -399,16 +399,17 @@ impl TiledRenderer {
                             // do final sync.
                             // ideally this is actually where we would drop the preview copy and just let the window access the data directly.
                             let mut lock = tile.preview_copy.write().unwrap();
-                            let inner = lock.as_mut().unwrap();
-                            for (a, (_, b)) in inner.buffer.iter_mut().zip(tile.iter_mut()) {
-                                *a = *b;
-                            }
+                            *lock = None;
+                            // let inner = lock.as_mut().unwrap();
+                            // for (a, (_, b)) in inner.buffer.iter_mut().zip(tile.iter_mut()) {
+                            //     *a = *b;
+                            // }
                         }
 
                         {
                             // let mut locked = tile_statuses[tile_index].write().unwrap();
                             let mut locked = tile.status.lock().unwrap();
-                            *locked = TileStatus::CompletedButNotSynced;
+                            *locked = TileStatus::Complete;
                         }
                         profile
                     })
@@ -442,46 +443,34 @@ impl TiledRenderer {
                     for (i, tile) in tiles.iter().enumerate() {
                         match tile.status.try_lock().map(|e| e.clone()) {
                             Ok(status @ TileStatus::InProgress)
-                            | Ok(status @ TileStatus::CompletedButNotSynced) => {
-                                // let locked = tile.preview_copy.read().unwrap();
-                                // let preview_copy = locked.as_ref().unwrap();
-                                // for (x, y) in tile.iter_indices() {
-                                //     assert!(
-                                //         x >= tile.horizontal_span.0,
-                                //         "{} {:?} {:?}",
-                                //         x,
-                                //         tile.horizontal_span,
-                                //         tile.vertical_span
-                                //     );
-                                //     assert!(
-                                //         y >= tile.vertical_span.0,
-                                //         "{} {:?} {:?}",
-                                //         x,
-                                //         tile.horizontal_span,
-                                //         tile.vertical_span
-                                //     );
-                                //     let [r, g, b, _]: [f32; 4] = Converter::sRGB
-                                //         .transfer_function(
-                                //             preview_tonemapper.map(
-                                //                 &preview_copy,
-                                //                 (
-                                //                     x as usize - tile.horizontal_span.0 as usize,
-                                //                     y as usize - tile.vertical_span.0 as usize,
-                                //                 ),
-                                //             ),
-                                //             false,
-                                //         )
-                                //         .into();
-                                //     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
-                                //         (255.0 * r) as u8,
-                                //         (255.0 * g) as u8,
-                                //         (255.0 * b) as u8,
-                                //     );
-                                // }
+                            // | Ok(status @ TileStatus::CompletedButNotSynced)
+                             => {
+                                let locked = tile.preview_copy.read().unwrap();
+                                let preview_copy = locked.as_ref().unwrap();
                                 for (x, y) in tile.iter_indices() {
+                                    assert!(
+                                        x >= tile.horizontal_span.0,
+                                        "{} {:?} {:?}",
+                                        x,
+                                        tile.horizontal_span,
+                                        tile.vertical_span
+                                    );
+                                    assert!(
+                                        y >= tile.vertical_span.0,
+                                        "{} {:?} {:?}",
+                                        x,
+                                        tile.horizontal_span,
+                                        tile.vertical_span
+                                    );
                                     let [r, g, b, _]: [f32; 4] = Converter::sRGB
                                         .transfer_function(
-                                            preview_tonemapper.map(&film, (x as usize, y as usize)),
+                                            preview_tonemapper.map(
+                                                &preview_copy,
+                                                (
+                                                    x as usize - tile.horizontal_span.0 as usize,
+                                                    y as usize - tile.vertical_span.0 as usize,
+                                                ),
+                                            ),
                                             false,
                                         )
                                         .into();
@@ -491,9 +480,22 @@ impl TiledRenderer {
                                         (255.0 * b) as u8,
                                     );
                                 }
-                                if matches!(status.clone(), TileStatus::CompletedButNotSynced) {
-                                    *tile.status.lock().unwrap() = TileStatus::Complete;
-                                }
+                                // for (x, y) in tile.iter_indices() {
+                                //     let [r, g, b, _]: [f32; 4] = Converter::sRGB
+                                //         .transfer_function(
+                                //             preview_tonemapper.map(&film, (x as usize, y as usize)),
+                                //             false,
+                                //         )
+                                //         .into();
+                                //     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
+                                //         (255.0 * r) as u8,
+                                //         (255.0 * g) as u8,
+                                //         (255.0 * b) as u8,
+                                //     );
+                                // }
+                                // if matches!(status.clone(), TileStatus::CompletedButNotSynced) {
+                                //     *tile.status.lock().unwrap() = TileStatus::Complete;
+                                // }
                             }
                             Ok(TileStatus::Complete) => {
                                 // let locked = tile.data.read().unwrap();
