@@ -43,6 +43,7 @@ pub struct Tile<T> {
     status: Arc<Mutex<TileStatus>>,
     data: Arc<RwLock<*mut T>>,
     preview_copy: Arc<RwLock<Option<Film<T>>>>,
+    width: u16,
     pub horizontal_span: (u16, u16),
     pub vertical_span: (u16, u16),
 }
@@ -51,11 +52,17 @@ unsafe impl<T> Send for Tile<T> {}
 unsafe impl<T> Sync for Tile<T> {}
 
 impl<T> Tile<T> {
-    pub fn new(data: *mut T, horizontal_span: (u16, u16), vertical_span: (u16, u16)) -> Self {
+    pub fn new(
+        data: *mut T,
+        horizontal_span: (u16, u16),
+        vertical_span: (u16, u16),
+        width: u16,
+    ) -> Self {
         Tile {
             status: Arc::new(Mutex::new(TileStatus::Incomplete)),
             data: Arc::new(RwLock::new(data)),
             preview_copy: Arc::new(RwLock::new(None)),
+            width,
             horizontal_span,
             vertical_span,
         }
@@ -63,9 +70,12 @@ impl<T> Tile<T> {
 
     pub fn iter_mut(&self) -> TileIter<'_, T> {
         TileIter {
+            left: self.horizontal_span.0,
+            top: self.vertical_span.0,
             reference: self.data.write().unwrap(),
             current_index: 0,
-            width: (self.horizontal_span.1 - self.horizontal_span.0),
+            tile_width: (self.horizontal_span.1 - self.horizontal_span.0),
+            width: self.width,
             max_index: (self.horizontal_span.1 - self.horizontal_span.0) as usize
                 * (self.vertical_span.1 - self.vertical_span.0) as usize,
         }
@@ -76,7 +86,7 @@ impl<T> Tile<T> {
             left: self.horizontal_span.0,
             top: self.vertical_span.0,
             current_index: 0,
-            width: (self.horizontal_span.1 - self.horizontal_span.0),
+            tile_width: (self.horizontal_span.1 - self.horizontal_span.0),
             max_index: (self.horizontal_span.1 - self.horizontal_span.0) as usize
                 * (self.vertical_span.1 - self.vertical_span.0) as usize,
         }
@@ -84,8 +94,11 @@ impl<T> Tile<T> {
 }
 
 pub struct TileIter<'a, T> {
+    left: u16,
+    top: u16,
     reference: RwLockWriteGuard<'a, *mut T>,
     current_index: usize,
+    tile_width: u16,
     width: u16,
     max_index: usize,
 }
@@ -100,8 +113,8 @@ impl<'a, T> Iterator for TileIter<'a, T> {
 
         // let y_span = self.vertical_span.1 - self.vertical_span.0;
 
-        let x = (self.current_index % self.width as usize) as u16;
-        let y = (self.current_index / self.width as usize) as u16;
+        let x = self.left + (self.current_index % self.tile_width as usize) as u16;
+        let y = self.top + (self.current_index / self.tile_width as usize) as u16;
 
         let reference;
         // this is bad as calling `.add` drops the lock it seems.
@@ -121,7 +134,7 @@ pub struct TileIndicesIter {
     left: u16,
     top: u16,
     current_index: usize,
-    width: u16,
+    tile_width: u16,
     max_index: usize,
 }
 
@@ -135,8 +148,8 @@ impl Iterator for TileIndicesIter {
 
         // let y_span = self.vertical_span.1 - self.vertical_span.0;
 
-        let x = self.left + (self.current_index % self.width as usize) as u16;
-        let y = self.top + (self.current_index / self.width as usize) as u16;
+        let x = self.left + (self.current_index % self.tile_width as usize) as u16;
+        let y = self.top + (self.current_index / self.tile_width as usize) as u16;
 
         self.current_index += 1;
         Some((x, y))
@@ -189,6 +202,7 @@ impl TiledRenderer {
                         y_idx as u16 * tile_size.1,
                         y_idx as u16 * tile_size.1 + tile_size.1,
                     ),
+                    film_size.0 as u16,
                 ));
             }
         }
@@ -205,6 +219,7 @@ impl TiledRenderer {
                         y_idx as u16 * tile_size.1,
                         y_idx as u16 * tile_size.1 + tile_size.1,
                     ),
+                    film_size.0 as u16,
                 ));
             }
         }
@@ -221,6 +236,7 @@ impl TiledRenderer {
                         full_tile_count.1 as u16 * tile_size.1,
                         full_tile_count.1 as u16 * tile_size.1 + remnant_tile_size.1 as u16,
                     ),
+                    film_size.0 as u16,
                 ));
             }
             if remnant_tile_size.0 > 0 {
@@ -236,6 +252,7 @@ impl TiledRenderer {
                         full_tile_count.1 as u16 * tile_size.1,
                         full_tile_count.1 as u16 * tile_size.1 + remnant_tile_size.1 as u16,
                     ),
+                    film_size.0 as u16,
                 ));
             }
         }
@@ -426,32 +443,45 @@ impl TiledRenderer {
                         match tile.status.try_lock().map(|e| e.clone()) {
                             Ok(status @ TileStatus::InProgress)
                             | Ok(status @ TileStatus::CompletedButNotSynced) => {
-                                let locked = tile.preview_copy.read().unwrap();
-                                let preview_copy = locked.as_ref().unwrap();
+                                // let locked = tile.preview_copy.read().unwrap();
+                                // let preview_copy = locked.as_ref().unwrap();
+                                // for (x, y) in tile.iter_indices() {
+                                //     assert!(
+                                //         x >= tile.horizontal_span.0,
+                                //         "{} {:?} {:?}",
+                                //         x,
+                                //         tile.horizontal_span,
+                                //         tile.vertical_span
+                                //     );
+                                //     assert!(
+                                //         y >= tile.vertical_span.0,
+                                //         "{} {:?} {:?}",
+                                //         x,
+                                //         tile.horizontal_span,
+                                //         tile.vertical_span
+                                //     );
+                                //     let [r, g, b, _]: [f32; 4] = Converter::sRGB
+                                //         .transfer_function(
+                                //             preview_tonemapper.map(
+                                //                 &preview_copy,
+                                //                 (
+                                //                     x as usize - tile.horizontal_span.0 as usize,
+                                //                     y as usize - tile.vertical_span.0 as usize,
+                                //                 ),
+                                //             ),
+                                //             false,
+                                //         )
+                                //         .into();
+                                //     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
+                                //         (255.0 * r) as u8,
+                                //         (255.0 * g) as u8,
+                                //         (255.0 * b) as u8,
+                                //     );
+                                // }
                                 for (x, y) in tile.iter_indices() {
-                                    assert!(
-                                        x >= tile.horizontal_span.0,
-                                        "{} {:?} {:?}",
-                                        x,
-                                        tile.horizontal_span,
-                                        tile.vertical_span
-                                    );
-                                    assert!(
-                                        y >= tile.vertical_span.0,
-                                        "{} {:?} {:?}",
-                                        x,
-                                        tile.horizontal_span,
-                                        tile.vertical_span
-                                    );
                                     let [r, g, b, _]: [f32; 4] = Converter::sRGB
                                         .transfer_function(
-                                            preview_tonemapper.map(
-                                                &preview_copy,
-                                                (
-                                                    x as usize - tile.horizontal_span.0 as usize,
-                                                    y as usize - tile.vertical_span.0 as usize,
-                                                ),
-                                            ),
+                                            preview_tonemapper.map(&film, (x as usize, y as usize)),
                                             false,
                                         )
                                         .into();
