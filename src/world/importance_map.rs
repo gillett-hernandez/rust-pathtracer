@@ -932,6 +932,7 @@ mod test {
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
-        let mul = 1.0 - variance_fraction;
+        // let mul = 1.0 - variance_fraction;
+        todo!();
     }
 }

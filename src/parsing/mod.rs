@@ -598,7 +598,6 @@ mod test {
                 MaterialData::GGX(inner) => {
                     println!("{:?}", inner.eta);
                 }
-                _ => {}
             }
         }
     }

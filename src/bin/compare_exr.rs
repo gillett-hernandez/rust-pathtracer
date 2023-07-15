@@ -118,14 +118,14 @@ fn main() {
                 image0
                     .buffer
                     .par_iter_mut()
-                    .zip(image1.buffer.par_iter())
-                    .for_each(|(px0, px1)| {
+                    // .zip(image1.buffer.par_iter())
+                    .for_each(|px| {
                         // rmse. not a true rmse since a true rmse would take into account the error of all the constituent samples that go into a pixel
-                        let rmse = px0.extract(0);
+                        let rmse = px.extract(0);
 
                         let color = g.at(((rmse - min_rmse) / (max_rmse - min_rmse)) as f64);
 
-                        *px0 = f32x4::new(
+                        *px = f32x4::new(
                             color.r as f32,
                             color.g as f32,
                             color.b as f32,

@@ -400,7 +400,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
         sampler: &mut Box<dyn Sampler>,
         camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
-        mut profile: &mut Profile,
+        profile: &mut Profile,
     ) -> XYZColor {
         profile.camera_rays += 1;
 

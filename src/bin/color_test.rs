@@ -20,7 +20,6 @@ use eframe::egui;
 use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 

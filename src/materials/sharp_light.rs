@@ -58,6 +58,7 @@ fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
 }
 
 impl Material<f32, f32> for SharpLight {
+    #[allow(unused_variables)]
     fn bsdf(
         &self,
         lambda: f32,
@@ -69,6 +70,7 @@ impl Material<f32, f32> for SharpLight {
         todo!()
     }
 
+    #[allow(unused_variables)]
     fn generate_and_evaluate(
         &self,
         lambda: f32,
@@ -217,7 +219,7 @@ mod test {
     fn test_sampling_direction() {
         let light = SharpLight::new(
             curves::void(),
-            curves::blackbody(5000.0, 1.0).to_cdf(EXTENDED_VISIBLE_RANGE, 100),
+            curves::blackbody_curve(5000.0, 1.0).to_cdf(EXTENDED_VISIBLE_RANGE, 100),
             1.0,
             Sidedness::Forward,
         );
@@ -263,7 +265,7 @@ mod test {
             WindowOptions::default(),
             true,
             |_, mut window_buffer, width, height| {
-                for i in 0..samples_per_iteration {
+                for _ in 0..samples_per_iteration {
                     let out = light.sample_emission(
                         Point3::ORIGIN,
                         Vec3::Z,
@@ -272,7 +274,7 @@ mod test {
                         Sample1D::new_random_sample(),
                     );
                     if let Some((ray, packet, solid_angle_pdf, wavelength_pdf)) = out {
-                        let sample = Sample2D::new_random_sample();
+                        // let sample = Sample2D::new_random_sample();
 
                         let uv = direction_to_uv(ray.direction);
                         let p = (

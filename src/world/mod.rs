@@ -7,7 +7,6 @@ pub use importance_map::ImportanceMap;
 use crate::prelude::*;
 
 use crate::hittable::*;
-use crate::materials::MaterialTable;
 
 use crate::mediums::MediumTable;
 
@@ -255,17 +254,18 @@ impl HasBoundingBox for World {
 
 #[cfg(test)]
 mod test {
-    use std::{path::PathBuf};
+    use std::path::PathBuf;
 
     use crate::parsing::construct_world;
 
     use super::*;
+
     #[test]
+
     fn test_world_intersection() {
         crate::log_test_setup();
         let world = construct_world(PathBuf::from("data/scenes/test_lighting_north.toml")).unwrap();
 
-        let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
         let ray = Ray::new(Point3::new(0.0, 0.0, 7.0), -Vec3::Z);
 
         let aabb = world.aabb();

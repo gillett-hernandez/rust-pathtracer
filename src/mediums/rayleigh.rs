@@ -124,10 +124,12 @@ mod test {
 
     use super::*;
 
+    #[allow(dead_code)]
     enum TestMode {
         ViewPhase,
         SamplePhase,
     }
+
     #[test]
     fn test_phase() {
         let width = 500usize;

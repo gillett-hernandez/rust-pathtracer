@@ -372,7 +372,7 @@ impl Hittable for Mesh {
         todo!("mesh light sampling is unimplemented")
     }
 
-    fn surface_area(&self, transform: &Transform3) -> f32 {
+    fn surface_area(&self, _: &Transform3) -> f32 {
         // TODO
         todo!("mesh light sampling is unimplemented")
     }

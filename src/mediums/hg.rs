@@ -114,6 +114,7 @@ mod test {
 
     use super::*;
 
+    #[allow(dead_code)]
     enum TestMode {
         ViewPhase,
         SamplePhase,

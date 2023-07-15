@@ -124,12 +124,9 @@ impl Converter {
 #[cfg(test)]
 mod test {
 
-    use rand::{random, seq::SliceRandom};
+    use rand::random;
 
-    use crate::{
-        parsing::config::Resolution,
-        tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3},
-    };
+    use crate::tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3};
 
     use super::*;
     #[test]

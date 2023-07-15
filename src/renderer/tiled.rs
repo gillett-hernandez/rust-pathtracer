@@ -4,23 +4,21 @@ use crate::prelude::*;
 use crate::integrator::*;
 use crate::tonemap::Clamp;
 
-use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 use minifb::WindowOptions;
 
 use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::ops::Deref;
-use std::ops::DerefMut;
+// use std::marker::PhantomData;
+use std::ops::Div;
 use std::sync::Mutex;
 use std::sync::RwLockWriteGuard;
 // use std::io::Write;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crossbeam::channel::unbounded;
-// use crossbeam::channel::{bounded};
+// use crossbeam::channel::unbounded;
+// use crossbeam::channel::bounded;
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 
@@ -68,16 +66,34 @@ impl<T> Tile<T> {
         }
     }
 
+    pub fn tile_width(&self) -> u16 {
+        self.horizontal_span.1 - self.horizontal_span.0
+    }
+
+    pub fn tile_height(&self) -> u16 {
+        self.vertical_span.1 - self.vertical_span.0
+    }
+
+    pub fn sync_to_preview(&self, samples: u32)
+    where
+        T: Div<f32, Output = T> + Copy,
+    {
+        let mut lock = self.preview_copy.write().unwrap();
+        let inner = lock.as_mut().unwrap();
+        for (a, (_, b)) in inner.buffer.iter_mut().zip(self.iter_mut()) {
+            *a = *b / samples as f32;
+        }
+    }
+
     pub fn iter_mut(&self) -> TileIter<'_, T> {
         TileIter {
             left: self.horizontal_span.0,
             top: self.vertical_span.0,
             reference: self.data.write().unwrap(),
             current_index: 0,
-            tile_width: (self.horizontal_span.1 - self.horizontal_span.0),
+            tile_width: self.tile_width(),
             width: self.width,
-            max_index: (self.horizontal_span.1 - self.horizontal_span.0) as usize
-                * (self.vertical_span.1 - self.vertical_span.0) as usize,
+            max_index: self.tile_width() as usize * self.tile_height() as usize,
         }
     }
 
@@ -86,9 +102,8 @@ impl<T> Tile<T> {
             left: self.horizontal_span.0,
             top: self.vertical_span.0,
             current_index: 0,
-            tile_width: (self.horizontal_span.1 - self.horizontal_span.0),
-            max_index: (self.horizontal_span.1 - self.horizontal_span.0) as usize
-                * (self.vertical_span.1 - self.vertical_span.0) as usize,
+            tile_width: self.tile_width(),
+            max_index: self.tile_width() as usize * self.tile_height() as usize,
         }
     }
 }
@@ -176,6 +191,9 @@ impl TiledRenderer {
     ) -> Tiles<'b> {
         let ptr = film.buffer.as_mut_ptr();
         let tile_size = self.tile_size;
+
+        // current tile generation order
+
         let full_tile_count = (
             film_size.0 / tile_size.0 as usize,
             film_size.1 / tile_size.1 as usize,
@@ -297,15 +315,6 @@ impl TiledRenderer {
 
         let tiles = self.generate_tiles((width, height), &mut film);
 
-        // extremely unsafe, do not do this
-        // safety is only preserved by the fact that the tiles are mutually exclusive / non overlapping, and a single thread only touches one tile at a time
-        // managed by an RwLock for each tile
-        // let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
-
-        // let tile_statuses = (0..tiles.len())
-        //     .map(|_| RwLock::new(TileStatus::Incomplete))
-        //     .collect::<Vec<RwLock<TileStatus>>>();
-
         let mut stats = Default::default();
 
         thread::scope(|s| {
@@ -330,7 +339,7 @@ impl TiledRenderer {
 
                         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                        let mut ct = 0;
+                        let mut ct = 0u32;
 
                         let phase_samples = 10;
                         let mut phase_counter = 0;
@@ -347,8 +356,9 @@ impl TiledRenderer {
                                 phase_samples
                             };
                             phase_counter += 1;
-                            // tile iter mut acquires lock on working buffer
-                            // due to this being architeched as a phased process, the rw lock on the preview copy is released periodically
+                            // tile iter_mut acquires lock on working buffer
+                            // due to this being architeched as a phased process, the w lock on the preview copy is released most of the time
+                            // and only periodically captured
 
                             for ((x, y), pixel) in tile.iter_mut() {
                                 let mut temp_color = XYZColor::BLACK;
@@ -376,31 +386,19 @@ impl TiledRenderer {
                                 }
                                 *pixel += temp_color;
                             }
-                            ct += this_phase_samples as usize;
+                            ct += this_phase_samples as u32;
                             // sync progress to preview copy
-                            {
-                                let mut lock = tile.preview_copy.write().unwrap();
-                                let inner = lock.as_mut().unwrap();
-                                for (a, (_, b)) in inner.buffer.iter_mut().zip(tile.iter_mut()) {
-                                    *a = *b / ct as f32;
-                                }
-                            }
-
-                            pixel_count.fetch_add(ct, Ordering::Relaxed);
+                            tile.sync_to_preview(ct);
                         }
                         for (_, pixel) in tile.iter_mut() {
                             *pixel = *pixel / settings.min_samples as f32;
                         }
 
                         {
-                            // do final sync.
-                            // ideally this is actually where we would drop the preview copy and just let the window access the data directly.
+                            // discard preview copy as the tile has been finalized
+
                             let mut lock = tile.preview_copy.write().unwrap();
                             *lock = None;
-                            // let inner = lock.as_mut().unwrap();
-                            // for (a, (_, b)) in inner.buffer.iter_mut().zip(tile.iter_mut()) {
-                            //     *a = *b;
-                            // }
                         }
 
                         {
@@ -408,6 +406,12 @@ impl TiledRenderer {
                             let mut locked = tile.status.lock().unwrap();
                             *locked = TileStatus::Complete;
                         }
+                        pixel_count.fetch_add(
+                            (ct / settings.min_samples as u32
+                                * tile.tile_width() as u32
+                                * tile.tile_height() as u32) as usize,
+                            Ordering::Relaxed,
+                        );
                         profile
                     })
                     .reduce(Profile::default, |a, b| a.combine(b));
@@ -425,7 +429,7 @@ impl TiledRenderer {
                     ..Default::default()
                 },
                 false,
-                |window, mut window_buffer, width, height| {
+                |_, window_buffer, _, _| {
                     let width = &tiles.film.width;
                     debug_assert!(window_buffer.len() % width == 0);
                     preview_tonemapper.initialize(&tiles.film, 1.0);
@@ -437,9 +441,9 @@ impl TiledRenderer {
                     //     .map(|e| e.read().unwrap().clone())
                     //     .collect::<Vec<TileStatus>>();
 
-                    for (i, tile) in tiles.tiles.iter().enumerate() {
+                    for (_, tile) in tiles.tiles.iter().enumerate() {
                         match tile.status.try_lock().map(|e| e.clone()) {
-                            Ok(status @ TileStatus::InProgress)
+                            Ok(TileStatus::InProgress)
                             // | Ok(status @ TileStatus::CompletedButNotSynced)
                              => {
                                 let locked = tile.preview_copy.read().unwrap();
@@ -533,8 +537,9 @@ impl TiledRenderer {
 
         film
     }
+    #[allow(unused_variables)]
     pub fn render_splatted<I: GenericIntegrator>(
-        mut integrator: I,
+        integrator: I,
         renders: Vec<RenderSettings>,
         _cameras: Vec<CameraEnum>,
     ) -> Vec<(RenderSettings, Film<XYZColor>)> {
@@ -659,26 +664,27 @@ impl Renderer for TiledRenderer {
 
 #[cfg(test)]
 mod test {
-    use minifb::WindowOptions;
-    use rand::random;
-
-    use crate::tonemap::Clamp;
 
     use super::*;
-    // #[test]
-    // fn test_generate_tiles() {
-    //     let mut film = Film::new(1920, 1080, false);
-    //     let renderer = TiledRenderer::new(64, 64);
+    #[test]
+    fn test_generate_tiles() {
+        let mut film = Film::new(1920, 1080, XYZColor::BLACK);
+        let renderer = TiledRenderer::new(64, 64);
 
-    //     let tiles = renderer.generate_tiles((film.width, film.height), &mut film.buffer);
-    //     for tile in tiles {
-    //         for pixel in tile.iter() {
-    //             film.write_at(pixel.0 as usize, pixel.1 as usize, true);
-    //         }
-    //     }
+        let tiles = renderer.generate_tiles((film.width, film.height), &mut film);
+        for tile in tiles.tiles {
+            for pixel in tile.iter_mut() {
+                *pixel.1 = SingleWavelength::new(550.0, 0.5).into();
+            }
+        }
 
-    //     assert!(film.buffer.iter().all(|e| *e));
-    // }
+        assert!(film.buffer.iter().all(|e| e.y() > 0.0));
+    }
+    // use minifb::WindowOptions;
+    // use rand::random;
+
+    // use crate::tonemap::Clamp;
+    
 
     // #[test]
     // fn test_parallel_unsafe_access() {
