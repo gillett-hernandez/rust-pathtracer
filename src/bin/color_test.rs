@@ -1,16 +1,15 @@
 extern crate rust_pathtracer as root;
+use root::prelude::*;
 
 use std::fs::File;
 use std::ops::RangeInclusive;
 
 use math::curves::*;
-use math::spectral::BOUNDED_VISIBLE_RANGE;
-use math::*;
 
-use root::parsing::{config::*, load_scene};
-use root::renderer::Film;
+use root::parsing::config::TOMLConfig;
+use root::parsing::parse_config_and_cameras;
+use root::parsing::*;
 use root::tonemap::{Converter, Tonemapper};
-use root::*;
 
 #[macro_use]
 extern crate log;
@@ -21,7 +20,6 @@ use eframe::egui;
 use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
@@ -266,14 +264,14 @@ impl eframe::App for Controller {
                 }
             }
 
-            use egui::plot::{Line, Plot, Value, Values};
+            use egui::plot::{Line, Plot, PlotPoints};
             let n_samples = 100;
-            let color = (0..n_samples).map(|i| {
-                let x01 = i as f32 / n_samples as f32;
-                let lambda = self.wavelength_bounds.sample(x01);
-                Value::new(lambda as f64, self.color.evaluate(lambda) as f64)
-            });
-            let line = Line::new(Values::from_values_iter(color));
+            let cloned = self.color.clone();
+            let color = move |lambda: f64|{
+                 cloned.evaluate(lambda as f32) as f64
+            };
+            let line = Line::new(PlotPoints::from_explicit_callback(color, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+
             let response = Plot::new("color")
                 .include_x(self.wavelength_bounds.lower)
                 .include_x(self.wavelength_bounds.upper)
@@ -325,12 +323,13 @@ impl eframe::App for Controller {
                     .unwrap();
             }
 
-            let illuminant = (0..n_samples).map(|i| {
-                let x01 = i as f32 / n_samples as f32;
-                let lambda = self.wavelength_bounds.sample(x01);
-                Value::new(lambda as f64, self.illuminant.evaluate(lambda) as f64)
-            });
-            let line = Line::new(Values::from_values_iter(illuminant));
+            let cloned = self.illuminant.clone();
+            let illuminant = move |lambda: f64| {
+                 cloned.evaluate(lambda as f32) as f64
+            };
+
+
+            let line = Line::new(PlotPoints::from_explicit_callback(illuminant, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
             Plot::new("illuminant")
                 .include_x(self.wavelength_bounds.lower)
                 .include_x(self.wavelength_bounds.upper)
@@ -346,13 +345,11 @@ impl eframe::App for Controller {
                     (Op::Mul, self.illuminant.clone()),
                 ],
             };
-            let multiplied = (0..n_samples).map(|i| {
-                let x01 = i as f32 / n_samples as f32;
-                let lambda = self.wavelength_bounds.sample(x01);
-
-                Value::new(lambda as f64, new_temp_curve.evaluate(lambda) as f64)
-            });
-            let line = Line::new(Values::from_values_iter(multiplied));
+            let multiplied = move |lambda| {
+                new_temp_curve.evaluate(lambda as f32) as f64
+            };
+            // let line = Line::new(Values::from_values_iter(multiplied));
+            let line = Line::new(PlotPoints::from_explicit_callback(multiplied, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
             Plot::new("combined")
                 .include_x(self.wavelength_bounds.lower)
                 .include_x(self.wavelength_bounds.upper)
@@ -439,21 +436,15 @@ impl View {
 
         self.tonemapper.initialize(&self.film, 1.0);
         // let window = self.window
-        let film = &self.film;
-        let tonemapper = &self.tonemapper;
-        self.buffer
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(pixel_idx, v)| {
-                let y: usize = pixel_idx / width;
-                let x: usize = pixel_idx - width * y;
-                let [r, g, b, _]: [f32; 4] = Converter::sRGB
-                    .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
-                    .into();
-                *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-            });
-        // self.film = film;
-        // self.tonemapper = tonemapper;
+        // let film = &self.film;
+        // let tonemapper = &self.tonemapper;
+        update_window_buffer(
+            &mut self.buffer,
+            &self.film,
+            self.tonemapper.as_mut(),
+            Converter::sRGB,
+            1.0,
+        );
         self.window
             .update_with_buffer(&self.buffer, self.film.width, self.film.height)
             .unwrap();
@@ -482,7 +473,7 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
         .unwrap();
 
     // override scene file based on provided command line argument
-    let (config, _) = parse_cameras_from(config);
+    let (config, _) = parse_config_and_cameras(config);
 
     let curves = load_scene(config.scene_file)
         .expect("failed to load scene")
@@ -494,10 +485,10 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
     illuminants.push(curves.get("E").unwrap().clone().into());
     illuminants.push(curves.get("cornell_light").unwrap().clone().into());
     illuminants.push(curves.get("cornell_light_accurate").unwrap().clone().into());
-    illuminants.push(curves.get("blackbody_5000k").unwrap().clone().into());
-    illuminants.push(curves.get("blackbody_3000k").unwrap().clone().into());
-    illuminants.push(curves.get("fluorescent").unwrap().clone().into());
-    illuminants.push(curves.get("xenon").unwrap().clone().into());
+    // illuminants.push(curves.get("blackbody_5000k").unwrap().clone().into());
+    // illuminants.push(curves.get("blackbody_3000k").unwrap().clone().into());
+    // illuminants.push(curves.get("fluorescent").unwrap().clone().into());
+    // illuminants.push(curves.get("xenon").unwrap().clone().into());
 
     let (req_sender, req_receiver) = unbounded();
     let (res_sender, res_receiver) = unbounded();

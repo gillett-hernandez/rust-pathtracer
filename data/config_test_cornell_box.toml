@@ -1,0 +1,45 @@
+default_scene_file = "data/scenes/cornell_box.toml"
+
+[[cameras]]
+type="SimpleCamera"
+name = "true cornell camera"
+look_from = [ -0.8, 0.278, 0.273]
+look_at = [0.0, 0.278, 0.273]
+aperture_size = 0.01
+focal_distance = 1.1
+vfov = 37.8
+
+
+[renderer]
+type="Naive"
+# type="Preview"
+# selected_preview_film_id = 0
+
+[[render_settings]]
+threads = 12
+filename = "beauty"
+min_samples = 128
+min_bounces = 1
+max_bounces = 12
+hwss = false
+camera_id = "true cornell camera"
+
+russian_roulette = true
+only_direct = false
+[render_settings.tonemap_settings]
+type = "Reinhard1"
+# exposure = -2.0
+key_value = 0.18
+white_point = 1.0
+luminance_only = false
+[render_settings.integrator]
+type = "PT"
+light_samples = 2
+medium_aware = false
+[render_settings.resolution]
+# width = 3840
+# height = 2160
+width = 1080
+height = 1080
+# width = 4096
+# height = 2048

@@ -11,19 +11,19 @@ strength = 1.0
 texture_name = "autumn_park_8k"
 # texture_name = "moonlit_golf_8k"
 [environment.importance_map]
-width = 8000
-height = 8000
+width = 1000
+height = 1000
 
 
 # light above
-# [[instances]]
-# material_name = "diffuse_light_warm"
-# [instances.aggregate]
-# type = "Rect"
-# size = [2, 2]
-# origin = [0.0, 0.0, 1.0]
-# normal = "Z"
-# two_sided = true
+[[instances]]
+material_name = "diffuse_light_warm"
+[instances.aggregate]
+type = "Rect"
+size = [2, 2]
+origin = [0.0, 0.0, 1.0]
+normal = "Z"
+two_sided = true
 
 # floor on side
 [[instances]]

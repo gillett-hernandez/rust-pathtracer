@@ -12,10 +12,17 @@ texture_id = "test_texture"
 type = "Lambertian"
 texture_id = "lambertian_green"
 
-
 [lambertian_red]
 type = "Lambertian"
 texture_id = "lambertian_red"
+
+[lambertian_blue]
+type = "Lambertian"
+texture_id = "lambertian_blue"
+
+[lambertian_yellow]
+type = "Lambertian"
+texture_id = "lambertian_yellow"
 
 # passes white furnace test
 [ggx_glass]
@@ -25,6 +32,18 @@ alpha = 0.0004
 kappa = "flat_zero"
 eta_o = "air_ior"
 [ggx_glass.eta]
+type = "Cauchy"
+a = 1.4
+b = 4500.0
+
+
+[ggx_air_glass]
+type = "GGX"
+permeability = 1.0
+alpha = 0.0004
+kappa = "flat_zero"
+eta = "air_ior"
+[ggx_air_glass.eta_o]
 type = "Cauchy"
 a = 1.4
 b = 4500.0
@@ -251,6 +270,12 @@ interpolation_mode = "Cubic"
 x_scale = 1000.0
 
 
+[diffuse_light_flat_x5]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "E5"
+bounce_color = "flat_78"
+
 [diffuse_light_flat_x10]
 type = "DiffuseLight"
 sidedness = "Dual"
@@ -285,6 +310,13 @@ emit_color = "blackbody_5000k"
 bounce_color = "flat_78"
 
 
+[diffuse_540THz]
+type = "DiffuseLight"
+sidedness = "Dual"
+emit_color = "540THz"
+bounce_color = "flat_zero"
+
+
 [diffuse_light_cornell]
 type = "DiffuseLight"
 sidedness = "Reverse"
@@ -309,7 +341,7 @@ bounce_color = "flat_78"
 
 [sharp_light_warm]
 type = "SharpLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 sharpness = 4.0
 emit_color = "blackbody_3000k_x5"
 bounce_color = "flat_78"
@@ -317,7 +349,7 @@ bounce_color = "flat_78"
 
 [sharp_light]
 type = "SharpLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 sharpness = 4.0
 emit_color = "blackbody_5000k"
 bounce_color = "flat_78"
@@ -325,8 +357,16 @@ bounce_color = "flat_78"
 
 [sharp_light_fluorescent]
 type = "SharpLight"
-sidedness = "Dual"
+sidedness = "Reverse"
 sharpness = 4.0
 emit_color = "fluorescent_x5"
 bounce_color = "flat_78"
 
+[isotropic_uniform_dense_bright]
+type = "GGX"
+alpha = 0.0004
+permeability = 1.0
+eta_o = "air_ior"
+eta = {type = "Flat", strength = 1.03}
+kappa = "flat_zero"
+inner_medium_id = "isotropic_uniform_dense_bright"

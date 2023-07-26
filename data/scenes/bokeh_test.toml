@@ -1,0 +1,668 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+env_sampling_probability = 0.5
+
+[environment]
+type="HDRI"
+strength = 0.1
+texture_name = "autumn_park_8k"
+# texture_name = "moonlit_golf_8k"
+
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -20.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -19.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -18.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -17.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -16.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -15.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -14.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -13.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -12.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -11.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -10.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -9.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -8.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -7.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -6.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -5.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -4.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -3.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -2.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, -1.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 0.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 1.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 2.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 3.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 4.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 5.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 6.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 7.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 8.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 9.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 10.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 11.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 12.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 13.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 14.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 15.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 16.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 17.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 18.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 19.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [-0.5, 20.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -20.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -19.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -18.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -17.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -16.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -15.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -14.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -13.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -12.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -11.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -10.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -9.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -8.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -7.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -6.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -5.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -4.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -3.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -2.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, -1.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 0.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 1.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 2.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 3.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 4.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 5.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 6.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 7.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 8.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 9.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 10.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 11.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 12.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 13.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 14.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 15.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 16.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 17.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 18.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 19.0, 0.0]
+
+
+[[instances]]
+material_name = "diffuse_light"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.01
+origin = [0.5, 20.0, 0.0]

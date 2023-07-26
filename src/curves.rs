@@ -1,9 +1,8 @@
 // this module contains a series of SDFs
+use math::prelude::*;
 
-use crate::math::curves::{InterpolationMode, Op};
-use crate::math::*;
-
-pub use crate::math::spectral::EXTENDED_VISIBLE_RANGE;
+use crate::prelude::*;
+use math::curves::{InterpolationMode, Op};
 
 pub fn cie_e(power: f32) -> Curve {
     Curve::Linear {
@@ -13,7 +12,7 @@ pub fn cie_e(power: f32) -> Curve {
     }
 }
 
-pub fn blackbody(temperature: f32, boost: f32) -> Curve {
+pub fn blackbody_curve(temperature: f32, boost: f32) -> Curve {
     Curve::Blackbody { temperature, boost }
 }
 

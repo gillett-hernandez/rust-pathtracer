@@ -1,6 +1,8 @@
+use math::prelude::Curve;
+use math::{spectral::BOUNDED_VISIBLE_RANGE, Sidedness};
+
 use crate::materials::*;
 use crate::texture::TexStack;
-use math::{spectral::BOUNDED_VISIBLE_RANGE, Curve, Sidedness};
 
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +22,8 @@ pub struct GGXData {
     pub eta_o: CurveDataOrReference,
     pub kappa: CurveDataOrReference,
     pub permeability: f32,
-    pub outer_medium_id: Option<usize>,
+    pub inner_medium_id: Option<String>,
+    pub outer_medium_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -38,20 +41,19 @@ pub struct SharpLightData {
     pub sharpness: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct PassthroughFilterData {
-    pub color: CurveDataOrReference,
-    pub outer_medium_id: usize,
-    pub inner_medium_id: usize,
-}
+// #[derive(Serialize, Deserialize, Clone)]
+// pub struct PassthroughFilterData {
+//     pub color: CurveDataOrReference,
+//     pub outer_medium_id: String,
+//     pub inner_medium_id: String,
+// }
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum MaterialData {
     GGX(GGXData),
     Lambertian(LambertianData),
-    PassthroughFilter(PassthroughFilterData),
-
+    // PassthroughFilter(PassthroughFilterData),
     DiffuseLight(DiffuseLightData),
     SharpLight(SharpLightData),
 }
@@ -61,6 +63,7 @@ impl MaterialData {
         self,
         curve_mapping: &HashMap<String, Curve>,
         texture_mapping: &HashMap<String, TexStack>,
+        medium_id_map: &HashMap<String, MediumId>,
     ) -> Option<MaterialEnum> {
         match self {
             MaterialData::GGX(data) => {
@@ -75,8 +78,14 @@ impl MaterialData {
                         eta,
                         eta_o,
                         kappa,
-                        data.permeability,
-                        data.outer_medium_id.unwrap_or(0),
+                        data.outer_medium_id
+                            .map(|name| medium_id_map.get(&name).cloned())
+                            .flatten()
+                            .unwrap_or(0),
+                        data.inner_medium_id
+                            .map(|name| medium_id_map.get(&name).cloned())
+                            .flatten()
+                            .unwrap_or(0),
                     )))
                 } else {
                     warn!("failed to resolve one of eta, eta_o, or kappa");
@@ -109,12 +118,18 @@ impl MaterialData {
             // MaterialData::PassthroughFilter(data) => {
             //     println!("parsing PassthroughFilter");
             //     // let color = parse_texture_stack(data.color);
-            //     let color = Curve::from(data.color);
-            //     MaterialEnum::PassthroughFilter(PassthroughFilter::new(
+            //     let color = data.color.resolve(curve_mapping)?;
+            //     Some(MaterialEnum::PassthroughFilter(PassthroughFilter::new(
             //         color,
-            //         data.outer_medium_id,
-            //         data.inner_medium_id,
-            //     ))
+            //         medium_id_map
+            //             .get(&data.outer_medium_id)
+            //             .cloned()
+            //             .unwrap_or(0),
+            //         medium_id_map
+            //             .get(&data.inner_medium_id)
+            //             .cloned()
+            //             .unwrap_or(0),
+            //     )))
             // }
             MaterialData::DiffuseLight(data) => {
                 info!("parsing DiffuseLight");
@@ -130,7 +145,6 @@ impl MaterialData {
                     data.sidedness,
                 )))
             }
-            _ => panic!(),
         }
     }
 }

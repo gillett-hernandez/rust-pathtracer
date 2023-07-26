@@ -1,11 +1,6 @@
-use crate::curves::mauve;
-use crate::renderer::Film;
-use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
+use crate::prelude::*;
 
-use nalgebra::{Matrix3, Vector3};
 use packed_simd::f32x4;
-
-use std::time::Instant;
 
 use super::Tonemapper;
 
@@ -78,7 +73,7 @@ impl Tonemapper for Reinhard0 {
                 l_w,
                 sum_of_log / total_pixels as f64
             );
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance
@@ -103,10 +98,14 @@ impl Tonemapper for Reinhard0 {
         let scaling_factor = l / (1.0 + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            cie_xyz_color = crate::MAUVE;
+            cie_xyz_color = MAUVE;
         }
 
         scaling_factor * cie_xyz_color.0
+    }
+
+    fn get_name(&self) -> &str {
+        "reinhard0"
     }
 }
 
@@ -181,7 +180,7 @@ impl Tonemapper for Reinhard0x3 {
                 l_w,
                 sum_of_log / total_pixels as f32
             );
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance
@@ -207,9 +206,13 @@ impl Tonemapper for Reinhard0x3 {
         let scaling_factor = l / (1.0 + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            cie_xyz_color = crate::MAUVE;
+            cie_xyz_color = MAUVE;
         }
 
         scaling_factor * cie_xyz_color.0
+    }
+
+    fn get_name(&self) -> &str {
+        "reinhard0x3"
     }
 }

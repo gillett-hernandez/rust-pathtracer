@@ -1,0 +1,59 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+
+env_sampling_probability = 0.0
+[environment]
+type="Constant"
+strength = 1.0
+color = "simple_sky_blue"
+
+# bright sphere
+[[instances]]
+material_name = "diffuse_light_flat_x10"
+[instances.aggregate]
+type = "Sphere"
+radius = 5.0
+origin = [3.0, -6.0, 8.0]
+
+
+
+# colored spheres
+[[instances]]
+material_name = "ggx_glass"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.5
+origin = [3.5, -1.0, 0.0]
+
+[[instances]]
+material_name = "ggx_air_glass"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.48
+origin = [3.5, -1.0, 0.0]
+
+[[instances]]
+material_name = "lambertian_blue"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.5
+origin = [3.5, 0.0, 0.0]
+
+[[instances]]
+material_name = "ggx_gold"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.5
+origin = [3.5, 1.0, 0.0]
+
+
+[[instances]]
+material_name = "lambertian_yellow"
+[instances.aggregate]
+type = "Rect"
+size = [40, 40]
+origin = [0.0, 0.0, -0.5]
+normal = "Z"
+two_sided = true

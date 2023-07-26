@@ -1,8 +1,6 @@
 use crate::geometry::*;
-use crate::materials::MaterialId;
-use crate::math::{
-    random, random_in_unit_disk, Point3, Ray, Sampler, TangentFrame, Transform3, Vec3,
-};
+use crate::prelude::*;
+
 #[derive(Debug, Clone)]
 pub struct ProjectiveCamera {
     pub origin: Point3,
@@ -18,9 +16,8 @@ pub struct ProjectiveCamera {
     u: Vec3,
     v: Vec3,
     w: Vec3,
-    lens_radius: f32,
-    t0: f32,
-    t1: f32,
+    // TODO: change this to aperture from rust_optics crate
+    aperture_radius: f32,
 }
 
 impl ProjectiveCamera {
@@ -31,8 +28,6 @@ impl ProjectiveCamera {
         vertical_fov: f32, // vertical_fov should be given in degrees, since it is converted to radians
         focal_distance: f32,
         aperture: f32,
-        t0: f32,
-        t1: f32,
     ) -> ProjectiveCamera {
         let direction = (look_at - look_from).normalized();
         let lens_radius = aperture / 2.0;
@@ -87,9 +82,7 @@ impl ProjectiveCamera {
             u,
             v,
             w,
-            lens_radius: aperture / 2.0,
-            t0,
-            t1,
+            aperture_radius: aperture / 2.0,
         }
     }
     pub fn get_surface(&self) -> Option<&Instance> {
@@ -97,30 +90,36 @@ impl ProjectiveCamera {
     }
 }
 
-impl ProjectiveCamera {
-    pub fn get_ray(
-        &self,
-        sampler: &mut Box<dyn Sampler>,
-        _lambda: f32,
-        s: f32,
-        t: f32,
-    ) -> (Ray, f32) {
+impl Camera<f32, f32> for ProjectiveCamera {
+    fn get_ray(&self, sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
         // circular aperture/lens
-        let rd: Vec3 = self.lens_radius * random_in_unit_disk(sampler.draw_2d());
+        let rd: Vec3 = self.aperture_radius * random_in_unit_disk(sampler.draw_2d());
         let offset = self.u * rd.x() + self.v * rd.y();
-        let time: f32 = self.t0 + random() * (self.t1 - self.t0);
         let ray_origin: Point3 = self.origin + offset;
 
-        let point_on_plane = self.lower_left_corner + s * self.horizontal + t * self.vertical;
+        let point_on_plane = self.lower_left_corner + u * self.horizontal + v * self.vertical;
 
         // println!("point on focal plane {:?}", point_on_plane);
         let ray_direction = (point_on_plane - ray_origin).normalized();
         debug_assert!(ray_origin.is_finite());
         debug_assert!(ray_direction.is_finite());
-        (Ray::new_with_time(ray_origin, ray_direction, time), 1.0)
+        (Ray::new_with_time(ray_origin, ray_direction, 0.0), 1.0)
+    }
+    fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
+        assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
+        let theta: f32 = self.vfov.to_radians();
+        let half_height = (theta / 2.0).tan();
+        let half_width = aspect_ratio * half_height;
+        self.lower_left_corner = self.origin
+            - self.u * half_width * self.focal_distance
+            - self.v * half_height * self.focal_distance
+            - self.w * self.focal_distance;
+        self.horizontal = self.u * 2.0 * half_width * self.focal_distance;
+        self.vertical = self.v * 2.0 * half_height * self.focal_distance;
+        self
     }
     // returns None if the point on the lens was not from a valid pixel
-    pub fn get_pixel_for_ray(&self, ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
+    fn get_pixel_for_ray(&self, ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
         // would require tracing ray backwards, but for now, try and see what image uv it went through according to the thinlens approximation
 
         // println!("ray is {:?}", ray);
@@ -166,18 +165,26 @@ impl ProjectiveCamera {
             Some((u, v))
         }
     }
-    pub fn with_aspect_ratio(mut self, aspect_ratio: f32) -> Self {
-        assert!(self.focal_distance > 0.0 && self.vfov > 0.0);
-        let theta: f32 = self.vfov.to_radians();
-        let half_height = (theta / 2.0).tan();
-        let half_width = aspect_ratio * half_height;
-        self.lower_left_corner = self.origin
-            - self.u * half_width * self.focal_distance
-            - self.v * half_height * self.focal_distance
-            - self.w * self.focal_distance;
-        self.horizontal = self.u * 2.0 * half_width * self.focal_distance;
-        self.vertical = self.v * 2.0 * half_height * self.focal_distance;
-        self
+
+    fn eval_we(
+        &self,
+        _lambda: f32,
+        _normal: Vec3,
+        _from: Point3,
+        _to: Point3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
+        // TODO
+        todo!()
+    }
+
+    fn sample_we(
+        &self,
+        film_sample: Sample2D,
+        sampler: &mut Box<dyn Sampler>,
+        lambda: f32,
+    ) -> (Ray, Vec3, PDF<f32, SolidAngle>) {
+        let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
+        (ray, self.direction, tau.into())
     }
 }
 
@@ -187,7 +194,7 @@ unsafe impl Sync for ProjectiveCamera {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::{RandomSampler, Sample2D};
+    use math::prelude::*;
 
     #[test]
     fn test_camera() {
@@ -198,12 +205,10 @@ mod tests {
             35.2,
             5.0,
             0.08,
-            0.0,
-            1.0,
         )
         .with_aspect_ratio(0.6);
-        let s = random();
-        let t = random();
+        let s = debug_random();
+        let t = debug_random();
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
@@ -226,14 +231,12 @@ mod tests {
             35.2,
             5.0,
             0.08,
-            0.0,
-            1.0,
         )
         .with_aspect_ratio(width as f32 / height as f32);
         let px = (0.99 * width) as usize;
         let py = (0.99 * height) as usize;
-        let s = (px as f32) / width + random() / width;
-        let t = (py as f32) / height + random() / height;
+        let s = (px as f32) / width + debug_random() / width;
+        let t = (py as f32) / height + debug_random() / height;
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let (r, _tau) = camera.get_ray(&mut sampler, 550.0, s, t);
         println!("camera ray {:?}", r);
@@ -262,8 +265,6 @@ mod tests {
             27.0,
             5.0,
             0.08,
-            0.0,
-            1.0,
         )
         .with_aspect_ratio(0.6);
 
@@ -277,8 +278,13 @@ mod tests {
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);
         let to = transform.to_world(Point3::ORIGIN);
-        let result2 =
-            camera_surface.psa_pdf(Vec3::X * (to - sample_from).normalized(), sample_from, to);
+        let direction = (to - sample_from).normalized();
+        let result2 = camera_surface.psa_pdf(
+            (Vec3::X * direction).abs(),
+            (Vec3::Z * direction).abs(),
+            sample_from,
+            to,
+        );
         println!("{:?}", result2);
     }
 }

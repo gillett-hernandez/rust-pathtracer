@@ -1,7 +1,4 @@
-#![allow(unused, unused_imports)]
-use crate::curves::mauve;
-use crate::renderer::Film;
-use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
+use crate::prelude::*;
 
 use nalgebra::{Matrix3, Vector3};
 use packed_simd::f32x4;
@@ -39,12 +36,17 @@ const S200: f32x4 = f32x4::splat(200.0);
 // and Reinhard '02 https://www.cs.utah.edu/docs/techreports/2002/pdf/UUCS-02-001.pdf
 
 pub trait Tonemapper: Send + Sync {
+    // factor in `initialize` is a prefactor weight on the film contents.
+    // a tonemapper should initialize based on the film x scale_factor
+    // and should premultiply the film values when tonemapping through `map`
     fn initialize(&mut self, film: &Film<XYZColor>, factor: f32);
     // should tonemap a pixel from hdr to ldr
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4;
+    fn get_name(&self) -> &str;
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 pub enum Converter {
     sRGB,
 }
@@ -73,7 +75,8 @@ impl Converter {
     pub fn write_to_files(
         &self,
         film: &Film<XYZColor>,
-        tonemapper: Box<dyn Tonemapper>,
+        tonemapper: &Box<dyn Tonemapper>,
+        factor: f32,
         exr_filename: &str,
         png_filename: &str,
     ) -> Result<(), Box<dyn Error>> {
@@ -84,8 +87,9 @@ impl Converter {
                 print!("saving exr...");
                 exr::prelude::write_rgb_file(exr_filename, film.width, film.height, |x, y| {
                     // TODO: maybe don't use linear srgb here, but instead CIE RGB
-                    let [r, g, b, _]: [f32; 4] =
-                        self.transfer_function(film.at(x, y).0, true).into();
+                    let [r, g, b, _]: [f32; 4] = self
+                        .transfer_function(film.at(x, y).0 * factor, true)
+                        .into();
                     (r, g, b)
                 })?;
                 println!(" done!");
@@ -116,3 +120,57 @@ impl Converter {
 }
 
 // should the tonemapper own a converter, or should a converter own the townmapper
+
+#[cfg(test)]
+mod test {
+
+    use rand::random;
+
+    use crate::tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3};
+
+    use super::*;
+    #[test]
+    fn test_write_to_file() {
+        let num_samples = random::<f32>() * 1000.0 + 1.0;
+
+        let mut tonemappers: Vec<Box<dyn Tonemapper>> = vec![
+            Box::new(Clamp::new(0.0, true, false)),
+            Box::new(Clamp::new(0.0, false, false)),
+            Box::new(Reinhard0::new(0.18, false)),
+            Box::new(Reinhard0x3::new(0.18, false)),
+            Box::new(Reinhard1::new(0.18, 10.0, false)),
+            Box::new(Reinhard1x3::new(0.18, 10.0, false)),
+        ];
+
+        let mut film = Film::new(1024, 1024, XYZColor::BLACK);
+
+        // estimated total energy per pixel is proportional to num_samples
+        println!("adding {} samples per pixel", num_samples as usize);
+        film.buffer.par_iter_mut().for_each(|px| {
+            for _ in 0..(num_samples as usize) {
+                *px += SingleWavelength::new_from_range(random::<f32>(), BOUNDED_VISIBLE_RANGE)
+                    .replace_energy(1.0)
+                    .into();
+            }
+        });
+
+        let converter = Converter::sRGB;
+        for (i, tonemapper) in tonemappers.iter_mut().enumerate() {
+            let name = tonemapper.get_name();
+            println!("tonemapper is {}", name);
+
+            let exr_filename = format!("test_output_{}_{}_{}.exr", num_samples as usize, name, i);
+            let png_filename = format!("test_output_{}_{}_{}.png", num_samples as usize, name, i);
+            tonemapper.initialize(&film, 1.0 / num_samples);
+            converter
+                .write_to_files(
+                    &film,
+                    tonemapper,
+                    1.0 / num_samples,
+                    &exr_filename,
+                    &png_filename,
+                )
+                .expect("failed to write files");
+        }
+    }
+}

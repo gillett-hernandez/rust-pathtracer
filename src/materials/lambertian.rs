@@ -1,7 +1,4 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::texture::TexStack;
-use crate::world::TransportMode;
+use crate::{prelude::*, texture::EvalAt};
 
 #[derive(Clone)]
 pub struct Lambertian {
@@ -15,7 +12,29 @@ impl Lambertian {
     pub const NAME: &'static str = "Lambertian";
 }
 
-impl Material for Lambertian {
+impl Material<f32, f32> for Lambertian {
+    fn bsdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        _transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
+        if wo.z() * wi.z() > 0.0 {
+            (
+                (self.texture.eval_at(lambda, uv).min(1.0) / PI),
+                (wo.z().abs() / PI).into(),
+            )
+        } else {
+            (0.0.into(), 0.0.into())
+        }
+    }
+    // don't implement sample_emission, since the default implementation is what we want.
+    // though perhaps it would be a good idea to panic if a the integrator tries to sample the emission of a lambertian
+
+    // implement f
+
     fn generate(
         &self,
         _lambda: f32,
@@ -27,30 +46,26 @@ impl Material for Lambertian {
         let d = random_cosine_direction(s) * wi.z().signum();
         Some(d)
     }
-    // don't implement sample_emission, since the default implementation is what we want.
-    // though perhaps it would be a good idea to panic if a the integrator tries to sample the emission of a lambertian
 
-    // implement f
-
-    fn bsdf(
+    fn generate_and_evaluate(
         &self,
         lambda: f32,
         uv: (f32, f32),
-        _transport_mode: TransportMode,
+        _: TransportMode,
+        s: Sample2D,
         wi: Vec3,
-        wo: Vec3,
-    ) -> (SingleEnergy, PDF) {
-        if wo.z() * wi.z() > 0.0 {
-            (
-                SingleEnergy::new(self.texture.eval_at(lambda, uv).min(1.0) / PI),
-                (wo.z().abs() / PI).into(),
-            )
-        } else {
-            (0.0.into(), 0.0.into())
-        }
+    ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
+        let wi_z = wi.z();
+        let d = random_cosine_direction(s) * wi_z.signum();
+        let wo_z = d.z();
+        (
+            (self.texture.eval_at(lambda, uv).min(1.0) / PI),
+            Some(d),
+            (wo_z.abs() / PI).into(),
+        )
     }
     // fn emission(&self, _hit: &HitRecord, _wi: Vec3, _wo: Option<Vec3>) -> SingleEnergy {
-    //     SingleEnergy::ZERO
+    //     0.0
     // }
 }
 
@@ -58,7 +73,6 @@ impl Material for Lambertian {
 mod test {
     use math::curves::InterpolationMode;
     use math::spectral::BOUNDED_VISIBLE_RANGE;
-    use math::*;
 
     use crate::renderer::Film;
     use crate::texture::{Texture, Texture1};
@@ -96,10 +110,10 @@ mod test {
 
         println!("{:?} -> {:?}", wi, wo);
         println!(
-            "f(wi -> wo) = {} / {} = {}",
-            reflectance.0,
-            pdf.0,
-            reflectance.0 / pdf.0
+            "f(wi -> wo) = {} / {:?} = {}",
+            reflectance,
+            pdf,
+            reflectance / *pdf
         );
     }
 }

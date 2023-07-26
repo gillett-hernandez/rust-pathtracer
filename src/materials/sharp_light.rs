@@ -1,10 +1,9 @@
-use crate::materials::Material;
-use crate::math::*;
-use crate::world::TransportMode;
+use math::Sidedness;
+
+use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct SharpLight {
-
     pub bounce_color: Curve,
     pub emit_color: CurveWithCDF,
     pub sharpness: f32,
@@ -12,7 +11,12 @@ pub struct SharpLight {
 }
 
 impl SharpLight {
-    pub fn new(bounce_color: Curve, emit_color: CurveWithCDF, sharpness: f32, sidedness: Sidedness) -> SharpLight {
+    pub fn new(
+        bounce_color: Curve,
+        emit_color: CurveWithCDF,
+        sharpness: f32,
+        sidedness: Sidedness,
+    ) -> SharpLight {
         SharpLight {
             bounce_color,
             emit_color,
@@ -53,8 +57,30 @@ fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
     (dist_top - dist_bottom) / (2.0 * PI)
 }
 
-impl Material for SharpLight {
-    // don't implement the other functions, since the fallback default implementation does the exact same thing
+impl Material<f32, f32> for SharpLight {
+    #[allow(unused_variables)]
+    fn bsdf(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        wi: Vec3,
+        wo: Vec3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
+        todo!()
+    }
+
+    #[allow(unused_variables)]
+    fn generate_and_evaluate(
+        &self,
+        lambda: f32,
+        uv: (f32, f32),
+        transport_mode: TransportMode,
+        s: Sample2D,
+        wi: Vec3,
+    ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
+        todo!()
+    }
 
     fn sample_emission(
         &self,
@@ -63,7 +89,12 @@ impl Material for SharpLight {
         wavelength_range: Bounds1D,
         mut scatter_sample: Sample2D,
         wavelength_sample: Sample1D,
-    ) -> Option<(Ray, SingleWavelength, PDF, PDF)> {
+    ) -> Option<(
+        Ray,
+        SingleWavelength,
+        PDF<f32, SolidAngle>,
+        PDF<f32, Uniform01>,
+    )> {
         // wo localized to point and normal
         let mut swap = false;
         if self.sidedness == Sidedness::Reverse {
@@ -99,37 +130,24 @@ impl Material for SharpLight {
             .normalized();
         // let directional_pdf = local_wo.z().abs() / PI;
         // debug_assert!(directional_pdf > 0.0, "{:?} {:?}", local_wo, object_wo);
-        let (sw, pdf) = self
+        let (sw, wavelength_pdf) = self
             .emit_color
             .sample_power_and_pdf(wavelength_range, wavelength_sample);
         // fac both affects the power of the emitted light and the pdf.
         Some((
             Ray::new(point, object_wo),
-            sw.with_energy(sw.energy * fac),
+            sw.replace_energy(sw.energy * fac),
             PDF::from(fac),
-            pdf,
+            wavelength_pdf,
         ))
     }
-
-    fn sample_emission_spectra(
-        &self,
-        _uv: (f32, f32),
-        wavelength_range: Bounds1D,
-        wavelength_sample: Sample1D,
-    ) -> Option<(f32, PDF)> {
-        let (sw, pdf) = self
-            .emit_color
-            .sample_power_and_pdf(wavelength_range, wavelength_sample);
-        Some((sw.lambda, pdf))
-    }
-
     fn emission(
         &self,
         lambda: f32,
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         wi: Vec3,
-    ) -> SingleEnergy {
+    ) -> f32 {
         // wi is in local space, and is normalized
         // lets check if it could have been constructed by sample_emission.
         let cosine = wi.z();
@@ -141,14 +159,15 @@ impl Material for SharpLight {
             if cosine > min_z {
                 // could have been generated
                 let fac = evaluate(wi, self.sharpness);
-                SingleEnergy::new(fac * self.emit_color.evaluate_power(lambda))
+                fac * self.emit_color.evaluate_power(lambda)
             } else {
-                SingleEnergy::ZERO
+                f32::ZERO
             }
         } else {
-            SingleEnergy::ZERO
+            f32::ZERO
         }
     }
+
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
         &self,
@@ -156,7 +175,7 @@ impl Material for SharpLight {
         _uv: (f32, f32),
         _transport_mode: TransportMode,
         wo: Vec3,
-    ) -> PDF {
+    ) -> PDF<f32, SolidAngle> {
         let cosine = wo.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
@@ -174,23 +193,120 @@ impl Material for SharpLight {
             0.0.into()
         }
     }
+
+    fn sample_emission_spectra(
+        &self,
+        _uv: (f32, f32),
+        wavelength_range: Bounds1D,
+        wavelength_sample: Sample1D,
+    ) -> Option<(f32, PDF<f32, Uniform01>)> {
+        let (sw, pdf) = self
+            .emit_color
+            .sample_power_and_pdf(wavelength_range, wavelength_sample);
+        Some((sw.lambda, pdf))
+    }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::curves;
-//     #[test]
-//     fn test_integral() {
-//         let light = SharpLight::new(curves::void(), 4.0, Sidedness::Forward);
-//         for _ in 0..10000 {
-//             let generated = light.sample_emission(
-//                 Point3::ORIGIN,
-//                 Vec3::Z,
-//                 curves::EXTENDED_VISIBLE_RANGE,
-//                 Sample2D::new_random_sample(),
-//                 Sample1D::new_random_sample(),
-//             );
-//         }
-//     }
-// }
+#[cfg(test)]
+mod test {
+    use minifb::WindowOptions;
+
+    use crate::{curves, tonemap::Clamp};
+
+    use super::*;
+
+    #[test]
+    fn test_sampling_direction() {
+        let light = SharpLight::new(
+            curves::void(),
+            curves::blackbody_curve(5000.0, 1.0).to_cdf(EXTENDED_VISIBLE_RANGE, 100),
+            1.0,
+            Sidedness::Forward,
+        );
+
+        let (width, height) = (500, 500);
+        let mut film = Film::new(width, height, XYZColor::BLACK);
+        for _ in 0..10000 {
+            let out = light.sample_emission(
+                Point3::ORIGIN,
+                Vec3::Z,
+                BOUNDED_VISIBLE_RANGE,
+                Sample2D::new_random_sample(),
+                Sample1D::new_random_sample(),
+            );
+            if let Some((ray, packet, solid_angle_pdf, wavelength_pdf)) = out {
+                let uv = direction_to_uv(ray.direction);
+                let p = (
+                    (uv.0 * width as f32) as usize,
+                    (uv.1 * height as f32) as usize,
+                );
+
+                let jacobian = (uv.1 * PI).sin().abs() * 2.0 * PI * PI;
+                let pixel = film.at(p.0, p.1);
+                film.write_at(
+                    p.0,
+                    p.1,
+                    pixel
+                        + SingleWavelength::new(
+                            packet.lambda,
+                            packet.energy / (*wavelength_pdf * *solid_angle_pdf / jacobian),
+                        )
+                        .into(),
+                );
+            }
+        }
+        let mut tonemapper = Clamp::new(0.0, true, true);
+        let mut total_samples = 10000;
+        let samples_per_iteration = 1000;
+        window_loop(
+            width,
+            height,
+            144,
+            WindowOptions::default(),
+            true,
+            |_, mut window_buffer, width, height| {
+                for _ in 0..samples_per_iteration {
+                    let out = light.sample_emission(
+                        Point3::ORIGIN,
+                        Vec3::Z,
+                        EXTENDED_VISIBLE_RANGE,
+                        Sample2D::new_random_sample(),
+                        Sample1D::new_random_sample(),
+                    );
+                    if let Some((ray, packet, solid_angle_pdf, wavelength_pdf)) = out {
+                        // let sample = Sample2D::new_random_sample();
+
+                        let uv = direction_to_uv(ray.direction);
+                        let p = (
+                            (uv.0 * width as f32) as usize,
+                            (uv.1 * height as f32) as usize,
+                        );
+
+                        let jacobian = (uv.1 * PI).sin().abs() * 2.0 * PI * PI;
+                        let pixel = film.at(p.0, p.1);
+                        film.write_at(
+                            p.0,
+                            p.1,
+                            pixel
+                                + SingleWavelength::new(
+                                    packet.lambda,
+                                    packet.energy / (*wavelength_pdf * *solid_angle_pdf / jacobian),
+                                )
+                                .into(),
+                        );
+                        total_samples += 1;
+                    }
+                }
+
+                let factor = 1.0 / ((total_samples as f32).sqrt() + 1.0);
+                update_window_buffer(
+                    &mut window_buffer,
+                    &film,
+                    &mut tonemapper,
+                    Converter::sRGB,
+                    factor,
+                );
+            },
+        );
+    }
+}

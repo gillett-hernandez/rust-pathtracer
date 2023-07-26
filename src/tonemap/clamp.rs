@@ -1,13 +1,7 @@
-use crate::curves::mauve;
-use crate::renderer::Film;
-use math::{SpectralPowerDistributionFunction, XYZColor, INFINITY};
-
-use nalgebra::{Matrix3, Vector3};
-use packed_simd::f32x4;
-
-use std::time::Instant;
-
 use super::Tonemapper;
+use crate::prelude::*;
+
+use packed_simd::f32x4;
 
 #[derive(Clone, Debug)]
 pub struct Clamp {
@@ -69,9 +63,9 @@ impl Tonemapper for Clamp {
 
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
 
-        let avg_luminance = total_luminance / (total_pixels as f32);
+        let _avg_luminance = total_luminance / (total_pixels as f32);
         if !self.silenced {
-            info!("dynamic range is {}", dynamic_range);
+            info!("dynamic range is {} dB", dynamic_range);
             info!(
                 "max luminance occurred at {}, {}, is {}",
                 max_lum_xy.0, max_lum_xy.1, max_luminance
@@ -85,7 +79,7 @@ impl Tonemapper for Clamp {
     fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1) * self.factor;
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
-            cie_xyz_color = crate::MAUVE;
+            cie_xyz_color = MAUVE;
         }
 
         let exposure_mult = 2.0f32.powf(self.exposure);
@@ -105,5 +99,8 @@ impl Tonemapper for Clamp {
                 .min(f32x4::splat(1.0))
                 .max(f32x4::splat(0.0))
         }
+    }
+    fn get_name(&self) -> &str {
+        "clamp"
     }
 }

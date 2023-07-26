@@ -1,8 +1,13 @@
+#![feature(fs_try_exists)]
 extern crate rust_pathtracer as root;
 
 use log::LevelFilter;
+use root::parsing::cameras::parse_config_and_cameras;
+// use root::prelude::*;
 use root::parsing::config::*;
 use root::parsing::construct_world;
+use root::parsing::get_settings;
+use root::renderer::TiledRenderer;
 use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
 
@@ -14,6 +19,7 @@ extern crate simplelog;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 
 use std::error::Error;
+use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -33,6 +39,10 @@ struct Opt {
     pub config_file: String,
     #[structopt(short = "n", long)]
     pub dry_run: bool,
+    #[structopt(short = "pll", long, default_value = "warn")]
+    pub print_log_level: String,
+    #[structopt(short = "wll", long, default_value = "info")]
+    pub write_log_level: String,
 }
 
 fn construct_scene(config: &Config) -> Result<World, Box<dyn Error>> {
@@ -43,26 +53,42 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     match config.renderer {
         RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
         RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
+        RendererType::Tiled {
+            tile_size: (width, height),
+        } => Box::new(TiledRenderer::new(width, height)),
+    }
+}
+
+fn parse_log_level(level: String, default: LevelFilter) -> LevelFilter {
+    match level.to_lowercase().as_str() {
+        "warn" => LevelFilter::Warn,
+        "info" => LevelFilter::Info,
+        "trace" => LevelFilter::Trace,
+        "error" => LevelFilter::Error,
+        "debug" => LevelFilter::Debug,
+        _ => default,
     }
 }
 
 fn main() {
+    let opts = Opt::from_args();
+    let term_log_level = parse_log_level(opts.print_log_level, LevelFilter::Warn);
+    let write_log_level = parse_log_level(opts.write_log_level, LevelFilter::Info);
+
     CombinedLogger::init(vec![
         TermLogger::new(
-            LevelFilter::Warn,
+            term_log_level,
             simplelog::Config::default(),
             TerminalMode::Mixed,
             ColorChoice::Auto,
         ),
         WriteLogger::new(
-            LevelFilter::Info,
+            write_log_level,
             simplelog::Config::default(),
             File::create("main.log").unwrap(),
         ),
     ])
     .unwrap();
-
-    let opts = Opt::from_args();
     let mut config: TOMLConfig = match get_settings(opts.config_file) {
         Ok(expr) => expr,
         Err(v) => {
@@ -84,7 +110,7 @@ fn main() {
 
     // override scene file based on provided command line argument
     config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
-    let (config, cameras) = parse_cameras_from(config);
+    let (config, cameras) = parse_config_and_cameras(config);
     let world = construct_scene(&config);
     if world.is_err() {
         error!(
@@ -96,10 +122,17 @@ fn main() {
 
     #[cfg(all(target_os = "windows", feature = "notification"))]
     let time = Instant::now();
+
+    println!("constructing renderer");
+    if !matches!(fs::try_exists("output"), Ok(true)) {
+        fs::create_dir("output")
+            .expect("failed to create output directory. please create it manually");
+    }
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
 
     if !opts.dry_run {
         renderer.render(world.unwrap(), cameras, &config);
+        println!("render done");
     }
 
     #[cfg(all(target_os = "windows", feature = "notification"))]

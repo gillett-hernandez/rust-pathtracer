@@ -12,10 +12,20 @@ strength = 1.0
 type = "Flat"
 strength = 1.0
 
+[E5]
+type = "Flat"
+strength = 5.0
 
 [E10]
 type = "Flat"
 strength = 10.0
+
+[540THz]
+type = "SimpleSpike"
+strength = 1.0
+lambda = 555.17
+left_taper = 1.0
+right_taper = 1.0
 
 [flat_zero]
 type = "Flat"
@@ -77,6 +87,31 @@ type = "TabulatedCSV"
 filename = "data/curves/csv/cornell.csv"
 column = 3
 interpolation_mode = "Cubic"
+
+[simple_blue]
+type = "SimpleSpike"
+lambda= 450.0
+left_taper= 50.0
+right_taper= 50.0
+strength= 0.55
+
+
+[simple_sky_blue]
+type = "SimpleSpike"
+lambda= 500.0
+left_taper= 100.0
+right_taper= 100.0
+strength= 0.55
+
+
+[simple_yellow]
+type = "SimpleSpike"
+lambda= 600.0
+left_taper= 50.0
+right_taper= 50.0
+strength= 0.55
+
+
 
 [blackbody_5000k]
 type = "Blackbody"
