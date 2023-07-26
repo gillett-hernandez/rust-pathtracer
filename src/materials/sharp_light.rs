@@ -67,7 +67,7 @@ impl Material<f32, f32> for SharpLight {
         wi: Vec3,
         wo: Vec3,
     ) -> (f32, PDF<f32, SolidAngle>) {
-        todo!()
+        (0.0, 0.0.into())
     }
 
     #[allow(unused_variables)]
@@ -79,7 +79,7 @@ impl Material<f32, f32> for SharpLight {
         s: Sample2D,
         wi: Vec3,
     ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {
-        todo!()
+        (0.0, None, 0.0.into())
     }
 
     fn sample_emission(

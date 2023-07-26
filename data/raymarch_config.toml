@@ -2,7 +2,7 @@ default_scene_file = "data/scenes/raymarch.toml"
 
 
 [[cameras]]
-type="SimpleCamera"
+type = "SimpleCamera"
 name = "distant camera"
 look_from = [-100, 0, 0]
 look_at = [0, 0, 0]
@@ -10,7 +10,7 @@ aperture_size = 0.03
 vfov = 20
 
 [[cameras]]
-type="SimpleCamera"
+type = "SimpleCamera"
 name = "simple camera"
 look_from = [-5, 0, 0]
 look_at = [0, 0, 0]
@@ -21,7 +21,7 @@ vfov = 70.4
 
 [renderer]
 # type="Naive"
-type="Preview"
+type = "Preview"
 selected_preview_film_id = 0
 
 [[render_settings]]
@@ -45,7 +45,7 @@ luminance_only = false
 [render_settings.integrator]
 type = "PT"
 light_samples = 2
+medium_aware = false
 [render_settings.resolution]
 width = 1024
 height = 1024
-

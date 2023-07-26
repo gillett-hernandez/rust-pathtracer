@@ -34,9 +34,9 @@ use win32_notification::NotificationBuilder;
 #[structopt(rename_all = "kebab-case")]
 struct Opt {
     #[structopt(long)]
-    pub scene_file: Option<String>,
+    pub scene: Option<String>,
     #[structopt(long, default_value = "data/config.toml")]
-    pub config_file: String,
+    pub config: String,
     #[structopt(short = "n", long)]
     pub dry_run: bool,
     #[structopt(short = "pll", long, default_value = "warn")]
@@ -89,7 +89,7 @@ fn main() {
         ),
     ])
     .unwrap();
-    let mut config: TOMLConfig = match get_settings(opts.config_file) {
+    let mut config: TOMLConfig = match get_settings(opts.config) {
         Ok(expr) => expr,
         Err(v) => {
             error!("couldn't read config.toml, {:?}", v);
@@ -109,7 +109,7 @@ fn main() {
         .unwrap();
 
     // override scene file based on provided command line argument
-    config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
+    config.default_scene_file = opts.scene.unwrap_or(config.default_scene_file);
     let (config, cameras) = parse_config_and_cameras(config);
     let world = construct_scene(&config);
     if world.is_err() {

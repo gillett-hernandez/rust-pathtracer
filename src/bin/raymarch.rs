@@ -9,18 +9,28 @@ use std::ops::{Add, Div, Mul, Neg, RangeInclusive, Sub};
 
 use log_once::warn_once;
 use math::curves::*;
-use math::spectral::BOUNDED_VISIBLE_RANGE;
+use math::prelude::{direction_to_uv, Point3, XYZColor};
+use math::ray::Ray;
+use math::sample::{RandomSampler, Sampler};
+use math::spectral::{SingleWavelength, WavelengthEnergyTrait, BOUNDED_VISIBLE_RANGE};
 use math::*;
 
+use math::tangent_frame::TangentFrame;
+use math::vec::Vec3;
+use packed_simd::f32x4;
 use pbr::ProgressBar;
 use root::camera::ProjectiveCamera;
 use root::hittable::{HasBoundingBox, AABB};
 use root::parsing::tonemap::TonemapSettings;
-use root::parsing::{config::*, construct_world, load_scene, parse_tonemapper};
+use root::parsing::{
+    config::*, construct_world, get_settings, load_scene, parse_config_and_cameras,
+    parse_tonemapper,
+};
+use root::prelude::Camera;
 use root::renderer::{output_film, Film};
 use root::rgb_to_u32;
 use root::tonemap::{Clamp, Converter, Tonemapper};
-use root::world::{EnvironmentMap, Material, MaterialEnum, TransportMode, NORMAL_OFFSET};
+use root::world::{EnvironmentMap, Material, MaterialEnum};
 use root::*;
 
 use log::LevelFilter;
@@ -65,7 +75,7 @@ fn deconvert(v: uvVec3) -> f32x4 {
 #[structopt(rename_all = "kebab-case")]
 struct Opt {
     #[structopt(long, default_value = "data/raymarch_config.toml")]
-    pub config_file: String,
+    pub config: String,
     #[structopt(short = "n", long)]
     pub dry_run: bool,
 }
@@ -280,8 +290,8 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
         sampler: &mut Box<dyn Sampler>,
         printout: bool,
     ) -> XYZColor {
-        let mut throughput = SingleEnergy(1.0);
-        let mut sum = SingleEnergy(0.0);
+        let mut throughput = 1.0;
+        let mut sum = 0.0;
         let mut flipped_sdf = false;
         let mut last_bsdf_pdf = 0.0;
         for bounce in 0..bounces {
@@ -300,7 +310,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
 
                     let emission =
                         material.emission(lambda, (0.0, 0.0), TransportMode::Importance, wi);
-                    if emission.0 > 0.0 {
+                    if emission > 0.0 {
                         // do MIS based on last_bsdf_pdf
                         sum += throughput * emission * if true { wi.z().abs() } else { 1.0 };
                     }
@@ -327,11 +337,11 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                             if printout {
                                 println!("{:?} {:?}", f, pdf);
                             }
-                            if pdf.is_nan() || pdf.0 == 0.0 {
+                            if pdf.is_nan() || *pdf == 0.0 {
                                 break;
                             }
-                            throughput *= wo.z().abs() * f / pdf.0;
-                            if throughput.0 == 0.0 {
+                            throughput *= wo.z().abs() * f / *pdf;
+                            if throughput == 0.0 {
                                 break;
                             }
                             r = Ray::new(
@@ -344,7 +354,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                             }
                         }
                         None => {
-                            warn_once!("didn't bounce at {:?}", point);
+                            warn_once!("didn't bounce");
                             break;
                         }
                     }
@@ -365,7 +375,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
     }
 }
 
-macro_rules! find_material {
+macro_rules! find_and_add_material {
     ($world: expr, $materials:expr, $scrutinee: pat) => {
         $world
             .materials
@@ -398,8 +408,8 @@ fn main() {
 
     let opt = Opt::from_args();
 
-    let settings = get_settings(opt.config_file).unwrap();
-    let (config, cameras) = parse_cameras_from(settings);
+    let settings = get_settings(opt.config).unwrap();
+    let (config, cameras) = parse_config_and_cameras(settings);
     let render_settings = &config.render_settings[0];
     let (width, height) = (
         render_settings.resolution.width,
@@ -416,7 +426,9 @@ fn main() {
     //     0.0,
     //     1.0,
     // )
-    let camera = cameras[0].with_aspect_ratio(height as f32 / width as f32);
+    let camera = cameras[0]
+        .clone()
+        .with_aspect_ratio(height as f32 / width as f32);
 
     let world = construct_world(config.scene_file).unwrap();
 
@@ -429,9 +441,10 @@ fn main() {
     // and you need to assign by finding that material through its type information here.
     // for more details, look at the definition of the find_material macro
 
-    find_material!(world, material_map, MaterialEnum::Lambertian(_));
-    find_material!(world, material_map, MaterialEnum::GGX(_));
-    find_material!(world, material_map, MaterialEnum::SharpLight(_));
+    find_and_add_material!(world, material_map, MaterialEnum::Lambertian(_));
+    find_and_add_material!(world, material_map, MaterialEnum::GGX(_));
+    find_and_add_material!(world, material_map, MaterialEnum::DiffuseLight(_));
+    // find_and_add_material!(world, material_map, MaterialEnum::SharpLight(_));
 
     let env_map = world.environment;
 
@@ -454,6 +467,11 @@ fn main() {
         ),
         1,
     );
+
+    // let subject = TaggedSDF::new(
+    //     sdfu::,
+    //     1,
+    // );
     let local_light = TaggedSDF::new(
         sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 2.0, 2.0))),
         2,
@@ -568,12 +586,14 @@ fn main() {
             }
             pb.finish();
         }
+        RendererType::Tiled { tile_size } => {}
         RendererType::Preview { .. } => {
             root::window_loop(
                 width,
                 height,
                 144,
                 WindowOptions::default(),
+                true,
                 |_, film, width, height| {
                     render_film
                         .buffer
