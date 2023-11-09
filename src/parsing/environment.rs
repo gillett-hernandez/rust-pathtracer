@@ -96,7 +96,7 @@ pub fn parse_environment(
                     TexStack {
                         textures: vec![Texture::Texture1(Texture1 {
                             curve: error_color.to_cdf(BOUNDED_VISIBLE_RANGE, 100),
-                            texture: Film::new(1, 1, 1.0),
+                            texture: Vec2D::new(1, 1, 1.0),
                             interpolation_mode: InterpolationMode::Linear,
                         })],
                     }

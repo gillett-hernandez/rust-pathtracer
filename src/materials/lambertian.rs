@@ -74,7 +74,7 @@ mod test {
     use math::curves::InterpolationMode;
     use math::spectral::BOUNDED_VISIBLE_RANGE;
 
-    use crate::renderer::Film;
+    use crate::renderer::Vec2D;
     use crate::texture::{Texture, Texture1};
 
     use super::*;
@@ -88,7 +88,7 @@ mod test {
         let cdf = flat.to_cdf(BOUNDED_VISIBLE_RANGE, 5);
         let tex = Texture1 {
             curve: cdf,
-            texture: Film::new(1, 1, 1.0),
+            texture: Vec2D::new(1, 1, 1.0),
             interpolation_mode: InterpolationMode::Linear,
         };
         let color = TexStack {

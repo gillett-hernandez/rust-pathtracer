@@ -11,7 +11,7 @@ extern crate minifb;
 
 use minifb::{Key, Window, WindowOptions};
 use rayon::prelude::*;
-use renderer::Film;
+use renderer::Vec2D;
 use tonemap::{Converter, Tonemapper};
 
 use math::{
@@ -74,7 +74,7 @@ pub fn window_loop<F>(
         (1000000 / max_framerate) as u64,
     )));
 
-    let mut film = Film::new(width, height, 0u32);
+    let mut film = Vec2D::new(width, height, 0u32);
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if clear_buffer {
             film.buffer.fill(0u32);
@@ -89,7 +89,7 @@ pub fn window_loop<F>(
 
 pub fn update_window_buffer(
     buffer: &mut [u32],
-    film: &Film<XYZColor>,
+    film: &Vec2D<XYZColor>,
     tonemapper: &mut dyn Tonemapper,
     converter: Converter,
     factor: f32,

@@ -7,8 +7,8 @@ env_sampling_probability = 0.5
 [environment]
 type = "HDRI"
 strength = 1.0
-# texture_name = "sunny_vondelpark_8k"
-texture_name = "machine_shop_4k"
+texture_name = "sunny_vondelpark_8k"
+# texture_name = "machine_shop_4k"
 # [environment]
 # type="Sun"
 # sun_direction=[0, 0, 1]
@@ -18,8 +18,8 @@ texture_name = "machine_shop_4k"
 
 # instances are ignored
 [[instances]]
-# material_name = "ggx_gold"
-material_name = "ggx_glass_dispersive"
+material_name = "ggx_gold"
+# material_name = "ggx_glass_dispersive"
 [instances.aggregate]
 type = "Sphere"
 radius = 1.0
@@ -27,7 +27,7 @@ origin = [0.0, 0.0, 0.0]
 
 # instances are ignored
 [[instances]]
-material_name = "blackbody_5000k"
+material_name = "diffuse_light"
 # material_name = "sharp_light_xenon"
 [instances.aggregate]
 type = "Sphere"

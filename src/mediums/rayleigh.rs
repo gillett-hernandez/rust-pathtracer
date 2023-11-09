@@ -136,7 +136,7 @@ mod test {
         let height = 500usize;
         let bounds = BOUNDED_VISIBLE_RANGE;
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let a = 1.0002724293f32;
         let b = 1.64748969205f32;

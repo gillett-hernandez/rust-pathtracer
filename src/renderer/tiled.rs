@@ -40,7 +40,7 @@ pub enum TileStatus {
 pub struct Tile<T> {
     status: Arc<Mutex<TileStatus>>,
     data: Arc<RwLock<*mut T>>,
-    preview_copy: Arc<RwLock<Option<Film<T>>>>,
+    preview_copy: Arc<RwLock<Option<Vec2D<T>>>>,
     width: u16,
     pub horizontal_span: (u16, u16),
     pub vertical_span: (u16, u16),
@@ -172,7 +172,7 @@ impl Iterator for TileIndicesIter {
 }
 
 pub struct Tiles<'a> {
-    film: &'a mut Film<XYZColor>,
+    film: &'a mut Vec2D<XYZColor>,
     tiles: Vec<Tile<XYZColor>>,
 }
 
@@ -187,7 +187,7 @@ impl TiledRenderer {
     pub fn generate_tiles<'a, 'b>(
         &'a self,
         film_size: (usize, usize),
-        film: &'b mut Film<XYZColor>,
+        film: &'b mut Vec2D<XYZColor>,
     ) -> Tiles<'b> {
         let ptr = film.buffer.as_mut_ptr();
         let tile_size = self.tile_size;
@@ -278,7 +278,7 @@ impl TiledRenderer {
         mut integrator: I,
         settings: &RenderSettings,
         _camera: &CameraEnum,
-    ) -> Film<XYZColor> {
+    ) -> Vec2D<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
         warn!("starting render with film resolution {}x{}", width, height);
         let min_camera_rays = width * height * settings.min_samples as usize;
@@ -290,7 +290,7 @@ impl TiledRenderer {
 
         let now = Instant::now();
 
-        let mut film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
+        let mut film: Vec2D<XYZColor> = Vec2D::new(width, height, XYZColor::BLACK);
 
         let mut pb = ProgressBar::new((width * height) as u64);
 
@@ -328,7 +328,7 @@ impl TiledRenderer {
                             // let mut locked = tile_statuses[tile_index].write().unwrap();
                             let mut locked = tile.status.lock().unwrap();
                             *locked = TileStatus::InProgress;
-                            *tile.preview_copy.write().unwrap() = Some(Film::new(
+                            *tile.preview_copy.write().unwrap() = Some(Vec2D::new(
                                 (tile.horizontal_span.1 - tile.horizontal_span.0) as usize,
                                 (tile.vertical_span.1 - tile.vertical_span.0) as usize,
                                 XYZColor::BLACK,
@@ -542,7 +542,7 @@ impl TiledRenderer {
         integrator: I,
         renders: Vec<RenderSettings>,
         _cameras: Vec<CameraEnum>,
-    ) -> Vec<(RenderSettings, Film<XYZColor>)> {
+    ) -> Vec<(RenderSettings, Vec2D<XYZColor>)> {
         vec![]
     }
 }
@@ -668,7 +668,7 @@ mod test {
     use super::*;
     #[test]
     fn test_generate_tiles() {
-        let mut film = Film::new(1920, 1080, XYZColor::BLACK);
+        let mut film = Vec2D::new(1920, 1080, XYZColor::BLACK);
         let renderer = TiledRenderer::new(64, 64);
 
         let tiles = renderer.generate_tiles((film.width, film.height), &mut film);
@@ -684,7 +684,6 @@ mod test {
     // use rand::random;
 
     // use crate::tonemap::Clamp;
-    
 
     // #[test]
     // fn test_parallel_unsafe_access() {

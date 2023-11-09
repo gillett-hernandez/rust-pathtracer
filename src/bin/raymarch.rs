@@ -27,7 +27,7 @@ use root::parsing::{
     parse_tonemapper,
 };
 use root::prelude::Camera;
-use root::renderer::{output_film, Film};
+use root::renderer::{output_film, Vec2D};
 use root::rgb_to_u32;
 use root::tonemap::{Clamp, Converter, Tonemapper};
 use root::world::{EnvironmentMap, Material, MaterialEnum};
@@ -152,19 +152,50 @@ impl<S1: SDF<f32, uvVec3> + MaterialTag, S2: SDF<f32, uvVec3> + MaterialTag> Mat
     for Union<f32, S1, S2, HardMin<f32>>
 {
     fn material(&self, p: uvVec3) -> usize {
-        // let minfunc = self.min_func;
-        // minfunc.
         let d0 = self.sdf1.dist(p);
         let d1 = self.sdf2.dist(p);
         match d0.partial_cmp(&d1) {
             Some(Ordering::Less) => self.sdf1.material(p),
             Some(Ordering::Greater) => self.sdf2.material(p),
-            Some(Ordering::Equal) => {
+            _ => {
                 // just choose one?
                 self.sdf1.material(p)
             }
-            None => unreachable!(),
         }
+    }
+}
+
+#[derive(Copy, Clone)]
+struct Mandlebulb {
+    pub max_iterations: u32,
+}
+
+impl SDF<f32, uvVec3> for Mandlebulb {
+    #[inline]
+    fn dist(&self, p: uvVec3) -> f32 {
+        let mut dz = 1.0;
+        let mut last_p = uvVec3::new(0.0, 0.0, 0.0) + p;
+        let mut mag = last_p.mag();
+        for _ in 0..self.max_iterations {
+            let mut distance = mag;
+            let mut zenithal = (last_p.z / distance).acos();
+            let mut azimuthal = last_p.y.atan2(last_p.x);
+
+            // println!("{} {} {}", distance, zenithal, azimuthal);
+            dz = 8.0 * mag.powi(7) * dz + 1.0;
+            zenithal *= 8.0;
+            azimuthal *= 8.0;
+            distance = distance.powi(8);
+            let (z_s, z_c) = zenithal.sin_cos();
+            let (a_s, a_c) = azimuthal.sin_cos();
+            last_p = uvVec3::new(distance * a_c * z_s, distance * a_s * z_s, distance * z_c) + p;
+            mag = last_p.mag();
+            if mag * mag > 256.0 {
+                break;
+            }
+        }
+
+        0.5 * mag.ln() * mag / dz
     }
 }
 
@@ -304,6 +335,8 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                     if printout {
                         println!("b{} = {:?}, {:?}, {}", bounce, point, normal, material);
                     }
+
+                    assert!(normal.is_finite(), "{:?}", normal);
                     let frame = TangentFrame::from_normal(normal);
                     let wi = frame.to_local(&-r.direction);
                     let material = &self.materials[material];
@@ -322,6 +355,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                         sampler.draw_2d(),
                         wi,
                     );
+                    assert!(wo.map(|e| e.is_finite()).unwrap_or(true), "{:?}", wo);
                     if printout {
                         println!("wi {:?}, wo {:?}", wi, wo);
                     }
@@ -348,6 +382,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                                 point + normal * NORMAL_OFFSET * wo.z().signum(),
                                 frame.to_world(&wo).normalized(),
                             );
+                            assert!(r.direction.is_finite(), "{:?}", r.direction);
                             if wo.z() * wi.z() < 0.0 {
                                 // flipped inside of a material, thus invert the sdf until we do this again.
                                 flipped_sdf = !flipped_sdf;
@@ -409,6 +444,7 @@ fn main() {
     let opt = Opt::from_args();
 
     let settings = get_settings(opt.config).unwrap();
+
     let (config, cameras) = parse_config_and_cameras(settings);
     let render_settings = &config.render_settings[0];
     let (width, height) = (
@@ -416,6 +452,15 @@ fn main() {
         render_settings.resolution.height,
     );
 
+    let threads = config
+        .render_settings
+        .iter()
+        .map(|i| &i.threads)
+        .fold(1, |a, &b| a.max(b.unwrap_or(1)));
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(threads as usize)
+        .build_global()
+        .unwrap();
     // let camera = ProjectiveCamera::new(
     //     Point3::new(-5.0, 0.0, 0.0),
     //     Point3::ORIGIN,
@@ -460,30 +505,32 @@ fn main() {
     world_aabb.grow_mut(&min);
     world_aabb.grow_mut(&max);
 
-    let subject = TaggedSDF::new(
-        sdfu::Sphere::new(1.0).union_smooth(
-            sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 0.0, 1.0))),
-            0.3,
-        ),
-        1,
-    );
-
     // let subject = TaggedSDF::new(
-    //     sdfu::,
+    //     sdfu::Sphere::new(1.0).union_smooth(
+    //         sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 0.0, 1.0))),
+    //         0.3,
+    //     ),
     //     1,
     // );
-    let local_light = TaggedSDF::new(
-        sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 2.0, 2.0))),
-        2,
-    );
+
+    let subject = TaggedSDF::new(Mandlebulb { max_iterations: 8 }.scale(1.0), 1);
+    let scene_sdf = subject;
+
+    println!("{}", subject.dist(uvVec3::new(1.0, 1.0, 1.0)));
+    // return;
+
+    // let local_light = TaggedSDF::new(
+    //     sdfu::Sphere::new(1.0).translate(convert(Vec3::new(0.0, 2.0, 2.0))),
+    //     2,
+    // );
+    // let scene_sdf = scene_sdf.union(local_light);
 
     let ground = TaggedSDF::new(
         sdfu::Box::new(convert(Vec3::new(10.0, 10.0, 0.1)))
             .translate(convert(Vec3::new(0.0, 0.0, -2.0))),
         0,
     );
-
-    let scene_sdf = subject.union(local_light).union(ground);
+    let scene_sdf = scene_sdf.union(ground);
 
     let scene = Scene {
         // primitives,
@@ -502,7 +549,7 @@ fn main() {
         .map(|e| e.into())
         .unwrap_or(BOUNDED_VISIBLE_RANGE);
 
-    let mut render_film = Film::new(width, height, XYZColor::BLACK);
+    let mut render_film = Vec2D::new(width, height, XYZColor::BLACK);
 
     // let converter = Converter::sRGB;
 

@@ -281,7 +281,7 @@ mod test {
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
-    use crate::renderer::Film;
+    use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
     use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
 
@@ -293,7 +293,7 @@ mod test {
 
     #[test]
     fn test_raw_importance_map() {
-        let mut film = Film::new(512, 512, 0.0f32);
+        let mut film = Vec2D::new(512, 512, 0.0f32);
 
         for (idx, pixel) in film.buffer.iter_mut().enumerate() {
             let (x, y) = (idx % film.width, (idx / film.width));
@@ -335,7 +335,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let converter = Converter::sRGB;
 
@@ -450,7 +450,7 @@ mod test {
                 panic!("{}", e);
             });
             let mut buffer = vec![0u32; limit];
-            let mut film = Film::new(width, height, XYZColor::BLACK);
+            let mut film = Vec2D::new(width, height, XYZColor::BLACK);
             let converter = Converter::sRGB;
 
             let mut tonemapper = Clamp::new(0.0, true, true);
@@ -575,7 +575,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
@@ -741,7 +741,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
@@ -843,8 +843,8 @@ mod test {
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
-        let mut sample_squared_film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+        let mut sample_squared_film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let variance_fraction = 0.1;
 

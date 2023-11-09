@@ -12,18 +12,17 @@ vfov = 20
 [[cameras]]
 type = "SimpleCamera"
 name = "simple camera"
-look_from = [-5, 0, 0]
+look_from = [5, 0, 0]
 look_at = [0, 0, 0]
 aperture_size = 0.04
 focal_distance = 5.0
-vfov = 70.4
+vfov = 35.4
 
 
 [renderer]
 # type="Naive"
 type = "Preview"
 selected_preview_film_id = 0
-
 [[render_settings]]
 threads = 22
 filename = "raymarch test"

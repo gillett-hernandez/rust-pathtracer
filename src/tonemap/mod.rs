@@ -39,9 +39,9 @@ pub trait Tonemapper: Send + Sync {
     // factor in `initialize` is a prefactor weight on the film contents.
     // a tonemapper should initialize based on the film x scale_factor
     // and should premultiply the film values when tonemapping through `map`
-    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32);
+    fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32);
     // should tonemap a pixel from hdr to ldr
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4;
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> f32x4;
     fn get_name(&self) -> &str;
 }
 
@@ -74,7 +74,7 @@ impl Converter {
 
     pub fn write_to_files(
         &self,
-        film: &Film<XYZColor>,
+        film: &Vec2D<XYZColor>,
         tonemapper: &Box<dyn Tonemapper>,
         factor: f32,
         exr_filename: &str,
@@ -142,7 +142,7 @@ mod test {
             Box::new(Reinhard1x3::new(0.18, 10.0, false)),
         ];
 
-        let mut film = Film::new(1024, 1024, XYZColor::BLACK);
+        let mut film = Vec2D::new(1024, 1024, XYZColor::BLACK);
 
         // estimated total energy per pixel is proportional to num_samples
         println!("adding {} samples per pixel", num_samples as usize);

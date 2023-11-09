@@ -23,7 +23,7 @@ impl Reinhard0 {
 }
 
 impl Tonemapper for Reinhard0 {
-    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
+    fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
         let mut max_lum_xy = (0, 0);
@@ -85,7 +85,7 @@ impl Tonemapper for Reinhard0 {
         }
         self.l_w = Some(l_w)
     }
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);
         let lum = cie_xyz_color.y();
 
@@ -128,7 +128,7 @@ impl Reinhard0x3 {
 }
 
 impl Tonemapper for Reinhard0x3 {
-    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
+    fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
         let mut max_lum_xy = (0, 0);
@@ -192,7 +192,7 @@ impl Tonemapper for Reinhard0x3 {
         }
         self.l_w = Some(l_w)
     }
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         // TODO: determine whether applying this per channel in xyz space is adequate,
         // or if this needs to be applied in sRGB linear or cie RGB space.
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);

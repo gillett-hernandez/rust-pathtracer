@@ -5,13 +5,13 @@ use rust_pathtracer as root;
 use exr::prelude::*;
 use packed_simd::f32x4;
 use rayon::prelude::*;
-use root::renderer::Film;
+use root::renderer::Vec2D;
 use structopt::StructOpt;
 
-fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Film<f32x4>> {
+fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Vec2D<f32x4>> {
     read_first_rgba_layer_from_file(
         name,
-        |size, _| Film::new(size.0, size.1, f32x4::splat(0.0)),
+        |size, _| Vec2D::new(size.0, size.1, f32x4::splat(0.0)),
         |film, pos, (r, g, b, a)| {
             film.write_at(pos.0, pos.1, f32x4::new(r, g, b, a));
         },

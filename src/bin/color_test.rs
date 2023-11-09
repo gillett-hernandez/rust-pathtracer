@@ -120,11 +120,10 @@ impl Model {
                 }
                 Request::AppendIlluminant(new_illuminant) => {
                     self.illuminants.push(new_illuminant);
-                }
-                // Request::IlluminantsCount => self
-                //     .sender
-                //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
-                //     .unwrap(),
+                } // Request::IlluminantsCount => self
+                  //     .sender
+                  //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
+                  //     .unwrap(),
             }
         }
     }
@@ -264,7 +263,7 @@ impl eframe::App for Controller {
                 }
             }
 
-            use egui::plot::{Line, Plot, PlotPoints};
+            use egui::widgets::plot::{Line, Plot, PlotPoints};
             let n_samples = 100;
             let cloned = self.color.clone();
             let color = move |lambda: f64|{
@@ -360,7 +359,7 @@ impl eframe::App for Controller {
 }
 
 pub struct View {
-    film: Film<XYZColor>,
+    film: Vec2D<XYZColor>,
     buffer: Vec<u32>,
     window: Window,
     tonemapper: Box<dyn Tonemapper>,
@@ -369,7 +368,7 @@ pub struct View {
 
 impl View {
     pub fn new(width: usize, height: usize, tonemapper: Box<dyn Tonemapper>) -> Self {
-        let film = Film::new(width, height, XYZColor::BLACK);
+        let film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let mut window = Window::new(
             "Preview",

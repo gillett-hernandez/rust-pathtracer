@@ -23,7 +23,7 @@ impl Clamp {
 }
 
 impl Tonemapper for Clamp {
-    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
+    fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         self.factor = factor;
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
@@ -76,7 +76,7 @@ impl Tonemapper for Clamp {
             );
         }
     }
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> f32x4 {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1) * self.factor;
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
             cie_xyz_color = MAUVE;

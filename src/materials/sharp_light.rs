@@ -225,7 +225,7 @@ mod test {
         );
 
         let (width, height) = (500, 500);
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         for _ in 0..10000 {
             let out = light.sample_emission(
                 Point3::ORIGIN,

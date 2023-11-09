@@ -29,7 +29,7 @@ impl NaiveRenderer {
         mut integrator: I,
         settings: &RenderSettings,
         _camera: &CameraEnum,
-    ) -> Film<XYZColor> {
+    ) -> Vec2D<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
         warn!("starting render with film resolution {}x{}", width, height);
         let min_camera_rays = width * height * settings.min_samples as usize;
@@ -41,7 +41,7 @@ impl NaiveRenderer {
 
         let now = Instant::now();
 
-        let mut film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
+        let mut film: Vec2D<XYZColor> = Vec2D::new(width, height, XYZColor::BLACK);
 
         let mut pb = ProgressBar::new((width * height) as u64);
 
@@ -122,21 +122,21 @@ impl NaiveRenderer {
         mut integrator: I,
         renders: Vec<RenderSettings>,
         _cameras: Vec<CameraEnum>,
-    ) -> Vec<(RenderSettings, Film<XYZColor>)> {
+    ) -> Vec<(RenderSettings, Vec2D<XYZColor>)> {
         let now = Instant::now();
 
         let mut total_camera_samples = 0;
         let mut total_pixels = 0;
-        let mut films: Vec<(RenderSettings, Film<XYZColor>)> = Vec::new();
-        let light_films: Arc<Mutex<Vec<Film<XYZColor>>>> = Arc::new(Mutex::new(Vec::new()));
+        let mut films: Vec<(RenderSettings, Vec2D<XYZColor>)> = Vec::new();
+        let light_films: Arc<Mutex<Vec<Vec2D<XYZColor>>>> = Arc::new(Mutex::new(Vec::new()));
         for settings in renders.iter() {
             let (width, height) = (settings.resolution.width, settings.resolution.height);
             println!("starting render with film resolution {}x{}", width, height);
             let pixels = width * height;
             total_pixels += pixels;
             total_camera_samples += pixels * (settings.min_samples as usize);
-            let image_film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
-            let light_film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
+            let image_film: Vec2D<XYZColor> = Vec2D::new(width, height, XYZColor::BLACK);
+            let light_film: Vec2D<XYZColor> = Vec2D::new(width, height, XYZColor::BLACK);
             films.push((settings.clone(), image_film));
             light_films.lock().unwrap().push(light_film);
         }
@@ -254,7 +254,7 @@ impl NaiveRenderer {
             .par_iter_mut()
             .enumerate()
             .map(
-                |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Film<XYZColor>))| {
+                |(camera_id, (settings, film)): (usize, &mut (RenderSettings, Vec2D<XYZColor>))| {
                     // if let IntegratorKind::BDPT {
                     //     selected_pair: Some((s, t)),
                     // } = settings.integrator

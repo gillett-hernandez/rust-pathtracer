@@ -5,7 +5,7 @@ pub use crate::camera::{Camera, CameraEnum, CameraId};
 pub use crate::curves::*;
 pub use crate::geometry::InstanceId;
 pub use crate::materials::{Material, MaterialEnum, MaterialId, MediumId};
-pub use crate::renderer::Film;
+pub use crate::renderer::Vec2D;
 pub use crate::texture::TexStack;
 pub use crate::tonemap::{Converter, Tonemapper};
 pub use crate::{

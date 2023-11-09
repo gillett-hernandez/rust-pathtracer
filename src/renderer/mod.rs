@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-mod film;
+mod vec2d;
 mod prelude;
 
 // integrators
@@ -9,7 +9,7 @@ mod preview;
 // mod sppm;
 mod tiled;
 
-pub use film::Film;
+pub use vec2d::Vec2D;
 
 pub use naive::NaiveRenderer;
 pub use preview::PreviewRenderer;
@@ -23,7 +23,7 @@ use crate::world::World;
 
 use self::prelude::IntegratorKind;
 
-pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, factor: f32) {
+pub fn output_film(render_settings: &RenderSettings, film: &Vec2D<XYZColor>, factor: f32) {
     assert!(factor > 0.0);
     let filename = render_settings.filename.as_ref();
     let filename_str = filename.cloned().unwrap_or_else(|| String::from("beauty"));
