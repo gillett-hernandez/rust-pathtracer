@@ -301,97 +301,97 @@ impl eframe::App for Controller {
             }
 
             // unimplemented!();
-            // use egui::widgets::plot::{Line, Plot, PlotPoints};
-            // let n_samples = 100;
-            // let cloned = self.color.clone();
-            // let color = move |lambda: f64|{
-            //      cloned.evaluate(lambda as f32) as f64
-            // };
-            // let line = Line::new(PlotPoints::from_explicit_callback(color, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+            use egui_plot::{Line, Plot, PlotPoints};
+            let n_samples = 100;
+            let cloned = self.color.clone();
+            let color = move |lambda: f64|{
+                 cloned.evaluate(lambda as f32) as f64
+            };
+            let line = Line::new(PlotPoints::from_explicit_callback(color, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
 
-            // let response = Plot::new("color")
-            //     .include_x(self.wavelength_bounds.lower)
-            //     .include_x(self.wavelength_bounds.upper)
-            //     .include_y(0.0)
-            //     .include_y(1.0)
-            //     .view_aspect(2.0)
-            //     .show(ui, |plot_ui| {
-            //         plot_ui.line(line);
-            //         if plot_ui.plot_clicked() {
-            //             plot_ui.pointer_coordinate().map(|v| v.to_pos2())
-            //         } else {
-            //             None
-            //         }
-            //     });
+            let response = Plot::new("color")
+                .include_x(self.wavelength_bounds.lower)
+                .include_x(self.wavelength_bounds.upper)
+                .include_y(0.0)
+                .include_y(1.0)
+                .view_aspect(2.0)
+                .show(ui, |plot_ui| {
+                    plot_ui.line(line);
+                    if plot_ui.response().clicked() {
+                        plot_ui.pointer_coordinate().map(|v| v.to_pos2())
+                    } else {
+                        None
+                    }
+                });
 
-            // let mut color_dirty = false;
-            // if let Some(clicked_point) = response.inner {
-            //     if clicked_point.y >= 0.0 && self.wavelength_bounds.contains(&clicked_point.x) {
-            //         if let Curve::Tabulated { signal, .. } = &mut self.color {
-            //             let index = signal.partition_point(|(x, _)| *x < clicked_point.x);
-            //             signal.insert(index, (clicked_point.x, clicked_point.y.min(1.0)));
-            //             color_dirty = true;
-            //         }
-            //     }
-            // }
+            let mut color_dirty = false;
+            if let Some(clicked_point) = response.inner {
+                if clicked_point.y >= 0.0 && self.wavelength_bounds.contains(&clicked_point.x) {
+                    if let Curve::Tabulated { signal, .. } = &mut self.color {
+                        let index = signal.partition_point(|(x, _)| *x < clicked_point.x);
+                        signal.insert(index, (clicked_point.x, clicked_point.y.min(1.0)));
+                        color_dirty = true;
+                    }
+                }
+            }
 
-            // let response = ui.add(egui::Button::new("reset color"));
-            // if response.clicked() {
-            //     if let Curve::Tabulated { signal, .. } = &mut self.color {
-            //         signal.clear();
-            //         signal.push((self.wavelength_bounds.lower, 0.0));
-            //         signal.push((self.wavelength_bounds.upper, 0.0));
-            //     } else {
-            //         self.color = Curve::Tabulated {
-            //             signal: vec![
-            //                 (self.wavelength_bounds.lower, 0.0),
-            //                 (self.wavelength_bounds.upper, 0.0),
-            //             ],
-            //             mode: InterpolationMode::Cubic,
-            //         };
-            //     }
-            //     color_dirty = true;
-            // }
+            let response = ui.add(egui::Button::new("reset color"));
+            if response.clicked() {
+                if let Curve::Tabulated { signal, .. } = &mut self.color {
+                    signal.clear();
+                    signal.push((self.wavelength_bounds.lower, 0.0));
+                    signal.push((self.wavelength_bounds.upper, 0.0));
+                } else {
+                    self.color = Curve::Tabulated {
+                        signal: vec![
+                            (self.wavelength_bounds.lower, 0.0),
+                            (self.wavelength_bounds.upper, 0.0),
+                        ],
+                        mode: InterpolationMode::Cubic,
+                    };
+                }
+                color_dirty = true;
+            }
 
-            // if color_dirty {
-            //     println!("updating color data in model");
-            //     self.sender
-            //         .try_send(Request::ChangeColor(self.color.clone()))
-            //         .unwrap();
-            // }
+            if color_dirty {
+                println!("updating color data in model");
+                self.sender
+                    .try_send(Request::ChangeColor(self.color.clone()))
+                    .unwrap();
+            }
 
-            // let cloned = self.illuminant.clone();
-            // let illuminant = move |lambda: f64| {
-            //      cloned.evaluate(lambda as f32) as f64
-            // };
+            let cloned = self.illuminant.clone();
+            let illuminant = move |lambda: f64| {
+                 cloned.evaluate(lambda as f32) as f64
+            };
 
 
-            // let line = Line::new(PlotPoints::from_explicit_callback(illuminant, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
-            // Plot::new("illuminant")
-            //     .include_x(self.wavelength_bounds.lower)
-            //     .include_x(self.wavelength_bounds.upper)
-            //     .include_y(0.0)
-            //     .include_y(1.0)
-            //     .view_aspect(2.0)
-            //     .show(ui, |plot_ui| plot_ui.line(line));
+            let line = Line::new(PlotPoints::from_explicit_callback(illuminant, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+            Plot::new("illuminant")
+                .include_x(self.wavelength_bounds.lower)
+                .include_x(self.wavelength_bounds.upper)
+                .include_y(0.0)
+                .include_y(1.0)
+                .view_aspect(2.0)
+                .show(ui, |plot_ui| plot_ui.line(line));
 
-            // let new_temp_curve = Curve::Machine {
-            //     seed: 1.0,
-            //     list: vec![
-            //         (Op::Mul, self.color.clone()),
-            //         (Op::Mul, self.illuminant.clone()),
-            //     ],
-            // };
-            // let multiplied = move |lambda| {
-            //     new_temp_curve.evaluate(lambda as f32) as f64
-            // };
-            // // let line = Line::new(Values::from_values_iter(multiplied));
-            // let line = Line::new(PlotPoints::from_explicit_callback(multiplied, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
-            // Plot::new("combined")
-            //     .include_x(self.wavelength_bounds.lower)
-            //     .include_x(self.wavelength_bounds.upper)
-            //     .view_aspect(2.0)
-            //     .show(ui, |plot_ui| plot_ui.line(line));
+            let new_temp_curve = Curve::Machine {
+                seed: 1.0,
+                list: vec![
+                    (Op::Mul, self.color.clone()),
+                    (Op::Mul, self.illuminant.clone()),
+                ],
+            };
+            let multiplied = move |lambda| {
+                new_temp_curve.evaluate(lambda as f32) as f64
+            };
+            // let line = Line::new(Values::from_values_iter(multiplied));
+            let line = Line::new(PlotPoints::from_explicit_callback(multiplied, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+            Plot::new("combined")
+                .include_x(self.wavelength_bounds.lower)
+                .include_x(self.wavelength_bounds.upper)
+                .view_aspect(2.0)
+                .show(ui, |plot_ui| plot_ui.line(line));
         });
     }
 }
