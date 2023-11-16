@@ -151,7 +151,7 @@ focal_distance = 5.0
 vfov = 60.0
 
 
-# # somewhat focused
+# somewhat focused
 # [[cameras]]
 # type="RealisticCamera"
 # name = "petzval kodak"
@@ -255,18 +255,23 @@ vfov = 30.0
 
 
 [renderer]
-type="Naive"
+# naive is 23.6 mrays/sec
+# type="Naive"
+type="Tiled"
+# tiled at 64 64 is 23.2 mrays/sec
+# tiled at 32 32 is 23.9 mrays/sec
+tile_size = [32, 32]
 # type="Preview"
 # selected_preview_film_id = 0
 
 [[render_settings]]
-threads = 12
+threads = 22
 filename = "beauty"
-min_samples = 128
+min_samples = 1024
 min_bounces = 1
 max_bounces = 12
 hwss = false
-# camera_id = "simple camera"
+camera_id = "simple camera"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
@@ -274,7 +279,7 @@ hwss = false
 # camera_id = "closeup camera"
 # camera_id = "panorama"
 # camera_id = "cornell camera"
-camera_id = "true cornell camera"
+# camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
 # camera_id = "wideangle sun test camera side"
@@ -296,7 +301,7 @@ white_point = 1.0
 luminance_only = false
 [render_settings.integrator]
 type = "PT"
-light_samples = 2
+light_samples = 4
 medium_aware = false
 # type = "LT"
 # camera_samples = 25
@@ -312,7 +317,7 @@ medium_aware = false
 [render_settings.resolution]
 # width = 3840
 # height = 2160
-width = 1080
-height = 1080
+width = 1024
+height = 1024
 # width = 4096
 # height = 2048

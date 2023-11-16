@@ -114,6 +114,7 @@ mod test {
 
     use super::*;
 
+    #[allow(dead_code)]
     enum TestMode {
         ViewPhase,
         SamplePhase,
@@ -124,7 +125,7 @@ mod test {
         let height = 500usize;
         let bounds = BOUNDED_VISIBLE_RANGE;
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         // we want the calculated sigma to be on the order of 5.1 * 10.0f32.powi(-31),
         // we also want to be able to calculate that medium.tr(532.0, Point3::ORIGIN, Point3::new(0.0, 0.0, 1.0))
@@ -172,6 +173,7 @@ mod test {
             height,
             144,
             WindowOptions::default(),
+            true,
             |_, mut window_buffer, width, height| {
                 let factor = match mode {
                     TestMode::ViewPhase => {

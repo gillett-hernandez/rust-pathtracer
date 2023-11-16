@@ -401,7 +401,7 @@ impl Material<f32, f32> for GGX {
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        uv: (f32, f32),
+        _: (f32, f32),
         transport_mode: TransportMode,
         sample: Sample2D,
         wi: Vec3,
@@ -798,7 +798,7 @@ mod test {
     #[test]
     fn test_integral() {
         let visible_bounds = BOUNDED_VISIBLE_RANGE;
-        let mut ggx_glass = ggx_glass(0.1);
+        let ggx_glass = ggx_glass(0.1);
 
         let n = 10000000;
         let sum: f32 = (0..n)

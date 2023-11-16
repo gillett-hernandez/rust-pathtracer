@@ -1,4 +1,4 @@
-#![feature(result_option_inspect)]
+#![feature(result_option_inspect, fs_try_exists)]
 
 #[macro_use]
 extern crate log;
@@ -11,7 +11,7 @@ extern crate minifb;
 
 use minifb::{Key, Window, WindowOptions};
 use rayon::prelude::*;
-use renderer::Film;
+use renderer::Vec2D;
 use tonemap::{Converter, Tonemapper};
 
 use math::{
@@ -64,6 +64,7 @@ pub fn window_loop<F>(
     height: usize,
     max_framerate: usize,
     options: WindowOptions,
+    clear_buffer: bool,
     mut func: F,
 ) where
     F: FnMut(&Window, &mut Vec<u32>, usize, usize) -> (),
@@ -73,9 +74,11 @@ pub fn window_loop<F>(
         (1000000 / max_framerate) as u64,
     )));
 
-    let mut film = Film::new(width, height, 0u32);
+    let mut film = Vec2D::new(width, height, 0u32);
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        film.buffer.fill(0u32);
+        if clear_buffer {
+            film.buffer.fill(0u32);
+        }
         func(&window, &mut film.buffer, width, height);
 
         window
@@ -86,7 +89,7 @@ pub fn window_loop<F>(
 
 pub fn update_window_buffer(
     buffer: &mut [u32],
-    film: &Film<XYZColor>,
+    film: &Vec2D<XYZColor>,
     tonemapper: &mut dyn Tonemapper,
     converter: Converter,
     factor: f32,
@@ -103,7 +106,7 @@ pub fn update_window_buffer(
             let [r, g, b, _]: [f32; 4] = converter
                 .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
                 .into();
-            *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+            *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
         });
 }
 

@@ -10,6 +10,7 @@ use crate::world::World;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error::Error;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -225,6 +226,11 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
             "semicolon (;) disallowed in mesh names"
         );
         let mut local_material_map = HashMap::new();
+        assert!(
+            matches!(fs::try_exists(mesh_data.filename.as_str()), Ok(true)),
+            "could not find obj file or mtl file {}",
+            mesh_data.filename.as_str()
+        );
         match mesh_data.mesh_index {
             Some(index) => {
                 let mesh = parse_specific_obj_mesh(
@@ -592,7 +598,6 @@ mod test {
                 MaterialData::GGX(inner) => {
                     println!("{:?}", inner.eta);
                 }
-                _ => {}
             }
         }
     }

@@ -14,7 +14,7 @@ where
 #[derive(Clone)]
 pub struct Texture4 {
     pub curves: [CurveWithCDF; 4],
-    pub texture: Film<f32x4>,
+    pub texture: Vec2D<f32x4>,
     pub interpolation_mode: InterpolationMode,
 }
 
@@ -98,7 +98,7 @@ impl EvalAt<f32> for Texture4 {
 #[derive(Clone)]
 pub struct Texture1 {
     pub curve: CurveWithCDF,
-    pub texture: Film<f32>,
+    pub texture: Vec2D<f32>,
     pub interpolation_mode: InterpolationMode,
 }
 

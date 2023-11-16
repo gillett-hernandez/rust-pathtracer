@@ -20,7 +20,6 @@ use eframe::egui;
 use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
@@ -56,6 +55,7 @@ enum Response {
 }
 
 struct Model {
+    // receive requests, send responses. acts as a server
     receiver: Receiver<Request>,
     sender: Sender<Response>,
     model_data: ModelData,
@@ -99,7 +99,7 @@ impl Model {
 
     pub fn data_update(&mut self) {
         for request in self.receiver.try_iter() {
-            match self.model_data {
+            match &mut self.model_data {
                 ModelData::Lightness(lightness_data) => {
                     info!("{:?}", &request);
                     match request {
@@ -126,21 +126,20 @@ impl Model {
                                 index
                             );
                             self.sender
-                                .try_send(Response::Illuminant(lightness_data.illuminants.get(index).cloned()))
+                                .try_send(Response::Illuminant(
+                                    lightness_data.illuminants.get(index).cloned(),
+                                ))
                                 .unwrap()
                         }
                         Request::AppendIlluminant(new_illuminant) => {
                             lightness_data.illuminants.push(new_illuminant);
-                        }
-                        // Request::IlluminantsCount => self
-                        //     .sender
-                        //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
-                        //     .unwrap(),
+                        } // Request::IlluminantsCount => self
+                          //     .sender
+                          //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
+                          //     .unwrap(),
                     }
                 }
-                ModelData::Blending(blending_data) => {
-                    
-                }
+                ModelData::Blending(blending_data) => {}
             }
         }
     }
@@ -167,6 +166,7 @@ impl LightnessModel {
 }
 
 struct Controller {
+    // send requests, receive responses. acts as a client
     sender: Sender<Request>,
     receiver: Receiver<Response>,
 
@@ -300,103 +300,104 @@ impl eframe::App for Controller {
                 }
             }
 
-            use egui::plot::{Line, Plot, PlotPoints};
-            let n_samples = 100;
-            let cloned = self.color.clone();
-            let color = move |lambda: f64|{
-                 cloned.evaluate(lambda as f32) as f64
-            };
-            let line = Line::new(PlotPoints::from_explicit_callback(color, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+            // unimplemented!();
+            // use egui::widgets::plot::{Line, Plot, PlotPoints};
+            // let n_samples = 100;
+            // let cloned = self.color.clone();
+            // let color = move |lambda: f64|{
+            //      cloned.evaluate(lambda as f32) as f64
+            // };
+            // let line = Line::new(PlotPoints::from_explicit_callback(color, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
 
-            let response = Plot::new("color")
-                .include_x(self.wavelength_bounds.lower)
-                .include_x(self.wavelength_bounds.upper)
-                .include_y(0.0)
-                .include_y(1.0)
-                .view_aspect(2.0)
-                .show(ui, |plot_ui| {
-                    plot_ui.line(line);
-                    if plot_ui.plot_clicked() {
-                        plot_ui.pointer_coordinate().map(|v| v.to_pos2())
-                    } else {
-                        None
-                    }
-                });
+            // let response = Plot::new("color")
+            //     .include_x(self.wavelength_bounds.lower)
+            //     .include_x(self.wavelength_bounds.upper)
+            //     .include_y(0.0)
+            //     .include_y(1.0)
+            //     .view_aspect(2.0)
+            //     .show(ui, |plot_ui| {
+            //         plot_ui.line(line);
+            //         if plot_ui.plot_clicked() {
+            //             plot_ui.pointer_coordinate().map(|v| v.to_pos2())
+            //         } else {
+            //             None
+            //         }
+            //     });
 
-            let mut color_dirty = false;
-            if let Some(clicked_point) = response.inner {
-                if clicked_point.y >= 0.0 && self.wavelength_bounds.contains(&clicked_point.x) {
-                    if let Curve::Tabulated { signal, .. } = &mut self.color {
-                        let index = signal.partition_point(|(x, _)| *x < clicked_point.x);
-                        signal.insert(index, (clicked_point.x, clicked_point.y.min(1.0)));
-                        color_dirty = true;
-                    }
-                }
-            }
+            // let mut color_dirty = false;
+            // if let Some(clicked_point) = response.inner {
+            //     if clicked_point.y >= 0.0 && self.wavelength_bounds.contains(&clicked_point.x) {
+            //         if let Curve::Tabulated { signal, .. } = &mut self.color {
+            //             let index = signal.partition_point(|(x, _)| *x < clicked_point.x);
+            //             signal.insert(index, (clicked_point.x, clicked_point.y.min(1.0)));
+            //             color_dirty = true;
+            //         }
+            //     }
+            // }
 
-            let response = ui.add(egui::Button::new("reset color"));
-            if response.clicked() {
-                if let Curve::Tabulated { signal, .. } = &mut self.color {
-                    signal.clear();
-                    signal.push((self.wavelength_bounds.lower, 0.0));
-                    signal.push((self.wavelength_bounds.upper, 0.0));
-                } else {
-                    self.color = Curve::Tabulated {
-                        signal: vec![
-                            (self.wavelength_bounds.lower, 0.0),
-                            (self.wavelength_bounds.upper, 0.0),
-                        ],
-                        mode: InterpolationMode::Cubic,
-                    };
-                }
-                color_dirty = true;
-            }
+            // let response = ui.add(egui::Button::new("reset color"));
+            // if response.clicked() {
+            //     if let Curve::Tabulated { signal, .. } = &mut self.color {
+            //         signal.clear();
+            //         signal.push((self.wavelength_bounds.lower, 0.0));
+            //         signal.push((self.wavelength_bounds.upper, 0.0));
+            //     } else {
+            //         self.color = Curve::Tabulated {
+            //             signal: vec![
+            //                 (self.wavelength_bounds.lower, 0.0),
+            //                 (self.wavelength_bounds.upper, 0.0),
+            //             ],
+            //             mode: InterpolationMode::Cubic,
+            //         };
+            //     }
+            //     color_dirty = true;
+            // }
 
-            if color_dirty {
-                println!("updating color data in model");
-                self.sender
-                    .try_send(Request::ChangeColor(self.color.clone()))
-                    .unwrap();
-            }
+            // if color_dirty {
+            //     println!("updating color data in model");
+            //     self.sender
+            //         .try_send(Request::ChangeColor(self.color.clone()))
+            //         .unwrap();
+            // }
 
-            let cloned = self.illuminant.clone();
-            let illuminant = move |lambda: f64| {
-                 cloned.evaluate(lambda as f32) as f64
-            };
+            // let cloned = self.illuminant.clone();
+            // let illuminant = move |lambda: f64| {
+            //      cloned.evaluate(lambda as f32) as f64
+            // };
 
 
-            let line = Line::new(PlotPoints::from_explicit_callback(illuminant, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
-            Plot::new("illuminant")
-                .include_x(self.wavelength_bounds.lower)
-                .include_x(self.wavelength_bounds.upper)
-                .include_y(0.0)
-                .include_y(1.0)
-                .view_aspect(2.0)
-                .show(ui, |plot_ui| plot_ui.line(line));
+            // let line = Line::new(PlotPoints::from_explicit_callback(illuminant, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+            // Plot::new("illuminant")
+            //     .include_x(self.wavelength_bounds.lower)
+            //     .include_x(self.wavelength_bounds.upper)
+            //     .include_y(0.0)
+            //     .include_y(1.0)
+            //     .view_aspect(2.0)
+            //     .show(ui, |plot_ui| plot_ui.line(line));
 
-            let new_temp_curve = Curve::Machine {
-                seed: 1.0,
-                list: vec![
-                    (Op::Mul, self.color.clone()),
-                    (Op::Mul, self.illuminant.clone()),
-                ],
-            };
-            let multiplied = move |lambda| {
-                new_temp_curve.evaluate(lambda as f32) as f64
-            };
-            // let line = Line::new(Values::from_values_iter(multiplied));
-            let line = Line::new(PlotPoints::from_explicit_callback(multiplied, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
-            Plot::new("combined")
-                .include_x(self.wavelength_bounds.lower)
-                .include_x(self.wavelength_bounds.upper)
-                .view_aspect(2.0)
-                .show(ui, |plot_ui| plot_ui.line(line));
+            // let new_temp_curve = Curve::Machine {
+            //     seed: 1.0,
+            //     list: vec![
+            //         (Op::Mul, self.color.clone()),
+            //         (Op::Mul, self.illuminant.clone()),
+            //     ],
+            // };
+            // let multiplied = move |lambda| {
+            //     new_temp_curve.evaluate(lambda as f32) as f64
+            // };
+            // // let line = Line::new(Values::from_values_iter(multiplied));
+            // let line = Line::new(PlotPoints::from_explicit_callback(multiplied, (self.wavelength_bounds.lower as f64)..(self.wavelength_bounds.upper as f64), n_samples));
+            // Plot::new("combined")
+            //     .include_x(self.wavelength_bounds.lower)
+            //     .include_x(self.wavelength_bounds.upper)
+            //     .view_aspect(2.0)
+            //     .show(ui, |plot_ui| plot_ui.line(line));
         });
     }
 }
 
 pub struct View {
-    film: Film<XYZColor>,
+    film: Vec2D<XYZColor>,
     buffer: Vec<u32>,
     window: Window,
     tonemapper: Box<dyn Tonemapper>,
@@ -405,7 +406,7 @@ pub struct View {
 
 impl View {
     pub fn new(width: usize, height: usize, tonemapper: Box<dyn Tonemapper>) -> Self {
-        let film = Film::new(width, height, XYZColor::BLACK);
+        let film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let mut window = Window::new(
             "Preview",
@@ -432,63 +433,68 @@ impl View {
         }
     }
 
-    fn update(&mut self, model: &LightnessModel) -> bool {
+    fn update(&mut self, model: &Model) -> bool {
         let (width, height) = (self.film.width, self.film.height);
 
-        for _ in self.per_illuminant_scale.len()..model.illuminants.len() {
-            self.per_illuminant_scale.push(0.0);
+        match &model.model_data {
+            ModelData::Lightness(model) => {
+                for _ in self.per_illuminant_scale.len()..model.illuminants.len() {
+                    self.per_illuminant_scale.push(0.0);
+                }
+                for (i, illuminant) in model.illuminants.iter().enumerate() {
+                    let integral = illuminant.convert_to_xyz(model.wavelength_bounds, 1.0, false);
+                    // theoretically, this should not panic, since the above loop inserts empty elements when the lengths don't match
+                    self.per_illuminant_scale[i] = integral.y();
+                }
+
+                let per_illuminant_scale = &self.per_illuminant_scale;
+
+                self.film
+                    .buffer
+                    .par_iter_mut()
+                    .enumerate()
+                    .for_each(|(idx, pixel)| {
+                        let illuminants = &model.illuminants;
+                        let (x, y) = (idx % width, idx / width);
+
+                        let bin_num = model.bins * x / width;
+                        let illuminant_bin = y * illuminants.len() / height;
+                        let illuminant = &illuminants[illuminant_bin];
+
+                        let strength = model.ev_multiplier.powf(bin_num as f32 - model.ev_offset);
+                        // *pixel = color.to_xyz_color();
+                        let stacked = Curve::Machine {
+                            seed: strength / per_illuminant_scale[illuminant_bin],
+                            list: vec![
+                                (Op::Mul, model.color.clone()),
+                                (Op::Mul, illuminant.clone()),
+                            ],
+                        };
+                        *pixel = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
+                    });
+
+                self.tonemapper.initialize(&self.film, 1.0);
+                // let window = self.window
+                // let film = &self.film;
+                // let tonemapper = &self.tonemapper;
+                update_window_buffer(
+                    &mut self.buffer,
+                    &self.film,
+                    self.tonemapper.as_mut(),
+                    Converter::sRGB,
+                    1.0,
+                );
+                self.window
+                    .update_with_buffer(&self.buffer, self.film.width, self.film.height)
+                    .unwrap();
+                !self.window.is_open() || self.window.is_key_pressed(Key::Escape, KeyRepeat::No)
+            }
+            ModelData::Blending(_) => todo!(),
         }
-        for (i, illuminant) in model.illuminants.iter().enumerate() {
-            let integral = illuminant.convert_to_xyz(model.wavelength_bounds, 1.0, false);
-            // theoretically, this should not panic, since the above loop inserts empty elements when the lengths don't match
-            self.per_illuminant_scale[i] = integral.y();
-        }
-
-        let per_illuminant_scale = &self.per_illuminant_scale;
-
-        self.film
-            .buffer
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(idx, pixel)| {
-                let illuminants = &model.illuminants;
-                let (x, y) = (idx % width, idx / width);
-
-                let bin_num = model.bins * x / width;
-                let illuminant_bin = y * illuminants.len() / height;
-                let illuminant = &illuminants[illuminant_bin];
-
-                let strength = model.ev_multiplier.powf(bin_num as f32 - model.ev_offset);
-                // *pixel = color.to_xyz_color();
-                let stacked = Curve::Machine {
-                    seed: strength / per_illuminant_scale[illuminant_bin],
-                    list: vec![
-                        (Op::Mul, model.color.clone()),
-                        (Op::Mul, illuminant.clone()),
-                    ],
-                };
-                *pixel = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
-            });
-
-        self.tonemapper.initialize(&self.film, 1.0);
-        // let window = self.window
-        // let film = &self.film;
-        // let tonemapper = &self.tonemapper;
-        update_window_buffer(
-            &mut self.buffer,
-            &self.film,
-            self.tonemapper.as_mut(),
-            Converter::sRGB,
-            1.0,
-        );
-        self.window
-            .update_with_buffer(&self.buffer, self.film.width, self.film.height)
-            .unwrap();
-        !self.window.is_open() || self.window.is_key_pressed(Key::Escape, KeyRepeat::No)
     }
 }
 
-fn mvc(opts: Opt) -> Result<(LightnessModel, Controller), ()> {
+fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
     let config: TOMLConfig = match get_settings(opts.config_file) {
         Ok(expr) => expr,
         Err(v) => {
@@ -521,10 +527,10 @@ fn mvc(opts: Opt) -> Result<(LightnessModel, Controller), ()> {
     illuminants.push(curves.get("E").unwrap().clone().into());
     illuminants.push(curves.get("cornell_light").unwrap().clone().into());
     illuminants.push(curves.get("cornell_light_accurate").unwrap().clone().into());
-    illuminants.push(curves.get("blackbody_5000k").unwrap().clone().into());
-    illuminants.push(curves.get("blackbody_3000k").unwrap().clone().into());
-    illuminants.push(curves.get("fluorescent").unwrap().clone().into());
-    illuminants.push(curves.get("xenon").unwrap().clone().into());
+    // illuminants.push(curves.get("blackbody_5000k").unwrap().clone().into());
+    // illuminants.push(curves.get("blackbody_3000k").unwrap().clone().into());
+    // illuminants.push(curves.get("fluorescent").unwrap().clone().into());
+    // illuminants.push(curves.get("xenon").unwrap().clone().into());
 
     let (req_sender, req_receiver) = unbounded();
     let (res_sender, res_receiver) = unbounded();
@@ -554,15 +560,17 @@ fn mvc(opts: Opt) -> Result<(LightnessModel, Controller), ()> {
         });
 
     Ok((
-        LightnessModel::new(
+        Model::new(
+            ModelData::Lightness(LightnessModel::new(
+                bins,
+                ev_multiplier,
+                ev_offset,
+                illuminants,
+                initial_color.clone(),
+                wavelength_bounds,
+            )),
             res_sender,
             req_receiver,
-            bins,
-            ev_multiplier,
-            ev_offset,
-            illuminants,
-            initial_color.clone(),
-            wavelength_bounds,
         ),
         // View::new(opts.width, opts.height, Box::new(tonemapper)),
         Controller::new(
@@ -628,7 +636,7 @@ press reset curve to reset the curve to a flat zero tabulated curve that you can
 adjust various sliders to change the EV offset.
 "
     );
-    eframe::run_native(
+    let _ = eframe::run_native(
         "the same color under different illuminants",
         options,
         Box::new(|_cc| Box::new(controller)),

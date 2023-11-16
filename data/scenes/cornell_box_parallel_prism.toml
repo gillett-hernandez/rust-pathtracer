@@ -3,12 +3,13 @@ textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 
-env_sampling_probability = 0.0
+env_sampling_probability = 0.5
 [environment]
-type="Constant"
-strength = 0.0000
-color = "flat_zero"
-
+type="Sun"
+strength = 0.4
+angular_diameter = 0.0565
+sun_direction = [1.0, 0.0, 1.0]
+color = "D65"
 
 
 [[instances]]
@@ -18,7 +19,7 @@ type = "Rect"
 size = [0.4, 0.1]
 origin = [0.0, 0.8, 0.9]
 normal = "Z"
-two_sided = false
+two_sided = true
 
 [[instances]]
 material_name = "lambertian_white"
@@ -66,14 +67,14 @@ normal = "X"
 two_sided = true
 
 
-[[instances]]
-material_name = "ggx_glass_dispersive"
-[instances.aggregate]
-type = "Mesh"
-name = "prism"
-[instances.transform]
-scale = [3.0, 3.0, 3.0]
-translate = [0.2, 0.0, -0.1]
-[[instances.transform.rotate]]
-axis = [0.0, 0.0, 1.0]
-angle = 90
+# [[instances]]
+# material_name = "ggx_glass_dispersive"
+# [instances.aggregate]
+# type = "Mesh"
+# name = "prism"
+# [instances.transform]
+# scale = [3.0, 3.0, 3.0]
+# translate = [0.2, 0.0, -0.1]
+# [[instances.transform.rotate]]
+# axis = [0.0, 0.0, 1.0]
+# angle = 90

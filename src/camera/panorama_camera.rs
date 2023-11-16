@@ -131,6 +131,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[allow(unused_variables)]
     fn test_panorama_camera() {
         let panorama = PanoramaCamera::new(
             Point3::new(-1.0, 0.0, 0.0),

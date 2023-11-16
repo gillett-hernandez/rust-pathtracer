@@ -1,3 +1,4 @@
+#![feature(fs_try_exists)]
 extern crate rust_pathtracer as root;
 
 use log::LevelFilter;
@@ -6,6 +7,7 @@ use root::parsing::cameras::parse_config_and_cameras;
 use root::parsing::config::*;
 use root::parsing::construct_world;
 use root::parsing::get_settings;
+use root::renderer::TiledRenderer;
 use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
 use root::world::*;
 
@@ -17,6 +19,7 @@ extern crate simplelog;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 
 use std::error::Error;
+use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -31,9 +34,9 @@ use win32_notification::NotificationBuilder;
 #[structopt(rename_all = "kebab-case")]
 struct Opt {
     #[structopt(long)]
-    pub scene_file: Option<String>,
+    pub scene: Option<String>,
     #[structopt(long, default_value = "data/config.toml")]
-    pub config_file: String,
+    pub config: String,
     #[structopt(short = "n", long)]
     pub dry_run: bool,
     #[structopt(short = "pll", long, default_value = "warn")]
@@ -50,6 +53,9 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     match config.renderer {
         RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
         RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
+        RendererType::Tiled {
+            tile_size: (width, height),
+        } => Box::new(TiledRenderer::new(width, height)),
     }
 }
 
@@ -83,7 +89,7 @@ fn main() {
         ),
     ])
     .unwrap();
-    let mut config: TOMLConfig = match get_settings(opts.config_file) {
+    let mut config: TOMLConfig = match get_settings(opts.config) {
         Ok(expr) => expr,
         Err(v) => {
             error!("couldn't read config.toml, {:?}", v);
@@ -103,7 +109,7 @@ fn main() {
         .unwrap();
 
     // override scene file based on provided command line argument
-    config.default_scene_file = opts.scene_file.unwrap_or(config.default_scene_file);
+    config.default_scene_file = opts.scene.unwrap_or(config.default_scene_file);
     let (config, cameras) = parse_config_and_cameras(config);
     let world = construct_scene(&config);
     if world.is_err() {
@@ -118,6 +124,10 @@ fn main() {
     let time = Instant::now();
 
     println!("constructing renderer");
+    if !matches!(fs::try_exists("output"), Ok(true)) {
+        fs::create_dir("output")
+            .expect("failed to create output directory. please create it manually");
+    }
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
 
     if !opts.dry_run {

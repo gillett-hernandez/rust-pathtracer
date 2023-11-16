@@ -94,7 +94,7 @@ impl GenericIntegrator for LightTracingIntegrator {
         _camera_sample: ((f32, f32), CameraId),
         _sample_id: usize,
         samples: &mut Vec<(Sample, CameraId)>,
-        mut profile: &mut Profile,
+        profile: &mut Profile,
     ) -> XYZColor {
         // setup: decide light, decide wavelength, emit ray from light, connect light ray vertices to camera.
         let wavelength_sample = sampler.draw_1d();

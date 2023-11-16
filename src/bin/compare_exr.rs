@@ -5,13 +5,13 @@ use rust_pathtracer as root;
 use exr::prelude::*;
 use packed_simd::f32x4;
 use rayon::prelude::*;
-use root::renderer::Film;
+use root::renderer::Vec2D;
 use structopt::StructOpt;
 
-fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Film<f32x4>> {
+fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Vec2D<f32x4>> {
     read_first_rgba_layer_from_file(
         name,
-        |size, _| Film::new(size.0, size.1, f32x4::splat(0.0)),
+        |size, _| Vec2D::new(size.0, size.1, f32x4::splat(0.0)),
         |film, pos, (r, g, b, a)| {
             film.write_at(pos.0, pos.1, f32x4::new(r, g, b, a));
         },
@@ -118,14 +118,14 @@ fn main() {
                 image0
                     .buffer
                     .par_iter_mut()
-                    .zip(image1.buffer.par_iter())
-                    .for_each(|(px0, px1)| {
+                    // .zip(image1.buffer.par_iter())
+                    .for_each(|px| {
                         // rmse. not a true rmse since a true rmse would take into account the error of all the constituent samples that go into a pixel
-                        let rmse = px0.extract(0);
+                        let rmse = px.extract(0);
 
                         let color = g.at(((rmse - min_rmse) / (max_rmse - min_rmse)) as f64);
 
-                        *px0 = f32x4::new(
+                        *px = f32x4::new(
                             color.r as f32,
                             color.g as f32,
                             color.b as f32,

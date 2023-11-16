@@ -124,17 +124,19 @@ mod test {
 
     use super::*;
 
+    #[allow(dead_code)]
     enum TestMode {
         ViewPhase,
         SamplePhase,
     }
+
     #[test]
     fn test_phase() {
         let width = 500usize;
         let height = 500usize;
         let bounds = BOUNDED_VISIBLE_RANGE;
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let a = 1.0002724293f32;
         let b = 1.64748969205f32;
@@ -188,6 +190,7 @@ mod test {
             height,
             144,
             WindowOptions::default(),
+            true,
             |_, mut window_buffer, width, height| {
                 let factor = match mode {
                     TestMode::ViewPhase => {

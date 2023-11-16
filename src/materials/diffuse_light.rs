@@ -60,8 +60,8 @@ impl Material<f32, f32> for DiffuseLight {
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        uv: (f32, f32),
-        transport_mode: TransportMode,
+        _: (f32, f32),
+        _: TransportMode,
         s: Sample2D,
         wi: Vec3,
     ) -> (f32, Option<Vec3>, PDF<f32, SolidAngle>) {

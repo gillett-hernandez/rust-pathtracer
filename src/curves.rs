@@ -4,8 +4,6 @@ use math::prelude::*;
 use crate::prelude::*;
 use math::curves::{InterpolationMode, Op};
 
-
-
 pub fn cie_e(power: f32) -> Curve {
     Curve::Linear {
         signal: vec![power],
@@ -14,7 +12,7 @@ pub fn cie_e(power: f32) -> Curve {
     }
 }
 
-pub fn blackbody(temperature: f32, boost: f32) -> Curve {
+pub fn blackbody_curve(temperature: f32, boost: f32) -> Curve {
     Curve::Blackbody { temperature, boost }
 }
 

@@ -36,10 +36,10 @@ impl Renderer for PreviewRenderer {
             selected_preview_film_id,
         } = config.renderer
         {
-            let mut films: Vec<Film<XYZColor>> = Vec::new();
+            let mut films: Vec<Vec2D<XYZColor>> = Vec::new();
             for render_settings in config.render_settings.iter() {
                 let Resolution { width, height } = render_settings.resolution;
-                films.push(Film::new(width, height, XYZColor::BLACK));
+                films.push(Vec2D::new(width, height, XYZColor::BLACK));
             }
             println!("num cameras {}", cameras.len());
             println!("num cameras {}", world.cameras.len());
@@ -512,13 +512,15 @@ impl Renderer for PreviewRenderer {
 
                     let mut total_camera_samples = 0;
                     let mut total_pixels = 0;
-                    let light_film: Arc<Mutex<Film<XYZColor>>> =
-                        Arc::new(Mutex::new(Film::new(width, height, XYZColor::BLACK)));
+                    let light_film: Arc<Mutex<Vec2D<XYZColor>>> =
+                        Arc::new(Mutex::new(Vec2D::new(width, height, XYZColor::BLACK)));
 
                     let (width, height) = (
                         render_settings.resolution.width,
                         render_settings.resolution.height,
                     );
+
+                    
                     println!("starting render with film resolution {}x{}", width, height);
                     let pixels = width * height;
                     total_pixels += pixels;
@@ -744,5 +746,14 @@ impl Renderer for PreviewRenderer {
                 }
             }
         }
+    }
+    fn supported_integrators(&self) -> &[IntegratorKind] {
+        &[
+            IntegratorKind::PT {
+                light_samples: 0,
+                medium_aware: false,
+            },
+            IntegratorKind::LT { camera_samples: 0 },
+        ]
     }
 }

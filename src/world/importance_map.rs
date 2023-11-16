@@ -177,9 +177,9 @@ impl ImportanceMap {
                         .evaluate_power(column as f32 / horizontal_resolution as f32))
                     .clamp(0.0, 1.0 - std::f32::EPSILON);
                     buffer[row * horizontal_resolution + column] = rgb_to_u32(
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
+                        (rgb * 255.0) as u8,
+                        (rgb * 255.0) as u8,
+                        (rgb * 255.0) as u8,
                     );
                 }
             }
@@ -209,9 +209,9 @@ impl ImportanceMap {
                 }
                 let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
                 let u32 = rgb_to_u32(
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
+                    (rgb * 255.0) as u8,
+                    (rgb * 255.0) as u8,
+                    (rgb * 255.0) as u8,
                 );
                 buffer[row * horizontal_resolution] = u32;
                 buffer[row * horizontal_resolution + 1] = u32;
@@ -281,9 +281,9 @@ mod test {
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
-    use crate::renderer::Film;
+    use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
-    use crate::tonemap::{Clamp, Converter, Tonemapper, Reinhard1x3};
+    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -293,7 +293,7 @@ mod test {
 
     #[test]
     fn test_raw_importance_map() {
-        let mut film = Film::new(512, 512, 0.0f32);
+        let mut film = Vec2D::new(512, 512, 0.0f32);
 
         for (idx, pixel) in film.buffer.iter_mut().enumerate() {
             let (x, y) = (idx % film.width, (idx / film.width));
@@ -335,7 +335,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let converter = Converter::sRGB;
 
@@ -450,7 +450,7 @@ mod test {
                 panic!("{}", e);
             });
             let mut buffer = vec![0u32; limit];
-            let mut film = Film::new(width, height, XYZColor::BLACK);
+            let mut film = Vec2D::new(width, height, XYZColor::BLACK);
             let converter = Converter::sRGB;
 
             let mut tonemapper = Clamp::new(0.0, true, true);
@@ -575,7 +575,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
@@ -741,7 +741,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
@@ -843,8 +843,8 @@ mod test {
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
-        let mut sample_squared_film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+        let mut sample_squared_film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let variance_fraction = 0.1;
 
@@ -895,7 +895,7 @@ mod test {
                     let [r, g, b, _]: [f32; 4] = converter
                         .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
                         .into();
-                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
@@ -928,10 +928,11 @@ mod test {
                             false,
                         )
                         .into();
-                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
-        let mul = 1.0 - variance_fraction;
+        // let mul = 1.0 - variance_fraction;
+        todo!();
     }
 }

@@ -10,9 +10,9 @@ type="HDRI"
 strength = 1.0
 texture_name = "autumn_park_8k"
 # texture_name = "moonlit_golf_8k"
-# [environment.importance_map]
-# width = 1000
-# height = 1000
+[environment.importance_map]
+width = 1000
+height = 1000
 
 
 # light above
