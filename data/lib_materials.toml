@@ -334,7 +334,7 @@ bounce_color = "flat_78"
 [sharp_light_xenon]
 type = "SharpLight"
 sidedness = "Dual"
-sharpness = 4.0
+sharpness = 100.0
 emit_color = "xenon_x5"
 bounce_color = "flat_78"
 
@@ -342,7 +342,7 @@ bounce_color = "flat_78"
 [sharp_light_warm]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 4.0
+sharpness = 40.0
 emit_color = "blackbody_3000k_x5"
 bounce_color = "flat_78"
 
@@ -350,7 +350,7 @@ bounce_color = "flat_78"
 [sharp_light]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 4.0
+sharpness = 400.0
 emit_color = "blackbody_5000k"
 bounce_color = "flat_78"
 
@@ -358,7 +358,7 @@ bounce_color = "flat_78"
 [sharp_light_fluorescent]
 type = "SharpLight"
 sidedness = "Reverse"
-sharpness = 4.0
+sharpness = 40.0
 emit_color = "fluorescent_x5"
 bounce_color = "flat_78"
 
