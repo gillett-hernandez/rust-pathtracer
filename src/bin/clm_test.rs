@@ -1,10 +1,10 @@
 // use math::XYZColor;
 extern crate rust_pathtracer as root;
 use math::curves::InterpolationMode;
-use math::*;
+use math::prelude::*;
 use root::materials::{refract, Material, GGX};
 
-use root::world::TransportMode;
+use root::{power_heuristic_generic, prelude::*};
 
 pub fn balance(f: f32, g: f32) -> f32 {
     f / (f + g)
@@ -25,15 +25,12 @@ impl Layer {
         wi: Vec3,
         wo: Vec3,
         transport_mode: TransportMode,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         match self {
             Layer::Diffuse { color } => {
                 let cosine = wo.z();
                 if cosine * wi.z() > 0.0 {
-                    (
-                        SingleEnergy::new(color.evaluate(lambda).min(1.0) / PI),
-                        (cosine / PI).into(),
-                    )
+                    (color.evaluate(lambda).min(1.0) / PI, (cosine / PI).into())
                 } else {
                     (0.0.into(), 0.0.into())
                 }
@@ -166,8 +163,8 @@ impl CLM {
                 break;
             }
             let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
-            throughput *= f.0;
-            path_pdf *= pdf.0;
+            throughput *= f;
+            path_pdf *= *pdf;
             println!("gs {:?} {:?}", throughput, path_pdf);
 
             index = (index as isize + direction) as usize;
@@ -227,7 +224,7 @@ impl CLM {
         short_path: &CLMPath,
         _sampler: &mut dyn Sampler,
         transport_mode: TransportMode,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         let _wi = long_path.0.first().unwrap().wi;
         let _wo = short_path.0.first().unwrap().wo;
         // let num_layers = self.layers.len();
@@ -239,7 +236,7 @@ impl CLM {
         long_path: &CLMPath,
         short_path: &CLMPath,
         transport_mode: TransportMode,
-    ) -> (SingleEnergy, PDF) {
+    ) -> (f32, PDF<f32, SolidAngle>) {
         let _opposite_mode = match transport_mode {
             TransportMode::Importance => TransportMode::Radiance,
             TransportMode::Radiance => TransportMode::Importance,
@@ -271,13 +268,13 @@ impl CLM {
                     layer.bsdf(lambda, vert.wi, nee_wo, transport_mode);
 
                 let (total_throughput, total_path_pdf) = (
-                    left_f * left_connection_f.0,
-                    left_path_pdf * left_connection_pdf.0,
+                    left_f * left_connection_f,
+                    left_path_pdf * *left_connection_pdf,
                 );
 
                 let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
 
-                let weight = balance(left_connection_pdf.0, pdf.0);
+                let weight = power_heuristic_generic(*left_connection_pdf, *pdf);
 
                 if total_path_pdf > 0.0 {
                     let addend = weight * total_throughput / total_path_pdf;
@@ -286,8 +283,8 @@ impl CLM {
                     println!("a {} {}", addend, total_path_pdf);
                 }
 
-                throughput *= (1.0 - weight) * f.0;
-                path_pdf *= pdf.0
+                throughput *= (1.0 - weight) * f;
+                path_pdf *= *pdf;
             } else {
                 let nee_index = nee_index as usize;
                 let nee_layer = &self.layers[nee_index];
@@ -303,15 +300,15 @@ impl CLM {
                     nee_layer.bsdf(lambda, nee_vert.wi, nee_vert.wo, transport_mode);
 
                 let (total_throughput, total_path_pdf) = (
-                    left_f * left_connection_f.0 * right_connection_f.0 * right_f,
-                    left_path_pdf * left_connection_pdf.0 * right_connection_pdf.0 * right_path_pdf,
+                    left_f * left_connection_f * right_connection_f * right_f,
+                    left_path_pdf * *left_connection_pdf * *right_connection_pdf * right_path_pdf,
                 );
 
                 let (f, pdf) = layer.bsdf(lambda, wi, wo, transport_mode);
 
-                let weight = balance(
-                    left_connection_pdf.0 * right_connection_pdf.0 * right_path_pdf,
-                    pdf.0,
+                let weight = power_heuristic_generic(
+                    *left_connection_pdf * *right_connection_pdf * right_path_pdf,
+                    *pdf,
                 );
 
                 if total_path_pdf > 0.0 {
@@ -321,8 +318,8 @@ impl CLM {
                     println!("a2 {} {}", addend, total_path_pdf);
                 }
 
-                throughput *= (1.0 - weight) * f.0;
-                path_pdf *= pdf.0
+                throughput *= (1.0 - weight) * f;
+                path_pdf *= *pdf;
             }
         }
         (sum.into(), pdf_sum.into())
@@ -340,7 +337,7 @@ fn main() {
     let glass = curves::cauchy(1.5, 10000.0);
     let flat_zero = curves::void();
     let flat_one = curves::cie_e(1.0);
-    let _ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 1.0, 0);
+    let _ggx_glass = GGX::new(0.00001, glass, flat_one, flat_zero, 0, 0);
 
     let cornell_colors = load_multiple_csv_rows(
         "data/curves/csv/cornell.csv",
@@ -389,5 +386,5 @@ fn main() {
         &mut *sampler,
         TransportMode::Importance,
     );
-    println!("{}, {}", f.0, pdf.0);
+    println!("{}, {:?}", f, pdf);
 }

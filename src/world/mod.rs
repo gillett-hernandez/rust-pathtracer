@@ -4,41 +4,27 @@ mod importance_map;
 pub use environment::EnvironmentMap;
 pub use importance_map::ImportanceMap;
 
+use crate::prelude::*;
+
 use crate::hittable::*;
-use crate::materials::MaterialTable;
-use crate::math::*;
-use crate::{camera::Camera, mediums::MediumTable};
+
+use crate::mediums::MediumTable;
 
 pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
-pub const NORMAL_OFFSET: f32 = 0.001;
-pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum TransportMode {
-    Radiance,
-    Importance,
-}
-
-impl Default for TransportMode {
-    fn default() -> Self {
-        TransportMode::Importance
-    }
-}
-
 #[derive(Clone)]
 pub struct World {
     pub accelerator: Accelerator,
-    pub lights: Vec<usize>,
-    pub cameras: Vec<Camera>,
+    pub lights: Vec<InstanceId>,
+    pub cameras: Vec<CameraEnum>,
     pub materials: MaterialTable,
     pub mediums: MediumTable,
     pub environment: EnvironmentMap,
     env_sampling_probability: f32,
-    radius: f32,
-    center: Point3,
+    pub radius: f32,
+    pub center: Point3,
 }
 
 impl World {
@@ -62,7 +48,7 @@ impl World {
                             "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                             id, instance.instance_id
                         );
-                            lights.push(instance.instance_id as usize);
+                            lights.push(instance.instance_id as InstanceId);
                         }
                     }
                 }
@@ -72,7 +58,7 @@ impl World {
                         "adding light with mat id Light({:?}) and instance id {:?} to lights list",
                         id, instance.instance_id
                     );
-                        lights.push(instance.instance_id as usize);
+                        lights.push(instance.instance_id as InstanceId);
                     }
                 }
             }
@@ -110,7 +96,7 @@ impl World {
         }
         world
     }
-    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF)> {
+    pub fn pick_random_light(&self, s: Sample1D) -> Option<(&Instance, PDF<f32, Uniform01>)> {
         // currently just uniform sampling
         // TODO: change method to take into account the location from which the light is being picked, to allow light trees or other heuristics
         // i.e. a projected solid angle * power heuristic and pdf
@@ -136,7 +122,10 @@ impl World {
         }
     }
 
-    pub fn pick_random_camera(&self, s: Sample1D) -> Option<(&Camera, usize, PDF)> {
+    pub fn pick_random_camera(
+        &self,
+        s: Sample1D,
+    ) -> Option<(&CameraEnum, usize, PDF<f32, Uniform01>)> {
         // currently just uniform sampling
         let length = self.cameras.len();
         if length == 0 {
@@ -156,7 +145,7 @@ impl World {
         }
     }
 
-    pub fn instance_is_light(&self, instance_id: usize) -> bool {
+    pub fn instance_is_light(&self, instance_id: InstanceId) -> bool {
         self.lights.contains(&instance_id)
     }
 
@@ -165,11 +154,11 @@ impl World {
         &self.materials[id]
     }
 
-    pub fn get_primitive(&self, index: usize) -> &Instance {
+    pub fn get_primitive(&self, index: InstanceId) -> &Instance {
         self.accelerator.get_primitive(index)
     }
 
-    pub fn get_camera(&self, index: usize) -> &Camera {
+    pub fn get_camera(&self, index: usize) -> &CameraEnum {
         &self.cameras[index]
     }
 
@@ -185,15 +174,7 @@ impl World {
         }
     }
 
-    pub fn get_world_radius(&self) -> f32 {
-        self.radius
-    }
-
-    pub fn get_center(&self) -> Point3 {
-        self.center
-    }
-
-    pub fn assign_cameras(&mut self, cameras: Vec<Camera>, add_and_rebuild_scene: bool) {
+    pub fn assign_cameras(&mut self, cameras: Vec<CameraEnum>, add_and_rebuild_scene: bool) {
         // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
         if add_and_rebuild_scene {
             match &mut self.accelerator {
@@ -235,7 +216,7 @@ impl World {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
                         if let Some(surface) = cam.get_surface() {
                             let mut surface = surface.clone();
-                            let id = instances.len();
+                            let id = instances.len() as InstanceId;
                             surface.instance_id = id;
                             surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
@@ -250,7 +231,7 @@ impl World {
                     for (cam_id, cam) in self.cameras.iter().enumerate() {
                         if let Some(surface) = cam.get_surface() {
                             let mut surface = surface.clone();
-                            let id = instances.len();
+                            let id = instances.len() as InstanceId;
                             surface.instance_id = id;
                             surface.material_id = Some(MaterialId::Camera(cam_id as u16));
                             println!("adding camera {:?} with id {}", &surface, cam_id);
@@ -268,5 +249,32 @@ impl World {
 impl HasBoundingBox for World {
     fn aabb(&self) -> AABB {
         self.accelerator.aabb()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use crate::parsing::construct_world;
+
+    use super::*;
+
+    #[test]
+
+    fn test_world_intersection() {
+        crate::log_test_setup();
+        let world = construct_world(PathBuf::from("data/scenes/test_lighting_north.toml")).unwrap();
+
+        let ray = Ray::new(Point3::new(0.0, 0.0, 7.0), -Vec3::Z);
+
+        let aabb = world.aabb();
+        println!("{:?}", aabb);
+
+        let maybe_hit = world.hit(ray, 0.0, INFINITY);
+        assert!(maybe_hit.is_some());
+        let intersection = maybe_hit.unwrap();
+
+        println!("{:?}", intersection);
     }
 }

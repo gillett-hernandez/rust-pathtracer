@@ -1,0 +1,85 @@
+curves = "data/lib_curves.toml"
+textures = "data/lib_textures.toml"
+materials = "data/lib_materials.toml"
+meshes = "data/lib_meshes.toml"
+
+env_sampling_probability = 0.0
+[environment]
+type="Sun"
+strength = 0.0
+angular_diameter = 0.0565
+sun_direction = [0.0, 0.0, 1.0]
+color = "D65"
+
+# bright sphere
+[[instances]]
+material_name = "diffuse_light_flat_x10"
+[instances.aggregate]
+type = "Sphere"
+radius = 5.0
+origin = [3.0, -6.0, 8.0]
+
+
+# white spheres
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Sphere"
+radius = 1.0
+origin = [5.0, -2.3, 0.0]
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Sphere"
+radius = 1.0
+origin = [5.0, 0.0, 0.0]
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Sphere"
+radius = 1.0
+origin = [5.0, 2.3, 0.0]
+
+
+# colored spheres
+[[instances]]
+material_name = "lambertian_red"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.4
+origin = [3.5, -1.4, -0.6]
+
+[[instances]]
+material_name = "lambertian_green"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.4
+origin = [3.5, 0.0, -0.6]
+
+[[instances]]
+material_name = "lambertian_blue"
+[instances.aggregate]
+type = "Sphere"
+radius = 0.4
+origin = [3.5, 1.4, -0.6]
+
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [40, 40]
+origin = [0.0, 0.0, -1.0]
+normal = "Z"
+two_sided = true
+
+[[instances]]
+material_name = "lambertian_white"
+[instances.aggregate]
+type = "Rect"
+size = [20, 20]
+origin = [16.0, 0.0, 0.0]
+normal = "X"
+two_sided = true

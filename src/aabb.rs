@@ -1,6 +1,6 @@
-use crate::math::*;
-use packed_simd::{f32x4, m32x4};
+use crate::prelude::*;
 
+use packed_simd::{f32x4, m32x4};
 use std::ops::Mul;
 
 pub trait HasBoundingBox {

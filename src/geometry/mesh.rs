@@ -1,9 +1,9 @@
+use crate::prelude::*;
+
 use crate::aabb::AABB;
 use crate::accelerator::{BHShape, BoundingHierarchy, FlatBVH};
 // use crate::geometry::triangle::Triangle;
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable};
-use crate::materials::MaterialId;
-use crate::math::*;
 
 use packed_simd::{f32x4, i32x4};
 
@@ -196,17 +196,6 @@ impl Hittable for MeshTriangleRef {
         Some(hit)
     }
 
-    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
-        unimplemented!("mesh light sampling methods are currently unimplemented")
-    }
-
-    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
-        unimplemented!("mesh light sampling methods are currently unimplemented")
-    }
-
-    fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
-        unimplemented!("mesh light sampling methods are currently unimplemented")
-    }
     fn surface_area(&self, transform: &Transform3) -> f32 {
         // calculates the surface area using heron's formula.
         let p0 = transform.to_world(self.vertices[self.indices[3 * self.idx]]);
@@ -217,6 +206,27 @@ impl Hittable for MeshTriangleRef {
         let d12 = (p2 - p1).norm();
         let s = 0.5 * (d02 + d01 + d12);
         (s * (s - d01) * (s - d12) * (s - d02)).sqrt()
+    }
+
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
+    }
+
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
+    }
+
+    fn psa_pdf(
+        &self,
+        _cos_o: f32,
+        _cos_i: f32,
+        _from: Point3,
+        _to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
 }
 
@@ -311,9 +321,7 @@ impl Hittable for Mesh {
                     // let hit0_t1 = a.2;
                     // let hit1_t1 = b.2;
                     // let sign = (hit1_t1-hit0_t1).signum();
-                    (aabb_hit_end_time0)
-                        .partial_cmp(aabb_hit_end_time1)
-                        .unwrap()
+                    PartialOrd::partial_cmp(aabb_hit_end_time0, aabb_hit_end_time1).unwrap()
                 },
             );
         }
@@ -342,18 +350,31 @@ impl Hittable for Mesh {
         }
         hit_record
     }
-    // TODO: implement mesh and triangle light sampling
-    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF) {
-        unimplemented!("mesh light sampling is unimplemented")
+
+    fn sample(&self, _s: Sample2D, _from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
-    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF) {
-        unimplemented!("mesh light sampling is unimplemented")
+
+    fn sample_surface(&self, _s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
-    fn psa_pdf(&self, _cos_o: f32, _from: Point3, _to: Point3) -> PDF {
-        unimplemented!("mesh light sampling is unimplemented")
+
+    fn psa_pdf(
+        &self,
+        _cos_o: f32,
+        _cos_i: f32,
+        _from: Point3,
+        _to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
-    fn surface_area(&self, _transform: &Transform3) -> f32 {
-        unimplemented!("mesh light sampling is unimplemented")
+
+    fn surface_area(&self, _: &Transform3) -> f32 {
+        // TODO
+        todo!("mesh light sampling is unimplemented")
     }
 }
 /*

@@ -1,6 +1,6 @@
+use crate::prelude::*;
+
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
-use crate::materials::MaterialId;
-use crate::math::*;
 
 use crate::accelerator::BHShape;
 use crate::geometry::*;
@@ -12,7 +12,7 @@ pub struct Instance {
     pub aggregate: Aggregate,
     pub transform: Option<Transform3>,
     pub material_id: Option<MaterialId>,
-    pub instance_id: usize,
+    pub instance_id: InstanceId,
     node_id: usize,
 }
 
@@ -41,7 +41,7 @@ impl Instance {
         aggregate: Aggregate,
         transform: Option<Transform3>,
         material_id: Option<MaterialId>,
-        instance_id: usize,
+        instance_id: InstanceId,
     ) -> Self {
         Instance {
             aggregate,
@@ -52,6 +52,12 @@ impl Instance {
         }
     }
 
+    pub fn get_instance_id(&self) -> InstanceId {
+        self.instance_id
+    }
+    pub fn get_material_id(&self) -> MaterialId {
+        self.material_id.unwrap_or(MaterialId::Material(0u16))
+    }
     // fn with_transform(&mut self, transform: Transform3) {
     //     // replaces this instance's transform with a new one
     //     self.transform = Some(transform);
@@ -101,7 +107,7 @@ impl Hittable for Instance {
                 debug_assert!(hit.uv.0 <= 1.0 && hit.uv.1 <= 1.0, "{:?}", hit);
                 debug_assert!(hit.uv.0 >= 0.0 && hit.uv.1 >= 0.0, "{:?}", hit);
                 Some(HitRecord {
-                    normal: transform.to_world(hit.normal).normalized(),
+                    normal: (transform.reverse.transpose() * hit.normal).normalized(),
                     point: transform.to_world(hit.point),
                     instance_id: self.instance_id,
                     material: self.material_id.unwrap_or(hit.material),
@@ -127,7 +133,7 @@ impl Hittable for Instance {
             None
         }
     }
-    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF) {
+    fn sample(&self, s: Sample2D, from: Point3) -> (Vec3, PDF<f32, SolidAngle>) {
         if let Some(transform) = self.transform {
             let (vec, pdf) = self.aggregate.sample(s, transform.to_local(from));
             (transform.to_world(vec).normalized(), pdf)
@@ -135,25 +141,34 @@ impl Hittable for Instance {
             self.aggregate.sample(s, from)
         }
     }
-    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF) {
+    fn sample_surface(&self, s: Sample2D) -> (Point3, Vec3, PDF<f32, Area>) {
         if let Some(transform) = self.transform {
             let (point, normal, pdf) = self.aggregate.sample_surface(s);
             (
                 transform.to_world(point),
-                transform.to_world(normal).normalized(),
+                (transform.reverse.transpose() * normal).normalized(),
                 pdf,
             )
         } else {
             self.aggregate.sample_surface(s)
         }
     }
-    fn psa_pdf(&self, cos_o: f32, from: Point3, to: Point3) -> PDF {
+    fn psa_pdf(
+        &self,
+        cos_o: f32,
+        cos_i: f32,
+        from: Point3,
+        to: Point3,
+    ) -> PDF<f32, ProjectedSolidAngle> {
         let (from, to) = if let Some(transform) = self.transform {
+            // TODO: check why this is to_world instead of to_local.
+            // (transform.to_local(from), transform.to_local(to))
+            // FIXME: figure out how the transform might affect cos_i and cos_o
             (transform.to_world(from), transform.to_world(to))
         } else {
             (from, to)
         };
-        self.aggregate.psa_pdf(cos_o, from, to)
+        self.aggregate.psa_pdf(cos_o, cos_i, from, to)
     }
 
     fn surface_area(&self, transform: &Transform3) -> f32 {
@@ -163,15 +178,6 @@ impl Hittable for Instance {
         } else {
             self.aggregate.surface_area(transform)
         }
-    }
-}
-
-impl Instance {
-    pub fn get_instance_id(&self) -> usize {
-        self.instance_id
-    }
-    pub fn get_material_id(&self) -> MaterialId {
-        self.material_id.unwrap_or(MaterialId::Material(0u16))
     }
 }
 
