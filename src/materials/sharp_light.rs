@@ -29,11 +29,6 @@ impl SharpLight {
     pub const NAME: &'static str = "SharpLight";
 }
 
-fn evaluate(vec: Vec3, sharpness: f32) -> f32 {
-    let pdf = (sharpness + 1.0) * vec.z().abs().powf(sharpness) / 2.0 / PI;
-    pdf
-}
-
 fn random_weighted_cosine(sample: Sample2D, power: f32) -> Vec3 {
     let theta = sample.x.powf((1.0 + power).recip()).acos();
     let phi = TAU * sample.y;
@@ -108,7 +103,7 @@ impl Material<f32, f32> for SharpLight {
             random_weighted_cosine(scatter_sample, self.sharpness)
         };
         // let mut local_wo = Vec3::Z;
-        let pdf = evaluate(local_wo, self.sharpness);
+        let pdf = Self::evaluate_inner(local_wo, self.sharpness);
         assert!(
             pdf != 0.0,
             "{} {} {:?} {} {}",
@@ -154,7 +149,7 @@ impl Material<f32, f32> for SharpLight {
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            self.emit_color.evaluate_power(lambda) * evaluate(wi, self.sharpness)
+            self.emit_color.evaluate_power(lambda) * Self::evaluate_inner(wi, self.sharpness)
         } else {
             f32::ZERO
         }
@@ -173,7 +168,7 @@ impl Material<f32, f32> for SharpLight {
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
             || self.sidedness == Sidedness::Dual
         {
-            evaluate(wo, self.sharpness).into()
+            Self::evaluate_inner(wo, self.sharpness).into()
         } else {
             0.0.into()
         }
@@ -209,8 +204,18 @@ impl Material<f32, f32> for SharpLight {
     }
 }
 
+impl SharpLight {
+    pub fn evaluate_inner(vec: Vec3, sharpness: f32) -> f32 {
+        (sharpness + 1.0) * vec.z().abs().powf(sharpness) / 2.0 / PI
+    }
+    pub fn evaluate(&self, vec: Vec3) -> f32 {
+        Self::evaluate_inner(vec, self.sharpness)
+    }
+}
+
 #[cfg(test)]
 mod test {
+
     use minifb::WindowOptions;
 
     use crate::{curves, tonemap::Clamp};
@@ -221,8 +226,83 @@ mod test {
     fn test_evaluate() {
         let non_normalized_local_wo = Vec3::new(0.8398655, -0.2606247, 1.623869);
         let sharpness = 2.1;
-        let e = evaluate(non_normalized_local_wo.normalized(), sharpness);
+        let e = SharpLight::evaluate_inner(non_normalized_local_wo.normalized(), sharpness);
         println!("{}", e);
+    }
+
+    #[test]
+    fn test_pdf_integrates_to_one() {
+        for _ in 0..10 {
+            let mut sharpness = rand::random::<f32>() * 100.0;
+            if sharpness < 1.0 {
+                sharpness = 0.0;
+            }
+
+            println!("testing with sharpness {}", sharpness);
+
+            let light = SharpLight::new(
+                curves::void(),
+                curves::blackbody_curve(5000.0, 1.0).to_cdf(EXTENDED_VISIBLE_RANGE, 100),
+                sharpness,
+                Sidedness::Forward,
+            );
+
+            // three ways, sampling randomly, importance sampling, and using the quadrature rule
+
+            // quadrature rule first
+            {
+                let mut sum = 0.0;
+                let mut num_samples = 0;
+
+                // need to actually multiply in the higher dimensional analogue of
+                // the delta_x factor for numerical integration.
+                let theta_n = 100;
+                let phi_n = 1000;
+                for theta_i in 0..theta_n {
+                    for phi_i in 1..=phi_n {
+                        let theta = TAU * theta_i as f32 / theta_n as f32;
+                        let x = phi_i as f32 / phi_n as f32;
+                        let phi = PI * x;
+
+                        let (phi_sin, z) = phi.sin_cos();
+                        let (theta_sin, theta_cos) = theta.sin_cos();
+                        let jacobian = phi_sin.abs() * PI * PI;
+                        let (x, y) = (theta_cos * phi_sin, theta_sin * phi_sin);
+
+                        let v = Vec3::new(x, y, z);
+
+                        let pdf = light.evaluate(v);
+                        sum += pdf * jacobian;
+                        num_samples += 1;
+                    }
+                }
+                println!("{:?}", sum / num_samples as f32);
+            }
+            {
+                // then uniform sampling (technically uniform over angles, so multiply pdf by proper jacobian)
+                let mut sum = 0.0;
+                let mut num_samples = 0;
+
+                for _ in 0..100000 {
+                    let theta = rand::random::<f32>() * TAU;
+                    let x = rand::random::<f32>();
+                    let phi = x * PI;
+
+                    let (phi_sin, z) = phi.sin_cos();
+                    let (theta_sin, theta_cos) = theta.sin_cos();
+                    let (x, y) = (theta_cos * phi_sin, theta_sin * phi_sin);
+
+                    let jacobian = phi_sin.abs() * PI * PI;
+                    let v = Vec3::new(x, y, z);
+
+                    let pdf = light.evaluate(v);
+                    sum += pdf * jacobian;
+                    num_samples += 1;
+                }
+                // with sharpness at 0.0, this evaluates to 1/pi.
+                println!("{:?}", sum / num_samples as f32);
+            }
+        }
     }
 
     #[test]
@@ -230,7 +310,7 @@ mod test {
         let light = SharpLight::new(
             curves::void(),
             curves::blackbody_curve(5000.0, 1.0).to_cdf(EXTENDED_VISIBLE_RANGE, 100),
-            10.0,
+            100.0,
             Sidedness::Forward,
         );
         // rayon::ThreadPoolBuilder::new()
@@ -240,32 +320,36 @@ mod test {
 
         let (width, height) = (500, 500);
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-        // for _ in 0..10000 {
-        //     let out = light.sample_emission(
-        //         Point3::ORIGIN,
-        //         Vec3::Z,
-        //         BOUNDED_VISIBLE_RANGE,
-        //         Sample2D::new_random_sample(),
-        //         Sample1D::new_random_sample(),
-        //     );
-        //     if let Some((ray, packet, solid_angle_pdf, wavelength_pdf)) = out {
-        //         let uv = direction_to_uv(ray.direction);
-        //         let p = (
-        //             (uv.0 * width as f32) as usize,
-        //             (uv.1 * height as f32) as usize,
-        //         );
 
-        //         let jacobian = (uv.1 * PI).sin().abs() * 2.0 * PI * PI;
-        //         let pixel = film.at(p.0, p.1);
-        //         let new_color = SingleWavelength::new(
-        //             packet.lambda,
-        //             packet.energy / (*wavelength_pdf * *solid_angle_pdf / jacobian),
-        //         )
-        //         .into();
-        //         assert!();
-        //         film.write_at(p.0, p.1, pixel + new_color);
-        //     }
-        // }
+        let mut sum = XYZColor::BLACK;
+        for _ in 0..10000 {
+            let out = light.sample_emission(
+                Point3::ORIGIN,
+                Vec3::Z,
+                BOUNDED_VISIBLE_RANGE,
+                Sample2D::new_random_sample(),
+                Sample1D::new_random_sample(),
+            );
+            if let Some((ray, packet, solid_angle_pdf, wavelength_pdf)) = out {
+                let uv = direction_to_uv(ray.direction);
+                let p = (
+                    (uv.0 * width as f32) as usize,
+                    (uv.1 * height as f32) as usize,
+                );
+
+                let jacobian = (uv.1 * PI).sin().abs() * 2.0 * PI * PI;
+                let pixel = film.at(p.0, p.1);
+                let new_color = SingleWavelength::new(
+                    packet.lambda,
+                    packet.energy / (*wavelength_pdf * *solid_angle_pdf / jacobian),
+                )
+                .into();
+                sum += new_color;
+                film.write_at(p.0, p.1, pixel + new_color);
+            }
+        }
+        println!("{:?}", sum / 10000.0);
+
         let mut tonemapper = Clamp::new(0.0, true, true);
         let mut total_samples = 10000;
         let samples_per_iteration = 1000;
@@ -299,12 +383,6 @@ mod test {
                             packet.lambda,
                             packet.energy / (*wavelength_pdf * *solid_angle_pdf / jacobian),
                         );
-                        // println!(
-                        //     "{}, {} {:?} {:?}, {:?}",
-                        //     packet.lambda, packet.energy, solid_angle_pdf, wavelength_pdf, jacobian
-                        // );
-                        // assert!(sw.energy.is_finite());
-                        // println!("{} {}", sw.lambda, sw.energy);
                         film.write_at(p.0, p.1, pixel + sw.into());
                         total_samples += 1;
                     }
