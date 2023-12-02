@@ -1,4 +1,4 @@
-name: Rust
+name: Build
 
 on:
   push:
@@ -7,9 +7,8 @@ on:
     branches: [ "main" ]
 
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
 
-name: build
 
 jobs:
   check:
@@ -21,6 +20,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly
+            profile: minimal
             override: true
             components: rustfmt, clippy
 
