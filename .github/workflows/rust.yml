@@ -32,3 +32,8 @@ jobs:
         with:
           command: check
           args: --verbose -Z sparse-registry
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose -Z sparse-registry
