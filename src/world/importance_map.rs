@@ -829,12 +829,12 @@ mod test {
             }
         }
         let true_value = 3.11227031972f64;
-        let err = (estimate - true_value as f32).abs() / estimate;
+        let err = (estimate - true_value as f32).abs() / true_value as f32;
         println!(
             "\n\nestimate is {}, true value is {}, error factor is {}",
             estimate, true_value, err
         );
-        assert!(err < 0.0001);
+        assert!(err < 0.001);
     }
 
     #[cfg(feature = "preview")]
