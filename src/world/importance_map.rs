@@ -6,6 +6,7 @@ use parking_lot::Mutex;
 
 use crate::prelude::*;
 
+#[cfg(feature = "preview")]
 use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
 
@@ -82,6 +83,7 @@ impl ImportanceMap {
         //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, Curve::Const(0.0))],
         // };
 
+        #[cfg(feature = "preview")]
         let (mut window, mut buffer, mut maybe_cdf) = if cfg!(feature = "visualize_importance_map")
         {
             println!("visualize feature enabled");
@@ -169,7 +171,7 @@ impl ImportanceMap {
             })
             .collect();
         for (row, (cdf, row_luminance)) in rows.drain(..).enumerate() {
-            // let  = rows[row];
+            #[cfg(feature = "preview")]
             if cfg!(feature = "visualize_importance_map") {
                 for column in 0..horizontal_resolution {
                     let rgb = (cdf
@@ -186,8 +188,10 @@ impl ImportanceMap {
             total_luminance += row_luminance;
             data.push(cdf);
             marginal_data.push(row_luminance);
+            #[cfg(feature = "preview")]
             maybe_cdf.iter_mut().for_each(|e| e.push(total_luminance));
 
+            #[cfg(feature = "preview")]
             if let Some(window) = &mut window {
                 if window.is_open() {
                     window
@@ -201,6 +205,7 @@ impl ImportanceMap {
 
         marginal_data.iter_mut().for_each(|e| *e /= total_luminance);
 
+        #[cfg(feature = "preview")]
         if let Some(window) = &mut window {
             let v_cdf = maybe_cdf.unwrap();
             for row in 0..vertical_resolution {
@@ -322,6 +327,7 @@ mod test {
         let mut estimate = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
+        #[cfg(feature = "preview")]
         let mut window = Window::new(
             "Preview",
             width,
@@ -334,6 +340,9 @@ mod test {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
+        #[cfg(feature = "preview")]
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
         let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
@@ -341,9 +350,8 @@ mod test {
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
         for idx in 0..limit {
+            #[cfg(feature = "preview")]
             if !window.is_open() {
                 println!("window closed, stopping test");
                 break;
@@ -385,6 +393,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
+                #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,
                     &film,
@@ -392,6 +401,7 @@ mod test {
                     converter,
                     1.0 / (idx as f32 + 1.0),
                 );
+                #[cfg(feature = "preview")]
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -437,6 +447,7 @@ mod test {
             let mut estimate2 = 0.0;
             let mut pb = ProgressBar::new(limit as u64);
 
+            #[cfg(feature = "preview")]
             let mut window = Window::new(
                 "Preview",
                 width,
@@ -449,16 +460,18 @@ mod test {
             .unwrap_or_else(|e| {
                 panic!("{}", e);
             });
+            #[cfg(feature = "preview")]
+            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
             let mut buffer = vec![0u32; limit];
             let mut film = Vec2D::new(width, height, XYZColor::BLACK);
             let converter = Converter::sRGB;
 
             let mut tonemapper = Clamp::new(0.0, true, true);
 
-            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
             // let mut sampler = StratifiedSampler::new(100, 100, 100);
             for idx in 0..limit {
+                #[cfg(feature = "preview")]
                 if !window.is_open() {
                     println!("window closed, stopping test");
                     break;
@@ -518,6 +531,7 @@ mod test {
                 if idx % 100 == 0 {
                     pb.add(100);
                     tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
+                    #[cfg(feature = "preview")]
                     update_window_buffer(
                         &mut buffer,
                         &film,
@@ -525,6 +539,7 @@ mod test {
                         converter,
                         1.0 / (idx as f32 + 1.0),
                     );
+                    #[cfg(feature = "preview")]
                     window.update_with_buffer(&buffer, width, height).unwrap();
                 }
             }
@@ -562,6 +577,7 @@ mod test {
         let mut estimate = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
+        #[cfg(feature = "preview")]
         let mut window = Window::new(
             "Preview",
             width,
@@ -574,15 +590,16 @@ mod test {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
+        #[cfg(feature = "preview")]
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
         let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
         for idx in 0..limit {
+            #[cfg(feature = "preview")]
             if !window.is_open() {
                 println!("window closed, stopping test");
                 break;
@@ -624,6 +641,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
+                #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,
                     &film,
@@ -631,6 +649,7 @@ mod test {
                     converter,
                     1.0 / (idx as f32 + 1.0),
                 );
+                #[cfg(feature = "preview")]
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -728,6 +747,7 @@ mod test {
         let mut estimate = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
+        #[cfg(feature = "preview")]
         let mut window = Window::new(
             "Preview",
             width,
@@ -740,15 +760,17 @@ mod test {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
+        #[cfg(feature = "preview")]
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
         let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let converter = Converter::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
         for idx in 0..limit {
+            #[cfg(feature = "preview")]
             if !window.is_open() {
                 println!("window closed, stopping test");
                 break;
@@ -793,6 +815,7 @@ mod test {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
                 pb.add(100);
+                #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,
                     &film,
@@ -800,6 +823,8 @@ mod test {
                     converter,
                     1.0 / (idx as f32 + 1.0),
                 );
+
+                #[cfg(feature = "preview")]
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -812,6 +837,7 @@ mod test {
         assert!(err < 0.0001);
     }
 
+    #[cfg(feature = "preview")]
     #[test]
     fn test_adaptive_sampling() {
         let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();

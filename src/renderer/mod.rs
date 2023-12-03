@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
-mod vec2d;
 mod prelude;
+mod vec2d;
 
 // integrators
 mod naive;
@@ -12,6 +12,7 @@ mod tiled;
 pub use vec2d::Vec2D;
 
 pub use naive::NaiveRenderer;
+#[cfg(feature = "preview")]
 pub use preview::PreviewRenderer;
 pub use tiled::TiledRenderer;
 

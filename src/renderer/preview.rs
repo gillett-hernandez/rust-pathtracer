@@ -19,17 +19,21 @@ use crossbeam::channel::unbounded;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
 use pbr::ProgressBar;
 
+#[cfg(feature = "preview")]
 use minifb::{Key, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 
+#[cfg(feature = "preview")]
 #[derive(Default)]
 pub struct PreviewRenderer {}
 
+#[cfg(feature = "preview")]
 impl PreviewRenderer {
     pub fn new() -> Self {
         PreviewRenderer {}
     }
 }
+#[cfg(feature = "preview")]
 impl Renderer for PreviewRenderer {
     fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {
         if let RendererType::Preview {
@@ -429,6 +433,10 @@ impl Renderer for PreviewRenderer {
                         {
                             break;
                         }
+
+                        if s > max_samples && max_samples > 0 {
+                            break;
+                        }
                         let now = Instant::now();
                         let _stats: Profile = films[film_idx]
                             .buffer
@@ -520,7 +528,6 @@ impl Renderer for PreviewRenderer {
                         render_settings.resolution.height,
                     );
 
-                    
                     println!("starting render with film resolution {}x{}", width, height);
                     let pixels = width * height;
                     total_pixels += pixels;
@@ -599,6 +606,7 @@ impl Renderer for PreviewRenderer {
 
                             {
                                 let owned = local_total_splats.to_owned();
+                                #[cfg(feature = "preview")]
                                 update_window_buffer(
                                     &mut light_buffer_ref.lock().unwrap(),
                                     &film,

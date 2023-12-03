@@ -7,8 +7,11 @@ extern crate packed_simd;
 #[macro_use]
 extern crate paste;
 extern crate image;
+
+#[cfg(feature = "preview")]
 extern crate minifb;
 
+#[cfg(feature = "preview")]
 use minifb::{Key, Window, WindowOptions};
 use rayon::prelude::*;
 use renderer::Vec2D;
@@ -59,6 +62,7 @@ pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
     ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
 }
 
+#[cfg(feature = "preview")]
 pub fn window_loop<F>(
     width: usize,
     height: usize,
@@ -87,6 +91,7 @@ pub fn window_loop<F>(
     }
 }
 
+#[cfg(feature = "preview")]
 pub fn update_window_buffer(
     buffer: &mut [u32],
     film: &Vec2D<XYZColor>,

@@ -305,6 +305,7 @@ mod test {
         }
     }
 
+    #[cfg(feature = "preview")]
     #[test]
     fn test_sampling_direction() {
         let light = SharpLight::new(

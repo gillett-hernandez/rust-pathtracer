@@ -115,6 +115,7 @@ impl Medium<f32, f32> for Rayleigh {
     }
 }
 
+#[cfg(feature = "preview")]
 #[cfg(test)]
 mod test {
     use minifb::WindowOptions;

@@ -8,7 +8,10 @@ use root::parsing::config::*;
 use root::parsing::construct_world;
 use root::parsing::get_settings;
 use root::renderer::TiledRenderer;
-use root::renderer::{NaiveRenderer, PreviewRenderer, Renderer};
+use root::renderer::{NaiveRenderer, Renderer};
+
+#[cfg(feature = "preview")]
+use root::renderer::PreviewRenderer;
 use root::world::*;
 
 #[macro_use]
@@ -52,6 +55,7 @@ fn construct_scene(config: &Config) -> Result<World, Box<dyn Error>> {
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     match config.renderer {
         RendererType::Naive { .. } => Box::new(NaiveRenderer::new()),
+        #[cfg(feature = "preview")]
         RendererType::Preview { .. } => Box::new(PreviewRenderer::new()),
         RendererType::Tiled {
             tile_size: (width, height),

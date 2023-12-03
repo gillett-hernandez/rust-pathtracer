@@ -89,8 +89,13 @@ impl From<TOMLRenderSettings> for RenderSettings {
 #[serde(tag = "type")]
 pub enum RendererType {
     Naive,
-    Preview { selected_preview_film_id: usize },
-    Tiled { tile_size: (u16, u16) },
+    #[cfg(feature = "preview")]
+    Preview {
+        selected_preview_film_id: usize,
+    },
+    Tiled {
+        tile_size: (u16, u16),
+    },
 }
 
 #[derive(Deserialize, Clone)]

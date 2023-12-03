@@ -4,6 +4,7 @@ use crate::prelude::*;
 use crate::integrator::*;
 use crate::tonemap::Clamp;
 
+#[cfg(feature = "preview")]
 use minifb::WindowOptions;
 
 use std::collections::HashMap;
@@ -418,8 +419,10 @@ impl TiledRenderer {
             });
 
             // let mut tonemapper = Clamp::new(3.0, true, true);
+            #[cfg(feature = "preview")]
             let mut preview_tonemapper = Clamp::new(2.0, true, true);
 
+            #[cfg(feature = "preview")]
             window_loop(
                 width,
                 height,
