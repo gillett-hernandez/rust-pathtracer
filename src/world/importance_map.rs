@@ -811,10 +811,10 @@ mod test {
             // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
             film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / pdf;
 
-            if idx % 100 == 0 {
+            if idx % 1000 == 0 {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
-                pb.add(100);
+                pb.add(1000);
                 #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,

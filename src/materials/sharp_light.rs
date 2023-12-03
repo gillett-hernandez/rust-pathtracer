@@ -216,6 +216,7 @@ impl SharpLight {
 #[cfg(test)]
 mod test {
 
+    #[cfg(feature = "preview")]
     use minifb::WindowOptions;
 
     use crate::{curves, tonemap::Clamp};
