@@ -345,7 +345,7 @@ mod tests {
     #[test]
     fn test_parse_tabulated_curve() {
         let (gold_ior, gold_kappa) =
-            load_ior_and_kappa("data/curves/csv/gold.csv", |x: f32| x * 1000.0).unwrap();
+            load_ior_and_kappa("data/test/gold.csv", |x: f32| x * 1000.0).unwrap();
 
         println!("{:?}", gold_ior.evaluate_power(500.0));
         println!("{:?}", gold_kappa.evaluate_power(500.0));
@@ -353,13 +353,13 @@ mod tests {
     #[test]
     fn test_parse_cornell() {
         let cornell_colors = load_multiple_csv_rows(
-            "data/curves/csv/cornell.csv",
+            "data/test/cornell.csv",
             3,
             InterpolationMode::Cubic,
             |x| x,
             |y| y,
         )
-        .expect("data/curves/csv/cornell.csv was not formatted correctly");
+        .expect("data/test/cornell.csv was not formatted correctly");
         let mut iter = cornell_colors.iter();
         let (cornell_white, cornell_green, cornell_red) = (
             iter.next().unwrap().clone(),
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn test_parse_linear_spectra() {
         let spectra = load_linear(
-            "data/curves/spectra/xenon_lamp.spectra",
+            "data/test/xenon_lamp.spectra",
             |x| x,
             |y| 10.0 * y,
             InterpolationMode::Cubic,

@@ -289,7 +289,7 @@ mod test {
     use super::*;
     #[test]
     fn test_bitmap() {
-        let film = parse_bitmap("data/textures/test.bmp");
+        let film = parse_bitmap("data/test/test.bmp");
         let mut sum = 0.0;
         let mut max = 0.0;
         for v in film.buffer {
@@ -306,7 +306,7 @@ mod test {
     }
     #[test]
     fn test_rgba() {
-        let film = parse_rgba("data/textures/test.png");
+        let film = parse_rgba("data/test/test.png");
         let mut sum = f32x4::splat(0.0);
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
@@ -323,7 +323,7 @@ mod test {
     }
     #[test]
     fn test_hdr() {
-        let film = parse_hdr("data/textures/test.hdr", 0.0);
+        let film = parse_hdr("data/test/test.hdr", 0.0);
         let mut sum = f32x4::splat(0.0);
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
@@ -341,7 +341,7 @@ mod test {
 
     #[test]
     fn test_exr() {
-        let film = parse_exr("data/textures/test.exr");
+        let film = parse_exr("data/test/test.exr");
         let mut sum = f32x4::splat(0.0);
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
@@ -362,7 +362,7 @@ mod test {
         let map = HashMap::new();
         let texture = parse_texture(
             TextureData::SRGB {
-                filename: "data/textures/test.png".to_string(),
+                filename: "data/test/test.png".to_string(),
             },
             &map,
         )
@@ -405,7 +405,7 @@ mod test {
                     }
                     .into(),
                 ],
-                filename: "data/textures/test.png".to_string(),
+                filename: "data/test/test.png".to_string(),
             }]),
             &map,
         )
