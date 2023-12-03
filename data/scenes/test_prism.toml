@@ -2,12 +2,13 @@ curves = "data/lib_curves.toml"
 textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
+
 env_sampling_probability = 0.1
 
 [environment]
-type="HDRI"
+type = "HDRI"
 strength = 1.0
-texture_name = "kiara_dawn_8k"
+texture_name = "low_res_hdri"
 
 
 [[instances]]

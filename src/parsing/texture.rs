@@ -102,7 +102,7 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Vec2D<f32x4> {
     info!("parsing hdr texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::codecs::hdr::HdrDecoder::new(BufReader::new(
-        File::open(path).expect("couldn't open hdr file"),
+        File::open(path).expect(&*format!("couldn't open hdr file at {}", filepath)),
     ))
     .expect("couldn't construct hdr decoder for some reason");
     let (width, height) = (
