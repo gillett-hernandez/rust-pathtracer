@@ -47,7 +47,7 @@ pub struct TextureStackData(pub Vec<TextureData>);
 pub fn parse_rgba(filepath: &str) -> Vec2D<f32x4> {
     info!("parsing rgba texture at {}", filepath);
     let path = Path::new(filepath);
-    let img = image::open(path).unwrap();
+    let img = image::open(path).expect(&*format!("could not find file at {}", filepath));
     let rgba_image = img.into_rgba8();
     let (width, height) = rgba_image.dimensions();
     let mut new_film = Vec2D::new(width as usize, height as usize, f32x4::splat(0.0));
