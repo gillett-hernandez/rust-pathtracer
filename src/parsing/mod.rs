@@ -37,7 +37,7 @@ use material::*;
 use medium::*;
 use serde::de::DeserializeOwned;
 use texture::*;
-pub use tonemap::parse_tonemapper;
+pub use tonemap::parse_tonemap_settings;
 
 use curves::{CurveData, CurveDataOrReference};
 

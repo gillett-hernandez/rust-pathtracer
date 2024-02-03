@@ -7,7 +7,7 @@ pub use crate::geometry::InstanceId;
 pub use crate::materials::{Material, MaterialEnum, MaterialId, MediumId};
 pub use crate::renderer::Vec2D;
 pub use crate::texture::TexStack;
-pub use crate::tonemap::{Converter, Tonemapper};
+pub use crate::tonemap::{Color, Tonemapper};
 pub use crate::{rgb_to_u32, TransportMode, INTERSECTION_TIME_OFFSET, MAUVE, NORMAL_OFFSET};
 
 #[cfg(feature = "preview")]

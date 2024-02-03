@@ -8,8 +8,8 @@ env_sampling_probability = 0.5
 [environment]
 type = "HDRI"
 strength = 1.0
-texture_name = "low_res_hdri"
-# texture_name = "moonlit_golf_8k"
+# texture_name = "low_res_hdri"
+texture_name = "moonlit_golf_8k"
 [environment.importance_map]
 width = 1000
 height = 1000

@@ -27,6 +27,15 @@ pub enum IntegratorKind {
     },
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Deserialize, Clone)]
+#[serde(tag = "type")]
+pub enum ColorSpaceSettings {
+    sRGB,
+    Rec709,
+    Rec2020,
+}
+
 #[derive(Deserialize, Clone)]
 pub struct RenderSettings {
     pub filename: Option<String>,
@@ -42,6 +51,8 @@ pub struct RenderSettings {
     pub russian_roulette: Option<bool>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
+    pub premultiply: Option<f32>,
+    pub colorspace_settings: ColorSpaceSettings,
     pub tonemap_settings: TonemapSettings,
 }
 
@@ -61,6 +72,8 @@ pub struct TOMLRenderSettings {
     pub russian_roulette: Option<bool>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
+    pub premultiply: Option<f32>,
+    pub colorspace_settings: ColorSpaceSettings,
     pub tonemap_settings: TonemapSettings,
 }
 
@@ -79,6 +92,8 @@ impl From<TOMLRenderSettings> for RenderSettings {
             camera_id: 0,
             russian_roulette: data.russian_roulette,
             only_direct: data.only_direct,
+            premultiply: data.premultiply,
+            colorspace_settings: data.colorspace_settings,
             wavelength_bounds: data.wavelength_bounds,
             tonemap_settings: data.tonemap_settings,
         }

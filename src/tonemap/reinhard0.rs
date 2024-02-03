@@ -85,7 +85,7 @@ impl Tonemapper for Reinhard0 {
         }
         self.l_w = Some(l_w)
     }
-    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> XYZColor {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);
         let lum = cie_xyz_color.y();
 
@@ -101,7 +101,7 @@ impl Tonemapper for Reinhard0 {
             cie_xyz_color = MAUVE;
         }
 
-        scaling_factor * cie_xyz_color.0
+        XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
     }
 
     fn get_name(&self) -> &str {
@@ -192,7 +192,7 @@ impl Tonemapper for Reinhard0x3 {
         }
         self.l_w = Some(l_w)
     }
-    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> XYZColor {
         // TODO: determine whether applying this per channel in xyz space is adequate,
         // or if this needs to be applied in sRGB linear or cie RGB space.
         let mut cie_xyz_color = film.at(pixel.0, pixel.1);
@@ -209,7 +209,7 @@ impl Tonemapper for Reinhard0x3 {
             cie_xyz_color = MAUVE;
         }
 
-        scaling_factor * cie_xyz_color.0
+        XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
     }
 
     fn get_name(&self) -> &str {

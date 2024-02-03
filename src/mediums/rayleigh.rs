@@ -158,7 +158,7 @@ mod test {
         let wi = Vec3::new(0.0, 1.0, 1.0).normalized();
         // let wi = Vec3::Z;
         let mut total_samples = 0;
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let (samples_per_iteration, exposure): (usize, f32) = match mode {
             TestMode::ViewPhase => (10, 17.0),

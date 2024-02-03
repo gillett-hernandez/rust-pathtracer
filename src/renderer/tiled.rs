@@ -2,7 +2,9 @@ use super::prelude::*;
 use crate::prelude::*;
 
 use crate::integrator::*;
-use crate::tonemap::Clamp;
+
+#[cfg(feature = "preview")]
+use crate::tonemap::{Clamp, OETF};
 
 #[cfg(feature = "preview")]
 use minifb::WindowOptions;
@@ -466,16 +468,15 @@ impl TiledRenderer {
                                         tile.horizontal_span,
                                         tile.vertical_span
                                     );
-                                    let [r, g, b, _]: [f32; 4] = Converter::sRGB
-                                        .transfer_function(
+                                    let [r, g, b, _]: [f32; 4] = crate::tonemap::sRGB
+                                        ::oetf(
                                             preview_tonemapper.map(
                                                 &preview_copy,
                                                 (
                                                     x as usize - tile.horizontal_span.0 as usize,
                                                     y as usize - tile.vertical_span.0 as usize,
                                                 ),
-                                            ),
-                                            false,
+                                            ).0,
                                         )
                                         .into();
                                     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
@@ -505,10 +506,9 @@ impl TiledRenderer {
                                 // let locked = tile.data.read().unwrap();
                                 // let preview_copy = locked;
                                 for (x, y) in tile.iter_indices() {
-                                    let [r, g, b, _]: [f32; 4] = Converter::sRGB
-                                        .transfer_function(
-                                            preview_tonemapper.map(&tiles.film, (x as usize, y as usize)),
-                                            false,
+                                    let [r, g, b, _]: [f32; 4] = crate::tonemap::sRGB
+                                        ::oetf(
+                                            preview_tonemapper.map(&tiles.film, (x as usize, y as usize)).0,
                                         )
                                         .into();
                                     window_buffer[y as usize * width + x as usize] = rgb_to_u32(

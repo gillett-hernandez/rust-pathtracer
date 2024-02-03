@@ -1,8 +1,6 @@
 use serde::Deserialize;
 
-use crate::tonemap::{
-    Clamp, Converter, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3, Tonemapper,
-};
+use crate::tonemap::{Clamp, Color, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3, Tonemapper};
 
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
@@ -67,7 +65,7 @@ impl TonemapSettings {
     }
 }
 
-pub fn parse_tonemapper(settings: TonemapSettings) -> (Box<dyn Tonemapper>, Converter) {
+pub fn parse_tonemap_settings(settings: TonemapSettings) -> Box<dyn Tonemapper> {
     let tonemapper: Box<dyn Tonemapper> = match settings {
         TonemapSettings::Clamp {
             exposure,
@@ -102,5 +100,5 @@ pub fn parse_tonemapper(settings: TonemapSettings) -> (Box<dyn Tonemapper>, Conv
             }
         }
     };
-    (tonemapper, Converter::sRGB)
+    tonemapper
 }

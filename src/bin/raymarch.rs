@@ -24,12 +24,12 @@ use root::hittable::{HasBoundingBox, AABB};
 use root::parsing::tonemap::TonemapSettings;
 use root::parsing::{
     config::*, construct_world, get_settings, load_scene, parse_config_and_cameras,
-    parse_tonemapper,
+    parse_tonemap_settings,
 };
 use root::prelude::Camera;
 use root::renderer::{output_film, Vec2D};
 use root::rgb_to_u32;
-use root::tonemap::{Clamp, Converter, Tonemapper};
+use root::tonemap::{Clamp, ColorSpace, Tonemapper};
 use root::world::{EnvironmentMap, Material, MaterialEnum};
 use root::*;
 
@@ -587,7 +587,7 @@ fn main() {
             silenced: true,
         },
     };
-    let (mut tonemapper, converter) = parse_tonemapper(tonemap_settings);
+    let (mut tonemapper, converter) = parse_tonemap_settings(tonemap_settings);
 
     let mut total_samples = 0;
     let samples_per_frame = 1;

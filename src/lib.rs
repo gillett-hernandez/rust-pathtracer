@@ -1,12 +1,13 @@
 #![feature(fs_try_exists)]
 
 #[macro_use]
+extern crate smallvec;
+#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate packed_simd;
 #[macro_use]
 extern crate paste;
-extern crate image;
 
 #[cfg(feature = "preview")]
 extern crate minifb;
@@ -15,7 +16,7 @@ extern crate minifb;
 use minifb::{Key, Window, WindowOptions};
 use rayon::prelude::*;
 use renderer::Vec2D;
-use tonemap::{Converter, Tonemapper};
+use tonemap::{sRGB, Color, Tonemapper, OETF};
 
 use math::{
     prelude::XYZColor,
@@ -96,7 +97,6 @@ pub fn update_window_buffer(
     buffer: &mut [u32],
     film: &Vec2D<XYZColor>,
     tonemapper: &mut dyn Tonemapper,
-    converter: Converter,
     factor: f32,
 ) {
     let width = film.width;
@@ -108,9 +108,8 @@ pub fn update_window_buffer(
         .for_each(|(pixel_idx, v)| {
             let y: usize = pixel_idx / width;
             let x: usize = pixel_idx % width;
-            let [r, g, b, _]: [f32; 4] = converter
-                .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
-                .into();
+            let [r, g, b, _]: [f32; 4] =
+                sRGB::oetf(tonemapper.map(&film, (x as usize, y as usize)).0).into();
             *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
         });
 }

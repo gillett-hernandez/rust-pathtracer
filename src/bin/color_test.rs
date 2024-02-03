@@ -9,7 +9,7 @@ use math::curves::*;
 use root::parsing::config::TOMLConfig;
 use root::parsing::parse_config_and_cameras;
 use root::parsing::*;
-use root::tonemap::{Converter, Tonemapper};
+use root::tonemap::{ColorSpace, Tonemapper};
 
 #[macro_use]
 extern crate log;
@@ -481,7 +481,7 @@ impl View {
                     &mut self.buffer,
                     &self.film,
                     self.tonemapper.as_mut(),
-                    Converter::sRGB,
+                    crate::tonemap::sRGB,
                     1.0,
                 );
                 self.window

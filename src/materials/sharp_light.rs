@@ -395,7 +395,7 @@ mod test {
                     &mut window_buffer,
                     &film,
                     &mut tonemapper,
-                    Converter::sRGB,
+                    crate::tonemap::sRGB,
                     factor,
                 );
             },

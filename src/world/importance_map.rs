@@ -288,7 +288,7 @@ mod test {
     use super::*;
     use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
-    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
+    use crate::tonemap::{sRGB, write_to_files, Clamp, Color, Rec709Primaries, Reinhard1x3, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -346,7 +346,7 @@ mod test {
         let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
@@ -465,7 +465,7 @@ mod test {
 
             let mut buffer = vec![0u32; limit];
             let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-            let converter = Converter::sRGB;
+            let converter = crate::tonemap::sRGB;
 
             let mut tonemapper = Clamp::new(0.0, true, true);
 
@@ -550,15 +550,14 @@ mod test {
             );
 
             let boxed: Box<dyn Tonemapper> = Box::new(tonemapper);
-            converter
-                .write_to_files(
-                    &film,
-                    &boxed,
-                    1.0,
-                    "env_map_sampling_test.exr",
-                    "env_map_sampling_test.png",
-                )
-                .expect("writing to disk failed");
+            write_to_files::<Rec709Primaries, sRGB>(
+                &film,
+                &boxed,
+                1.0,
+                "env_map_sampling_test.exr",
+                "env_map_sampling_test.png",
+            )
+            .expect("writing to disk failed");
         }
     }
 
@@ -594,7 +593,7 @@ mod test {
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
         let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
@@ -765,7 +764,7 @@ mod test {
 
         let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
@@ -865,7 +864,7 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; width * height];
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Reinhard1x3::new(0.001, 40.0, true);
         // let mut tonemapper = Clamp::new(-10.0, true, true);

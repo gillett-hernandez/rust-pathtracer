@@ -6,7 +6,7 @@ use crate::parsing::config::{Config, RenderSettings, RendererType, Resolution};
 
 use crate::integrator::{GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator};
 
-use crate::parsing::parse_tonemapper;
+use crate::parsing::parse_tonemap_settings;
 use crate::profile::Profile;
 use crate::world::{EnvironmentMap, World};
 
@@ -53,7 +53,7 @@ impl Renderer for PreviewRenderer {
             let original_render_settings = config.render_settings[film_idx].clone();
             let mut render_settings = config.render_settings[film_idx].clone();
             render_settings.tonemap_settings = render_settings.tonemap_settings.silenced();
-            let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
+            let mut tonemapper = parse_tonemap_settings(render_settings.tonemap_settings);
 
             world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
             let env_sampling_probability = world.get_env_sampling_probability();
@@ -491,7 +491,6 @@ impl Renderer for PreviewRenderer {
                             &mut buffer,
                             &films[film_idx],
                             tonemapper.as_mut(),
-                            converter,
                             1.0 / (s as f32 + 1.0),
                         );
                         window.update_with_buffer(&buffer, width, height).unwrap();
@@ -580,8 +579,8 @@ impl Renderer for PreviewRenderer {
                         let mut local_total_splats = total_splats_ref.lock().unwrap();
                         let mut local_stop_splatting = false;
                         let mut remaining_iterations = 10;
-                        let (mut tonemapper2, converter) =
-                            parse_tonemapper(render_settings_copy.tonemap_settings);
+                        let mut tonemapper2 =
+                            parse_tonemap_settings(render_settings_copy.tonemap_settings);
 
                         let mut last_instant = Instant::now();
                         let first_instant = last_instant.clone();
@@ -612,7 +611,6 @@ impl Renderer for PreviewRenderer {
                                     &mut light_buffer_ref.lock().unwrap(),
                                     &film,
                                     tonemapper2.as_mut(),
-                                    converter,
                                     1.0 / ((owned as f32).sqrt() + 1.0),
                                 );
                                 println!(
