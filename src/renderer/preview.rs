@@ -33,6 +33,7 @@ impl PreviewRenderer {
         PreviewRenderer {}
     }
 }
+
 #[cfg(feature = "preview")]
 impl Renderer for PreviewRenderer {
     fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {

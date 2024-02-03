@@ -803,13 +803,16 @@ mod test {
 
             // sum += y_bar(sw.lambda * 10.0) * sw.energy;
             estimate += sw.energy / pdf / limit as f32;
-            let (px, py) = (
-                (uv.0 * width as f32) as usize,
-                (uv.1 * height as f32) as usize,
-            );
 
-            // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
-            film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / pdf;
+            if !cfg!(feature = "preview") {
+                let (px, py) = (
+                    (uv.0 * width as f32) as usize,
+                    (uv.1 * height as f32) as usize,
+                );
+
+                // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
+                film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / pdf;
+            }
 
             if idx % 1000 == 0 {
                 println!();
