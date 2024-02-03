@@ -40,21 +40,6 @@ const XYZ_TO_REC2020_LINEAR: Matrix3<f32> = Matrix3::new(
     1.2884099,
 );
 
-const S313: f32x4 = f32x4::splat(0.0031308);
-const S323_25: f32x4 = f32x4::splat(323.0 / 25.0);
-const S5_12: f32x4 = f32x4::splat(5.0 / 12.0);
-const S211: f32x4 = f32x4::splat(211.0);
-const S11: f32x4 = f32x4::splat(11.0);
-const S200: f32x4 = f32x4::splat(200.0);
-const S45: f32x4 = f32x4::splat(4.5);
-const S045: f32x4 = f32x4::splat(0.45);
-const S018: f32x4 = f32x4::splat(0.018053968510);
-const S099: f32x4 = f32x4::splat(0.099296826);
-const S109: f32x4 = f32x4::splat(1.099296826);
-
-// reference https://64.github.io/tonemapping/
-// and Reinhard '02 https://www.cs.utah.edu/docs/techreports/2002/pdf/UUCS-02-001.pdf
-
 pub trait Tonemapper: Send + Sync {
     // factor in `initialize` is a prefactor weight on the film contents.
     // a tonemapper should initialize based on the film x scale_factor
@@ -166,9 +151,9 @@ pub struct sRGB;
 
 impl OETF for sRGB {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        (linear_color.lt(S313)).select(
-            S323_25 * linear_color,
-            (S211 * linear_color.powf(S5_12) - S11) / S200,
+        (linear_color.lt(f32x4::splat(0.0031308))).select(
+            f32x4::splat(323.0 / 25.0) * linear_color,
+            f32x4::splat(211.0) * linear_color.powf(f32x4::splat(5.0 / 12.0)) - f32x4::splat(11.0),
         )
     }
     fn primaries() -> Primaries {
@@ -185,9 +170,10 @@ pub struct Rec709;
 
 impl OETF for Rec709 {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        (linear_color.lt(S018)).select(
-            S45 * linear_color,
-            (S109 * linear_color.powf(S045) - S099) / S200,
+        linear_color.lt(f32x4::splat(0.018053968510)).select(
+            f32x4::splat(4.5) * linear_color,
+            f32x4::splat(1.099296826) * linear_color.powf(f32x4::splat(0.45))
+                - f32x4::splat(0.099296826),
         )
     }
     fn primaries() -> Primaries {
@@ -204,9 +190,10 @@ pub struct Rec2020;
 
 impl OETF for Rec2020 {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        (linear_color.lt(S018)).select(
-            S45 * linear_color,
-            (S109 * linear_color.powf(S045) - S099) / S200,
+        linear_color.lt(f32x4::splat(0.018053968510)).select(
+            f32x4::splat(4.5) * linear_color,
+            f32x4::splat(1.099296826) * linear_color.powf(f32x4::splat(0.45))
+                - f32x4::splat(0.099296826),
         )
     }
     fn primaries() -> Primaries {

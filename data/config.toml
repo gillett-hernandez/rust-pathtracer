@@ -262,7 +262,7 @@ tile_size = [32, 32]
 [[render_settings]]
 threads = 22
 filename = "beauty"
-min_samples = 32
+min_samples = 256
 min_bounces = 1
 max_bounces = 12
 hwss = false
@@ -294,7 +294,7 @@ type = "Rec2020"
 
 [render_settings.tonemap_settings]
 type = "Clamp"
-exposure = 2.0
+exposure = 1.0
 silenced = false
 # key_value = 0.18
 # white_point = 1.0
@@ -315,9 +315,9 @@ medium_aware = false
 # selected_pair = [1,2]
 # selected_pair = [1,1]
 [render_settings.resolution]
-# width = 3840
-# height = 2160
-width = 1024
-height = 1024
+width = 2560
+height = 1440
+# width = 1024
+# height = 1024
 # width = 4096
 # height = 2048
