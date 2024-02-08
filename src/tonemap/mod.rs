@@ -52,7 +52,7 @@ pub trait Tonemapper: Send + Sync {
 
 #[derive(Clone, Copy)]
 pub struct Color<T: Default> {
-    values: f32x4,
+    pub values: f32x4,
     color_space: PhantomData<*mut T>,
 }
 
@@ -153,7 +153,8 @@ impl OETF for sRGB {
     fn oetf(linear_color: f32x4) -> f32x4 {
         (linear_color.lt(f32x4::splat(0.0031308))).select(
             f32x4::splat(323.0 / 25.0) * linear_color,
-            f32x4::splat(211.0) * linear_color.powf(f32x4::splat(5.0 / 12.0)) - f32x4::splat(11.0),
+            f32x4::splat(211.0 / 200.0) * linear_color.powf(f32x4::splat(5.0 / 12.0))
+                - f32x4::splat(11.0 / 200.0),
         )
     }
     fn primaries() -> Primaries {
@@ -204,7 +205,7 @@ impl OETF for Rec2020 {
     }
 }
 
-pub fn write_to_files<S: Default, T: OETF + Default>(
+pub fn write_to_files<S, T>(
     film: &Vec2D<XYZColor>,
     tonemapper: &Box<dyn Tonemapper>,
     factor: f32,
@@ -213,6 +214,8 @@ pub fn write_to_files<S: Default, T: OETF + Default>(
 ) -> Result<(), Box<dyn Error>>
 where
     Color<S>: From<Color<CIEXYZ>>,
+    S: Default,
+    T: OETF + Default,
 {
     let now = Instant::now();
 
@@ -342,9 +345,57 @@ mod test {
 
     use rand::random;
 
-    use crate::tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3};
+    use crate::tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3, OETF};
 
     use super::*;
+
+    fn printout<S, T>()
+    where
+        Color<S>: From<Color<CIEXYZ>>,
+        S: Default,
+        T: OETF + Default,
+    {
+        let mut film = Vec2D::new(32, 32, XYZColor::BLACK);
+
+        let num_samples = 10;
+        // estimated total energy per pixel is proportional to num_samples
+        println!("adding {} samples per pixel", num_samples as usize);
+        film.buffer.par_iter_mut().for_each(|px| {
+            for _ in 0..(num_samples as usize) {
+                *px += SingleWavelength::new_from_range(random::<f32>(), BOUNDED_VISIBLE_RANGE)
+                    .replace_energy(1.0)
+                    .into();
+            }
+        });
+
+        for pixel in film.buffer.iter() {
+            let as_color: Color<CIEXYZ> = (*pixel / num_samples as f32).into();
+            let as_s: Color<S> = as_color.into();
+            // Linear RGB color space with S primaries
+            let [r, g, b, _]: [f32; 4] = T::oetf(as_s.values.into()).into();
+
+            let sdr_rgb = (
+                (r * 255.0).ceil().clamp(0.0, 255.0) as u8,
+                (g * 255.0).ceil().clamp(0.0, 255.0) as u8,
+                (b * 255.0).ceil().clamp(0.0, 255.0) as u8,
+            );
+            println!("{:?}", sdr_rgb);
+        }
+    }
+
+    #[test]
+    fn test_srgb_sdr() {
+        printout::<Rec709Primaries, sRGB>();
+    }
+    #[test]
+    fn test_rec709_sdr() {
+        printout::<Rec709Primaries, Rec709>();
+    }
+    #[test]
+    fn test_rec2020_sdr() {
+        printout::<Rec2020Primaries, Rec2020>();
+    }
+
     #[test]
     fn test_write_to_file() {
         let num_samples = random::<f32>() * 1000.0 + 1.0;

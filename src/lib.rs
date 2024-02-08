@@ -9,10 +9,10 @@ extern crate packed_simd;
 #[macro_use]
 extern crate paste;
 
-#[cfg(feature = "preview")]
+#[cfg(feature = "minifb")]
 extern crate minifb;
 
-#[cfg(feature = "preview")]
+#[cfg(feature = "minifb")]
 use minifb::{Key, Window, WindowOptions};
 use rayon::prelude::*;
 use renderer::Vec2D;
@@ -63,7 +63,7 @@ pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
     ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
 }
 
-#[cfg(feature = "preview")]
+#[cfg(feature = "minifb")]
 pub fn window_loop<F>(
     width: usize,
     height: usize,
@@ -92,13 +92,15 @@ pub fn window_loop<F>(
     }
 }
 
-#[cfg(feature = "preview")]
+#[cfg(feature = "minifb")]
 pub fn update_window_buffer(
     buffer: &mut [u32],
     film: &Vec2D<XYZColor>,
     tonemapper: &mut dyn Tonemapper,
     factor: f32,
 ) {
+    use crate::tonemap::{Rec709Primaries, CIEXYZ};
+
     let width = film.width;
     debug_assert!(buffer.len() % width == 0);
     tonemapper.initialize(&film, factor);
@@ -108,8 +110,9 @@ pub fn update_window_buffer(
         .for_each(|(pixel_idx, v)| {
             let y: usize = pixel_idx / width;
             let x: usize = pixel_idx % width;
-            let [r, g, b, _]: [f32; 4] =
-                sRGB::oetf(tonemapper.map(&film, (x as usize, y as usize)).0).into();
+            let as_xyz: Color<CIEXYZ> = tonemapper.map(&film, (x as usize, y as usize)).into();
+            let as_rec709: Color<Rec709Primaries> = as_xyz.into();
+            let [r, g, b, _]: [f32; 4] = sRGB::oetf(as_rec709.values).into();
             *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
         });
 }

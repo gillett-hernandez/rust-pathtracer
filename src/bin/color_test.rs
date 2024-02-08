@@ -1,15 +1,16 @@
 extern crate rust_pathtracer as root;
-use root::prelude::*;
+use parking_lot::RwLock;
+use root::{prelude::*, update_window_buffer};
 
-use std::fs::File;
 use std::ops::RangeInclusive;
+use std::{fs::File, sync::Arc};
 
 use math::curves::*;
 
 use root::parsing::config::TOMLConfig;
 use root::parsing::parse_config_and_cameras;
 use root::parsing::*;
-use root::tonemap::{ColorSpace, Tonemapper};
+use root::tonemap::Tonemapper;
 
 #[macro_use]
 extern crate log;
@@ -32,7 +33,7 @@ struct Opt {
     pub height: usize,
     #[structopt(long, default_value = "")]
     pub initial_color: String,
-    #[structopt(long, default_value = "10.0")]
+    #[structopt(long, default_value = "1.0")]
     pub dynamic_range: f32,
 }
 
@@ -449,16 +450,10 @@ impl View {
 
                 let per_illuminant_scale = &self.per_illuminant_scale;
 
-                self.film
-                    .buffer
-                    .par_iter_mut()
-                    .enumerate()
-                    .for_each(|(idx, pixel)| {
+                let mut cache = Vec::new();
+                for illuminant_bin in 0..model.illuminants.len() {
+                    for bin_num in 0..model.bins {
                         let illuminants = &model.illuminants;
-                        let (x, y) = (idx % width, idx / width);
-
-                        let bin_num = model.bins * x / width;
-                        let illuminant_bin = y * illuminants.len() / height;
                         let illuminant = &illuminants[illuminant_bin];
 
                         let strength = model.ev_multiplier.powf(bin_num as f32 - model.ev_offset);
@@ -470,20 +465,35 @@ impl View {
                                 (Op::Mul, illuminant.clone()),
                             ],
                         };
-                        *pixel = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
+                        let color = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
+                        // println!(
+                        //     "color for illuminant {} and bin {} == {:?}",
+                        //     illuminant_bin, bin_num, color.0
+                        // );
+                        cache.push(color);
+                    }
+                }
+
+                self.film
+                    .buffer
+                    .par_iter_mut()
+                    .enumerate()
+                    .for_each(|(idx, pixel)| {
+                        let illuminants = &model.illuminants;
+                        let (x, y) = (idx % width, idx / width);
+
+                        let bin_num = model.bins * x / width;
+
+                        let illuminant_bin = y * illuminants.len() / height;
+
+                        *pixel = cache[illuminant_bin * model.bins + bin_num];
                     });
 
                 self.tonemapper.initialize(&self.film, 1.0);
                 // let window = self.window
                 // let film = &self.film;
                 // let tonemapper = &self.tonemapper;
-                update_window_buffer(
-                    &mut self.buffer,
-                    &self.film,
-                    self.tonemapper.as_mut(),
-                    crate::tonemap::sRGB,
-                    1.0,
-                );
+                update_window_buffer(&mut self.buffer, &self.film, self.tonemapper.as_mut(), 1.0);
                 self.window
                     .update_with_buffer(&self.buffer, self.film.width, self.film.height)
                     .unwrap();
@@ -625,7 +635,7 @@ fn main() {
     });
 
     let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(500.0, 900.0)),
+        viewport: egui::ViewportBuilder::default().with_inner_size(egui::vec2(500.0, 900.0)),
         ..Default::default()
     };
 

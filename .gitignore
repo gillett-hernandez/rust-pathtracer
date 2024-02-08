@@ -8,6 +8,7 @@ output/*
 data/meshes/*
 data/download/*
 data/brdfs/*
+data/curves/sensitivities/*
 *.obj
 *.mtl
 *.log
