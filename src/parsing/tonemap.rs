@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::tonemap::{Clamp, Color, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3, Tonemapper};
+use crate::tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3, Tonemapper};
 
 #[derive(Deserialize, Clone, Copy)]
 #[serde(tag = "type")]

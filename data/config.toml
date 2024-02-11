@@ -260,13 +260,13 @@ tile_size = [32, 32]
 # selected_preview_film_id = 0
 
 [[render_settings]]
-threads = 22
+threads = 20
 filename = "beauty"
-min_samples = 256
+min_samples = 32
 min_bounces = 1
 max_bounces = 12
 hwss = false
-camera_id = "simple camera"
+# camera_id = "simple camera"
 # camera_id = "caustic test camera"
 # camera_id = "wideangle sun test camera"
 # camera_id = "sun test camera"
@@ -274,7 +274,7 @@ camera_id = "simple camera"
 # camera_id = "closeup camera"
 # camera_id = "panorama"
 # camera_id = "cornell camera"
-# camera_id = "true cornell camera"
+camera_id = "true cornell camera"
 # camera_id = "distant camera"
 # camera_id = "veach mis camera"
 # camera_id = "wideangle sun test camera side"
@@ -286,7 +286,7 @@ camera_id = "simple camera"
 # camera_id = "petzval kodak cornell"
 russian_roulette = true
 only_direct = false
-premultiply = 1.0
+premultiply = 10.0
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
 [render_settings.colorspace_settings]
