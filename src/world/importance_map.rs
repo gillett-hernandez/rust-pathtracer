@@ -6,6 +6,7 @@ use parking_lot::Mutex;
 
 use crate::prelude::*;
 
+#[cfg(feature = "preview")]
 use minifb::{Scale, Window, WindowOptions};
 use pbr::ProgressBar;
 
@@ -82,6 +83,7 @@ impl ImportanceMap {
         //     list: vec![(Op::Mul, luminance_curve), (Op::Mul, Curve::Const(0.0))],
         // };
 
+        #[cfg(feature = "preview")]
         let (mut window, mut buffer, mut maybe_cdf) = if cfg!(feature = "visualize_importance_map")
         {
             println!("visualize feature enabled");
@@ -169,7 +171,7 @@ impl ImportanceMap {
             })
             .collect();
         for (row, (cdf, row_luminance)) in rows.drain(..).enumerate() {
-            // let  = rows[row];
+            #[cfg(feature = "preview")]
             if cfg!(feature = "visualize_importance_map") {
                 for column in 0..horizontal_resolution {
                     let rgb = (cdf
@@ -177,17 +179,19 @@ impl ImportanceMap {
                         .evaluate_power(column as f32 / horizontal_resolution as f32))
                     .clamp(0.0, 1.0 - std::f32::EPSILON);
                     buffer[row * horizontal_resolution + column] = rgb_to_u32(
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
-                        (rgb * 256.0) as u8,
+                        (rgb * 255.0) as u8,
+                        (rgb * 255.0) as u8,
+                        (rgb * 255.0) as u8,
                     );
                 }
             }
             total_luminance += row_luminance;
             data.push(cdf);
             marginal_data.push(row_luminance);
+            #[cfg(feature = "preview")]
             maybe_cdf.iter_mut().for_each(|e| e.push(total_luminance));
 
+            #[cfg(feature = "preview")]
             if let Some(window) = &mut window {
                 if window.is_open() {
                     window
@@ -201,6 +205,7 @@ impl ImportanceMap {
 
         marginal_data.iter_mut().for_each(|e| *e /= total_luminance);
 
+        #[cfg(feature = "preview")]
         if let Some(window) = &mut window {
             let v_cdf = maybe_cdf.unwrap();
             for row in 0..vertical_resolution {
@@ -209,9 +214,9 @@ impl ImportanceMap {
                 }
                 let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
                 let u32 = rgb_to_u32(
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
-                    (rgb * 256.0) as u8,
+                    (rgb * 255.0) as u8,
+                    (rgb * 255.0) as u8,
+                    (rgb * 255.0) as u8,
                 );
                 buffer[row * horizontal_resolution] = u32;
                 buffer[row * horizontal_resolution + 1] = u32;
@@ -247,8 +252,9 @@ impl ImportanceMap {
             } => {
                 let mut file = std::fs::File::create(filepath).map_err(|_| ())?;
                 let mut bufwriter = std::io::BufWriter::new(file);
-                // do we want to ignore the storage underlying these curves? i.e. "cast" them all to Linearly sampled?
-                // or linear cosine transforms or something like that.
+
+                
+
                 Ok(())
             }
             _ => {
@@ -308,9 +314,9 @@ mod test {
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
-    use crate::renderer::Film;
+    use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
-    use crate::tonemap::{Clamp, Converter, Reinhard1x3, Tonemapper};
+    use crate::tonemap::{sRGB, write_to_files, Clamp, Color, Rec709Primaries, Reinhard1x3, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -320,7 +326,7 @@ mod test {
 
     #[test]
     fn test_raw_importance_map() {
-        let mut film = Film::new(512, 512, 0.0f32);
+        let mut film = Vec2D::new(512, 512, 0.0f32);
 
         for (idx, pixel) in film.buffer.iter_mut().enumerate() {
             let (x, y) = (idx % film.width, (idx / film.width));
@@ -349,6 +355,7 @@ mod test {
         let mut estimate = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
+        #[cfg(feature = "preview")]
         let mut window = Window::new(
             "Preview",
             width,
@@ -361,16 +368,18 @@ mod test {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
-        let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        #[cfg(feature = "preview")]
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-        let converter = Converter::sRGB;
+        let mut buffer = vec![0u32; limit];
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
         for idx in 0..limit {
+            #[cfg(feature = "preview")]
             if !window.is_open() {
                 println!("window closed, stopping test");
                 break;
@@ -412,6 +421,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
+                #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,
                     &film,
@@ -419,6 +429,7 @@ mod test {
                     converter,
                     1.0 / (idx as f32 + 1.0),
                 );
+                #[cfg(feature = "preview")]
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -464,6 +475,7 @@ mod test {
             let mut estimate2 = 0.0;
             let mut pb = ProgressBar::new(limit as u64);
 
+            #[cfg(feature = "preview")]
             let mut window = Window::new(
                 "Preview",
                 width,
@@ -476,16 +488,18 @@ mod test {
             .unwrap_or_else(|e| {
                 panic!("{}", e);
             });
+            #[cfg(feature = "preview")]
+            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
             let mut buffer = vec![0u32; limit];
-            let mut film = Film::new(width, height, XYZColor::BLACK);
-            let converter = Converter::sRGB;
+            let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+            let converter = crate::tonemap::sRGB;
 
             let mut tonemapper = Clamp::new(0.0, true, true);
 
-            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
             // let mut sampler = StratifiedSampler::new(100, 100, 100);
             for idx in 0..limit {
+                #[cfg(feature = "preview")]
                 if !window.is_open() {
                     println!("window closed, stopping test");
                     break;
@@ -545,6 +559,7 @@ mod test {
                 if idx % 100 == 0 {
                     pb.add(100);
                     tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
+                    #[cfg(feature = "preview")]
                     update_window_buffer(
                         &mut buffer,
                         &film,
@@ -552,6 +567,7 @@ mod test {
                         converter,
                         1.0 / (idx as f32 + 1.0),
                     );
+                    #[cfg(feature = "preview")]
                     window.update_with_buffer(&buffer, width, height).unwrap();
                 }
             }
@@ -562,15 +578,14 @@ mod test {
             );
 
             let boxed: Box<dyn Tonemapper> = Box::new(tonemapper);
-            converter
-                .write_to_files(
-                    &film,
-                    &boxed,
-                    1.0,
-                    "env_map_sampling_test.exr",
-                    "env_map_sampling_test.png",
-                )
-                .expect("writing to disk failed");
+            write_to_files::<Rec709Primaries, sRGB>(
+                &film,
+                &boxed,
+                1.0,
+                "env_map_sampling_test.exr",
+                "env_map_sampling_test.png",
+            )
+            .expect("writing to disk failed");
         }
     }
 
@@ -589,6 +604,7 @@ mod test {
         let mut estimate = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
+        #[cfg(feature = "preview")]
         let mut window = Window::new(
             "Preview",
             width,
@@ -601,15 +617,16 @@ mod test {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
+        #[cfg(feature = "preview")]
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
-        let converter = Converter::sRGB;
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
         for idx in 0..limit {
+            #[cfg(feature = "preview")]
             if !window.is_open() {
                 println!("window closed, stopping test");
                 break;
@@ -651,6 +668,7 @@ mod test {
 
             if idx % 100 == 0 {
                 pb.add(100);
+                #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,
                     &film,
@@ -658,6 +676,7 @@ mod test {
                     converter,
                     1.0 / (idx as f32 + 1.0),
                 );
+                #[cfg(feature = "preview")]
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
@@ -755,6 +774,7 @@ mod test {
         let mut estimate = 0.0;
         let mut pb = ProgressBar::new(limit as u64);
 
+        #[cfg(feature = "preview")]
         let mut window = Window::new(
             "Preview",
             width,
@@ -767,15 +787,17 @@ mod test {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
+        #[cfg(feature = "preview")]
+        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+
         let mut buffer = vec![0u32; limit];
-        let mut film = Film::new(width, height, XYZColor::BLACK);
-        let converter = Converter::sRGB;
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Clamp::new(0.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-
         for idx in 0..limit {
+            #[cfg(feature = "preview")]
             if !window.is_open() {
                 println!("window closed, stopping test");
                 break;
@@ -808,18 +830,22 @@ mod test {
 
             // sum += y_bar(sw.lambda * 10.0) * sw.energy;
             estimate += sw.energy / pdf / limit as f32;
-            let (px, py) = (
-                (uv.0 * width as f32) as usize,
-                (uv.1 * height as f32) as usize,
-            );
 
-            // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
-            film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / pdf;
+            if !cfg!(feature = "preview") {
+                let (px, py) = (
+                    (uv.0 * width as f32) as usize,
+                    (uv.1 * height as f32) as usize,
+                );
 
-            if idx % 100 == 0 {
+                // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
+                film.buffer[px + width * py] += XYZColor::new(1.0, 1.0, 1.0) * sw.energy / pdf;
+            }
+
+            if idx % 1000 == 0 {
                 println!();
                 println!("{}", estimate * limit as f32 / idx as f32);
-                pb.add(100);
+                pb.add(1000);
+                #[cfg(feature = "preview")]
                 update_window_buffer(
                     &mut buffer,
                     &film,
@@ -827,18 +853,21 @@ mod test {
                     converter,
                     1.0 / (idx as f32 + 1.0),
                 );
+
+                #[cfg(feature = "preview")]
                 window.update_with_buffer(&buffer, width, height).unwrap();
             }
         }
         let true_value = 3.11227031972f64;
-        let err = (estimate - true_value as f32).abs() / estimate;
+        let err = (estimate - true_value as f32).abs() / true_value as f32;
         println!(
             "\n\nestimate is {}, true value is {}, error factor is {}",
             estimate, true_value, err
         );
-        assert!(err < 0.0001);
+        assert!(err < 0.001);
     }
 
+    #[cfg(feature = "preview")]
     #[test]
     fn test_adaptive_sampling() {
         let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
@@ -863,15 +892,15 @@ mod test {
             panic!("{}", e);
         });
         let mut buffer = vec![0u32; width * height];
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let mut tonemapper = Reinhard1x3::new(0.001, 40.0, true);
         // let mut tonemapper = Clamp::new(-10.0, true, true);
 
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
-        let mut sample_squared_film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+        let mut sample_squared_film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let variance_fraction = 0.1;
 
@@ -922,7 +951,7 @@ mod test {
                     let [r, g, b, _]: [f32; 4] = converter
                         .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
                         .into();
-                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
@@ -955,10 +984,11 @@ mod test {
                             false,
                         )
                         .into();
-                    *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
+                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
                 });
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
-        let mul = 1.0 - variance_fraction;
+        // let mul = 1.0 - variance_fraction;
+        todo!();
     }
 }

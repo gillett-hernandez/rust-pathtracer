@@ -2,22 +2,26 @@ use super::prelude::*;
 use crate::prelude::*;
 
 use crate::integrator::*;
-use crate::tonemap::Clamp;
 
-use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
+#[cfg(feature = "preview")]
+use crate::tonemap::{Clamp, OETF};
+
+#[cfg(feature = "preview")]
 use minifb::WindowOptions;
 
 use std::collections::HashMap;
-use std::ops::Deref;
-use std::ops::DerefMut;
+// use std::marker::PhantomData;
+use std::ops::Div;
+use std::sync::Mutex;
+use std::sync::RwLockWriteGuard;
 // use std::io::Write;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crossbeam::channel::unbounded;
-// use crossbeam::channel::{bounded};
+// use crossbeam::channel::unbounded;
+// use crossbeam::channel::bounded;
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 
@@ -31,16 +35,148 @@ pub enum TileStatus {
     #[default]
     Incomplete,
     InProgress,
-    CompletedButNotSynced,
+    // CompletedButNotSynced,
     Complete,
 }
 
-fn iter_pixels(
-    tile: impl Deref<Target = ((u16, u16), (u16, u16))>,
-) -> impl Iterator<Item = (u16, u16)> {
-    (tile.0 .0..tile.0 .1)
-        .into_iter()
-        .flat_map(move |x| (tile.1 .0..tile.1 .1).map(move |y| (x, y)))
+#[derive(Clone)]
+pub struct Tile<T> {
+    status: Arc<Mutex<TileStatus>>,
+    data: Arc<RwLock<*mut T>>,
+    preview_copy: Arc<RwLock<Option<Vec2D<T>>>>,
+    width: u16,
+    pub horizontal_span: (u16, u16),
+    pub vertical_span: (u16, u16),
+}
+
+unsafe impl<T> Send for Tile<T> {}
+unsafe impl<T> Sync for Tile<T> {}
+
+impl<T> Tile<T> {
+    pub fn new(
+        data: *mut T,
+        horizontal_span: (u16, u16),
+        vertical_span: (u16, u16),
+        width: u16,
+    ) -> Self {
+        Tile {
+            status: Arc::new(Mutex::new(TileStatus::Incomplete)),
+            data: Arc::new(RwLock::new(data)),
+            preview_copy: Arc::new(RwLock::new(None)),
+            width,
+            horizontal_span,
+            vertical_span,
+        }
+    }
+
+    pub fn tile_width(&self) -> u16 {
+        self.horizontal_span.1 - self.horizontal_span.0
+    }
+
+    pub fn tile_height(&self) -> u16 {
+        self.vertical_span.1 - self.vertical_span.0
+    }
+
+    pub fn sync_to_preview(&self, samples: u32)
+    where
+        T: Div<f32, Output = T> + Copy,
+    {
+        let mut lock = self.preview_copy.write().unwrap();
+        let inner = lock.as_mut().unwrap();
+        for (a, (_, b)) in inner.buffer.iter_mut().zip(self.iter_mut()) {
+            *a = *b / samples as f32;
+        }
+    }
+
+    pub fn iter_mut(&self) -> TileIter<'_, T> {
+        TileIter {
+            left: self.horizontal_span.0,
+            top: self.vertical_span.0,
+            reference: self.data.write().unwrap(),
+            current_index: 0,
+            tile_width: self.tile_width(),
+            width: self.width,
+            max_index: self.tile_width() as usize * self.tile_height() as usize,
+        }
+    }
+
+    pub fn iter_indices(&self) -> TileIndicesIter {
+        TileIndicesIter {
+            left: self.horizontal_span.0,
+            top: self.vertical_span.0,
+            current_index: 0,
+            tile_width: self.tile_width(),
+            max_index: self.tile_width() as usize * self.tile_height() as usize,
+        }
+    }
+}
+
+pub struct TileIter<'a, T> {
+    left: u16,
+    top: u16,
+    reference: RwLockWriteGuard<'a, *mut T>,
+    current_index: usize,
+    tile_width: u16,
+    width: u16,
+    max_index: usize,
+}
+
+impl<'a, T> Iterator for TileIter<'a, T> {
+    type Item = ((u16, u16), &'a mut T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_index >= self.max_index {
+            return None;
+        }
+
+        // let y_span = self.vertical_span.1 - self.vertical_span.0;
+
+        let x = self.left + (self.current_index % self.tile_width as usize) as u16;
+        let y = self.top + (self.current_index / self.tile_width as usize) as u16;
+
+        let reference;
+        // this is bad as calling `.add` drops the lock it seems.
+        unsafe {
+            reference = self
+                .reference
+                .add(y as usize * self.width as usize + x as usize)
+                .as_mut()
+                .unwrap()
+        }
+        self.current_index += 1;
+        Some(((x, y), reference))
+    }
+}
+
+pub struct TileIndicesIter {
+    left: u16,
+    top: u16,
+    current_index: usize,
+    tile_width: u16,
+    max_index: usize,
+}
+
+impl Iterator for TileIndicesIter {
+    type Item = (u16, u16);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_index >= self.max_index {
+            return None;
+        }
+
+        // let y_span = self.vertical_span.1 - self.vertical_span.0;
+
+        let x = self.left + (self.current_index % self.tile_width as usize) as u16;
+        let y = self.top + (self.current_index / self.tile_width as usize) as u16;
+
+        self.current_index += 1;
+        Some((x, y))
+    }
+}
+
+pub struct Tiles<'a> {
+    film: &'a mut Vec2D<XYZColor>,
+    tiles: Vec<Tile<XYZColor>>,
 }
 
 impl TiledRenderer {
@@ -51,8 +187,16 @@ impl TiledRenderer {
         }
     }
 
-    pub fn generate_tiles(&self, film_size: (usize, usize)) -> Vec<((u16, u16), (u16, u16))> {
+    pub fn generate_tiles<'a, 'b>(
+        &'a self,
+        film_size: (usize, usize),
+        film: &'b mut Vec2D<XYZColor>,
+    ) -> Tiles<'b> {
+        let ptr = film.buffer.as_mut_ptr();
         let tile_size = self.tile_size;
+
+        // current tile generation order
+
         let full_tile_count = (
             film_size.0 / tile_size.0 as usize,
             film_size.1 / tile_size.1 as usize,
@@ -65,7 +209,8 @@ impl TiledRenderer {
         let mut tiles = Vec::new();
         for y_idx in 0..full_tile_count.1 {
             for x_idx in 0..full_tile_count.0 {
-                tiles.push((
+                tiles.push(Tile::new(
+                    ptr,
                     (
                         x_idx as u16 * tile_size.0,
                         x_idx as u16 * tile_size.0 + tile_size.0,
@@ -74,13 +219,15 @@ impl TiledRenderer {
                         y_idx as u16 * tile_size.1,
                         y_idx as u16 * tile_size.1 + tile_size.1,
                     ),
+                    film_size.0 as u16,
                 ));
             }
         }
         if remnant_tile_size.0 > 0 {
             // add all right side partial tiles
             for y_idx in 0..full_tile_count.1 {
-                tiles.push((
+                tiles.push(Tile::new(
+                    ptr,
                     (
                         full_tile_count.0 as u16 * tile_size.0,
                         full_tile_count.0 as u16 * tile_size.0 + remnant_tile_size.0 as u16,
@@ -89,13 +236,15 @@ impl TiledRenderer {
                         y_idx as u16 * tile_size.1,
                         y_idx as u16 * tile_size.1 + tile_size.1,
                     ),
+                    film_size.0 as u16,
                 ));
             }
         }
         if remnant_tile_size.1 > 0 {
             // add all bottom side partial tiles
             for x_idx in 0..full_tile_count.0 {
-                tiles.push((
+                tiles.push(Tile::new(
+                    ptr,
                     (
                         x_idx as u16 * tile_size.0,
                         x_idx as u16 * tile_size.0 + tile_size.0,
@@ -104,12 +253,14 @@ impl TiledRenderer {
                         full_tile_count.1 as u16 * tile_size.1,
                         full_tile_count.1 as u16 * tile_size.1 + remnant_tile_size.1 as u16,
                     ),
+                    film_size.0 as u16,
                 ));
             }
             if remnant_tile_size.0 > 0 {
                 // both
                 // add last partial tile at bottom right
-                tiles.push((
+                tiles.push(Tile::new(
+                    ptr,
                     (
                         full_tile_count.0 as u16 * tile_size.0,
                         full_tile_count.0 as u16 * tile_size.0 + remnant_tile_size.0 as u16,
@@ -118,10 +269,11 @@ impl TiledRenderer {
                         full_tile_count.1 as u16 * tile_size.1,
                         full_tile_count.1 as u16 * tile_size.1 + remnant_tile_size.1 as u16,
                     ),
-                ))
+                    film_size.0 as u16,
+                ));
             }
         }
-        tiles
+        Tiles { film, tiles }
     }
 
     pub fn render_sampled<I: SamplerIntegrator>(
@@ -129,7 +281,7 @@ impl TiledRenderer {
         mut integrator: I,
         settings: &RenderSettings,
         _camera: &CameraEnum,
-    ) -> Film<XYZColor> {
+    ) -> Vec2D<XYZColor> {
         let (width, height) = (settings.resolution.width, settings.resolution.height);
         warn!("starting render with film resolution {}x{}", width, height);
         let min_camera_rays = width * height * settings.min_samples as usize;
@@ -141,7 +293,7 @@ impl TiledRenderer {
 
         let now = Instant::now();
 
-        let mut film: Film<XYZColor> = Film::new(width, height, XYZColor::BLACK);
+        let mut film: Vec2D<XYZColor> = Vec2D::new(width, height, XYZColor::BLACK);
 
         let mut pb = ProgressBar::new((width * height) as u64);
 
@@ -164,82 +316,115 @@ impl TiledRenderer {
             }
         });
 
-        let tiles = self.generate_tiles((width, height));
-
-        // extremely unsafe, do not do this
-        let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
-        // safety is only preserved by the fact that the tiles are mutually exclusive / non overlapping, and a single thread only touches one tile at a time
-
-        let tile_statuses = (0..tiles.len())
-            .map(|_| RwLock::new(TileStatus::Incomplete))
-            .collect::<Vec<RwLock<TileStatus>>>();
+        let tiles = self.generate_tiles((width, height), &mut film);
 
         let mut stats = Default::default();
 
         thread::scope(|s| {
             let join_handle = s.spawn(|| {
                 stats = tiles
+                    .tiles
                     .par_iter()
                     .enumerate()
-                    .map(|(tile_index, tile)| {
+                    .map(|(_, tile)| {
                         {
-                            let mut locked = tile_statuses[tile_index].write().unwrap();
+                            // let mut locked = tile_statuses[tile_index].write().unwrap();
+                            let mut locked = tile.status.lock().unwrap();
                             *locked = TileStatus::InProgress;
+                            *tile.preview_copy.write().unwrap() = Some(Vec2D::new(
+                                (tile.horizontal_span.1 - tile.horizontal_span.0) as usize,
+                                (tile.vertical_span.1 - tile.vertical_span.0) as usize,
+                                XYZColor::BLACK,
+                            ));
                         }
 
                         let mut profile = Profile::default();
 
                         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
                         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
-                        let mut ct = 0;
-                        for (x, y) in iter_pixels(tile) {
-                            let mut temp_color = XYZColor::BLACK;
+                        let mut ct = 0u32;
 
-                            for s in 0..settings.min_samples {
-                                let sample = sampler.draw_2d();
+                        let phase_samples = 10;
+                        let mut phase_counter = 0;
+                        let limit = (
+                            settings.min_samples / phase_samples,
+                            settings.min_samples % phase_samples,
+                        );
+                        let mut terminate_loop = false;
+                        while !terminate_loop {
+                            let this_phase_samples = if phase_counter == limit.0 {
+                                terminate_loop = true;
+                                limit.1
+                            } else {
+                                phase_samples
+                            };
+                            phase_counter += 1;
+                            // tile iter_mut acquires lock on working buffer
+                            // due to this being architeched as a phased process, the w lock on the preview copy is released most of the time
+                            // and only periodically captured
 
-                                // box filter
-                                let camera_uv = (
-                                    (x as f32 + sample.x) / (settings.resolution.width as f32),
-                                    (y as f32 + sample.y) / (settings.resolution.height as f32),
-                                );
-                                temp_color += integrator.color(
-                                    &mut sampler,
-                                    (camera_uv, 0),
-                                    s as usize,
-                                    &mut profile,
-                                );
+                            for ((x, y), pixel) in tile.iter_mut() {
+                                let mut temp_color = XYZColor::BLACK;
+                                for s in 0..this_phase_samples {
+                                    let sample = sampler.draw_2d();
 
-                                debug_assert!(
-                                    temp_color.0.is_finite().all(),
-                                    "{:?} resulted in {:?}",
-                                    camera_uv,
-                                    temp_color
-                                );
+                                    // box filter
+                                    let camera_uv = (
+                                        (x as f32 + sample.x) / (settings.resolution.width as f32),
+                                        (y as f32 + sample.y) / (settings.resolution.height as f32),
+                                    );
+                                    temp_color += integrator.color(
+                                        &mut sampler,
+                                        (camera_uv, 0),
+                                        s as usize,
+                                        &mut profile,
+                                    );
+
+                                    debug_assert!(
+                                        temp_color.0.is_finite().all(),
+                                        "{:?} resulted in {:?}",
+                                        camera_uv,
+                                        temp_color
+                                    );
+                                }
+                                *pixel += temp_color;
                             }
-
-                            // extremely unsafe, do not do this
-                            unsafe {
-                                *ptr.0.add(y as usize * width + x as usize) =
-                                    temp_color / (settings.min_samples as f32);
-                            }
-                            ct += 1;
+                            ct += this_phase_samples as u32;
+                            // sync progress to preview copy
+                            tile.sync_to_preview(ct);
                         }
-                        pixel_count.fetch_add(ct, Ordering::Relaxed);
+                        for (_, pixel) in tile.iter_mut() {
+                            *pixel = *pixel / settings.min_samples as f32;
+                        }
 
                         {
-                            let mut locked = tile_statuses[tile_index].write().unwrap();
-                            *locked = TileStatus::CompletedButNotSynced;
+                            // discard preview copy as the tile has been finalized
+
+                            let mut lock = tile.preview_copy.write().unwrap();
+                            *lock = None;
                         }
 
+                        {
+                            // let mut locked = tile_statuses[tile_index].write().unwrap();
+                            let mut locked = tile.status.lock().unwrap();
+                            *locked = TileStatus::Complete;
+                        }
+                        pixel_count.fetch_add(
+                            (ct / settings.min_samples as u32
+                                * tile.tile_width() as u32
+                                * tile.tile_height() as u32) as usize,
+                            Ordering::Relaxed,
+                        );
                         profile
                     })
                     .reduce(Profile::default, |a, b| a.combine(b));
             });
 
             // let mut tonemapper = Clamp::new(3.0, true, true);
+            #[cfg(feature = "preview")]
             let mut preview_tonemapper = Clamp::new(2.0, true, true);
 
+            #[cfg(feature = "preview")]
             window_loop(
                 width,
                 height,
@@ -249,38 +434,88 @@ impl TiledRenderer {
                     ..Default::default()
                 },
                 false,
-                |window, mut window_buffer, width, height| {
-                    let width = film.width;
+                |_, window_buffer, _, _| {
+                    let width = &tiles.film.width;
                     debug_assert!(window_buffer.len() % width == 0);
-                    preview_tonemapper.initialize(&film, 1.0);
+                    preview_tonemapper.initialize(&tiles.film, 1.0);
 
                     // local copy of status's
 
-                    let copy = tile_statuses
-                        .iter()
-                        .map(|e| e.read().unwrap().clone())
-                        .collect::<Vec<TileStatus>>();
+                    // let copy = tile_statuses
+                    //     .iter()
+                    //     .map(|e| e.read().unwrap().clone())
+                    //     .collect::<Vec<TileStatus>>();
 
-                    for (i, (tile, single_tile_status)) in tiles.iter().zip(copy.iter()).enumerate()
-                    {
-                        match single_tile_status {
-                            status @ TileStatus::InProgress
-                            | status @ TileStatus::CompletedButNotSynced => {
-                                for (x, y) in iter_pixels(tile) {
-                                    let [r, g, b, _]: [f32; 4] = Converter::sRGB
-                                        .transfer_function(
-                                            preview_tonemapper.map(&film, (x as usize, y as usize)),
-                                            false,
+                    for (_, tile) in tiles.tiles.iter().enumerate() {
+                        match tile.status.try_lock().map(|e| e.clone()) {
+                            Ok(TileStatus::InProgress)
+                            // | Ok(status @ TileStatus::CompletedButNotSynced)
+                             => {
+                                let locked = tile.preview_copy.read().unwrap();
+                                let preview_copy = locked.as_ref().unwrap();
+                                for (x, y) in tile.iter_indices() {
+                                    assert!(
+                                        x >= tile.horizontal_span.0,
+                                        "{} {:?} {:?}",
+                                        x,
+                                        tile.horizontal_span,
+                                        tile.vertical_span
+                                    );
+                                    assert!(
+                                        y >= tile.vertical_span.0,
+                                        "{} {:?} {:?}",
+                                        x,
+                                        tile.horizontal_span,
+                                        tile.vertical_span
+                                    );
+                                    let [r, g, b, _]: [f32; 4] = crate::tonemap::sRGB
+                                        ::oetf(
+                                            preview_tonemapper.map(
+                                                &preview_copy,
+                                                (
+                                                    x as usize - tile.horizontal_span.0 as usize,
+                                                    y as usize - tile.vertical_span.0 as usize,
+                                                ),
+                                            ).0,
                                         )
                                         .into();
                                     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
-                                        (256.0 * r) as u8,
-                                        (256.0 * g) as u8,
-                                        (256.0 * b) as u8,
+                                        (255.0 * r) as u8,
+                                        (255.0 * g) as u8,
+                                        (255.0 * b) as u8,
                                     );
                                 }
-                                if matches!(status, TileStatus::CompletedButNotSynced) {
-                                    *tile_statuses[i].write().unwrap() = TileStatus::Complete;
+                                // for (x, y) in tile.iter_indices() {
+                                //     let [r, g, b, _]: [f32; 4] = Converter::sRGB
+                                //         .transfer_function(
+                                //             preview_tonemapper.map(&film, (x as usize, y as usize)),
+                                //             false,
+                                //         )
+                                //         .into();
+                                //     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
+                                //         (255.0 * r) as u8,
+                                //         (255.0 * g) as u8,
+                                //         (255.0 * b) as u8,
+                                //     );
+                                // }
+                                // if matches!(status.clone(), TileStatus::CompletedButNotSynced) {
+                                //     *tile.status.lock().unwrap() = TileStatus::Complete;
+                                // }
+                            }
+                            Ok(TileStatus::Complete) => {
+                                // let locked = tile.data.read().unwrap();
+                                // let preview_copy = locked;
+                                for (x, y) in tile.iter_indices() {
+                                    let [r, g, b, _]: [f32; 4] = crate::tonemap::sRGB
+                                        ::oetf(
+                                            preview_tonemapper.map(&tiles.film, (x as usize, y as usize)).0,
+                                        )
+                                        .into();
+                                    window_buffer[y as usize * width + x as usize] = rgb_to_u32(
+                                        (255.0 * r) as u8,
+                                        (255.0 * g) as u8,
+                                        (255.0 * b) as u8,
+                                    );
                                 }
                             }
                             _ => {}
@@ -305,11 +540,12 @@ impl TiledRenderer {
 
         film
     }
+    #[allow(unused_variables)]
     pub fn render_splatted<I: GenericIntegrator>(
-        mut integrator: I,
+        integrator: I,
         renders: Vec<RenderSettings>,
         _cameras: Vec<CameraEnum>,
-    ) -> Vec<(RenderSettings, Film<XYZColor>)> {
+    ) -> Vec<(RenderSettings, Vec2D<XYZColor>)> {
         vec![]
     }
 }
@@ -429,94 +665,86 @@ impl Renderer for TiledRenderer {
     }
 }
 
-struct DoNotDoThisEver<T>(*mut T);
-unsafe impl Send for DoNotDoThisEver<f32> {}
-unsafe impl Sync for DoNotDoThisEver<f32> {}
-unsafe impl Send for DoNotDoThisEver<f32x4> {}
-unsafe impl Sync for DoNotDoThisEver<f32x4> {}
-unsafe impl Send for DoNotDoThisEver<XYZColor> {}
-unsafe impl Sync for DoNotDoThisEver<XYZColor> {}
-
 #[cfg(test)]
 mod test {
-    use minifb::WindowOptions;
-    use rand::random;
-
-    use crate::tonemap::Clamp;
 
     use super::*;
     #[test]
     fn test_generate_tiles() {
-        let mut film = Film::new(1920, 1080, false);
+        let mut film = Vec2D::new(1920, 1080, XYZColor::BLACK);
         let renderer = TiledRenderer::new(64, 64);
 
-        let tiles = renderer.generate_tiles((film.width, film.height));
-        for tile in tiles {
-            for pixel in iter_pixels(&tile) {
-                film.write_at(pixel.0 as usize, pixel.1 as usize, true);
+        let tiles = renderer.generate_tiles((film.width, film.height), &mut film);
+        for tile in tiles.tiles {
+            for pixel in tile.iter_mut() {
+                *pixel.1 = SingleWavelength::new(550.0, 0.5).into();
             }
         }
 
-        assert!(film.buffer.iter().all(|e| *e));
+        assert!(film.buffer.iter().all(|e| e.y() > 0.0));
     }
+    // use minifb::WindowOptions;
+    // use rand::random;
 
-    #[test]
-    fn test_parallel_unsafe_access() {
-        let mut film = Film::new(1920, 1080, 0.0f32);
-        let renderer = TiledRenderer::new(64, 64);
+    // use crate::tonemap::Clamp;
 
-        let tiles = renderer.generate_tiles((film.width, film.height));
-        let width = film.width;
-        let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
-        tiles.par_iter().for_each(|tile| {
-            for pixel in iter_pixels(tile) {
-                unsafe {
-                    *ptr.0.add(pixel.1 as usize * width + pixel.0 as usize) += 0.25;
-                }
-            }
-        });
+    // #[test]
+    // fn test_parallel_unsafe_access() {
+    //     let mut film = Film::new(1920, 1080, 0.0f32);
+    //     let renderer = TiledRenderer::new(64, 64);
 
-        let expected = 1920.0 * 1080.0 * 0.25;
-        // assert_eq!(film.buffer.iter().cloned().sum::<f32>(), expected);
-        println!(
-            "{} == {}?",
-            film.buffer.iter().cloned().sum::<f32>(),
-            expected
-        );
+    //     let tiles = renderer.generate_tiles((film.width, film.height));
+    //     let width = film.width;
+    //     let ptr = DoNotDoThisEver(film.buffer.as_mut_ptr());
+    //     tiles.par_iter().for_each(|tile| {
+    //         for pixel in iter_pixels(tile) {
+    //             unsafe {
+    //                 *ptr.0.add(pixel.1 as usize * width + pixel.0 as usize) += 0.25;
+    //             }
+    //         }
+    //     });
 
-        let new_film = Film {
-            buffer: film
-                .buffer
-                .iter()
-                .cloned()
-                .map(|e| SingleWavelength::new(550.0, e).into())
-                .collect::<Vec<XYZColor>>(),
-            width,
-            height: film.height,
-        };
+    //     let expected = 1920.0 * 1080.0 * 0.25;
+    //     // assert_eq!(film.buffer.iter().cloned().sum::<f32>(), expected);
+    //     println!(
+    //         "{} == {}?",
+    //         film.buffer.iter().cloned().sum::<f32>(),
+    //         expected
+    //     );
 
-        let mut tonemapper = Clamp::new(0.0, true, true);
-        window_loop(
-            1920,
-            1080,
-            144,
-            WindowOptions {
-                borderless: true,
-                ..Default::default()
-            },
-            true,
-            |window, mut window_buffer, width, height| {
-                update_window_buffer(
-                    &mut window_buffer,
-                    &new_film,
-                    &mut tonemapper,
-                    Converter::sRGB,
-                    1.0,
-                );
-            },
-        )
-    }
+    //     let new_film = Film {
+    //         buffer: film
+    //             .buffer
+    //             .iter()
+    //             .cloned()
+    //             .map(|e| SingleWavelength::new(550.0, e).into())
+    //             .collect::<Vec<XYZColor>>(),
+    //         width,
+    //         height: film.height,
+    //     };
 
+    //     let mut tonemapper = Clamp::new(0.0, true, true);
+    //     window_loop(
+    //         1920,
+    //         1080,
+    //         144,
+    //         WindowOptions {
+    //             borderless: true,
+    //             ..Default::default()
+    //         },
+    //         true,
+    //         |window, mut window_buffer, width, height| {
+    //             update_window_buffer(
+    //                 &mut window_buffer,
+    //                 &new_film,
+    //                 &mut tonemapper,
+    //                 Converter::sRGB,
+    //                 1.0,
+    //             );
+    //         },
+    //     )
+    // }
+    /*
     #[test]
     fn test_viewing_while_writing_unsafe_parallel() {
         rayon::ThreadPoolBuilder::new()
@@ -616,9 +844,9 @@ mod test {
                                         )
                                         .into();
                                     window_buffer[y as usize * width + x as usize] = rgb_to_u32(
-                                        (256.0 * r) as u8,
-                                        (256.0 * g) as u8,
-                                        (256.0 * b) as u8,
+                                        (255.0 * r) as u8,
+                                        (255.0 * g) as u8,
+                                        (255.0 * b) as u8,
                                     );
                                 }
                                 if matches!(status, TileStatus::CompletedButNotSynced) {
@@ -632,5 +860,5 @@ mod test {
             );
             let _ = join_handle.join();
         });
-    }
+    } */
 }

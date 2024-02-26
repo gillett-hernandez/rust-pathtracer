@@ -20,7 +20,13 @@ curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
 type = "HDR"
 filename = "data/hdri/autumn_park_8k.hdr"
 alpha_fill = 0.0
-curves= ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
+
+[[low_res_hdri]]
+type = "EXR"
+filename = "data/hdri/kloofendal_43d_clear_puresky_1k.exr"
+alpha_fill = 0.0
+curves = ["srgb_r", "srgb_g", "srgb_b", "flat_zero"]
 
 [[kiara_dawn_8k]]
 type = "HDR"

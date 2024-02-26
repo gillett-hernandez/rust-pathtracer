@@ -1,8 +1,8 @@
 use crate::prelude::*;
-use std::fs;
+use crate::tonemap::{sRGB, write_to_files, Rec2020, Rec2020Primaries, Rec709, Rec709Primaries};
 
-mod film;
 mod prelude;
+mod vec2d;
 
 // integrators
 mod naive;
@@ -10,21 +10,23 @@ mod preview;
 // mod sppm;
 mod tiled;
 
-pub use film::Film;
+pub use vec2d::Vec2D;
 
 pub use naive::NaiveRenderer;
+#[cfg(feature = "preview")]
 pub use preview::PreviewRenderer;
 pub use tiled::TiledRenderer;
 
 use crate::camera::CameraEnum;
 
-use crate::parsing::config::{Config, RenderSettings};
-use crate::parsing::parse_tonemapper;
+use crate::parsing::config::{ColorSpaceSettings, Config, RenderSettings};
+use crate::parsing::parse_tonemap_settings;
 use crate::world::World;
 
 use self::prelude::IntegratorKind;
 
-pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, factor: f32) {
+pub fn output_film(render_settings: &RenderSettings, film: &Vec2D<XYZColor>, mut factor: f32) {
+    factor *= render_settings.premultiply.unwrap_or(1.0);
     assert!(factor > 0.0);
     let filename = render_settings.filename.as_ref();
     let filename_str = filename.cloned().unwrap_or_else(|| String::from("beauty"));
@@ -32,15 +34,52 @@ pub fn output_film(render_settings: &RenderSettings, film: &Film<XYZColor>, fact
     let exr_filename = format!("output/{}.exr", filename_str);
     let png_filename = format!("output/{}.png", filename_str);
 
-    let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
+    let mut tonemapper = parse_tonemap_settings(render_settings.tonemap_settings);
     tonemapper.initialize(film, factor);
 
-    if let Err(inner) =
-        converter.write_to_files(film, &tonemapper, factor, &exr_filename, &png_filename)
-    {
-        error!("failed to write files");
-        error!("{:?}", inner.to_string());
-        panic!();
+    match render_settings.colorspace_settings {
+        ColorSpaceSettings::sRGB => {
+            info!("writing png as sRGB");
+            if let Err(inner) = write_to_files::<Rec709Primaries, sRGB>(
+                film,
+                &tonemapper,
+                factor,
+                &exr_filename,
+                &png_filename,
+            ) {
+                error!("failed to write files");
+                error!("{:?}", inner.to_string());
+                panic!();
+            }
+        }
+        ColorSpaceSettings::Rec709 => {
+            info!("writing png as Rec709");
+            if let Err(inner) = write_to_files::<Rec709Primaries, Rec709>(
+                film,
+                &tonemapper,
+                factor,
+                &exr_filename,
+                &png_filename,
+            ) {
+                error!("failed to write files");
+                error!("{:?}", inner.to_string());
+                panic!();
+            }
+        }
+        ColorSpaceSettings::Rec2020 => {
+            info!("writing png as Rec2020");
+            if let Err(inner) = write_to_files::<Rec2020Primaries, Rec2020>(
+                film,
+                &tonemapper,
+                factor,
+                &exr_filename,
+                &png_filename,
+            ) {
+                error!("failed to write files");
+                error!("{:?}", inner.to_string());
+                panic!();
+            }
+        }
     }
 }
 

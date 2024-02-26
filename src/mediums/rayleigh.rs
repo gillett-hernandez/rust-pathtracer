@@ -115,6 +115,7 @@ impl Medium<f32, f32> for Rayleigh {
     }
 }
 
+#[cfg(feature = "preview")]
 #[cfg(test)]
 mod test {
     use minifb::WindowOptions;
@@ -124,17 +125,19 @@ mod test {
 
     use super::*;
 
+    #[allow(dead_code)]
     enum TestMode {
         ViewPhase,
         SamplePhase,
     }
+
     #[test]
     fn test_phase() {
         let width = 500usize;
         let height = 500usize;
         let bounds = BOUNDED_VISIBLE_RANGE;
 
-        let mut film = Film::new(width, height, XYZColor::BLACK);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let a = 1.0002724293f32;
         let b = 1.64748969205f32;
@@ -155,7 +158,7 @@ mod test {
         let wi = Vec3::new(0.0, 1.0, 1.0).normalized();
         // let wi = Vec3::Z;
         let mut total_samples = 0;
-        let converter = Converter::sRGB;
+        let converter = crate::tonemap::sRGB;
 
         let (samples_per_iteration, exposure): (usize, f32) = match mode {
             TestMode::ViewPhase => (10, 17.0),

@@ -23,7 +23,7 @@ impl Clamp {
 }
 
 impl Tonemapper for Clamp {
-    fn initialize(&mut self, film: &Film<XYZColor>, factor: f32) {
+    fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         self.factor = factor;
         let mut max_luminance = 0.0;
         let mut min_luminance = INFINITY;
@@ -76,7 +76,7 @@ impl Tonemapper for Clamp {
             );
         }
     }
-    fn map(&self, film: &Film<XYZColor>, pixel: (usize, usize)) -> f32x4 {
+    fn map(&self, film: &Vec2D<XYZColor>, pixel: (usize, usize)) -> XYZColor {
         let mut cie_xyz_color = film.at(pixel.0, pixel.1) * self.factor;
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
             cie_xyz_color = MAUVE;
@@ -92,12 +92,14 @@ impl Tonemapper for Clamp {
             let scaling_factor = new_lum / lum;
             // TODO: determine if this needs to be done per channel.
 
-            scaling_factor * cie_xyz_color.0
+            XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
         } else {
-            (cie_xyz_color * exposure_mult)
-                .0
-                .min(f32x4::splat(1.0))
-                .max(f32x4::splat(0.0))
+            XYZColor::from_raw(
+                (cie_xyz_color * exposure_mult)
+                    .0
+                    .min(f32x4::splat(1.0))
+                    .max(f32x4::splat(0.0)),
+            )
         }
     }
     fn get_name(&self) -> &str {

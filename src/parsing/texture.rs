@@ -44,13 +44,13 @@ pub enum TextureData {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TextureStackData(pub Vec<TextureData>);
 
-pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
+pub fn parse_rgba(filepath: &str) -> Vec2D<f32x4> {
     info!("parsing rgba texture at {}", filepath);
     let path = Path::new(filepath);
-    let img = image::open(path).unwrap();
+    let img = image::open(path).expect(&*format!("could not find file at {}", filepath));
     let rgba_image = img.into_rgba8();
     let (width, height) = rgba_image.dimensions();
-    let mut new_film = Film::new(width as usize, height as usize, f32x4::splat(0.0));
+    let mut new_film = Vec2D::new(width as usize, height as usize, f32x4::splat(0.0));
     for (x, y, pixel) in rgba_image.enumerate_pixels() {
         // apparently, no into is needed since an rgba<u8> is just an alias for [u8;4]
         let [r, g, b, a]: [u8; 4] = pixel.0;
@@ -58,17 +58,17 @@ pub fn parse_rgba(filepath: &str) -> Film<f32x4> {
             x as usize,
             y as usize,
             f32x4::new(
-                r as f32 / 256.0,
-                g as f32 / 256.0,
-                b as f32 / 256.0,
-                a as f32 / 256.0,
+                r as f32 / 255.0,
+                g as f32 / 255.0,
+                b as f32 / 255.0,
+                a as f32 / 255.0,
             ),
         );
     }
     new_film
 }
 
-pub fn parse_exr(filepath: &str) -> Film<f32x4> {
+pub fn parse_exr(filepath: &str) -> Vec2D<f32x4> {
     info!("parsing exr texture at {}", filepath);
     let rgba_image = exr::prelude::read_first_rgba_layer_from_file(
         filepath,
@@ -84,7 +84,7 @@ pub fn parse_exr(filepath: &str) -> Film<f32x4> {
     )
     .unwrap();
 
-    let mut new_film = Film::new(
+    let mut new_film = Vec2D::new(
         rgba_image.layer_data.size.0 as usize,
         rgba_image.layer_data.size.1 as usize,
         f32x4::splat(0.0),
@@ -98,18 +98,18 @@ pub fn parse_exr(filepath: &str) -> Film<f32x4> {
     new_film
 }
 
-pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Film<f32x4> {
+pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Vec2D<f32x4> {
     info!("parsing hdr texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::codecs::hdr::HdrDecoder::new(BufReader::new(
-        File::open(path).expect("couldn't open hdr file"),
+        File::open(path).expect(&*format!("couldn't open hdr file at {}", filepath)),
     ))
     .expect("couldn't construct hdr decoder for some reason");
     let (width, height) = (
         img.metadata().width as usize,
         img.metadata().height as usize,
     );
-    let mut new_film = Film::new(width as usize, height as usize, f32x4::splat(0.0));
+    let mut new_film = Vec2D::new(width as usize, height as usize, f32x4::splat(0.0));
     for (idx, pixel) in img.read_image_hdr().unwrap().iter().enumerate() {
         let [r, g, b]: [f32; 3] = pixel.0;
         let (x, y) = (idx % width, idx / width);
@@ -122,25 +122,25 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Film<f32x4> {
     new_film
 }
 
-pub fn parse_bitmap(filepath: &str) -> Film<f32> {
+pub fn parse_bitmap(filepath: &str) -> Vec2D<f32> {
     info!("parsing greyscale texture at {}", filepath);
     let path = Path::new(filepath);
     let img = image::open(path).unwrap();
     let greyscale = img.into_luma8();
     let (width, height) = greyscale.dimensions();
-    let mut new_film = Film::new(width as usize, height as usize, 0.0);
+    let mut new_film = Vec2D::new(width as usize, height as usize, 0.0);
     for (x, y, pixel) in greyscale.enumerate_pixels() {
         let grey: [u8; 1] = pixel.0;
-        new_film.write_at(x as usize, y as usize, grey[0] as f32 / 256.0);
+        new_film.write_at(x as usize, y as usize, grey[0] as f32 / 255.0);
     }
     new_film
 }
 
-pub fn select_on_film<T1, T2, F>(film: &Film<T1>, closure: F) -> Film<T2>
+pub fn select_on_film<T1, T2, F>(film: &Vec2D<T1>, closure: F) -> Vec2D<T2>
 where
     F: FnMut(&T1) -> T2,
 {
-    Film {
+    Vec2D {
         buffer: film.buffer.iter().map(closure).collect(),
         width: film.width,
         height: film.height,
@@ -289,7 +289,7 @@ mod test {
     use super::*;
     #[test]
     fn test_bitmap() {
-        let film = parse_bitmap("data/textures/test.bmp");
+        let film = parse_bitmap("data/test/test.bmp");
         let mut sum = 0.0;
         let mut max = 0.0;
         for v in film.buffer {
@@ -306,7 +306,7 @@ mod test {
     }
     #[test]
     fn test_rgba() {
-        let film = parse_rgba("data/textures/test.png");
+        let film = parse_rgba("data/test/test.png");
         let mut sum = f32x4::splat(0.0);
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
@@ -323,7 +323,7 @@ mod test {
     }
     #[test]
     fn test_hdr() {
-        let film = parse_hdr("data/textures/test.hdr", 0.0);
+        let film = parse_hdr("data/test/test.hdr", 0.0);
         let mut sum = f32x4::splat(0.0);
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
@@ -341,7 +341,7 @@ mod test {
 
     #[test]
     fn test_exr() {
-        let film = parse_exr("data/textures/test.exr");
+        let film = parse_exr("data/test/test.exr");
         let mut sum = f32x4::splat(0.0);
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
@@ -362,7 +362,7 @@ mod test {
         let map = HashMap::new();
         let texture = parse_texture(
             TextureData::SRGB {
-                filename: "data/textures/test.png".to_string(),
+                filename: "data/test/test.png".to_string(),
             },
             &map,
         )
@@ -405,7 +405,7 @@ mod test {
                     }
                     .into(),
                 ],
-                filename: "data/textures/test.png".to_string(),
+                filename: "data/test/test.png".to_string(),
             }]),
             &map,
         )

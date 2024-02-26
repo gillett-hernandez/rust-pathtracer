@@ -1,0 +1,50 @@
+default_scene_file = "data/scenes/raymarch.toml"
+
+
+[[cameras]]
+type = "SimpleCamera"
+name = "distant camera"
+look_from = [-100, 0, 0]
+look_at = [0, 0, 0]
+aperture_size = 0.03
+vfov = 20
+
+[[cameras]]
+type = "SimpleCamera"
+name = "simple camera"
+look_from = [5, 0, 0]
+look_at = [0, 0, 0]
+aperture_size = 0.04
+focal_distance = 5.0
+vfov = 35.4
+
+
+[renderer]
+# type="Naive"
+type = "Preview"
+selected_preview_film_id = 0
+[[render_settings]]
+threads = 22
+filename = "raymarch test"
+min_samples = 256
+min_bounces = 2
+max_bounces = 12
+hwss = false
+camera_id = "simple camera"
+russian_roulette = true
+only_direct = false
+# wavelength_bounds = [380.0, 750.0]
+# wavelength_bounds = [500.0, 510.0]
+[render_settings.tonemap_settings]
+type = "Reinhard1"
+# exposure = -2.0
+key_value = 0.5
+white_point = 10.0
+luminance_only = false
+[render_settings.integrator]
+type = "PT"
+light_samples = 2
+medium_aware = false
+[render_settings.resolution]
+width = 1024
+height = 1024

@@ -6,7 +6,7 @@ use crate::parsing::config::{Config, RenderSettings, RendererType, Resolution};
 
 use crate::integrator::{GenericIntegrator, Integrator, IntegratorType, Sample, SamplerIntegrator};
 
-use crate::parsing::parse_tonemapper;
+use crate::parsing::parse_tonemap_settings;
 use crate::profile::Profile;
 use crate::world::{EnvironmentMap, World};
 
@@ -19,27 +19,32 @@ use crossbeam::channel::unbounded;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
 use pbr::ProgressBar;
 
+#[cfg(feature = "preview")]
 use minifb::{Key, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 
+#[cfg(feature = "preview")]
 #[derive(Default)]
 pub struct PreviewRenderer {}
 
+#[cfg(feature = "preview")]
 impl PreviewRenderer {
     pub fn new() -> Self {
         PreviewRenderer {}
     }
 }
+
+#[cfg(feature = "preview")]
 impl Renderer for PreviewRenderer {
     fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {
         if let RendererType::Preview {
             selected_preview_film_id,
         } = config.renderer
         {
-            let mut films: Vec<Film<XYZColor>> = Vec::new();
+            let mut films: Vec<Vec2D<XYZColor>> = Vec::new();
             for render_settings in config.render_settings.iter() {
                 let Resolution { width, height } = render_settings.resolution;
-                films.push(Film::new(width, height, XYZColor::BLACK));
+                films.push(Vec2D::new(width, height, XYZColor::BLACK));
             }
             println!("num cameras {}", cameras.len());
             println!("num cameras {}", world.cameras.len());
@@ -48,7 +53,7 @@ impl Renderer for PreviewRenderer {
             let original_render_settings = config.render_settings[film_idx].clone();
             let mut render_settings = config.render_settings[film_idx].clone();
             render_settings.tonemap_settings = render_settings.tonemap_settings.silenced();
-            let (mut tonemapper, converter) = parse_tonemapper(render_settings.tonemap_settings);
+            let mut tonemapper = parse_tonemap_settings(render_settings.tonemap_settings);
 
             world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
             let env_sampling_probability = world.get_env_sampling_probability();
@@ -429,6 +434,10 @@ impl Renderer for PreviewRenderer {
                         {
                             break;
                         }
+
+                        if s > max_samples && max_samples > 0 {
+                            break;
+                        }
                         let now = Instant::now();
                         let _stats: Profile = films[film_idx]
                             .buffer
@@ -482,7 +491,6 @@ impl Renderer for PreviewRenderer {
                             &mut buffer,
                             &films[film_idx],
                             tonemapper.as_mut(),
-                            converter,
                             1.0 / (s as f32 + 1.0),
                         );
                         window.update_with_buffer(&buffer, width, height).unwrap();
@@ -512,13 +520,14 @@ impl Renderer for PreviewRenderer {
 
                     let mut total_camera_samples = 0;
                     let mut total_pixels = 0;
-                    let light_film: Arc<Mutex<Film<XYZColor>>> =
-                        Arc::new(Mutex::new(Film::new(width, height, XYZColor::BLACK)));
+                    let light_film: Arc<Mutex<Vec2D<XYZColor>>> =
+                        Arc::new(Mutex::new(Vec2D::new(width, height, XYZColor::BLACK)));
 
                     let (width, height) = (
                         render_settings.resolution.width,
                         render_settings.resolution.height,
                     );
+
                     println!("starting render with film resolution {}x{}", width, height);
                     let pixels = width * height;
                     total_pixels += pixels;
@@ -570,8 +579,8 @@ impl Renderer for PreviewRenderer {
                         let mut local_total_splats = total_splats_ref.lock().unwrap();
                         let mut local_stop_splatting = false;
                         let mut remaining_iterations = 10;
-                        let (mut tonemapper2, converter) =
-                            parse_tonemapper(render_settings_copy.tonemap_settings);
+                        let mut tonemapper2 =
+                            parse_tonemap_settings(render_settings_copy.tonemap_settings);
 
                         let mut last_instant = Instant::now();
                         let first_instant = last_instant.clone();
@@ -597,11 +606,11 @@ impl Renderer for PreviewRenderer {
 
                             {
                                 let owned = local_total_splats.to_owned();
+                                #[cfg(feature = "preview")]
                                 update_window_buffer(
                                     &mut light_buffer_ref.lock().unwrap(),
                                     &film,
                                     tonemapper2.as_mut(),
-                                    converter,
                                     1.0 / ((owned as f32).sqrt() + 1.0),
                                 );
                                 println!(

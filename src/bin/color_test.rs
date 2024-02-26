@@ -1,15 +1,16 @@
 extern crate rust_pathtracer as root;
-use root::prelude::*;
+use parking_lot::RwLock;
+use root::{prelude::*, update_window_buffer};
 
-use std::fs::File;
 use std::ops::RangeInclusive;
+use std::{fs::File, sync::Arc};
 
 use math::curves::*;
 
 use root::parsing::config::TOMLConfig;
 use root::parsing::parse_config_and_cameras;
 use root::parsing::*;
-use root::tonemap::{Converter, Tonemapper};
+use root::tonemap::Tonemapper;
 
 #[macro_use]
 extern crate log;
@@ -20,7 +21,6 @@ use eframe::egui;
 use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
@@ -33,7 +33,7 @@ struct Opt {
     pub height: usize,
     #[structopt(long, default_value = "")]
     pub initial_color: String,
-    #[structopt(long, default_value = "10.0")]
+    #[structopt(long, default_value = "1.0")]
     pub dynamic_range: f32,
 }
 
@@ -56,9 +56,27 @@ enum Response {
 }
 
 struct Model {
+    // receive requests, send responses. acts as a server
     receiver: Receiver<Request>,
     sender: Sender<Response>,
+    model_data: ModelData,
+}
 
+enum ModelData {
+    Lightness(LightnessModel),
+    Blending(BlendingModel),
+}
+
+struct LightnessModel {
+    pub bins: usize,
+    pub ev_multiplier: f32,
+    pub ev_offset: f32,
+    pub illuminants: Vec<Curve>,
+    pub color: Curve,
+    pub wavelength_bounds: Bounds1D,
+}
+
+struct BlendingModel {
     pub bins: usize,
     pub ev_multiplier: f32,
     pub ev_offset: f32,
@@ -69,8 +87,67 @@ struct Model {
 
 impl Model {
     pub fn new(
+        model_data: ModelData,
         response_sender: Sender<Response>,
         request_receiver: Receiver<Request>,
+    ) -> Self {
+        Model {
+            model_data,
+            receiver: request_receiver,
+            sender: response_sender,
+        }
+    }
+
+    pub fn data_update(&mut self) {
+        for request in self.receiver.try_iter() {
+            match &mut self.model_data {
+                ModelData::Lightness(lightness_data) => {
+                    info!("{:?}", &request);
+                    match request {
+                        Request::ChangeBins(new) => lightness_data.bins = new,
+                        Request::ChangeEvOffset(new) => lightness_data.ev_offset = new,
+                        Request::ChangeColor(new) => {
+                            println!("changed color");
+                            lightness_data.color = new
+                        }
+                        Request::ChangeIlluminant(index, illuminant) => {
+                            match lightness_data.illuminants.get_mut(index) {
+                                Some(inner) => {
+                                    println!("changed illuminant");
+                                    *inner = illuminant
+                                }
+                                None => {
+                                    println!("failed to change illuminant, index out of range");
+                                }
+                            }
+                        }
+                        Request::ViewIlluminant(index) => {
+                            println!(
+                                "got request, sending back illuminant {} from model (unless out of range)",
+                                index
+                            );
+                            self.sender
+                                .try_send(Response::Illuminant(
+                                    lightness_data.illuminants.get(index).cloned(),
+                                ))
+                                .unwrap()
+                        }
+                        Request::AppendIlluminant(new_illuminant) => {
+                            lightness_data.illuminants.push(new_illuminant);
+                        } // Request::IlluminantsCount => self
+                          //     .sender
+                          //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
+                          //     .unwrap(),
+                    }
+                }
+                ModelData::Blending(blending_data) => {}
+            }
+        }
+    }
+}
+
+impl LightnessModel {
+    pub fn new(
         bins: usize,
         ev_multiplier: f32,
         ev_offset: f32,
@@ -79,8 +156,6 @@ impl Model {
         wavelength_bounds: Bounds1D,
     ) -> Self {
         Self {
-            receiver: request_receiver,
-            sender: response_sender,
             bins,
             ev_multiplier,
             ev_offset,
@@ -89,49 +164,10 @@ impl Model {
             wavelength_bounds,
         }
     }
-    pub fn data_update(&mut self) {
-        for request in self.receiver.try_iter() {
-            info!("{:?}", &request);
-            match request {
-                Request::ChangeBins(new) => self.bins = new,
-                Request::ChangeEvOffset(new) => self.ev_offset = new,
-                Request::ChangeColor(new) => {
-                    println!("changed color");
-                    self.color = new
-                }
-                Request::ChangeIlluminant(index, illuminant) => {
-                    match self.illuminants.get_mut(index) {
-                        Some(inner) => {
-                            println!("changed illuminant");
-                            *inner = illuminant
-                        }
-                        None => {
-                            println!("failed to change illuminant, index out of range");
-                        }
-                    }
-                }
-                Request::ViewIlluminant(index) => {
-                    println!(
-                        "got request, sending back illuminant {} from model (unless out of range)",
-                        index
-                    );
-                    self.sender
-                        .try_send(Response::Illuminant(self.illuminants.get(index).cloned()))
-                        .unwrap()
-                }
-                Request::AppendIlluminant(new_illuminant) => {
-                    self.illuminants.push(new_illuminant);
-                }
-                // Request::IlluminantsCount => self
-                //     .sender
-                //     .try_send(Response::IlluminantsCount(self.illuminants.len()))
-                //     .unwrap(),
-            }
-        }
-    }
 }
 
 struct Controller {
+    // send requests, receive responses. acts as a client
     sender: Sender<Request>,
     receiver: Receiver<Response>,
 
@@ -265,7 +301,8 @@ impl eframe::App for Controller {
                 }
             }
 
-            use egui::plot::{Line, Plot, PlotPoints};
+            // unimplemented!();
+            use egui_plot::{Line, Plot, PlotPoints};
             let n_samples = 100;
             let cloned = self.color.clone();
             let color = move |lambda: f64|{
@@ -281,7 +318,7 @@ impl eframe::App for Controller {
                 .view_aspect(2.0)
                 .show(ui, |plot_ui| {
                     plot_ui.line(line);
-                    if plot_ui.plot_clicked() {
+                    if plot_ui.response().clicked() {
                         plot_ui.pointer_coordinate().map(|v| v.to_pos2())
                     } else {
                         None
@@ -361,7 +398,7 @@ impl eframe::App for Controller {
 }
 
 pub struct View {
-    film: Film<XYZColor>,
+    film: Vec2D<XYZColor>,
     buffer: Vec<u32>,
     window: Window,
     tonemapper: Box<dyn Tonemapper>,
@@ -370,7 +407,7 @@ pub struct View {
 
 impl View {
     pub fn new(width: usize, height: usize, tonemapper: Box<dyn Tonemapper>) -> Self {
-        let film = Film::new(width, height, XYZColor::BLACK);
+        let film = Vec2D::new(width, height, XYZColor::BLACK);
 
         let mut window = Window::new(
             "Preview",
@@ -400,56 +437,70 @@ impl View {
     fn update(&mut self, model: &Model) -> bool {
         let (width, height) = (self.film.width, self.film.height);
 
-        for _ in self.per_illuminant_scale.len()..model.illuminants.len() {
-            self.per_illuminant_scale.push(0.0);
+        match &model.model_data {
+            ModelData::Lightness(model) => {
+                for _ in self.per_illuminant_scale.len()..model.illuminants.len() {
+                    self.per_illuminant_scale.push(0.0);
+                }
+                for (i, illuminant) in model.illuminants.iter().enumerate() {
+                    let integral = illuminant.convert_to_xyz(model.wavelength_bounds, 1.0, false);
+                    // theoretically, this should not panic, since the above loop inserts empty elements when the lengths don't match
+                    self.per_illuminant_scale[i] = integral.y();
+                }
+
+                let per_illuminant_scale = &self.per_illuminant_scale;
+
+                let mut cache = Vec::new();
+                for illuminant_bin in 0..model.illuminants.len() {
+                    for bin_num in 0..model.bins {
+                        let illuminants = &model.illuminants;
+                        let illuminant = &illuminants[illuminant_bin];
+
+                        let strength = model.ev_multiplier.powf(bin_num as f32 - model.ev_offset);
+                        // *pixel = color.to_xyz_color();
+                        let stacked = Curve::Machine {
+                            seed: strength / per_illuminant_scale[illuminant_bin],
+                            list: vec![
+                                (Op::Mul, model.color.clone()),
+                                (Op::Mul, illuminant.clone()),
+                            ],
+                        };
+                        let color = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
+                        // println!(
+                        //     "color for illuminant {} and bin {} == {:?}",
+                        //     illuminant_bin, bin_num, color.0
+                        // );
+                        cache.push(color);
+                    }
+                }
+
+                self.film
+                    .buffer
+                    .par_iter_mut()
+                    .enumerate()
+                    .for_each(|(idx, pixel)| {
+                        let illuminants = &model.illuminants;
+                        let (x, y) = (idx % width, idx / width);
+
+                        let bin_num = model.bins * x / width;
+
+                        let illuminant_bin = y * illuminants.len() / height;
+
+                        *pixel = cache[illuminant_bin * model.bins + bin_num];
+                    });
+
+                self.tonemapper.initialize(&self.film, 1.0);
+                // let window = self.window
+                // let film = &self.film;
+                // let tonemapper = &self.tonemapper;
+                update_window_buffer(&mut self.buffer, &self.film, self.tonemapper.as_mut(), 1.0);
+                self.window
+                    .update_with_buffer(&self.buffer, self.film.width, self.film.height)
+                    .unwrap();
+                !self.window.is_open() || self.window.is_key_pressed(Key::Escape, KeyRepeat::No)
+            }
+            ModelData::Blending(_) => todo!(),
         }
-        for (i, illuminant) in model.illuminants.iter().enumerate() {
-            let integral = illuminant.convert_to_xyz(model.wavelength_bounds, 1.0, false);
-            // theoretically, this should not panic, since the above loop inserts empty elements when the lengths don't match
-            self.per_illuminant_scale[i] = integral.y();
-        }
-
-        let per_illuminant_scale = &self.per_illuminant_scale;
-
-        self.film
-            .buffer
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(idx, pixel)| {
-                let illuminants = &model.illuminants;
-                let (x, y) = (idx % width, idx / width);
-
-                let bin_num = model.bins * x / width;
-                let illuminant_bin = y * illuminants.len() / height;
-                let illuminant = &illuminants[illuminant_bin];
-
-                let strength = model.ev_multiplier.powf(bin_num as f32 - model.ev_offset);
-                // *pixel = color.to_xyz_color();
-                let stacked = Curve::Machine {
-                    seed: strength / per_illuminant_scale[illuminant_bin],
-                    list: vec![
-                        (Op::Mul, model.color.clone()),
-                        (Op::Mul, illuminant.clone()),
-                    ],
-                };
-                *pixel = stacked.convert_to_xyz(model.wavelength_bounds, 1.0, false);
-            });
-
-        self.tonemapper.initialize(&self.film, 1.0);
-        // let window = self.window
-        // let film = &self.film;
-        // let tonemapper = &self.tonemapper;
-        update_window_buffer(
-            &mut self.buffer,
-            &self.film,
-            self.tonemapper.as_mut(),
-            Converter::sRGB,
-            1.0,
-        );
-        self.window
-            .update_with_buffer(&self.buffer, self.film.width, self.film.height)
-            .unwrap();
-        !self.window.is_open() || self.window.is_key_pressed(Key::Escape, KeyRepeat::No)
     }
 }
 
@@ -520,14 +571,16 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
 
     Ok((
         Model::new(
+            ModelData::Lightness(LightnessModel::new(
+                bins,
+                ev_multiplier,
+                ev_offset,
+                illuminants,
+                initial_color.clone(),
+                wavelength_bounds,
+            )),
             res_sender,
             req_receiver,
-            bins,
-            ev_multiplier,
-            ev_offset,
-            illuminants,
-            initial_color.clone(),
-            wavelength_bounds,
         ),
         // View::new(opts.width, opts.height, Box::new(tonemapper)),
         Controller::new(
@@ -582,7 +635,7 @@ fn main() {
     });
 
     let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(500.0, 900.0)),
+        viewport: egui::ViewportBuilder::default().with_inner_size(egui::vec2(500.0, 900.0)),
         ..Default::default()
     };
 
@@ -593,7 +646,7 @@ press reset curve to reset the curve to a flat zero tabulated curve that you can
 adjust various sliders to change the EV offset.
 "
     );
-    eframe::run_native(
+    let _ = eframe::run_native(
         "the same color under different illuminants",
         options,
         Box::new(|_cc| Box::new(controller)),

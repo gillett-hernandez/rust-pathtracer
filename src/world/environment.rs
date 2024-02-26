@@ -362,7 +362,7 @@ mod test {
     #[test]
     fn test_sample_emission() {
         let env_map = EnvironmentMap::Constant {
-            color: curves::blackbody(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+            color: curves::blackbody_curve(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: 1.0,
         };
         let (ray, sw, pdf, _lambda_pdf) = env_map.sample_emission(
@@ -389,7 +389,7 @@ mod test {
     #[test]
     fn test_sample_emission_sun() {
         let env_map = EnvironmentMap::Sun {
-            color: curves::blackbody(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+            color: curves::blackbody_curve(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: 1.0,
             angular_diameter: 0.1,
             sun_direction: Vec3::Z,
@@ -418,7 +418,7 @@ mod test {
     #[test]
     fn test_sample_env_map() {
         let env_map = EnvironmentMap::Sun {
-            color: curves::blackbody(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
+            color: curves::blackbody_curve(5500.0, 40.0).to_cdf(BOUNDED_VISIBLE_RANGE, 100),
             strength: 1.0,
             angular_diameter: 0.1,
             sun_direction: Vec3::Z,

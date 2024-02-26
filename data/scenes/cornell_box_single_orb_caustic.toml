@@ -3,7 +3,7 @@ textures = "data/lib_textures.toml"
 materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 
-env_sampling_probability = 0.01
+env_sampling_probability = 0.0
 [environment]
 type="Constant"
 strength = 0.00000
