@@ -288,9 +288,7 @@ mod test {
     use super::*;
     use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
-    use crate::tonemap::{
-        sRGB, write_to_files, Clamp, Color, Rec709Primaries, Reinhard1x3, Tonemapper,
-    };
+    use crate::tonemap::{sRGB, write_to_files, Clamp, Rec709Primaries, Tonemapper};
 
     use crate::world::environment::*;
     use crate::{
@@ -345,12 +343,10 @@ mod test {
         #[cfg(feature = "preview")]
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-        let mut buffer = vec![0u32; limit];
+        #[cfg(feature = "preview")]
+        let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
+
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-
-        let converter = crate::tonemap::sRGB;
-
-        let mut tonemapper = Clamp::new(0.0, true, true);
 
         for idx in 0..limit {
             #[cfg(feature = "preview")]
@@ -464,9 +460,10 @@ mod test {
             #[cfg(feature = "preview")]
             window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-            let mut buffer = vec![0u32; limit];
+            #[cfg(feature = "preview")]
+            let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
+
             let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-            let converter = crate::tonemap::sRGB;
 
             let mut tonemapper = Clamp::new(0.0, true, true);
 
@@ -591,11 +588,10 @@ mod test {
         });
         #[cfg(feature = "preview")]
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
-        let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-        let converter = crate::tonemap::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0, true, true);
+        #[cfg(feature = "preview")]
+        let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
 
         for idx in 0..limit {
             #[cfg(feature = "preview")]
@@ -761,11 +757,10 @@ mod test {
         #[cfg(feature = "preview")]
         window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
 
-        let mut buffer = vec![0u32; limit];
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
-        let converter = crate::tonemap::sRGB;
 
-        let mut tonemapper = Clamp::new(0.0, true, true);
+        #[cfg(feature = "preview")]
+        let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
 
         for idx in 0..limit {
             #[cfg(feature = "preview")]
