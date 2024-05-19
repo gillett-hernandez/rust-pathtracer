@@ -1,5 +1,4 @@
 #![feature(fs_try_exists, portable_simd)]
-#![warn(rust_2018_idioms, rust_2021_compatibility)]
 
 #[macro_use]
 extern crate smallvec;
@@ -8,8 +7,6 @@ extern crate log;
 #[macro_use]
 extern crate paste;
 
-#[cfg(feature = "minifb")]
-extern crate minifb;
 
 #[cfg(feature = "minifb")]
 use minifb::{Key, Window, WindowOptions};

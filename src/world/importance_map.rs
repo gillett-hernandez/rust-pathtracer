@@ -400,7 +400,6 @@ mod test {
                     &mut buffer,
                     &film,
                     &mut tonemapper,
-                    converter,
                     1.0 / (idx as f32 + 1.0),
                 );
                 #[cfg(feature = "preview")]
@@ -538,7 +537,6 @@ mod test {
                         &mut buffer,
                         &film,
                         &mut tonemapper,
-                        converter,
                         1.0 / (idx as f32 + 1.0),
                     );
                     #[cfg(feature = "preview")]
@@ -647,7 +645,6 @@ mod test {
                     &mut buffer,
                     &film,
                     &mut tonemapper,
-                    converter,
                     1.0 / (idx as f32 + 1.0),
                 );
                 #[cfg(feature = "preview")]
@@ -824,7 +821,6 @@ mod test {
                     &mut buffer,
                     &film,
                     &mut tonemapper,
-                    converter,
                     1.0 / (idx as f32 + 1.0),
                 );
 

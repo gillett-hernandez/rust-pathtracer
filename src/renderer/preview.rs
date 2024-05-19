@@ -81,7 +81,7 @@ impl Renderer for PreviewRenderer {
             match Integrator::from_settings_and_world(
                 arc_world,
                 IntegratorType::from(render_settings.integrator),
-                &cameras,
+                &cameras[..],
                 &render_settings,
             ) {
                 None => {}

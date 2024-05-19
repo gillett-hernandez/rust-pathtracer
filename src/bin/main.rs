@@ -16,7 +16,6 @@ use root::world::*;
 
 #[macro_use]
 extern crate log;
-extern crate simplelog;
 
 // use simplelog::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};

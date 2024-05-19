@@ -5,6 +5,10 @@ authors = ["Gillett Hernandez <gillett.hernandez@gmail.com>"]
 edition = "2021"
 default-run = "main"
 
+[lints.rust]
+rust_2018_idioms = "warn"
+rust_2021_compatibility = "warn"
+
 [features]
 visualize_importance_map = ["minifb"]
 preview = ["minifb"]
