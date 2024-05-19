@@ -21,28 +21,29 @@ realistic_camera = ["rust_optics"]
 
 
 [dependencies]
-crossbeam = "0.8.1"
-smallvec = "1.13.1"
-log = "0.4.17"
-log-once = "0.4.0"
+anyhow = "~1.0"
+crossbeam = "~0.8"
+smallvec = "~1.13"
+log = "~0.4"
+log-once = "~0.4"
 # simplelog = { git = "https://github.com/zed-industries/simplelog.rs", rev = "bd35550d556cf3498a18757608b616d53ea822d6" }
 simplelog = "0.12"
-exr = "1.71"
-png = "0.17"
-image = "0.24"
-minifb = { version = "0.26", optional = true }
-nalgebra = "0.32.1"
-num_cpus = "1.13.0"
-ordered-float = "4.1.1"
-parking_lot = "0.12.0"
-pbr = "1.0.4"
-rand = "0.8.4"
-rayon = "1.8.0"
-serde = { version = "1.0.120", features = ["derive"] }
-tobj = "3.2.0"
-toml = "0.8.8"
-structopt = "0.3.26"
-paste = "1.0.7"
+exr = "~1.72"
+png = "~0.17"
+image = { version = "~0.25", features = ["hdr"] }
+minifb = { version = "~0.26", optional = true }
+nalgebra = "~0.32"
+num_cpus = "~1.16"
+ordered-float = "~4.2"
+parking_lot = "~0.12"
+pbr = "~1.1"
+rand = "~0.8"
+rayon = "~1.10"
+serde = { version = "~1.0", features = ["derive"] }
+tobj = "~4.0"
+toml = "~0.8"
+structopt = "~0.3"
+paste = "~1.0"
 eframe = { version = "~0", optional = true }
 egui = { version = "~0", optional = true }
 egui_plot = { version = "~0", optional = true }
@@ -50,17 +51,17 @@ egui_extras = { version = "~0", optional = true }
 sdfu = { git = "https://github.com/fu5ha/sdfu", optional = true, features = [
     "ultraviolet",
 ] }
-ultraviolet = { version = "0.8.1", optional = true }
+ultraviolet = { version = "~0.9", optional = true }
 math = { git = "https://github.com/gillett-hernandez/rust_cg_math" }
 # math = { git = "https://github.com/gillett-hernandez/rust_cg_math", default-features = false}
 rust_optics = { git = "https://github.com/gillett-hernandez/rust_optics", optional = true }
-colorgrad = { version = "0.6.1", optional = true }
+colorgrad = { version = "~0.6", optional = true }
 
 [target.'cfg(windows)'.dependencies]
-win32_notification = "0.1.0"
+win32_notification = "~0.1"
 
 [build-dependencies]
-serde = { version = "1.0.120", features = ["derive"] }
+serde = { version = "~1.0", features = ["derive"] }
 
 [lib]
 path = "src/lib.rs"

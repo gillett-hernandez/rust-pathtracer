@@ -375,7 +375,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
         .iter()
         .filter(|(name, _)| used_textures.contains(*name))
     {
-        if let Some(parsed) = parse_texture_stack(data.clone(), &curves) {
+        if let Ok(parsed) = parse_texture_stack(data.clone(), &curves) {
             textures_map.insert(name.clone(), parsed);
         } else {
             warn!("failed to parse texture {}", name);
