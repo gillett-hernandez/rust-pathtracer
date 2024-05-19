@@ -55,6 +55,7 @@ pub fn parse_rgba(filepath: &str) -> anyhow::Result<Vec2D<f32x4>> {
     let mut new_film = Vec2D::new(width as usize, height as usize, f32x4::splat(0.0));
     for (x, y, pixel) in rgba_image.enumerate_pixels() {
         // apparently, no into is needed since an rgba<u8> is just an alias for [u8;4]
+
         let [r, g, b, a]: [u8; 4] = pixel.0;
         new_film.write_at(
             x as usize,
@@ -103,27 +104,24 @@ pub fn parse_exr(filepath: &str) -> anyhow::Result<Vec2D<f32x4>> {
 pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> anyhow::Result<Vec2D<f32x4>> {
     info!("parsing hdr texture at {}", filepath);
     let path = Path::new(filepath);
-    let img = image::codecs::hdr::HdrDecoder::new(BufReader::new(
+    let hdr_decoder = image::codecs::hdr::HdrDecoder::new(BufReader::new(
         File::open(path).expect(&*format!("couldn't open hdr file at {}", filepath)),
     ))
     .context("couldn't construct hdr decoder for some reason")?;
     let (width, height) = (
-        img.metadata().width as usize,
-        img.metadata().height as usize,
+        hdr_decoder.metadata().width as usize,
+        hdr_decoder.metadata().height as usize,
     );
     let mut new_film = Vec2D::new(width as usize, height as usize, f32x4::splat(0.0));
 
-    let img = DynamicImage::from_decoder(img).context("failed to parse hdr")?;
+    let hdr = match DynamicImage::from_decoder(hdr_decoder).unwrap() {
+        DynamicImage::ImageRgb32F(image) => image,
+        _ => bail!("expected rgb32f image"),
+    };
 
-    let view = img
-        .as_rgb32f()
-        .context("should be able to view data as rgbf32")?;
-
-    // img.
-
-    for (x, y, pixel) in view.enumerate_pixels() {
+    for (x, y, pixel) in hdr.enumerate_pixels() {
         let [r, g, b]: [f32; 3] = pixel.0;
-        // let (x, y) = (idx % width, idx / width);
+
         new_film.write_at(
             x as usize,
             y as usize,
