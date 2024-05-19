@@ -1,5 +1,11 @@
-pub use packed_simd::f32x4;
 pub use rayon::prelude::*;
+pub use std::simd::{
+    cmp::{SimdPartialOrd, SimdPartialEq},
+    f32x4,
+    num::{SimdFloat, SimdInt},
+    simd_swizzle, StdFloat,
+
+};
 
 pub use crate::camera::{Camera, CameraEnum, CameraId};
 pub use crate::curves::*;

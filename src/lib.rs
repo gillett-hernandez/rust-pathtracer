@@ -1,11 +1,10 @@
-#![feature(fs_try_exists)]
+#![feature(fs_try_exists, portable_simd)]
+#![warn(rust_2018_idioms, rust_2021_compatibility)]
 
 #[macro_use]
 extern crate smallvec;
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate packed_simd;
 #[macro_use]
 extern crate paste;
 

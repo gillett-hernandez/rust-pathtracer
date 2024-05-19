@@ -9,9 +9,8 @@ use exr::{
     },
 };
 use nalgebra::{Matrix3, Vector3};
-use packed_simd::{f32x2, f32x4};
 
-use std::{collections::HashMap, error::Error, marker::PhantomData, time::Instant};
+use std::{collections::HashMap, error::Error, marker::PhantomData, simd::f32x2, time::Instant};
 
 mod clamp;
 mod reinhard0;
@@ -75,19 +74,19 @@ pub struct Primaries {
 const REC709: Primaries = Primaries {
     // https://en.wikipedia.org/wiki/Rec._709#Primary_chromaticities
     // 0.3127 	0.3290 	0.64 	0.33 	0.30 	0.60 	0.15 	0.06
-    red: f32x2::new(0.64, 0.33),
-    green: f32x2::new(0.30, 0.60),
-    blue: f32x2::new(0.15, 0.06),
-    white: f32x2::new(0.3127, 0.3290),
+    red: f32x2::from_array([0.64, 0.33]),
+    green: f32x2::from_array([0.30, 0.60]),
+    blue: f32x2::from_array([0.15, 0.06]),
+    white: f32x2::from_array([0.3127, 0.3290]),
 };
 
 const REC2020: Primaries = Primaries {
     // https://en.wikipedia.org/wiki/Rec._2020#System_colorimetry
     // 0.3127 	0.3290 	0.708 	0.292 	0.170 	0.797 	0.131 	0.046
-    red: f32x2::new(0.708, 0.292),
-    green: f32x2::new(0.292, 0.170),
-    blue: f32x2::new(0.131, 0.046),
-    white: f32x2::new(0.3127, 0.3290),
+    red: f32x2::from_array([0.708, 0.292]),
+    green: f32x2::from_array([0.292, 0.170]),
+    blue: f32x2::from_array([0.131, 0.046]),
+    white: f32x2::from_array([0.3127, 0.3290]),
 };
 
 #[derive(Copy, Clone, Default)]
@@ -116,12 +115,12 @@ impl From<Color<CIEXYZ>> for Color<Rec709Primaries> {
         let [x, y, z, _]: [f32; 4] = v.values.into();
         let intermediate = XYZ_TO_REC709_LINEAR * Vector3::new(x, y, z);
 
-        Color::<Rec709Primaries>::new(f32x4::new(
+        Color::<Rec709Primaries>::new(f32x4::from_array([
             intermediate[0],
             intermediate[1],
             intermediate[2],
             0.0,
-        ))
+        ]))
     }
 }
 
@@ -130,12 +129,12 @@ impl From<Color<CIEXYZ>> for Color<Rec2020Primaries> {
         let [x, y, z, _]: [f32; 4] = v.values.into();
         let intermediate = XYZ_TO_REC2020_LINEAR * Vector3::new(x, y, z);
 
-        Color::<Rec2020Primaries>::new(f32x4::new(
+        Color::<Rec2020Primaries>::new(f32x4::from_array([
             intermediate[0],
             intermediate[1],
             intermediate[2],
             0.0,
-        ))
+        ]))
     }
 }
 
@@ -151,7 +150,7 @@ pub struct sRGB;
 
 impl OETF for sRGB {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        (linear_color.lt(f32x4::splat(0.0031308))).select(
+        (linear_color.simd_lt(f32x4::splat(0.0031308))).select(
             f32x4::splat(323.0 / 25.0) * linear_color,
             f32x4::splat(211.0 / 200.0) * linear_color.powf(f32x4::splat(5.0 / 12.0))
                 - f32x4::splat(11.0 / 200.0),
@@ -171,7 +170,7 @@ pub struct Rec709;
 
 impl OETF for Rec709 {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        linear_color.lt(f32x4::splat(0.018053968510)).select(
+        linear_color.simd_lt(f32x4::splat(0.018053968510)).select(
             f32x4::splat(4.5) * linear_color,
             f32x4::splat(1.099296826) * linear_color.powf(f32x4::splat(0.45))
                 - f32x4::splat(0.099296826),
@@ -191,7 +190,7 @@ pub struct Rec2020;
 
 impl OETF for Rec2020 {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        linear_color.lt(f32x4::splat(0.018053968510)).select(
+        linear_color.simd_lt(f32x4::splat(0.018053968510)).select(
             f32x4::splat(4.5) * linear_color,
             f32x4::splat(1.099296826) * linear_color.powf(f32x4::splat(0.45))
                 - f32x4::splat(0.099296826),
@@ -252,10 +251,10 @@ where
         display_window: IntegerBounds::new((0, 0), (film.width, film.height)),
         pixel_aspect: 1.0,
         chromaticities: Some(Chromaticities {
-            red: Vec2(primaries.red.extract(0), primaries.red.extract(1)),
-            green: Vec2(primaries.green.extract(0), primaries.green.extract(1)),
-            blue: Vec2(primaries.blue.extract(0), primaries.blue.extract(1)),
-            white: Vec2(primaries.white.extract(0), primaries.white.extract(1)),
+            red: Vec2(primaries.red[0], primaries.red[1]),
+            green: Vec2(primaries.green[0], primaries.green[1]),
+            blue: Vec2(primaries.blue[0], primaries.blue[1]),
+            white: Vec2(primaries.white[0], primaries.white[1]),
         }),
         time_code: None,
         other: HashMap::new(),
@@ -304,10 +303,10 @@ where
     encoder.set_source_gamma(png::ScaledFloat::new(T::effective_gamma())); // 1.0 / 2.2, unscaled, but rounded
     let source_chromaticities = png::SourceChromaticities::new(
         // Using unscaled instantiation here
-        (primaries.white.extract(0), primaries.white.extract(1)),
-        (primaries.red.extract(0), primaries.red.extract(1)),
-        (primaries.green.extract(0), primaries.green.extract(1)),
-        (primaries.blue.extract(0), primaries.blue.extract(1)),
+        (primaries.white[0], primaries.white[1]),
+        (primaries.red[0], primaries.red[1]),
+        (primaries.green[0], primaries.green[1]),
+        (primaries.blue[0], primaries.blue[1]),
     );
     encoder.set_source_chromaticities(source_chromaticities);
     let mut writer = encoder.write_header().unwrap();

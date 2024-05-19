@@ -1,7 +1,6 @@
 use crate::prelude::*;
 
-use packed_simd::{f32x4, m32x4};
-use std::ops::Mul;
+use std::{ops::Mul, simd::Mask};
 
 pub trait HasBoundingBox {
     fn aabb(&self) -> AABB;
@@ -32,36 +31,37 @@ impl AABB {
         let min: f32x4 = self.min.0;
         let max: f32x4 = self.max.0;
         // point is only contained if its elements are all greater than or equal to the min and less than or equal to the max
-        point.0.ge(min).all() && point.0.le(max).all()
+        point.0.simd_ge(min).all() && point.0.simd_le(max).all()
     }
 
     pub fn hit(&self, r: &Ray, _t0: f32, _t1: f32) -> Option<(f32, f32)> {
         let denom = r.direction.0;
-        const ZERO: f32x4 = f32x4::splat(0.0);
+        const ZERO: f32x4 = f32x4::ZERO;
 
-        let min: f32x4 = (denom.eq(ZERO)).select(ZERO, (self.min - r.origin).0 / denom);
+        let min: f32x4 = (denom.simd_eq(ZERO)).select(ZERO, (self.min - r.origin).0 / denom);
 
         let max: f32x4 =
-            (denom.eq(ZERO)).select(f32x4::splat(INFINITY), (self.max - r.origin).0 / denom);
-        let tmin = min.min(max);
-        let tmax = min.max(max);
-        if tmin.max_element() > tmax.min_element() {
+            (denom.simd_eq(ZERO)).select(f32x4::splat(INFINITY), (self.max - r.origin).0 / denom);
+        let tmin = min.simd_min(max);
+        let tmax = min.simd_max(max);
+        if tmin.reduce_max() > tmax.reduce_min() {
             return None;
         }
 
-        let scaled_t0 = (denom.eq(ZERO)).select(ZERO, f32x4::splat(_t0) / denom.abs());
-        let scaled_t1 = f32x4::splat(_t1) / denom.abs();
+        let mut scaled_t0 =
+            (denom.simd_eq(ZERO)).select(ZERO, f32x4::splat(_t0) / SimdFloat::abs(denom));
+        let mut scaled_t1 = f32x4::splat(_t1) / SimdFloat::abs(denom);
         // println!("{:?} {:?}", scaled_t0, scaled_t1);
-        if tmin.gt(scaled_t1).any() || tmax.lt(scaled_t0).any() {
+        if tmin.simd_gt(scaled_t1).any() || tmax.simd_lt(scaled_t0).any() {
             // if any of the "earliest" hit times (tmin) exceed the max allowable hit time for that dimension (scaled_t1), a hit cannot have occurred
             // if any of the "latest" hit times (tmax) are smaller than the minimum allowable hit time for that dimension (scaled_t0), a hit cannot have occurred.
             return None;
         }
 
-        Some((
-            scaled_t0.replace(3, f32::INFINITY).min_element(),
-            scaled_t1.replace(3, f32::NEG_INFINITY).max_element(),
-        ))
+        scaled_t0[3] = f32::INFINITY;
+        scaled_t1[3] = f32::NEG_INFINITY;
+
+        Some((scaled_t0.reduce_min(), scaled_t1.reduce_max()))
     }
     pub fn expand(mut self, other: &AABB) -> AABB {
         self.min = Point3(self.min.0.min(other.min.0));
@@ -89,7 +89,7 @@ impl AABB {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.min.0.gt(self.max.0).any()
+        self.min.0.simd_gt(self.max.0).any()
     }
 
     pub fn center(&self) -> Point3 {
@@ -118,13 +118,18 @@ impl Mul<AABB> for Matrix4x4 {
     fn mul(self, rhs: AABB) -> Self::Output {
         // need to transform all 8 corner points and make a bounding box surrounding all of them.
         // all 8 corner points can be reconstructed by this procedure:
-        let mut min = f32x4::splat(f32::INFINITY).replace(3, 1.0);
-        let mut max = f32x4::splat(-f32::INFINITY).replace(3, 1.0);
+
+        let mut min = f32x4::splat(f32::INFINITY);
+        let mut max = f32x4::splat(-f32::INFINITY);
+
+        min[3] = 1.0;
+        max[3] = 1.0;
 
         for index in 0..8 {
             let (xb, yb, zb) = (index & 1 == 0, (index >> 1) & 1 == 0, (index >> 2) & 1 == 0);
-            let candidate =
-                (self * Point3(m32x4::new(xb, yb, zb, false).select(rhs.min.0, rhs.max.0))).0;
+            let candidate = (self
+                * Point3(Mask::from_array([xb, yb, zb, false]).select(rhs.min.0, rhs.max.0)))
+            .0;
             min = min.min(candidate);
             max = max.max(candidate);
         }

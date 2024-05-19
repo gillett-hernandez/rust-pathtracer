@@ -288,7 +288,9 @@ mod test {
     use super::*;
     use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
-    use crate::tonemap::{sRGB, write_to_files, Clamp, Color, Rec709Primaries, Reinhard1x3, Tonemapper};
+    use crate::tonemap::{
+        sRGB, write_to_files, Clamp, Color, Rec709Primaries, Reinhard1x3, Tonemapper,
+    };
 
     use crate::world::environment::*;
     use crate::{
@@ -687,7 +689,7 @@ mod test {
             );
             integral += XYZColor::from(le.replace_energy(le.energy / *pdf / *wavelength_pdf));
         }
-        assert!((integral / n as f32).0.gt(f32x4::splat(0.0)).any());
+        assert!((integral / n as f32).0.simd_gt(f32x4::splat(0.0)).any());
         println!("{:?}", integral / n as f32);
     }
 

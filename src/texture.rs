@@ -1,12 +1,29 @@
 use crate::prelude::*;
 
 use math::curves::{Curve, CurveWithCDF, InterpolationMode, Op};
-use packed_simd::f32x4;
+
+// Into
+
+// trait MyInto<T>: Sized {
+//     fn force_into(self) -> T;
+// }
+
+// impl MyInto<f32x4> for f32 {
+//     fn force_into(self) -> f32x4 {
+//         f32x4::splat(self)
+//     }
+// }
+
+// impl MyInto<f32> for f32 {
+//     // trivially
+//     fn force_into(self) -> f32 {
+//         self
+//     }
+// }
 
 pub trait EvalAt<T: Field>
 where
     CurveWithCDF: SpectralPowerDistributionFunction<T>,
-    T: std::ops::Mul<f32, Output = T>,
 {
     fn eval_at(&self, lambda: T, uv: (f32, f32)) -> T;
 }
@@ -30,28 +47,28 @@ impl Texture4 {
                     Op::Add,
                     Curve::Machine {
                         list: vec![(Op::Mul, self.curves[0].pdf.clone())],
-                        seed: texel.extract(0),
+                        seed: texel[0],
                     },
                 ),
                 (
                     Op::Add,
                     Curve::Machine {
                         list: vec![(Op::Mul, self.curves[1].pdf.clone())],
-                        seed: texel.extract(1),
+                        seed: texel[1],
                     },
                 ),
                 (
                     Op::Add,
                     Curve::Machine {
                         list: vec![(Op::Mul, self.curves[2].pdf.clone())],
-                        seed: texel.extract(2),
+                        seed: texel[2],
                     },
                 ),
                 (
                     Op::Add,
                     Curve::Machine {
                         list: vec![(Op::Mul, self.curves[3].pdf.clone())],
-                        seed: texel.extract(3),
+                        seed: texel[3],
                     },
                 ),
             ],
@@ -74,7 +91,10 @@ impl EvalAt<f32x4> for Texture4 {
             self.curves[3].evaluate_power(lambda),
         ];
 
-        evals[0] * x + evals[1] * y + evals[2] * z + evals[3] * w
+        evals[0] * f32x4::splat(x)
+            + evals[1] * f32x4::splat(y)
+            + evals[2] * f32x4::splat(z)
+            + evals[3] * f32x4::splat(w)
     }
 }
 
@@ -84,14 +104,14 @@ impl EvalAt<f32> for Texture4 {
         // TODO: bilinear or bicubic texture interpolation/filtering
         let texel = self.texture.at_uv(uv);
         // let eval = f32x4::new(
-        let evals = f32x4::new(
+        let evals = f32x4::from_array([
             self.curves[0].evaluate_power(lambda),
             self.curves[1].evaluate_power(lambda),
             self.curves[2].evaluate_power(lambda),
             self.curves[3].evaluate_power(lambda),
-        );
+        ]);
 
-        (evals * texel).sum()
+        (evals * texel).reduce_sum()
     }
 }
 
@@ -127,7 +147,7 @@ impl EvalAt<f32x4> for Texture1 {
         // TODO: bilinear or bicubic texture interpolation/filtering
         let factor = self.texture.at_uv(uv);
         let eval = self.curve.evaluate_power(lambda);
-        eval * factor
+        eval * f32x4::splat(factor)
     }
 }
 
@@ -180,9 +200,8 @@ pub fn replace_channel(tex4: &mut Texture4, tex1: Texture1, channel: u8) {
         .buffer
         .par_iter_mut()
         .enumerate()
-        .for_each(|(idx, pixel)| unsafe {
-            // safety: function literally panics if channel is >= 4
-            *pixel = pixel.replace_unchecked(channel, tex1.texture.buffer[idx]);
+        .for_each(|(idx, pixel)| {
+            pixel[3] = tex1.texture.buffer[idx];
         });
     tex4.curves[channel] = tex1.curve;
 }

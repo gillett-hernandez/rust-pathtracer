@@ -239,7 +239,7 @@ pub fn random_walk<L, E>(
                 }
 
                 if !matches!(
-                    MyPartialOrd::partial_cmp(&*pdf, &E::ZERO),
+                    TotalPartialOrd::partial_cmp(&*pdf, &E::ZERO),
                     Some(std::cmp::Ordering::Greater)
                 ) {
                     trace!(
@@ -385,7 +385,7 @@ pub fn random_walk_hero(
     // let mut last_bsdf_pdf = PDF::from(0.0);
     for bounce in 0..bounce_limit {
         if let Some(mut hit) = world.hit(ray, 0.0, ray.tmax) {
-            hit.lambda = lambda.extract(0);
+            hit.lambda = lambda[0];
             hit.transport_mode = trace_type;
             let mut vertex = HeroSurfaceVertex::new(
                 trace_type.into(),
@@ -434,16 +434,16 @@ pub fn random_walk_hero(
             // what to do in this situation, where there is a wo and there's also emission?
             let multi_emission = HeroEnergy(f32x4::new(
                 material
-                    .emission(lambda.extract(0), hit.uv, hit.transport_mode, wi)
+                    .emission(lambda[0], hit.uv, hit.transport_mode, wi)
                     .0,
                 material
-                    .emission(lambda.extract(1), hit.uv, hit.transport_mode, wi)
+                    .emission(lambda[1], hit.uv, hit.transport_mode, wi)
                     .0,
                 material
-                    .emission(lambda.extract(2), hit.uv, hit.transport_mode, wi)
+                    .emission(lambda[2], hit.uv, hit.transport_mode, wi)
                     .0,
                 material
-                    .emission(lambda.extract(3), hit.uv, hit.transport_mode, wi)
+                    .emission(lambda[3], hit.uv, hit.transport_mode, wi)
                     .0,
             ));
 
@@ -453,30 +453,30 @@ pub fn random_walk_hero(
                 // NOTE! cos_i and cos_o seem to have somewhat reversed names.
                 let (multi_f, multi_pdf) = {
                     let (f0, pdf0) =
-                        material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wi, wo);
+                        material.bsdf(lambda[0], hit.uv, hit.transport_mode, wi, wo);
                     let (f1, pdf1) =
-                        material.bsdf(lambda.extract(1), hit.uv, hit.transport_mode, wi, wo);
+                        material.bsdf(lambda[1], hit.uv, hit.transport_mode, wi, wo);
                     let (f2, pdf2) =
-                        material.bsdf(lambda.extract(2), hit.uv, hit.transport_mode, wi, wo);
+                        material.bsdf(lambda[2], hit.uv, hit.transport_mode, wi, wo);
                     let (f3, pdf3) =
-                        material.bsdf(lambda.extract(3), hit.uv, hit.transport_mode, wi, wo);
+                        material.bsdf(lambda[3], hit.uv, hit.transport_mode, wi, wo);
                     (
-                        f32x4::new(f0.0, f1.0, f2.0, f3.0),
-                        f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
+                        f32x4::from_array([f0.0, f1.0, f2.0, f3.0]),
+                        f32x4::from_array([pdf0.0, pdf1.0, pdf2.0, pdf3.0]),
                     )
                 };
                 let (_reverse_multi_f, reverse_multi_pdf) = {
                     let (f0, pdf0) =
-                        material.bsdf(lambda.extract(0), hit.uv, hit.transport_mode, wo, wi);
+                        material.bsdf(lambda[0], hit.uv, hit.transport_mode, wo, wi);
                     let (f1, pdf1) =
-                        material.bsdf(lambda.extract(1), hit.uv, hit.transport_mode, wo, wi);
+                        material.bsdf(lambda[1], hit.uv, hit.transport_mode, wo, wi);
                     let (f2, pdf2) =
-                        material.bsdf(lambda.extract(2), hit.uv, hit.transport_mode, wo, wi);
+                        material.bsdf(lambda[2], hit.uv, hit.transport_mode, wo, wi);
                     let (f3, pdf3) =
-                        material.bsdf(lambda.extract(3), hit.uv, hit.transport_mode, wo, wi);
+                        material.bsdf(lambda[3], hit.uv, hit.transport_mode, wo, wi);
                     (
-                        f32x4::new(f0.0, f1.0, f2.0, f3.0),
-                        f32x4::new(pdf0.0, pdf1.0, pdf2.0, pdf3.0),
+                        f32x4::from_array([f0.0, f1.0, f2.0, f3.0]),
+                        f32x4::from_array([pdf0.0, pdf1.0, pdf2.0, pdf3.0]),
                     )
                 };
                 let cos_i = wo.z().abs();
@@ -486,8 +486,8 @@ pub fn random_walk_hero(
 
                 // }
 
-                let hero_f = multi_f.extract(0);
-                let hero_pdf = multi_pdf.extract(0);
+                let hero_f = multi_f[0];
+                let hero_pdf = multi_pdf[0];
                 debug_assert!(hero_pdf >= 0.0, "pdf was less than 0 {:?}", hero_pdf);
                 if hero_pdf < 0.00000001 || hero_pdf.is_nan() {
                     break;
@@ -509,7 +509,7 @@ pub fn random_walk_hero(
                 vertex.pdf_backward = rr_continue_prob * reverse_multi_pdf / cos_o;
 
                 debug_assert!(
-                    vertex.pdf_forward.extract(0) > 0.0 && vertex.pdf_forward.is_finite().all(),
+                    vertex.pdf_forward[0] > 0.0 && vertex.pdf_forward.is_finite().all(),
                     "pdf forward was 0 for material {:?} at vertex {:?}. wi: {:?}, wo: {:?}, cos_o: {}, cos_i: {}, rrcont={}",
                     material.get_name(),
                     vertex,
@@ -537,7 +537,7 @@ pub fn random_walk_hero(
                 // last_bsdf_pdf = pdf;
 
                 debug_assert!(
-                    !beta.extract(0).is_nan(),
+                    !beta[0].is_nan(),
                     "{:?} {:?} {} {:?}",
                     beta,
                     multi_f,
@@ -793,7 +793,7 @@ pub fn random_walk_medium<L, E>(
             beta *= combined_throughput / hero_tr;
 
             // multiply hero_tr back in for only hero wavelength.
-            // beta = beta.replace(0, beta.extract(0) * hero_tr);
+            // beta = beta.replace(0, beta[0] * hero_tr);
 
             match vertex {
                 Vertex::Surface(mut vertex) => {
@@ -1047,7 +1047,7 @@ pub fn random_walk_medium<L, E>(
                     //     vertex.medium_id, wi, wo
                     // );
                     // beta /= phase.0; // pre divide by hero pdf
-                    // beta = beta.replace(0, beta.extract(0) * phase.0);
+                    // beta = beta.replace(0, beta[0] * phase.0);
                     // debug_assert!(beta.is_finite().all(), "{:?} {:?}", beta, phase);
 
                     // let [u, v, w, _] = vertex.point.as_array();

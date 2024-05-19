@@ -21,16 +21,15 @@ crossbeam = "0.8.1"
 smallvec = "1.13.1"
 log = "0.4.17"
 log-once = "0.4.0"
-simplelog = { git = "https://github.com/zed-industries/simplelog.rs", rev = "bd35550d556cf3498a18757608b616d53ea822d6" }
-exr = "1.71.0"
-png = "0.17.11"
-image = "0.24.8"
-minifb = { version = "0.25.0", optional = true }
+# simplelog = { git = "https://github.com/zed-industries/simplelog.rs", rev = "bd35550d556cf3498a18757608b616d53ea822d6" }
+simplelog = "0.12"
+exr = "1.71"
+png = "0.17"
+image = "0.24"
+minifb = { version = "0.26", optional = true }
 nalgebra = "0.32.1"
 num_cpus = "1.13.0"
 ordered-float = "4.1.1"
-# packed_simd = { version = "0.3.7", package = "packed_simd_2" }
-packed_simd = "~0.3"
 parking_lot = "0.12.0"
 pbr = "1.0.4"
 rand = "0.8.4"
@@ -40,15 +39,16 @@ tobj = "3.2.0"
 toml = "0.8.8"
 structopt = "0.3.26"
 paste = "1.0.7"
-eframe = { version = "~0.26", optional = true }
-egui = { version = "~0.26", optional = true }
-egui_plot = { version = "~0.26", optional = true }
-egui_extras = { version = "~0.26", optional = true }
+eframe = { version = "~0", optional = true }
+egui = { version = "~0", optional = true }
+egui_plot = { version = "~0", optional = true }
+egui_extras = { version = "~0", optional = true }
 sdfu = { git = "https://github.com/fu5ha/sdfu", optional = true, features = [
     "ultraviolet",
 ] }
 ultraviolet = { version = "0.8.1", optional = true }
 math = { git = "https://github.com/gillett-hernandez/rust_cg_math" }
+# math = { git = "https://github.com/gillett-hernandez/rust_cg_math", default-features = false}
 rust_optics = { git = "https://github.com/gillett-hernandez/rust_optics", optional = true }
 colorgrad = { version = "0.6.1", optional = true }
 

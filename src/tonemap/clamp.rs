@@ -1,8 +1,6 @@
 use super::Tonemapper;
 use crate::prelude::*;
 
-use packed_simd::f32x4;
-
 #[derive(Clone, Debug)]
 pub struct Clamp {
     exposure: f32,
@@ -92,7 +90,7 @@ impl Tonemapper for Clamp {
             let scaling_factor = new_lum / lum;
             // TODO: determine if this needs to be done per channel.
 
-            XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
+            XYZColor::from_raw(f32x4::splat(scaling_factor) * cie_xyz_color.0)
         } else {
             XYZColor::from_raw(
                 (cie_xyz_color * exposure_mult)

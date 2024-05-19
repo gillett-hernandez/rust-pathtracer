@@ -6,8 +6,8 @@ use crate::hittable::{HitRecord, Hittable};
 
 fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
     match axis {
-        Axis::X => Vec3(shuffle!(vec.0, [2, 1, 0, 3])),
-        Axis::Y => Vec3(shuffle!(vec.0, [0, 2, 1, 3])),
+        Axis::X => Vec3(simd_swizzle!(vec.0, [2, 1, 0, 3])),
+        Axis::Y => Vec3(simd_swizzle!(vec.0, [0, 2, 1, 3])),
         Axis::Z => vec,
     }
 }

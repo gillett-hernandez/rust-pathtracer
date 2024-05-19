@@ -1,11 +1,14 @@
+#![feature(portable_simd)]
 use std::path::Path;
 
 use rust_pathtracer as root;
 
 use exr::prelude::*;
-use packed_simd::f32x4;
 use rayon::prelude::*;
-use root::renderer::Vec2D;
+use root::{
+    prelude::{f32x4, SimdFloat},
+    renderer::Vec2D,
+};
 use structopt::StructOpt;
 
 fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Vec2D<f32x4>> {
@@ -13,7 +16,7 @@ fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Vec2D<f32x4>> {
         name,
         |size, _| Vec2D::new(size.0, size.1, f32x4::splat(0.0)),
         |film, pos, (r, g, b, a)| {
-            film.write_at(pos.0, pos.1, f32x4::new(r, g, b, a));
+            film.write_at(pos.0, pos.1, f32x4::from_array([r, g, b, a]));
         },
     )
     .ok()
@@ -94,25 +97,16 @@ fn main() {
                     .for_each(|(px0, px1)| {
                         // rmse. not a true rmse since a true rmse would take into account the error of all the constituent samples that go into a pixel
                         let difference = *px0 - *px1;
-                        let sum_of_sqr = (difference * difference).sum() / 4.0;
+                        let sum_of_sqr = (difference * difference).reduce_sum() / 4.0;
                         let rmse = sum_of_sqr.sqrt();
-                        *px0 = f32x4::splat(rmse).replace(3, 0.0);
+                        *px0 = f32x4::splat(rmse);
+                        px0[3] = 0.0;
                     });
                 // grab max rmse
 
                 // "tonemap" rmse
-                let max_rmse = image0
-                    .buffer
-                    .iter()
-                    .map(|e| e.extract(0))
-                    .reduce(f32::max)
-                    .unwrap();
-                let min_rmse = image0
-                    .buffer
-                    .iter()
-                    .map(|e| e.extract(0))
-                    .reduce(f32::min)
-                    .unwrap();
+                let max_rmse = image0.buffer.iter().map(|e| e[0]).reduce(f32::max).unwrap();
+                let min_rmse = image0.buffer.iter().map(|e| e[0]).reduce(f32::min).unwrap();
                 println!("minmax: {} -> {}", min_rmse, max_rmse);
 
                 image0
@@ -121,16 +115,16 @@ fn main() {
                     // .zip(image1.buffer.par_iter())
                     .for_each(|px| {
                         // rmse. not a true rmse since a true rmse would take into account the error of all the constituent samples that go into a pixel
-                        let rmse = px.extract(0);
+                        let rmse = px[0];
 
                         let color = g.at(((rmse - min_rmse) / (max_rmse - min_rmse)) as f64);
 
-                        *px = f32x4::new(
+                        *px = f32x4::from_array([
                             color.r as f32,
                             color.g as f32,
                             color.b as f32,
                             color.a as f32,
-                        );
+                        ]);
                     });
 
                 let mut img: image::RgbImage = image::ImageBuffer::new(width as u32, height as u32);

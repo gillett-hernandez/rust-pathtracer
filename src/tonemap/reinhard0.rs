@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-use packed_simd::f32x4;
-
 use super::Tonemapper;
 
 #[derive(Clone, Debug)]
@@ -101,7 +99,7 @@ impl Tonemapper for Reinhard0 {
             cie_xyz_color = MAUVE;
         }
 
-        XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
+        XYZColor::from_raw(f32x4::splat(scaling_factor) * cie_xyz_color.0)
     }
 
     fn get_name(&self) -> &str {
@@ -149,7 +147,7 @@ impl Tonemapper for Reinhard0x3 {
                     continue;
                 }
                 total_luminance += lum;
-                sum_of_log += (Self::DELTA + color.0).ln();
+                sum_of_log += (f32x4::splat(Self::DELTA) + color.0).ln();
                 if lum > max_luminance {
                     // println!("max lum {} at ({}, {})", max_luminance, x, y);
                     max_luminance = lum;
@@ -172,13 +170,13 @@ impl Tonemapper for Reinhard0x3 {
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
 
         let avg_luminance = total_luminance / (total_pixels as f32);
-        let l_w = (sum_of_log / (total_pixels as f32)).exp() / factor;
+        let l_w = (sum_of_log / f32x4::splat(total_pixels as f32)).exp() / f32x4::splat(factor);
         if !self.silenced {
             info!(
                 "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {:?})",
                 avg_luminance,
                 l_w,
-                sum_of_log / total_pixels as f32
+                sum_of_log / f32x4::splat(total_pixels as f32)
             );
             info!("dynamic range is {} dB", dynamic_range);
             info!(
@@ -199,11 +197,11 @@ impl Tonemapper for Reinhard0x3 {
 
         // using super basic reinhard mapping
         // Ld = L / (1 + L)
-        let l = self.key_value * cie_xyz_color.0
+        let l = f32x4::splat(self.key_value) * cie_xyz_color.0
             / self
                 .l_w
                 .expect("tonemapper data not set correctly. was this tonemapper initialized?");
-        let scaling_factor = l / (1.0 + l);
+        let scaling_factor = l / (f32x4::ONE + l);
 
         if !cie_xyz_color.0.is_finite().all() || cie_xyz_color.0.is_nan().any() {
             cie_xyz_color = MAUVE;

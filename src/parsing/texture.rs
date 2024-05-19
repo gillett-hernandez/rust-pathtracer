@@ -6,7 +6,6 @@ use crate::texture::*;
 
 use math::curves::InterpolationMode;
 
-use packed_simd::f32x4;
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -57,12 +56,12 @@ pub fn parse_rgba(filepath: &str) -> Vec2D<f32x4> {
         new_film.write_at(
             x as usize,
             y as usize,
-            f32x4::new(
+            f32x4::from_array([
                 r as f32 / 255.0,
                 g as f32 / 255.0,
                 b as f32 / 255.0,
                 a as f32 / 255.0,
-            ),
+            ]),
         );
     }
     new_film
@@ -79,7 +78,7 @@ pub fn parse_exr(filepath: &str) -> Vec2D<f32x4> {
             empty_image
         },
         |pixel_vector, position, (r, g, b, a): (f32, f32, f32, f32)| {
-            pixel_vector[position.y()][position.x()] = f32x4::new(r, g, b, a)
+            pixel_vector[position.y()][position.x()] = f32x4::from_array([r, g, b, a])
         },
     )
     .unwrap();
@@ -116,7 +115,7 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> Vec2D<f32x4> {
         new_film.write_at(
             x as usize,
             y as usize,
-            f32x4::new(r as f32, g as f32, b as f32, alpha_fill),
+            f32x4::from_array([r as f32, g as f32, b as f32, alpha_fill]),
         );
     }
     new_film
@@ -311,13 +310,13 @@ mod test {
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
             sum += v;
-            if v.sum() > max.sum() {
+            if v.reduce_sum() > max.reduce_sum() {
                 max = v;
             }
         }
         println!(
             "avg value is {:?}",
-            sum / film.width as f32 / film.height as f32
+            sum / f32x4::splat(film.width as f32 * film.height as f32)
         );
         println!("max value is {:?}", max);
     }
@@ -328,13 +327,13 @@ mod test {
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
             sum += v;
-            if v.sum() > max.sum() {
+            if v.reduce_sum() > max.reduce_sum() {
                 max = v;
             }
         }
         println!(
             "avg value is {:?}",
-            sum / film.width as f32 / film.height as f32
+            sum / f32x4::splat(film.width as f32 * film.height as f32)
         );
         println!("max value is {:?}", max);
     }
@@ -346,13 +345,13 @@ mod test {
         let mut max = f32x4::splat(0.0);
         for v in film.buffer {
             sum += v;
-            if v.sum() > max.sum() {
+            if v.reduce_sum() > max.reduce_sum() {
                 max = v;
             }
         }
         println!(
             "avg value is {:?}",
-            sum / film.width as f32 / film.height as f32
+            sum / f32x4::splat(film.width as f32 * film.height as f32)
         );
         println!("max value is {:?}", max);
     }

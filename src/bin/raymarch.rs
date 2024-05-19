@@ -68,7 +68,7 @@ fn convert(p: impl Convert) -> uvVec3 {
 
 #[inline(always)]
 fn deconvert(v: uvVec3) -> f32x4 {
-    f32x4::new(v.x, v.y, v.z, 0.0)
+    f32x4::from_array([v.x, v.y, v.z, 0.0])
 }
 
 #[derive(Debug, StructOpt)]
