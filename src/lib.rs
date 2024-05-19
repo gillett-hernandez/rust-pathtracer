@@ -7,7 +7,6 @@ extern crate log;
 #[macro_use]
 extern crate paste;
 
-
 #[cfg(feature = "minifb")]
 use minifb::{Key, Window, WindowOptions};
 use rayon::prelude::*;
@@ -71,9 +70,7 @@ pub fn window_loop<F>(
     F: FnMut(&Window, &mut Vec<u32>, usize, usize) -> (),
 {
     let mut window = Window::new("Window", width, height, options).unwrap();
-    window.limit_update_rate(Some(std::time::Duration::from_micros(
-        (1000000 / max_framerate) as u64,
-    )));
+    window.set_target_fps(max_framerate);
 
     let mut film = Vec2D::new(width, height, 0u32);
     while window.is_open() && !window.is_key_down(Key::Escape) {

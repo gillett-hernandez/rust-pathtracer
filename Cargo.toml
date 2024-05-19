@@ -82,10 +82,6 @@ path = "src/bin/raymarch.rs"
 required-features = ["build_raymarch"]
 
 [[bin]]
-name = "medium_test"
-path = "src/bin/medium_test.rs"
-
-[[bin]]
 name = "color_test"
 path = "src/bin/color_test.rs"
 required-features = ["gui"]

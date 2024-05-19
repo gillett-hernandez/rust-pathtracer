@@ -1,5 +1,7 @@
+// only needed because the actual code that uses these imports is gated
+// behind a feature flag which the compiler does not seem to detect even though 
+#![allow(unused_imports)]
 use super::prelude::*;
-use crate::prelude::*;
 
 use crate::parsing::config::{Config, RenderSettings, RendererType, Resolution};
 // use crate::integrator::*;
