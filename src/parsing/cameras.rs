@@ -9,8 +9,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
-
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::config::{Config, TOMLConfig};
 
@@ -20,7 +19,7 @@ use optics::aperture::{ApertureEnum, CircularAperture, SimpleBladedAperture};
 use optics::parse_lenses_from;
 
 #[cfg(feature = "realistic_camera")]
-#[derive(Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 #[serde(tag = "type")]
 pub enum ApertureData {
     Circular,
@@ -44,7 +43,7 @@ impl Into<ApertureEnum> for ApertureData {
 }
 
 #[cfg(feature = "realistic_camera")]
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RealisticCameraData {
     pub name: String,
     pub lens_spec: String,
@@ -63,7 +62,7 @@ pub struct RealisticCameraData {
     pub solver_heat: Option<f32>, // defaults to 0.01
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SimpleCameraData {
     pub name: String,
     pub look_from: [f32; 3],
@@ -78,7 +77,7 @@ pub struct SimpleCameraData {
                                     // pub shutter_close_time: Option<f32>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PanoramaCameraData {
     pub name: String,
     pub look_from: [f32; 3],
@@ -87,7 +86,7 @@ pub struct PanoramaCameraData {
     pub fov: [f32; 2],          // in degrees. x should be in (0, 360], y should be in (0, 180]
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum CameraSettings {
     SimpleCamera(SimpleCameraData),

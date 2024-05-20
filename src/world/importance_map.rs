@@ -465,8 +465,6 @@ mod test {
 
             let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
-            let mut tonemapper = Clamp::new(0.0, true, true);
-
             // let mut sampler = StratifiedSampler::new(100, 100, 100);
             for idx in 0..limit {
                 #[cfg(feature = "preview")]

@@ -1,46 +1,33 @@
 #![feature(portable_simd)]
-#[macro_use]
-extern crate log;
 extern crate rust_pathtracer as root;
-extern crate simplelog;
 
+// std imports
 use std::cmp::Ordering;
 use std::fs::File;
-use std::ops::{Add, Div, Mul, Neg, RangeInclusive, Sub};
 
-use log_once::warn_once;
-use math::curves::*;
-use math::prelude::{direction_to_uv, Point3, XYZColor};
-use math::ray::Ray;
-use math::sample::{RandomSampler, Sampler};
-use math::spectral::{SingleWavelength, WavelengthEnergyTrait, BOUNDED_VISIBLE_RANGE};
-use math::*;
-
-use math::tangent_frame::TangentFrame;
-use math::vec::Vec3;
-use pbr::ProgressBar;
-use root::camera::ProjectiveCamera;
-use root::hittable::{HasBoundingBox, AABB};
-use root::parsing::tonemap::TonemapSettings;
-use root::parsing::{
-    config::*, construct_world, get_settings, load_scene, parse_config_and_cameras,
-    parse_tonemap_settings,
-};
-use root::prelude::*;
-use root::renderer::{output_film, Vec2D};
-use root::tonemap::{Clamp, Tonemapper};
-use root::world::{EnvironmentMap, Material, MaterialEnum};
-
+// third party but non-subject-matter imports
 use log::LevelFilter;
-use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
+use log_once::warn_once;
+use minifb::WindowOptions;
+use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
+// our imports
 use math::prelude::*;
+use root::hittable::{HasBoundingBox, AABB};
+use root::parsing::tonemap::TonemapSettings;
+use root::parsing::{
+    config::*, construct_world, get_settings, parse_config_and_cameras, parse_tonemap_settings,
+};
+use root::prelude::*;
+use root::renderer::{output_film, Vec2D};
+use root::world::{EnvironmentMap, Material, MaterialEnum};
+
+// third party but subject-matter-relevant imports
 use sdfu::ops::{HardMin, Union};
-use sdfu::{Sphere, SDF};
+use sdfu::SDF;
 use ultraviolet::vec::Vec3 as uvVec3;
 
 trait Convert {
@@ -115,7 +102,7 @@ enum MarchResult {
 // generate_primitive_enum!(Sphere => Sphere<f32>);
 
 trait MaterialTag {
-    fn material(&self, p: uvVec3) -> usize {
+    fn material(&self, _: uvVec3) -> usize {
         0
     }
 }
@@ -142,7 +129,7 @@ impl<S: SDF<f32, uvVec3>> SDF<f32, uvVec3> for TaggedSDF<S> {
 }
 
 impl<S: SDF<f32, uvVec3>> MaterialTag for TaggedSDF<S> {
-    fn material(&self, p: uvVec3) -> usize {
+    fn material(&self, _: uvVec3) -> usize {
         self.material
     }
 }
@@ -215,42 +202,18 @@ where
 
 impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
     fn sdf(&self, p: Point3) -> (f32, usize) {
-        let mut min_time = f32::INFINITY;
-        let mut selected = 0;
+        let p = convert(p);
 
-        // for (index, prim) in self.primitives.iter().enumerate() {
-        //     let time = prim.dist(convert(p));
-
-        //     if time < min_time {
-        //         min_time = time;
-        //         selected = index
-        //     }
-        // }
-        selected = self.primitives.material(convert(p));
-        min_time = self.primitives.dist(convert(p));
-        (min_time, selected)
+        (self.primitives.dist(p), self.primitives.material(p))
     }
     fn normal(&self, p: Point3, threshold: f32) -> Vec3 {
         // get normal from prim[index]
-        // Vec3(deconvert(
-        //     self.primitives[index]
-        //         .normals(threshold)
-        //         .normal_at(convert(p)),
-        // ))
+
         Vec3(deconvert(
             self.primitives.normals(threshold).normal_at(convert(p)),
         ))
     }
-    // fn material(&self, p: Point3, threshold: f32) -> Option<usize> {
-    //     // dead code?
-    //     for (i, prim) in self.primitives.iter().enumerate() {
-    //         if prim.dist(convert(p)) < threshold {
-    //             // considered on or inside surface
-    //             return Some(i);
-    //         }
-    //     }
-    //     None
-    // }
+
     pub fn march(
         &self,
         r: Ray,
@@ -323,7 +286,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
         let mut throughput = 1.0;
         let mut sum = 0.0;
         let mut flipped_sdf = false;
-        let mut last_bsdf_pdf = 0.0;
+        // let mut last_bsdf_pdf = 0.0;
         for bounce in 0..bounces {
             match self.march(r, 0.001, 0.001, flipped_sdf, printout) {
                 MarchResult::SurfaceIntersection {
@@ -415,7 +378,7 @@ macro_rules! find_and_add_material {
             .materials
             .iter()
             .enumerate()
-            .find(|(index, material)| matches!(material, $scrutinee))
+            .find(|(_, material)| matches!(material, $scrutinee))
             .and_then(|(i, material)| {
                 $materials.push(i);
                 Some(material)
@@ -559,7 +522,7 @@ fn main() {
         TonemapSettings::Clamp {
             exposure,
             luminance_only,
-            silenced,
+            ..
         } => TonemapSettings::Clamp {
             exposure,
             luminance_only,
@@ -568,7 +531,7 @@ fn main() {
         TonemapSettings::Reinhard0 {
             key_value,
             luminance_only,
-            silenced,
+            ..
         } => TonemapSettings::Reinhard0 {
             key_value,
             luminance_only,
@@ -578,7 +541,7 @@ fn main() {
             key_value,
             white_point,
             luminance_only,
-            silenced,
+            ..
         } => TonemapSettings::Reinhard1 {
             key_value,
             white_point,
@@ -596,9 +559,9 @@ fn main() {
         let mut sampler: Box<dyn Sampler> = Box::new(RandomSampler::new());
         let lambda = wavelength_bounds.sample(sampler.draw_1d().x);
         let (u, v) = (0.501, 0.5);
-        let (r, pdf) = camera.get_ray(&mut sampler, lambda, u, v);
+        let (r, _) = camera.get_ray(&mut sampler, lambda, u, v);
 
-        let color = scene.color(r, lambda, bounces, &mut sampler, true);
+        let _ = scene.color(r, lambda, bounces, &mut sampler, true);
         return;
     }
 
@@ -624,7 +587,7 @@ fn main() {
                                 (px as f32 + film_sample.x) / width as f32,
                                 (py as f32 + film_sample.y) / height as f32,
                             );
-                            let (r, pdf) = camera.get_ray(&mut sampler, lambda, u, v);
+                            let (r, _) = camera.get_ray(&mut sampler, lambda, u, v);
                             *pixel += scene.color(r, lambda, bounces, &mut sampler, false);
                         }
                     });
@@ -632,7 +595,7 @@ fn main() {
             }
             pb.finish();
         }
-        RendererType::Tiled { tile_size } => {}
+        RendererType::Tiled { .. } => {}
         RendererType::Preview { .. } => {
             root::window_loop(
                 width,
@@ -656,7 +619,7 @@ fn main() {
                                     (px as f32 + film_sample.x) / width as f32,
                                     (py as f32 + film_sample.y) / height as f32,
                                 );
-                                let (r, pdf) = camera.get_ray(&mut sampler, lambda, u, v);
+                                let (r, _) = camera.get_ray(&mut sampler, lambda, u, v);
                                 *pixel += scene.color(r, lambda, bounces, &mut sampler, false);
                             }
                         });
@@ -664,12 +627,7 @@ fn main() {
 
                     let factor = 1.0 / (total_samples as f32 + 1.0);
 
-                    update_window_buffer(
-                        window_buffer,
-                        &render_film,
-                        tonemapper.as_mut(),
-                        factor,
-                    );
+                    update_window_buffer(window_buffer, &render_film, tonemapper.as_mut(), factor);
                 },
             );
         }

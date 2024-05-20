@@ -2,17 +2,17 @@
 
 use crate::parsing::tonemap::TonemapSettings;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::cameras::CameraSettings;
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 pub struct Resolution {
     pub width: usize,
     pub height: usize,
 }
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
 pub enum IntegratorKind {
     PT {
@@ -28,7 +28,7 @@ pub enum IntegratorKind {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum ColorSpaceSettings {
     sRGB,
@@ -36,7 +36,7 @@ pub enum ColorSpaceSettings {
     Rec2020,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RenderSettings {
     pub filename: Option<String>,
     pub resolution: Resolution,
@@ -56,7 +56,7 @@ pub struct RenderSettings {
     pub tonemap_settings: TonemapSettings,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TOMLRenderSettings {
     pub filename: Option<String>,
     pub resolution: Resolution,
@@ -100,7 +100,7 @@ impl From<TOMLRenderSettings> for RenderSettings {
     }
 }
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
 pub enum RendererType {
     Naive,
@@ -113,7 +113,7 @@ pub enum RendererType {
     },
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TOMLConfig {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub default_scene_file: String,

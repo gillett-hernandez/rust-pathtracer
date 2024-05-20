@@ -199,8 +199,8 @@ impl Camera<f32, f32> for RealisticCamera {
         todo!();
     }
 
-    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF<f32, SolidAngle>) {
-        // TODO
+    fn eval_we(&self, _lambda: f32, _normal: Vec3, _from: Point3, _to: Point3) -> (f32, PDF<f32, SolidAngle>) {
+        // TODO implement We, requires backwards tracing to be robust
         todo!()
     }
 
