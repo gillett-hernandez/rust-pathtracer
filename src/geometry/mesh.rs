@@ -180,7 +180,7 @@ impl Hittable for MeshTriangleRef {
         let hit = HitRecord::new(
             t_scaled * inv_det,
             Point3::from(b0 * Vec3::from(p0) + b1 * Vec3::from(p1) + b2 * Vec3::from(p2)),
-            (0.0, 0.0),
+            UV(0.0, 0.0),
             0.0,
             shading_normal.unwrap_or(geometric_normal),
             mat_id,

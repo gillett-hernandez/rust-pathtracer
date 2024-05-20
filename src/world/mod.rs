@@ -113,7 +113,7 @@ impl World {
                 x,
                 length as f32 * x,
                 idx,
-                length as usize
+                length
             );
             Some((
                 self.accelerator.get_primitive(self.lights[idx]),
@@ -139,7 +139,7 @@ impl World {
                 x,
                 length as f32 * x,
                 idx,
-                length as usize
+                length
             );
             Some((self.get_camera(idx), idx, PDF::from(1.0 / length as f32)))
         }
@@ -271,7 +271,7 @@ mod test {
         let aabb = world.aabb();
         println!("{:?}", aabb);
 
-        let maybe_hit = world.hit(ray, 0.0, INFINITY);
+        let maybe_hit = world.hit(ray, 0.0, f32::INFINITY);
         assert!(maybe_hit.is_some());
         let intersection = maybe_hit.unwrap();
 

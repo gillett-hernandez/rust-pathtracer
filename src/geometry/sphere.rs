@@ -58,7 +58,7 @@ impl Hittable for Sphere {
                 return Some(HitRecord::new(
                     time,
                     point,
-                    (0.0, 0.0),
+                    UV(0.0, 0.0),
                     0.0,
                     normal,
                     0.into(),
@@ -75,7 +75,7 @@ impl Hittable for Sphere {
                 return Some(HitRecord::new(
                     time,
                     point,
-                    (0.0, 0.0),
+                    UV(0.0, 0.0),
                     0.0,
                     normal,
                     0.into(),

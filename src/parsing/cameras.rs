@@ -31,9 +31,9 @@ pub enum ApertureData {
 }
 
 #[cfg(feature = "realistic_camera")]
-impl Into<ApertureEnum> for ApertureData {
-    fn into(self) -> ApertureEnum {
-        match self {
+impl From<ApertureData> for ApertureEnum {
+    fn from(data: ApertureData) -> ApertureEnum {
+        match data {
             ApertureData::Circular => ApertureEnum::CircularAperture(CircularAperture::default()),
             ApertureData::Bladed { blades, sharpness } => {
                 ApertureEnum::SimpleBladedAperture(SimpleBladedAperture::new(blades, sharpness))

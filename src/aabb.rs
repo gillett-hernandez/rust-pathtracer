@@ -41,7 +41,7 @@ impl AABB {
         let min: f32x4 = (denom.simd_eq(ZERO)).select(ZERO, (self.min - r.origin).0 / denom);
 
         let max: f32x4 =
-            (denom.simd_eq(ZERO)).select(f32x4::splat(INFINITY), (self.max - r.origin).0 / denom);
+            (denom.simd_eq(ZERO)).select(f32x4::splat(f32::INFINITY), (self.max - r.origin).0 / denom);
         let tmin = min.simd_min(max);
         let tmax = min.simd_max(max);
         if tmin.reduce_max() > tmax.reduce_min() {

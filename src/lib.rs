@@ -9,9 +9,12 @@ extern crate paste;
 
 #[cfg(feature = "minifb")]
 use minifb::{Key, Window, WindowOptions};
+#[cfg(feature = "minifb")]
 use rayon::prelude::*;
-use renderer::Vec2D;
+#[cfg(feature = "minifb")]
 use tonemap::{sRGB, Color, Tonemapper, OETF};
+#[cfg(feature = "minifb")]
+use vec2d::Vec2D;
 
 use math::{
     prelude::XYZColor,
@@ -21,8 +24,6 @@ use math::{
 pub mod aabb;
 pub mod accelerator;
 pub mod camera;
-pub mod prelude;
-
 pub mod curves;
 pub mod geometry;
 pub mod hittable;
@@ -30,10 +31,12 @@ pub mod integrator;
 pub mod materials;
 pub mod mediums;
 pub mod parsing;
+pub mod prelude;
 pub mod profile;
 pub mod renderer;
 pub mod texture;
 pub mod tonemap;
+pub mod vec2d;
 pub mod world;
 
 // mauve. universal sign of danger
@@ -42,16 +45,11 @@ pub const MAUVE: XYZColor = XYZColor::new(0.5199467, 51.48687, 1.0180528);
 pub const NORMAL_OFFSET: f32 = 0.001;
 pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Default, Debug)]
 pub enum TransportMode {
     Radiance,
+    #[default]
     Importance,
-}
-
-impl Default for TransportMode {
-    fn default() -> Self {
-        TransportMode::Importance
-    }
 }
 
 pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
@@ -114,8 +112,7 @@ pub fn power_heuristic_generic<T>(a: T, b: T) -> T
 where
     T: Field + ToScalar<f32>,
 {
-    let w = a / (a + b);
-    w
+    a / (a + b)
 }
 
 #[cfg(test)]

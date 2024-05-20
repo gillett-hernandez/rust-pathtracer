@@ -9,6 +9,9 @@ default-run = "main"
 rust_2018_idioms = "warn"
 rust_2021_compatibility = "warn"
 
+[lints.clippy]
+assigning_clones = "deny"
+
 [features]
 visualize_importance_map = ["minifb"]
 preview = ["minifb"]
@@ -53,7 +56,9 @@ sdfu = { git = "https://github.com/fu5ha/sdfu", optional = true, features = [
     "ultraviolet",
 ] }
 ultraviolet = { version = "~0.8", optional = true }
-math = { git = "https://github.com/gillett-hernandez/rust_cg_math" }
+math = { git = "https://github.com/gillett-hernandez/rust_cg_math", features = [
+    "serde",
+] }
 # math = { git = "https://github.com/gillett-hernandez/rust_cg_math", default-features = false}
 rust_optics = { git = "https://github.com/gillett-hernandez/rust_optics", optional = true }
 colorgrad = { version = "~0.6", optional = true }

@@ -112,7 +112,7 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> anyhow::Result<Vec2D<f32x4>
         hdr_decoder.metadata().width as usize,
         hdr_decoder.metadata().height as usize,
     );
-    let mut new_film = Vec2D::new(width as usize, height as usize, f32x4::splat(0.0));
+    let mut new_film = Vec2D::new(width, height, f32x4::splat(0.0));
 
     let hdr = match DynamicImage::from_decoder(hdr_decoder).unwrap() {
         DynamicImage::ImageRgb32F(image) => image,
@@ -125,7 +125,7 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> anyhow::Result<Vec2D<f32x4>
         new_film.write_at(
             x as usize,
             y as usize,
-            f32x4::from_array([r as f32, g as f32, b as f32, alpha_fill]),
+            f32x4::from_array([r, g, b , alpha_fill]),
         );
     }
     Ok(new_film)
@@ -379,7 +379,7 @@ mod test {
         )
         .unwrap();
 
-        println!("{}", texture.eval_at(550.0, (0.5, 0.5)));
+        println!("{}", texture.eval_at(550.0, (0.5, 0.5).into()));
     }
     #[test]
     fn test_parse_texture_stack() {
@@ -422,6 +422,6 @@ mod test {
         )
         .unwrap();
 
-        println!("{}", texture.eval_at(550.0, (0.5, 0.5)));
+        println!("{}", texture.eval_at(550.0, (0.5, 0.5).into()));
     }
 }

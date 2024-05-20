@@ -3,6 +3,7 @@ use std::sync::Arc;
 use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
 
@@ -18,7 +19,7 @@ use rayon::iter::ParallelIterator;
 // would change memory usage complexity from O(n*m) to O(k*n*m) where k is the number of channels in the texstack
 // which is 4 for every tex4, 1 for every tex1, etc.
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub enum ImportanceMap {
     Baked {
         luminance_curve: Curve,
@@ -124,7 +125,7 @@ impl ImportanceMap {
                 let mut signal_cmf = Vec::new();
                 let mut row_luminance = 0.0;
                 for column in 0..horizontal_resolution {
-                    let uv = (
+                    let uv = UV(
                         row as f32 / vertical_resolution as f32,
                         column as f32 / horizontal_resolution as f32,
                     );
@@ -177,7 +178,7 @@ impl ImportanceMap {
                     let rgb = (cdf
                         .cdf
                         .evaluate_power(column as f32 / horizontal_resolution as f32))
-                    .clamp(0.0, 1.0 - std::f32::EPSILON);
+                    .clamp(0.0, 1.0 - f32::EPSILON);
                     buffer[row * horizontal_resolution + column] = rgb_to_u32(
                         (rgb * 255.0) as u8,
                         (rgb * 255.0) as u8,
@@ -212,7 +213,7 @@ impl ImportanceMap {
                 if !window.is_open() {
                     break;
                 }
-                let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - std::f32::EPSILON);
+                let rgb = (v_cdf[row] / total_luminance).clamp(0.0, 1.0 - f32::EPSILON);
                 let u32 = rgb_to_u32(
                     (rgb * 255.0) as u8,
                     (rgb * 255.0) as u8,
@@ -241,10 +242,7 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
-    pub fn sample_uv(
-        &self,
-        sample: Sample2D,
-    ) -> ((f32, f32), (PDF<f32, Uniform01>, PDF<f32, Uniform01>)) {
+    pub fn sample_uv(&self, sample: Sample2D) -> (UV, (PDF<f32, Uniform01>, PDF<f32, Uniform01>)) {
         match self {
             Self::Baked {
                 data, marginal_cdf, ..
@@ -272,7 +270,7 @@ impl ImportanceMap {
                 assert!(u >= 0.0, "{}", u);
                 assert!(v < 1.0, "{}", v);
                 assert!(v >= 0.0, "{}", v);
-                ((u, v), (row_pdf, column_pdf))
+                (UV(u, v), (row_pdf, column_pdf))
             }
             _ => panic!("used unbaked importance map"),
         }
@@ -286,9 +284,9 @@ mod test {
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
-    use crate::renderer::Vec2D;
     use crate::texture::EvalAt;
     use crate::tonemap::{sRGB, write_to_files, Clamp, Rec709Primaries, Tonemapper};
+    use crate::vec2d::Vec2D;
 
     use crate::world::environment::*;
     use crate::{
@@ -603,10 +601,10 @@ mod test {
                 let u = (idx % width) as f32 / width as f32;
                 let v = (idx / width) as f32 / height as f32;
 
-                (u, v)
+                UV(u, v)
             } else {
                 let s = Sample2D::new_random_sample();
-                (s.x, s.y)
+                UV(s.x, s.y)
             };
 
             let pdf = env.pdf_for(uv);

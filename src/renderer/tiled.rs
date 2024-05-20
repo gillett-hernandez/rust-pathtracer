@@ -186,11 +186,11 @@ impl TiledRenderer {
         }
     }
 
-    pub fn generate_tiles<'a, 'b>(
-        &'a self,
+    pub fn generate_tiles<'a>(
+        &self,
         film_size: (usize, usize),
-        film: &'b mut Vec2D<XYZColor>,
-    ) -> Tiles<'b> {
+        film: &'a mut Vec2D<XYZColor>,
+    ) -> Tiles<'a> {
         let ptr = film.buffer.as_mut_ptr();
         let tile_size = self.tile_size;
 
@@ -393,7 +393,7 @@ impl TiledRenderer {
                             tile.sync_to_preview(ct);
                         }
                         for (_, pixel) in tile.iter_mut() {
-                            *pixel = *pixel / settings.min_samples as f32;
+                            *pixel /= settings.min_samples as f32;
                         }
 
                         {
@@ -564,7 +564,7 @@ impl Renderer for TiledRenderer {
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
-        for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
+        for render_settings in config.render_settings.iter() {
             let camera_id = render_settings.camera_id;
 
             let (width, height) = (

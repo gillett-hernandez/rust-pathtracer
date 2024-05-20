@@ -303,10 +303,10 @@ impl Renderer for PreviewRenderer {
                                 let camera_uv = (
                                     ((x as f32 + sample.x)
                                         / (render_settings.resolution.width as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                     ((y as f32 + sample.y)
                                         / (render_settings.resolution.height as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                 );
                                 temp_color += integrator.color(
                                     &mut sampler,
@@ -675,10 +675,10 @@ impl Renderer for PreviewRenderer {
                                 let camera_uv = (
                                     ((x as f32 + sample.x)
                                         / (render_settings.resolution.width as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                     ((y as f32 + sample.y)
                                         / (render_settings.resolution.height as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                 );
                                 temp_color += integrator.color(
                                     &mut sampler,

@@ -220,7 +220,7 @@ impl NaiveRenderer {
                     let (sample, film_id): (Sample, CameraId) = v;
 
                     if let Sample::LightSample(sw, pixel) = sample {
-                        let film = &mut films[film_id as usize];
+                        let film = &mut films[film_id];
                         let color = sw;
                         let (x, y) = (
                             (pixel.0 * film.width as f32) as usize,
@@ -282,9 +282,9 @@ impl NaiveRenderer {
                                 let sample = sampler.draw_2d();
                                 let camera_uv = (
                                     ((x as f32 + sample.x) / (settings.resolution.width as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                     ((y as f32 + sample.y) / (settings.resolution.height as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                 );
                                 temp_color += integrator.color(
                                     &mut sampler,
@@ -421,7 +421,7 @@ impl Renderer for NaiveRenderer {
         splatting_renders_and_cameras.insert(IntegratorType::LightTracing, Vec::new());
 
         // phase 1, gather and sort what renders need to be done
-        for (_render_id, render_settings) in config.render_settings.iter().enumerate() {
+        for render_settings in config.render_settings.iter() {
             let camera_id = render_settings.camera_id;
 
             let (width, height) = (

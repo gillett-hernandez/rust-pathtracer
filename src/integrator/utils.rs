@@ -44,7 +44,7 @@ pub struct SurfaceVertex<L: Field, E: Field> {
     pub local_wi: Vec3,
     pub point: Point3,
     pub normal: Vec3,
-    pub uv: (f32, f32),
+    pub uv: UV,
     pub material_id: MaterialId,
     pub instance_id: InstanceId,
     pub throughput: E,
@@ -63,7 +63,7 @@ impl<L: Field, E: Field> SurfaceVertex<L, E> {
         local_wi: Vec3,
         point: Point3,
         normal: Vec3,
-        uv: (f32, f32),
+        uv: UV,
         material_id: MaterialId,
         instance_id: InstanceId,
         throughput: E,
@@ -91,8 +91,10 @@ impl<L: Field, E: Field> SurfaceVertex<L, E> {
             outer_medium_id,
         }
     }
+}
 
-    pub fn default() -> Self {
+impl<L: Field, E: Field> Default for SurfaceVertex<L, E> {
+    fn default() -> Self {
         SurfaceVertex::new(
             VertexType::Eye,
             0.0,
@@ -100,7 +102,7 @@ impl<L: Field, E: Field> SurfaceVertex<L, E> {
             Vec3::ZERO,
             Point3::ORIGIN,
             Vec3::ZERO,
-            (0.0, 0.0),
+            UV(0.0, 0.0),
             MaterialId::Material(0),
             0,
             E::ZERO,
@@ -349,7 +351,7 @@ pub fn random_walk<L, E>(
                     Point3::from(at_env),
                     ray.direction,
                     // delay computing uv
-                    (0.0, 0.0),
+                    UV(0.0, 0.0),
                     MaterialId::Light(0),
                     0,
                     beta,
@@ -611,6 +613,25 @@ pub struct MediumVertex<L: Field, E: Field> {
     pub veach_g: f32,
 }
 
+impl<L: Field, E: Field> Default for MediumVertex<L, E> {
+    fn default() -> Self {
+        MediumVertex::new(
+            VertexType::Eye,
+            0.0,
+            L::ZERO,
+            Vec3::ZERO,
+            Point3::ORIGIN,
+            (0.0, 0.0, 0.0),
+            0,
+            0,
+            E::ZERO,
+            PDF::new(E::ZERO),
+            PDF::new(E::ZERO),
+            0.0,
+        )
+    }
+}
+
 impl<L: Field, E: Field> MediumVertex<L, E> {
     pub fn new(
         vertex_type: VertexType,
@@ -642,22 +663,6 @@ impl<L: Field, E: Field> MediumVertex<L, E> {
         }
     }
 
-    pub fn default() -> Self {
-        MediumVertex::new(
-            VertexType::Eye,
-            0.0,
-            L::ZERO,
-            Vec3::ZERO,
-            Point3::ORIGIN,
-            (0.0, 0.0, 0.0),
-            0,
-            0,
-            E::ZERO,
-            PDF::new(E::ZERO),
-            PDF::new(E::ZERO),
-            0.0,
-        )
-    }
     pub fn transport_mode(&self) -> TransportMode {
         match self.vertex_type {
             VertexType::Light | VertexType::LightSource(_) => TransportMode::Radiance,
@@ -949,7 +954,7 @@ pub fn random_walk_medium<L, E>(
                                         // only remove outer if it's not the Vacuum index.
                                         match tracked_mediums
                                             .iter()
-                                            .position(|e| (*e as u8) == outer)
+                                            .position(|e| *e == outer)
                                         {
                                             Some(index) => {
                                                 tracked_mediums.remove(index);
@@ -974,7 +979,7 @@ pub fn random_walk_medium<L, E>(
                                     if inner != 0 {
                                         match tracked_mediums
                                             .iter()
-                                            .position(|e| (*e as u8) == inner)
+                                            .position(|e| *e  == inner)
                                         {
                                             Some(index) => {
                                                 tracked_mediums.remove(index);
@@ -1073,7 +1078,7 @@ pub fn random_walk_medium<L, E>(
                     ray.direction,
                     Point3::from(at_env),
                     ray.direction,
-                    (0.0, 0.0),
+                    UV(0.0, 0.0),
                     MaterialId::Light(0),
                     0,
                     beta,

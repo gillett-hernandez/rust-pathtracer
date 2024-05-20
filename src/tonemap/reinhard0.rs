@@ -23,7 +23,7 @@ impl Reinhard0 {
 impl Tonemapper for Reinhard0 {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
@@ -128,7 +128,7 @@ impl Reinhard0x3 {
 impl Tonemapper for Reinhard0x3 {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;

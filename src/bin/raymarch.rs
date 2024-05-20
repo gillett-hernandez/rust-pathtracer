@@ -23,7 +23,7 @@ use root::parsing::{
     config::*, construct_world, get_settings, parse_config_and_cameras, parse_tonemap_settings,
 };
 use root::prelude::*;
-use root::renderer::{output_film, Vec2D};
+use root::renderer::output_film;
 use root::world::{EnvironmentMap, Material, MaterialEnum};
 
 // third party but subject-matter-relevant imports
@@ -305,7 +305,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                     let material = &self.materials[material];
 
                     let emission =
-                        material.emission(lambda, (0.0, 0.0), TransportMode::Importance, wi);
+                        material.emission(lambda, UV(0.0, 0.0), TransportMode::Importance, wi);
                     if emission > 0.0 {
                         // do MIS based on last_bsdf_pdf
                         sum += throughput * emission * if true { wi.z().abs() } else { 1.0 };
@@ -313,7 +313,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
 
                     let wo = material.generate(
                         lambda,
-                        (0.0, 0.0),
+                        UV(0.0, 0.0),
                         TransportMode::Importance,
                         sampler.draw_2d(),
                         wi,
@@ -326,7 +326,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                         Some(wo) => {
                             let (f, pdf) = material.bsdf(
                                 lambda,
-                                (0.0, 0.0),
+                                UV(0.0, 0.0),
                                 TransportMode::Importance,
                                 wi,
                                 wo,
@@ -364,7 +364,7 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                     sum += throughput
                         * self
                             .environment
-                            .emission(direction_to_uv(direction), lambda);
+                            .emission(direction_to_uv(direction).into(), lambda);
                     break;
                 }
             }
@@ -635,7 +635,7 @@ fn main() {
         }
     }
     output_film(
-        &render_settings,
+        render_settings,
         &render_film,
         1.0 / (total_samples as f32 + 1.0),
     );

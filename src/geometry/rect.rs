@@ -94,7 +94,7 @@ impl Hittable for AARect {
         if self.two_sided && r.direction * hit_normal > 0.0 {
             hit_normal = -hit_normal;
         }
-        let uv = (
+        let uv = UV(
             (xh + self.half_size.0) / self.size.0,
             (yh + self.half_size.1) / self.size.1,
         );

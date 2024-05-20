@@ -7,7 +7,7 @@ use exr::prelude::*;
 use rayon::prelude::*;
 use root::{
     prelude::{f32x4, SimdFloat},
-    renderer::Vec2D,
+    vec2d::Vec2D,
 };
 use structopt::StructOpt;
 

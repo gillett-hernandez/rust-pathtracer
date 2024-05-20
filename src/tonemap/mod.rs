@@ -59,7 +59,7 @@ impl<T: Default> Color<T> {
     pub fn new(v: f32x4) -> Self {
         Self {
             values: v,
-            color_space: PhantomData::default(),
+            color_space: PhantomData,
         }
     }
 }
@@ -105,7 +105,7 @@ impl From<XYZColor> for Color<CIEXYZ> {
     fn from(value: XYZColor) -> Self {
         Self {
             values: value.0,
-            color_space: PhantomData::default(),
+            color_space: PhantomData,
         }
     }
 }
@@ -170,10 +170,10 @@ pub struct Rec709;
 
 impl OETF for Rec709 {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        linear_color.simd_lt(f32x4::splat(0.018053968510)).select(
+        linear_color.simd_lt(f32x4::splat(0.01805397)).select(
             f32x4::splat(4.5) * linear_color,
-            f32x4::splat(1.099296826) * linear_color.powf(f32x4::splat(0.45))
-                - f32x4::splat(0.099296826),
+            f32x4::splat(1.0992968) * linear_color.powf(f32x4::splat(0.45))
+                - f32x4::splat(0.09929682),
         )
     }
     fn primaries() -> Primaries {
@@ -190,10 +190,10 @@ pub struct Rec2020;
 
 impl OETF for Rec2020 {
     fn oetf(linear_color: f32x4) -> f32x4 {
-        linear_color.simd_lt(f32x4::splat(0.018053968510)).select(
+        linear_color.simd_lt(f32x4::splat(0.01805397)).select(
             f32x4::splat(4.5) * linear_color,
-            f32x4::splat(1.099296826) * linear_color.powf(f32x4::splat(0.45))
-                - f32x4::splat(0.099296826),
+            f32x4::splat(1.0992968) * linear_color.powf(f32x4::splat(0.45))
+                - f32x4::splat(0.09929682),
         )
     }
     fn primaries() -> Primaries {
@@ -314,10 +314,10 @@ where
     let mut data = Vec::new();
     for y in 0..film.height {
         for x in 0..film.width {
-            let as_color: Color<CIEXYZ> = tonemapper.map(film, (x as usize, y as usize)).into();
+            let as_color: Color<CIEXYZ> = tonemapper.map(film, (x, y)).into();
             let as_s: Color<S> = as_color.into();
             // Linear RGB color space with S primaries
-            let [r, g, b, _]: [f32; 4] = T::oetf(as_s.values.into()).into();
+            let [r, g, b, _]: [f32; 4] = T::oetf(as_s.values).into();
 
             data.extend_from_slice(&[
                 (r * 255.0).ceil().clamp(0.0, 255.0) as u8,

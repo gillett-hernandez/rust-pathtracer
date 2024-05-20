@@ -25,7 +25,7 @@ pub trait EvalAt<T: Field>
 where
     CurveWithCDF: SpectralPowerDistributionFunction<T>,
 {
-    fn eval_at(&self, lambda: T, uv: (f32, f32)) -> T;
+    fn eval_at(&self, lambda: T, uv: UV) -> T;
 }
 
 #[derive(Clone)]
@@ -39,7 +39,7 @@ impl Texture4 {
     // evaluate the 4 CDFs with the mixing ratios specified by the texture.
     // not clamped to 0 to 1, so that should be done by the callee
 
-    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+    pub fn curve_at(&self, uv: UV) -> Curve {
         let texel = self.texture.at_uv(uv);
         Curve::Machine {
             list: vec![
@@ -80,7 +80,7 @@ impl Texture4 {
 // evaluate the 4 CDFs with the mixing ratios specified by the texture.
 // not clamped to 0 to 1, so that should be done by the callee
 impl EvalAt<f32x4> for Texture4 {
-    fn eval_at(&self, lambda: f32x4, uv: (f32, f32)) -> f32x4 {
+    fn eval_at(&self, lambda: f32x4, uv: UV) -> f32x4 {
         // TODO: bilinear or bicubic texture interpolation/filtering
         let [x, y, z, w]: [f32; 4] = self.texture.at_uv(uv).into();
         // let eval = f32x4::new(
@@ -100,7 +100,7 @@ impl EvalAt<f32x4> for Texture4 {
 
 impl EvalAt<f32> for Texture4 {
     #[inline(always)]
-    fn eval_at(&self, lambda: f32, uv: (f32, f32)) -> f32 {
+    fn eval_at(&self, lambda: f32, uv: UV) -> f32 {
         // TODO: bilinear or bicubic texture interpolation/filtering
         let texel = self.texture.at_uv(uv);
         // let eval = f32x4::new(
@@ -123,7 +123,7 @@ pub struct Texture1 {
 }
 
 impl Texture1 {
-    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+    pub fn curve_at(&self, uv: UV) -> Curve {
         Curve::Machine {
             list: vec![(Op::Mul, self.curve.pdf.clone())],
             seed: self.texture.at_uv(uv),
@@ -133,7 +133,7 @@ impl Texture1 {
 
 impl EvalAt<f32> for Texture1 {
     #[inline(always)]
-    fn eval_at(&self, lambda: f32, uv: (f32, f32)) -> f32 {
+    fn eval_at(&self, lambda: f32, uv: UV) -> f32 {
         // TODO: bilinear or bicubic texture interpolation/filtering
         let factor = self.texture.at_uv(uv);
         let eval = self.curve.evaluate_power(lambda);
@@ -143,7 +143,7 @@ impl EvalAt<f32> for Texture1 {
 
 impl EvalAt<f32x4> for Texture1 {
     #[inline(always)]
-    fn eval_at(&self, lambda: f32x4, uv: (f32, f32)) -> f32x4 {
+    fn eval_at(&self, lambda: f32x4, uv: UV) -> f32x4 {
         // TODO: bilinear or bicubic texture interpolation/filtering
         let factor = self.texture.at_uv(uv);
         let eval = self.curve.evaluate_power(lambda);
@@ -158,7 +158,7 @@ pub enum Texture {
 }
 
 impl Texture {
-    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+    pub fn curve_at(&self, uv: UV) -> Curve {
         match self {
             Texture::Texture1(tex) => tex.curve_at(uv),
             Texture::Texture4(tex) => tex.curve_at(uv),
@@ -168,7 +168,7 @@ impl Texture {
 
 // TODO: bilinear or bicubic texture interpolation/filtering
 impl EvalAt<f32> for Texture {
-    fn eval_at(&self, lambda: f32, uv: (f32, f32)) -> f32 {
+    fn eval_at(&self, lambda: f32, uv: UV) -> f32 {
         match self {
             Texture::Texture1(tex) => tex.eval_at(lambda, uv),
             Texture::Texture4(tex) => tex.eval_at(lambda, uv),
@@ -178,7 +178,7 @@ impl EvalAt<f32> for Texture {
 
 // TODO: bilinear or bicubic texture interpolation/filtering
 impl EvalAt<f32x4> for Texture {
-    fn eval_at(&self, lambda: f32x4, uv: (f32, f32)) -> f32x4 {
+    fn eval_at(&self, lambda: f32x4, uv: UV) -> f32x4 {
         match self {
             Texture::Texture1(tex) => tex.eval_at(lambda, uv),
             Texture::Texture4(tex) => tex.eval_at(lambda, uv),
@@ -187,13 +187,7 @@ impl EvalAt<f32x4> for Texture {
 }
 
 pub fn replace_channel(tex4: &mut Texture4, tex1: Texture1, channel: u8) {
-    match channel {
-        4.. => {
-            // technically reachable but
-            panic!("bad channel for call to replace_channel. should be less than 4");
-        }
-        _ => {}
-    }
+    assert!(channel < 4);
     let channel = channel as usize;
 
     tex4.texture
@@ -214,7 +208,7 @@ pub struct TexStack {
 impl TexStack {
     // pub fn importance_sample_at(
     //     &self,
-    //     uv: (f32, f32),
+    //     uv: UV,
     //     sample: Sample1D,
     // ) -> (SingleWavelength, PDF) {
     //     // let mut spds: Vec<Curve> = Vec::new();
@@ -224,7 +218,7 @@ impl TexStack {
     //     todo!()
     // }
 
-    pub fn curve_at(&self, uv: (f32, f32)) -> Curve {
+    pub fn curve_at(&self, uv: UV) -> Curve {
         let mut list = Vec::new();
         let seed = 0.0;
         for tex in &self.textures {
@@ -262,7 +256,7 @@ impl TexStack {
 }
 
 impl EvalAt<f32> for TexStack {
-    fn eval_at(&self, lambda: f32, uv: (f32, f32)) -> f32 {
+    fn eval_at(&self, lambda: f32, uv: UV) -> f32 {
         let mut energy = 0.0;
         for tex in self.textures.iter() {
             energy += tex.eval_at(lambda, uv);
@@ -272,7 +266,7 @@ impl EvalAt<f32> for TexStack {
 }
 
 impl EvalAt<f32x4> for TexStack {
-    fn eval_at(&self, lambda: f32x4, uv: (f32, f32)) -> f32x4 {
+    fn eval_at(&self, lambda: f32x4, uv: UV) -> f32x4 {
         let mut energy = f32x4::ZERO;
         for tex in self.textures.iter() {
             energy += tex.eval_at(lambda, uv);

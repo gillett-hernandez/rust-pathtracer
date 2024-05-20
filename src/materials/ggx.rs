@@ -256,7 +256,7 @@ impl Material<f32, f32> for GGX {
     fn bsdf(
         &self,
         lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
@@ -401,7 +401,7 @@ impl Material<f32, f32> for GGX {
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        _: (f32, f32),
+        _: UV,
         transport_mode: TransportMode,
         sample: Sample2D,
         wi: Vec3,
@@ -589,10 +589,10 @@ impl Material<f32, f32> for GGX {
         (f, Some(wo), pdf.into())
     }
 
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+    fn outer_medium_id(&self, _uv: UV) -> MediumId {
         self.outer_medium_id
     }
-    fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+    fn inner_medium_id(&self, _uv: UV) -> MediumId {
         self.inner_medium_id
     }
 }
@@ -641,7 +641,7 @@ mod test {
         let fake_hit_record: HitRecord = HitRecord::new(
             0.0,
             Point3::ZERO,
-            (0.0f32, 0.0f32),
+            UV(0.0f32, 0.0f32),
             lambda,
             Vec3::Z,
             MaterialId::Material(0),
@@ -766,7 +766,7 @@ mod test {
 
         let ggx_glass = ggx_glass(0.001);
 
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("{:?} {:?}", f, pdf);
     }
     //wi: Vec3(f32x4(0.48507738, 0.4317013, -0.76048267, -0.0)), wo: Vec3(f32x4(-0.7469567, -0.66481555, 0.00871551, 0.0))
@@ -779,9 +779,9 @@ mod test {
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
         let wo = Vec3::new(-0.7469567, -0.66481555, 0.00871551);
 
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("normal   {:?} {:?}", f, pdf);
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wo, wi);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wo, wi);
         println!("reversed {:?} {:?}", f, pdf);
     }
     #[test]
@@ -791,7 +791,7 @@ mod test {
         let wo = Vec3::new(0.048132252, 0.5836164, -0.81060183);
         let ggx_glass = ggx_glass(0.01);
 
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("{:?} {:?}", f, pdf);
     }
 
@@ -816,14 +816,14 @@ mod test {
                 let wo = ggx_glass
                     .generate(
                         lambda,
-                        (0.0, 0.0),
+                        UV(0.0, 0.0),
                         TransportMode::Importance,
                         Sample2D::new_random_sample(),
                         wi,
                     )
                     .unwrap();
                 let (f, pdf) =
-                    ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+                    ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
                 if *pdf == 0.0 {
                     0.0
                 } else {

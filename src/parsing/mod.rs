@@ -558,7 +558,7 @@ pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
-    File::open(&filepath)
+    File::open(filepath)
         .and_then(|mut f| f.read_to_string(&mut input))
         .unwrap();
     let num_cpus = num_cpus::get();

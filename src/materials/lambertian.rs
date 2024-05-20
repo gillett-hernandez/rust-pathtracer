@@ -16,7 +16,7 @@ impl Material<f32, f32> for Lambertian {
     fn bsdf(
         &self,
         lambda: f32,
-        uv: (f32, f32),
+        uv: UV,
         _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
@@ -27,7 +27,7 @@ impl Material<f32, f32> for Lambertian {
                 (wo.z().abs() / PI).into(),
             )
         } else {
-            (0.0.into(), 0.0.into())
+            (0.0, 0.0.into())
         }
     }
     // don't implement sample_emission, since the default implementation is what we want.
@@ -38,7 +38,7 @@ impl Material<f32, f32> for Lambertian {
     fn generate(
         &self,
         _lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         _transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,
@@ -50,7 +50,7 @@ impl Material<f32, f32> for Lambertian {
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        uv: (f32, f32),
+        uv: UV,
         _: TransportMode,
         s: Sample2D,
         wi: Vec3,
@@ -74,8 +74,8 @@ mod test {
     use math::curves::InterpolationMode;
     use math::spectral::BOUNDED_VISIBLE_RANGE;
 
-    use crate::renderer::Vec2D;
     use crate::texture::{Texture, Texture1};
+    use crate::vec2d::Vec2D;
 
     use super::*;
     #[test]
@@ -99,14 +99,14 @@ mod test {
         let wi = material
             .generate(
                 500.0,
-                (0.0, 0.0),
+                UV(0.0, 0.0),
                 TransportMode::Radiance,
                 Sample2D::new_random_sample(),
                 wo,
             )
             .expect("couldn't generate wi from lambert");
         let (reflectance, pdf) =
-            material.bsdf(500.0, (0.0, 0.0), TransportMode::Importance, wi, wo);
+            material.bsdf(500.0, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
 
         println!("{:?} -> {:?}", wi, wo);
         println!(

@@ -31,11 +31,11 @@ impl Layer {
                 if cosine * wi.z() > 0.0 {
                     (color.evaluate(lambda).min(1.0) / PI, (cosine / PI).into())
                 } else {
-                    (0.0.into(), 0.0.into())
+                    (0.0, 0.0.into())
                 }
             }
-            Layer::Dielectric(ggx) => ggx.bsdf(lambda, (0.0, 0.0), transport_mode, wi, wo),
-            Layer::None => (0.0.into(), 0.0.into()),
+            Layer::Dielectric(ggx) => ggx.bsdf(lambda, UV(0.0, 0.0), transport_mode, wi, wo),
+            Layer::None => (0.0, 0.0.into()),
         }
     }
     pub fn generate(
@@ -47,7 +47,9 @@ impl Layer {
     ) -> Option<Vec3> {
         match self {
             Layer::Diffuse { color: _ } => Some(random_cosine_direction(sample)),
-            Layer::Dielectric(ggx) => ggx.generate(lambda, (0.0, 0.0), transport_mode, sample, wi),
+            Layer::Dielectric(ggx) => {
+                ggx.generate(lambda, UV(0.0, 0.0), transport_mode, sample, wi)
+            }
             Layer::None => None,
         }
     }
@@ -306,7 +308,7 @@ impl CLM {
                 path_pdf *= *pdf;
             }
         }
-        (sum.into(), pdf_sum.into())
+        (sum, pdf_sum.into())
     }
 }
 

@@ -26,7 +26,7 @@ impl Reinhard1 {
 impl Tonemapper for Reinhard1 {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
@@ -139,7 +139,7 @@ impl Reinhard1x3 {
 impl Tonemapper for Reinhard1x3 {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
@@ -169,11 +169,11 @@ impl Tonemapper for Reinhard1x3 {
             }
         }
 
-        if min_luminance < Self::DELTA as f32 {
+        if min_luminance < Self::DELTA {
             if !self.silenced {
                 warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
             }
-            min_luminance = Self::DELTA as f32;
+            min_luminance = Self::DELTA;
         }
 
         let dynamic_range = max_luminance.log10() - min_luminance.log10();

@@ -151,8 +151,8 @@ impl GenericIntegrator for BDPTIntegrator {
         let camera_id = camera_sample.1;
         let camera = self.world.get_camera(camera_id);
         let film_sample = Sample2D::new(
-            (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
-            (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
+            (camera_sample.0).0.clamp(0.0, 1.0 - f32::EPSILON),
+            (camera_sample.0).1.clamp(0.0, 1.0 - f32::EPSILON),
         );
 
         let (sampled_camera_ray, lens_normal, camera_pdf) =
