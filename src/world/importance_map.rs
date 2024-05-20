@@ -461,7 +461,9 @@ mod test {
             window.set_target_fps(60);
 
             #[cfg(feature = "preview")]
-            let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
+            let mut buffer = vec![0u32; limit];
+
+            let mut tonemapper = Clamp::new(0.0, true, true);
 
             let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
@@ -526,7 +528,6 @@ mod test {
 
                 if idx % 100 == 0 {
                     pb.add(100);
-                    tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
                     #[cfg(feature = "preview")]
                     update_window_buffer(
                         &mut buffer,

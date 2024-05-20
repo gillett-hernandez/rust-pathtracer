@@ -18,6 +18,7 @@ gui = ["eframe", "egui_extras", "egui", "egui_plot", "minifb"]
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 color-grad = ["colorgrad"]
 realistic_camera = ["rust_optics"]
+default = ["realistic_camera", "build_raymarch"]
 
 
 [dependencies]

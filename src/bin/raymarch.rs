@@ -8,6 +8,7 @@ use std::fs::File;
 // third party but non-subject-matter imports
 use log::LevelFilter;
 use log_once::warn_once;
+#[cfg(feature = "preview")]
 use minifb::WindowOptions;
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
@@ -596,6 +597,7 @@ fn main() {
             pb.finish();
         }
         RendererType::Tiled { .. } => {}
+        #[cfg(feature = "preview")]
         RendererType::Preview { .. } => {
             root::window_loop(
                 width,

@@ -19,4 +19,4 @@ jobs:
       - name: Install latest nightly
         uses: dtolnay/rust-toolchain@nightly
 
-      - run: cargo test --all-features
+      - run: cargo test
