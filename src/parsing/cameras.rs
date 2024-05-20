@@ -6,6 +6,8 @@ use crate::camera::{CameraEnum, PanoramaCamera, ProjectiveCamera};
 use crate::camera::RealisticCamera;
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 
 
 use serde::Deserialize;

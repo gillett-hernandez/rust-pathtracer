@@ -1,3 +1,4 @@
+#![feature(portable_simd)]
 #[macro_use]
 extern crate log;
 extern crate rust_pathtracer as root;
@@ -17,7 +18,6 @@ use math::*;
 
 use math::tangent_frame::TangentFrame;
 use math::vec::Vec3;
-use packed_simd::f32x4;
 use pbr::ProgressBar;
 use root::camera::ProjectiveCamera;
 use root::hittable::{HasBoundingBox, AABB};
@@ -26,21 +26,20 @@ use root::parsing::{
     config::*, construct_world, get_settings, load_scene, parse_config_and_cameras,
     parse_tonemap_settings,
 };
-use root::prelude::Camera;
+use root::prelude::*;
 use root::renderer::{output_film, Vec2D};
-use root::rgb_to_u32;
-use root::tonemap::{Clamp, ColorSpace, Tonemapper};
+use root::tonemap::{Clamp, Tonemapper};
 use root::world::{EnvironmentMap, Material, MaterialEnum};
-use root::*;
 
 use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
-use sdfu::ops::{HardMin, Union};
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
+use math::prelude::*;
+use sdfu::ops::{HardMin, Union};
 use sdfu::{Sphere, SDF};
 use ultraviolet::vec::Vec3 as uvVec3;
 
@@ -154,7 +153,7 @@ impl<S1: SDF<f32, uvVec3> + MaterialTag, S2: SDF<f32, uvVec3> + MaterialTag> Mat
     fn material(&self, p: uvVec3) -> usize {
         let d0 = self.sdf1.dist(p);
         let d1 = self.sdf2.dist(p);
-        match d0.partial_cmp(&d1) {
+        match PartialOrd::partial_cmp(&d0, &d1) {
             Some(Ordering::Less) => self.sdf1.material(p),
             Some(Ordering::Greater) => self.sdf2.material(p),
             _ => {
@@ -587,7 +586,7 @@ fn main() {
             silenced: true,
         },
     };
-    let (mut tonemapper, converter) = parse_tonemap_settings(tonemap_settings);
+    let mut tonemapper = parse_tonemap_settings(tonemap_settings);
 
     let mut total_samples = 0;
     let samples_per_frame = 1;
@@ -641,7 +640,7 @@ fn main() {
                 144,
                 WindowOptions::default(),
                 true,
-                |_, film, width, height| {
+                |_, window_buffer, width, height| {
                     render_film
                         .buffer
                         .par_iter_mut()
@@ -663,18 +662,14 @@ fn main() {
                         });
                     total_samples += samples_per_frame;
 
-                    tonemapper.initialize(&render_film, 1.0 / (total_samples as f32 + 1.0));
-                    film.par_iter_mut().enumerate().for_each(|(pixel_idx, v)| {
-                        let y: usize = pixel_idx / width;
-                        let x: usize = pixel_idx % width;
-                        let [r, g, b, _]: [f32; 4] = converter
-                            .transfer_function(
-                                tonemapper.map(&render_film, (x as usize, y as usize)),
-                                false,
-                            )
-                            .into();
-                        *v = rgb_to_u32((256.0 * r) as u8, (256.0 * g) as u8, (256.0 * b) as u8);
-                    });
+                    let factor = 1.0 / (total_samples as f32 + 1.0);
+
+                    update_window_buffer(
+                        window_buffer,
+                        &render_film,
+                        tonemapper.as_mut(),
+                        factor,
+                    );
                 },
             );
         }

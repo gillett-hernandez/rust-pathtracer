@@ -391,13 +391,7 @@ mod test {
                 }
 
                 let factor = 1.0 / ((total_samples as f32).sqrt() + 1.0);
-                update_window_buffer(
-                    &mut window_buffer,
-                    &film,
-                    &mut tonemapper,
-                    crate::tonemap::sRGB,
-                    factor,
-                );
+                update_window_buffer(&mut window_buffer, &film, &mut tonemapper, factor);
             },
         );
     }

@@ -422,7 +422,7 @@ impl View {
             panic!("{}", e);
         });
         // Limit to max ~60 fps update rate
-        window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
+        window.set_target_fps(60);
         let buffer = vec![0u32; width * height];
 
         Self {

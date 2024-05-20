@@ -34,13 +34,8 @@ pub trait Camera<L: Field, E: Field> {
     // TODO: refactor this to actually coorespond to the function as defined by Veach (x == position on film, w = incoming direction, l = lambda)
     // TODO: after the above has been completed, address the fact that if lambda is any nonscalar value (f32x4, etc), then eval_we would return 0 for all lanes/channels except for the main wavelength
     // perhaps by splitting the WavelengthEnergy packet into its constituents, and sampling paths to the film for each lambda
-    fn eval_we(
-        &self,
-        lambda: L,
-        normal: Vec3,
-        from: Point3,
-        to: Point3,
-    ) -> (E, PDF<E, SolidAngle>);
+    fn eval_we(&self, lambda: L, normal: Vec3, from: Point3, to: Point3)
+        -> (E, PDF<E, SolidAngle>);
     fn sample_we(
         &self,
         film_sample: Sample2D,
@@ -52,7 +47,18 @@ pub trait Camera<L: Field, E: Field> {
     }
 }
 
-macro_rules! generate_camera {
+macro_rules! generate_camera_enum {
+    ($name: ident, $($item:ident),+) => {
+        #[derive(Debug, Clone)]
+        pub enum $name {
+            $(
+                $item($item),
+            )+
+        }
+    };
+}
+
+macro_rules! generate_camera_impl {
 
     ($name: ident, $l: ty, $e: ty, $($item:ident),+) => {
 
@@ -124,24 +130,15 @@ macro_rules! generate_camera {
         unsafe impl Sync for $name {}
 
     };
-    ($name: ident, $($item:ident),+) => {
-        #[derive(Debug, Clone)]
-        pub enum $name {
-            $(
-                $item($item),
-            )+
-        }
-    };
+
 }
 
 #[cfg(not(feature = "realistic_camera"))]
-generate_camera! {CameraEnum, ProjectiveCamera, PanoramaCamera}
+generate_camera_enum! {CameraEnum, ProjectiveCamera, PanoramaCamera}
 #[cfg(not(feature = "realistic_camera"))]
-generate_camera! {CameraEnum, f32, f32, ProjectiveCamera, PanoramaCamera}
-
-
+generate_camera_impl! {CameraEnum, f32, f32, ProjectiveCamera, PanoramaCamera}
 
 #[cfg(feature = "realistic_camera")]
-generate_camera! {CameraEnum, ProjectiveCamera, PanoramaCamera, RealisticCamera}
+generate_camera_enum! {CameraEnum, ProjectiveCamera, PanoramaCamera, RealisticCamera}
 #[cfg(feature = "realistic_camera")]
-generate_camera! {CameraEnum, f32, f32, ProjectiveCamera, PanoramaCamera, RealisticCamera}
+generate_camera_impl! {CameraEnum, f32, f32, ProjectiveCamera, PanoramaCamera, RealisticCamera}

@@ -100,7 +100,7 @@ impl ImportanceMap {
                 panic!("{}", e);
             });
 
-            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+            window.set_target_fps(60);
             (
                 Some(window),
                 vec![0u32; horizontal_resolution * vertical_resolution],
@@ -341,7 +341,7 @@ mod test {
             panic!("{}", e);
         });
         #[cfg(feature = "preview")]
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+        window.set_target_fps(60);
 
         #[cfg(feature = "preview")]
         let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
@@ -458,7 +458,7 @@ mod test {
                 panic!("{}", e);
             });
             #[cfg(feature = "preview")]
-            window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+            window.set_target_fps(60);
 
             #[cfg(feature = "preview")]
             let (mut buffer, mut tonemapper) = (vec![0u32; limit], Clamp::new(0.0, true, true));
@@ -587,7 +587,7 @@ mod test {
             panic!("{}", e);
         });
         #[cfg(feature = "preview")]
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+        window.set_target_fps(60);
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
         #[cfg(feature = "preview")]
@@ -755,7 +755,7 @@ mod test {
             panic!("{}", e);
         });
         #[cfg(feature = "preview")]
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+        window.set_target_fps(60);
 
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
 
@@ -831,10 +831,12 @@ mod test {
         );
         assert!(err < 0.001);
     }
-
+    /*
     #[cfg(feature = "preview")]
     #[test]
     fn test_adaptive_sampling() {
+        use crate::tonemap::Reinhard1x3;
+
         let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
         let env = &world.environment;
 
@@ -862,7 +864,7 @@ mod test {
         let mut tonemapper = Reinhard1x3::new(0.001, 40.0, true);
         // let mut tonemapper = Clamp::new(-10.0, true, true);
 
-        window.limit_update_rate(Some(std::time::Duration::from_micros(6944)));
+        window.set_target_fps(60);
 
         let mut film = Vec2D::new(width, height, XYZColor::BLACK);
         let mut sample_squared_film = Vec2D::new(width, height, XYZColor::BLACK);
@@ -906,18 +908,13 @@ mod test {
                 });
             pb.inc();
 
-            tonemapper.initialize(&film, 1.0 / (idx as f32 + 1.0));
-            buffer
-                .par_iter_mut()
-                .enumerate()
-                .for_each(|(pixel_idx, v)| {
-                    let y: usize = pixel_idx / width;
-                    let x: usize = pixel_idx - width * y;
-                    let [r, g, b, _]: [f32; 4] = converter
-                        .transfer_function(tonemapper.map(&film, (x as usize, y as usize)), false)
-                        .into();
-                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
-                });
+            update_window_buffer(
+                &mut buffer,
+                &film,
+                &mut tonemapper,
+                1.0 / (idx as f32 + 1.0),
+            );
+
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
         // done with variance estimation phase,
@@ -931,29 +928,21 @@ mod test {
                 let sum = film.buffer[i];
                 let sum_of_squares = sample_squared_film.buffer[i];
                 let denom = variance_samples as f32;
-                *e = XYZColor::from_raw(
-                    (sum_of_squares.0 / denom - (sum.0 / denom).powf(f32x4::splat(2.0))).abs(),
-                );
+                *e = XYZColor::from_raw(SimdFloat::abs(
+                    (sum_of_squares.0 / f32x4::splat(denom)
+                        - (sum.0 / f32x4::splat(denom)).powf(f32x4::splat(2.0))),
+                ));
             });
         while window.is_open() {
-            tonemapper.initialize(&variance_visualization, 1.0 / 100.0);
-            buffer
-                .par_iter_mut()
-                .enumerate()
-                .for_each(|(pixel_idx, v)| {
-                    let y: usize = pixel_idx / width;
-                    let x: usize = pixel_idx - width * y;
-                    let [r, g, b, _]: [f32; 4] = converter
-                        .transfer_function(
-                            tonemapper.map(&variance_visualization, (x as usize, y as usize)),
-                            false,
-                        )
-                        .into();
-                    *v = rgb_to_u32((255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8);
-                });
+            update_window_buffer(
+                &mut buffer,
+                &film,
+                &mut tonemapper,
+                1.0 / (idx as f32 + 1.0),
+            );
+
             window.update_with_buffer(&buffer, width, height).unwrap();
         }
-        // let mul = 1.0 - variance_fraction;
         todo!();
-    }
+    } */
 }

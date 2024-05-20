@@ -35,6 +35,8 @@ russian_roulette = true
 only_direct = false
 # wavelength_bounds = [380.0, 750.0]
 # wavelength_bounds = [500.0, 510.0]
+[render_settings.colorspace_settings]
+type = "Rec2020"
 [render_settings.tonemap_settings]
 type = "Reinhard1"
 # exposure = -2.0
