@@ -14,7 +14,6 @@ use root::tonemap::Tonemapper;
 
 #[macro_use]
 extern crate log;
-extern crate simplelog;
 
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use eframe::egui;
