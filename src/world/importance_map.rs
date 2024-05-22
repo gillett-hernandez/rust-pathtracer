@@ -263,9 +263,11 @@ impl ImportanceMap {
                     toml_filepath.to_string_lossy()
                 ))?;
 
+                warn!("serializing importance map to disk, this may take a moment...");
                 let stringified = toml::to_string(self).context("failed to serialize to string")?;
                 toml_file.write_all(stringified.as_bytes())?;
                 drop(toml_file);
+                info!("done serializing to disk.");
 
                 let tar_gz_file = File::create(filepath.as_ref()).context(format!(
                     "failed to create tarball {:?}",
@@ -277,10 +279,12 @@ impl ImportanceMap {
                     toml_filepath.to_string_lossy()
                 ))?;
 
+                warn!("gzipping cached data, this may take a moment...");
                 let enc = flate2::write::GzEncoder::new(tar_gz_file, Compression::default());
                 let mut tar = tar::Builder::new(enc);
                 tar.append_file(toml_filepath.file_name().unwrap(), &mut toml_file)?;
                 drop(toml_file);
+                info!("done gzipping.");
 
                 std::fs::remove_file(toml_filepath)
                     .context("failed to delete temporary toml file")?;
@@ -298,8 +302,11 @@ impl ImportanceMap {
         assert!(&filepath_as_str[filepath_as_str.len() - 6..] == "tar.gz");
 
         let parent_dir = filepath.as_ref().parent().unwrap();
-        warn!("parent dir is {}", parent_dir.to_string_lossy());
 
+        warn!(
+            "extracting gzipped importance map data at {}...",
+            filepath.as_ref().to_string_lossy()
+        );
         let tar_gz = File::open(filepath.as_ref()).context("failed to open tarball")?;
         let tar = flate2::read::GzDecoder::new(tar_gz);
         let mut archive = tar::Archive::new(tar);
@@ -307,6 +314,8 @@ impl ImportanceMap {
             "failed to unpack archive to {}",
             parent_dir.to_string_lossy()
         ))?;
+
+        info!("finished extracting, loading...");
 
         let toml_filepath = filepath.as_ref().with_extension("").with_extension("toml");
         let toml_file = File::open(&toml_filepath).context(format!(
@@ -320,8 +329,11 @@ impl ImportanceMap {
             .read_to_string(&mut string)
             .context("failed to read data from file to string")?;
 
+        info!("finished loading from disk, deserializing...");
+
         let map: ImportanceMap = toml::from_str(&string)?;
         drop(reader);
+        info!("done.");
 
         std::fs::remove_file(toml_filepath).context("failed to delete temporary toml file")?;
 
