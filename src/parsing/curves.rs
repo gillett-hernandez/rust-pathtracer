@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 use math::curves::InterpolationMode;
+use ordered_float::Float;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -16,6 +17,15 @@ pub struct DomainMapping {
     pub x_scale: Option<f32>,
     pub y_offset: Option<f32>,
     pub y_scale: Option<f32>,
+}
+
+impl std::hash::Hash for DomainMapping {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.x_offset.map(|e| e.integer_decode().hash(state));
+        self.x_scale.map(|e| e.integer_decode().hash(state));
+        self.y_offset.map(|e| e.integer_decode().hash(state));
+        self.y_scale.map(|e| e.integer_decode().hash(state));
+    }
 }
 impl Default for DomainMapping {
     // default domain mapping is the identity mapping. all inputs are unchanged upon being mapped.
@@ -60,6 +70,59 @@ pub enum CurveData {
         right_taper: f32,
         strength: f32,
     },
+}
+
+impl std::hash::Hash for CurveData {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        match self {
+            CurveData::Blackbody {
+                temperature,
+                strength,
+            } => {
+                temperature.integer_decode().hash(state);
+                strength.integer_decode().hash(state);
+            }
+            CurveData::Linear {
+                filename,
+                domain_mapping,
+                interpolation_mode,
+            } => {
+                filename.hash(state);
+                domain_mapping.hash(state);
+                core::mem::discriminant(interpolation_mode).hash(state);
+            }
+            CurveData::TabulatedCSV {
+                filename,
+                column,
+                domain_mapping,
+                interpolation_mode,
+            } => {
+                filename.hash(state);
+                column.hash(state);
+                domain_mapping.hash(state);
+                core::mem::discriminant(interpolation_mode).hash(state);
+            }
+            CurveData::Flat { strength } => {
+                strength.integer_decode().hash(state);
+            }
+            CurveData::Cauchy { a, b } => {
+                a.integer_decode().hash(state);
+                b.integer_decode().hash(state);
+            }
+            CurveData::SimpleSpike {
+                lambda,
+                left_taper,
+                right_taper,
+                strength,
+            } => {
+                lambda.integer_decode().hash(state);
+                left_taper.integer_decode().hash(state);
+                right_taper.integer_decode().hash(state);
+                strength.integer_decode().hash(state);
+            }
+        }
+    }
 }
 
 pub fn spectra(filename: &str, strength: f32) -> Curve {

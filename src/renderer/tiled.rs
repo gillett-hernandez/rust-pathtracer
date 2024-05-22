@@ -4,6 +4,7 @@ use crate::integrator::*;
 
 #[cfg(feature = "preview")]
 use crate::tonemap::{Clamp, OETF};
+use crate::world::ImportanceMap;
 
 #[cfg(feature = "preview")]
 use minifb::WindowOptions;
@@ -611,7 +612,10 @@ impl Renderer for TiledRenderer {
                         ..
                     } = &mut world.environment
                     {
-                        if *strength > 0.0 && env_sampling_probability > 0.0 {
+                        if *strength > 0.0
+                            && env_sampling_probability > 0.0
+                            && !matches!(importance_map, ImportanceMap::Baked { .. })
+                        {
                             let wavelength_bounds = render_settings
                                 .wavelength_bounds
                                 .map(|e| Bounds1D::new(e.0, e.1))

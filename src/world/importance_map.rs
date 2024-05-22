@@ -1,5 +1,10 @@
-use std::{io::Write, path::Path, sync::Arc};
+use std::{
+    io::{Read, Write},
+    path::Path,
+    sync::Arc,
+};
 
+use anyhow::{bail, Context};
 use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
@@ -20,6 +25,7 @@ use rayon::iter::ParallelIterator;
 // which is 4 for every tex4, 1 for every tex1, etc.
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum ImportanceMap {
     Baked {
         luminance_curve: Curve,
@@ -242,37 +248,40 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
-    pub fn save_baked<P: AsRef<Path>>(&self, filepath: P) -> Result<(), ()> {
-        match self.clone() {
-            ImportanceMap::Baked {
-                data,
-                marginal_cdf,
-                horizontal_resolution,
-                vertical_resolution,
-                luminance_curve,
-            } => {
-                let mut file = std::fs::File::create(filepath).map_err(|_| ())?;
+    pub fn save_baked<P: AsRef<Path>>(&self, filepath: P) -> anyhow::Result<()> {
+        match &self {
+            ImportanceMap::Baked { .. } => {
+                let file = std::fs::File::create(filepath.as_ref()).context(format!(
+                    "failed to create file {:?}",
+                    filepath.as_ref().to_string_lossy()
+                ))?;
                 let mut bufwriter = std::io::BufWriter::new(file);
 
-                // bincode::serialize_into(bufwriter, data);
-                // bincode::serialize_into(bufwriter, marginal_cdf);
-                // bincode::serialize_into(bufwriter, horizontal_resolution);
-                // bincode::serialize_into(bufwriter, vertical_resolution);
-                // bincode::serialize_into(bufwriter, luminance_curve);
+                let stringified = toml::to_string(self).context("failed to serialize to string")?;
+                bufwriter.write_all(stringified.as_bytes())?;
 
                 Ok(())
             }
             _ => {
                 // importance map not baked, so cannot save
-                Err(())
+                bail!("the importance map has not been baked and thus cannot be saved to disk")
             }
         }
     }
-    pub fn load_baked<P: AsRef<Path>>(filepath: P) -> Option<Self> {
-        let mut file = std::fs::File::open(filepath).ok()?;
-        let mut bufreader = std::io::BufReader::new(file);
-        // need methods to serialize and deserialize CurveWithCDF, and thus Curve
-        None
+    pub fn load_baked<P: AsRef<Path>>(filepath: P) -> anyhow::Result<Self> {
+        let file = std::fs::File::open(filepath.as_ref()).context(format!(
+            "failed to open file {:?}",
+            filepath.as_ref().to_string_lossy()
+        ))?;
+        let mut reader = std::io::BufReader::new(file);
+
+        let mut string = String::new();
+        reader
+            .read_to_string(&mut string)
+            .context("failed to read data from file to string")?;
+        let map: ImportanceMap = toml::from_str(&string)?;
+
+        Ok(map)
     }
     pub fn sample_uv(&self, sample: Sample2D) -> (UV, (PDF<f32, Uniform01>, PDF<f32, Uniform01>)) {
         match self {

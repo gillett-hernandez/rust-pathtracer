@@ -29,7 +29,6 @@ pub mod primitives;
 pub mod texture;
 pub mod tonemap;
 
-use anyhow::bail;
 use anyhow::Context;
 pub use cameras::*;
 use config::*;
@@ -376,10 +375,8 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> anyhow::Result<World> {
     }
 
     // parse enviroment
-    let environment = parse_environment(scene.environment, &curves, &textures_map, &mauve);
-    if environment.is_none() {
-        bail!("failed to parse environment");
-    }
+    let environment = parse_environment(scene.environment, &curves, &textures_map, &mauve)
+        .context("failed to parse environment")?;
 
     // parse mediums from disk or from literal
     let mut mediums_map: HashMap<String, _> = HashMap::new();
@@ -547,7 +544,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> anyhow::Result<World> {
         instances,
         materials,
         mediums,
-        environment.unwrap(),
+        environment,
         scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::BVH,
     );

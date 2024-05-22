@@ -5,6 +5,7 @@ Cargo.lock
 *.hdr
 output/*
 .vscode/*
+cache/**
 data/meshes/*
 data/download/*
 data/brdfs/*

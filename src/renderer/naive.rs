@@ -1,6 +1,7 @@
 use super::prelude::*;
 
 use crate::integrator::*;
+use crate::world::ImportanceMap;
 
 use math::spectral::BOUNDED_VISIBLE_RANGE as VISIBLE_RANGE;
 
@@ -474,7 +475,10 @@ impl Renderer for NaiveRenderer {
                         ..
                     } = &mut world.environment
                     {
-                        if *strength > 0.0 && env_sampling_probability > 0.0 {
+                        if *strength > 0.0
+                            && env_sampling_probability > 0.0
+                            && !matches!(importance_map, ImportanceMap::Baked { .. })
+                        {
                             let wavelength_bounds = render_settings
                                 .wavelength_bounds
                                 .map(|e| Bounds1D::new(e.0, e.1))
@@ -637,7 +641,10 @@ impl Renderer for NaiveRenderer {
                         ..
                     } = &mut world.environment
                     {
-                        if *strength > 0.0 && env_sampling_probability > 0.0 {
+                        if *strength > 0.0
+                            && env_sampling_probability > 0.0
+                            && !matches!(importance_map, ImportanceMap::Baked { .. })
+                        {
                             importance_map.bake_in_place(texture, wavelength_bounds);
                         }
                     }

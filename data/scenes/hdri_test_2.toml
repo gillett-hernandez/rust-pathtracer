@@ -11,6 +11,7 @@ strength = 1.0
 texture_name = "low_res_hdri"
 # texture_name = "moonlit_golf_8k"
 [environment.importance_map]
+cache = true
 width = 1000
 height = 1000
 

@@ -91,6 +91,16 @@ fn main() {
         ),
     ])
     .unwrap();
+
+    let mut cache_path = PathBuf::new();
+    cache_path.push(".");
+    cache_path.push("cache");
+    if !cache_path.exists() {
+        std::fs::DirBuilder::new()
+            .create(cache_path)
+            .expect("Failed to create cache directory. Does this process have permissions?");
+    }
+
     let mut config: TOMLConfig = match get_settings(opts.config) {
         Ok(expr) => expr,
         Err(v) => {

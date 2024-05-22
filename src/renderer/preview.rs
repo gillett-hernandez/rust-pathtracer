@@ -10,7 +10,7 @@ use crate::integrator::{GenericIntegrator, Integrator, IntegratorType, Sample, S
 
 use crate::parsing::parse_tonemap_settings;
 use crate::profile::Profile;
-use crate::world::{EnvironmentMap, World};
+use crate::world::{EnvironmentMap, ImportanceMap, World};
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -66,7 +66,10 @@ impl Renderer for PreviewRenderer {
                 ..
             } = &mut world.environment
             {
-                if *strength > 0.0 && env_sampling_probability > 0.0 {
+                if *strength > 0.0
+                    && env_sampling_probability > 0.0
+                    && !matches!(importance_map, ImportanceMap::Baked { .. })
+                {
                     importance_map.bake_in_place(
                         texture,
                         render_settings
