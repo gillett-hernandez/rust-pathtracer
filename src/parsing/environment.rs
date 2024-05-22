@@ -129,7 +129,7 @@ pub fn parse_environment(
                             "importancemap_{}_{}_{:x}",
                             data.width, data.height, curve_hash
                         ));
-                        path.set_extension("tar.gz");
+                        path.set_extension("dat");
                         if path.exists() {
                             warn!("loading baked importance map from disk");
                             let map = ImportanceMap::load_baked(path)?;

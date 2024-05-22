@@ -1,14 +1,13 @@
 use std::{
     fs::File,
-    io::{Read, Write},
-    path::{Path, PathBuf},
+    /* io::{Read, Write}, */
+    path::{Path /* , PathBuf */},
     sync::Arc,
 };
 
 use anyhow::{bail, Context};
-use flate2::Compression;
+use deepsize::DeepSizeOf;
 use math::curves::{InterpolationMode, Op};
-
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
@@ -26,8 +25,8 @@ use rayon::iter::ParallelIterator;
 // would change memory usage complexity from O(n*m) to O(k*n*m) where k is the number of channels in the texstack
 // which is 4 for every tex4, 1 for every tex1, etc.
 
-#[derive(Clone, Deserialize, Serialize)]
-#[serde(tag = "type")]
+#[derive(Clone, Deserialize, Serialize, DeepSizeOf)]
+
 pub enum ImportanceMap {
     Baked {
         luminance_curve: Curve,
@@ -254,40 +253,18 @@ impl ImportanceMap {
         match &self {
             ImportanceMap::Baked { .. } => {
                 let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
-                assert!(&filepath_as_str[filepath_as_str.len() - 6..] == "tar.gz");
+                warn!(
+                    "serializing importance map, which has an in-memory size of {} bytes to path {}",
+                    self.deep_size_of(), filepath_as_str
+                );
 
-                // use 2x `with_extension` to strip .gz and .tar from the file extensions
-                let toml_filepath = filepath.as_ref().with_extension("").with_extension("toml");
-                let mut toml_file = File::create(&toml_filepath).context(format!(
+                let file = File::create(filepath.as_ref()).context(format!(
                     "failed to create file {:?}",
-                    toml_filepath.to_string_lossy()
-                ))?;
-
-                warn!("serializing importance map to disk, this may take a moment...");
-                let stringified = toml::to_string(self).context("failed to serialize to string")?;
-                toml_file.write_all(stringified.as_bytes())?;
-                drop(toml_file);
-                info!("done serializing to disk.");
-
-                let tar_gz_file = File::create(filepath.as_ref()).context(format!(
-                    "failed to create tarball {:?}",
                     filepath.as_ref().to_string_lossy()
                 ))?;
+                bincode::serialize_into(file, self)
+                    .context("failed to bincode-serialize data to disk")?;
 
-                let mut toml_file = File::open(&toml_filepath).context(format!(
-                    "failed to open file {:?}",
-                    toml_filepath.to_string_lossy()
-                ))?;
-
-                warn!("gzipping cached data, this may take a moment...");
-                let enc = flate2::write::GzEncoder::new(tar_gz_file, Compression::default());
-                let mut tar = tar::Builder::new(enc);
-                tar.append_file(toml_filepath.file_name().unwrap(), &mut toml_file)?;
-                drop(toml_file);
-                info!("done gzipping.");
-
-                std::fs::remove_file(toml_filepath)
-                    .context("failed to delete temporary toml file")?;
 
                 Ok(())
             }
@@ -299,43 +276,19 @@ impl ImportanceMap {
     }
     pub fn load_baked<P: AsRef<Path>>(filepath: P) -> anyhow::Result<Self> {
         let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
-        assert!(&filepath_as_str[filepath_as_str.len() - 6..] == "tar.gz");
 
-        let parent_dir = filepath.as_ref().parent().unwrap();
+        warn!("deserializing importance map from {}", filepath_as_str);
+
+        let file = File::open(filepath.as_ref()).context(format!(
+            "failed to open file {:?}",
+            filepath.as_ref().to_string_lossy()
+        ))?;
+        let map: ImportanceMap = bincode::deserialize_from::<_, ImportanceMap>(file)?;
 
         warn!(
-            "extracting gzipped importance map data at {}...",
-            filepath.as_ref().to_string_lossy()
+            "success! importance map now has an in-memory size of {} bytes",
+            map.deep_size_of()
         );
-        let tar_gz = File::open(filepath.as_ref()).context("failed to open tarball")?;
-        let tar = flate2::read::GzDecoder::new(tar_gz);
-        let mut archive = tar::Archive::new(tar);
-        archive.unpack(parent_dir).context(format!(
-            "failed to unpack archive to {}",
-            parent_dir.to_string_lossy()
-        ))?;
-
-        info!("finished extracting, loading...");
-
-        let toml_filepath = filepath.as_ref().with_extension("").with_extension("toml");
-        let toml_file = File::open(&toml_filepath).context(format!(
-            "failed to open toml file {:?}",
-            toml_filepath.to_string_lossy()
-        ))?;
-
-        let mut reader = std::io::BufReader::new(toml_file);
-        let mut string = String::new();
-        reader
-            .read_to_string(&mut string)
-            .context("failed to read data from file to string")?;
-
-        info!("finished loading from disk, deserializing...");
-
-        let map: ImportanceMap = toml::from_str(&string)?;
-        drop(reader);
-        info!("done.");
-
-        std::fs::remove_file(toml_filepath).context("failed to delete temporary toml file")?;
 
         Ok(map)
     }
