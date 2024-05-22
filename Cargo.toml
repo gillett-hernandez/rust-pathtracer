@@ -19,7 +19,7 @@ notification = []
 sort_mesh_aabb_hits = []
 gui = ["eframe", "egui_extras", "egui", "egui_plot", "minifb"]
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
-color-grad = ["colorgrad"]
+color_grad = ["colorgrad"]
 realistic_camera = ["rust_optics"]
 default = ["realistic_camera", "build_raymarch"]
 
@@ -81,7 +81,7 @@ path = "src/bin/clm_test.rs"
 [[bin]]
 name = "compare_exr"
 path = "src/bin/compare_exr.rs"
-required-features = ["color-grad"]
+required-features = ["color_grad"]
 
 [[bin]]
 name = "raymarch"

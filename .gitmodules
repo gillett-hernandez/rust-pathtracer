@@ -1,6 +1,0 @@
-[submodule "crates/math"]
-	path = crates/math
-	url = git@github.com:gillett-hernandez/rust_cg_math.git
-[submodule "crates/optics"]
-	path = crates/optics
-	url = git@github.com:gillett-hernandez/rust_optics.git
