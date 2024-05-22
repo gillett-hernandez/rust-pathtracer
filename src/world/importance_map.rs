@@ -1,10 +1,12 @@
 use std::{
+    fs::File,
     io::{Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
 use anyhow::{bail, Context};
+use flate2::Compression;
 use math::curves::{InterpolationMode, Op};
 
 use parking_lot::Mutex;
@@ -251,14 +253,37 @@ impl ImportanceMap {
     pub fn save_baked<P: AsRef<Path>>(&self, filepath: P) -> anyhow::Result<()> {
         match &self {
             ImportanceMap::Baked { .. } => {
-                let file = std::fs::File::create(filepath.as_ref()).context(format!(
+                let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
+                assert!(&filepath_as_str[filepath_as_str.len() - 6..] == "tar.gz");
+
+                // use 2x `with_extension` to strip .gz and .tar from the file extensions
+                let toml_filepath = filepath.as_ref().with_extension("").with_extension("toml");
+                let mut toml_file = File::create(&toml_filepath).context(format!(
                     "failed to create file {:?}",
-                    filepath.as_ref().to_string_lossy()
+                    toml_filepath.to_string_lossy()
                 ))?;
-                let mut bufwriter = std::io::BufWriter::new(file);
 
                 let stringified = toml::to_string(self).context("failed to serialize to string")?;
-                bufwriter.write_all(stringified.as_bytes())?;
+                toml_file.write_all(stringified.as_bytes())?;
+                drop(toml_file);
+
+                let tar_gz_file = File::create(filepath.as_ref()).context(format!(
+                    "failed to create tarball {:?}",
+                    filepath.as_ref().to_string_lossy()
+                ))?;
+
+                let mut toml_file = File::open(&toml_filepath).context(format!(
+                    "failed to open file {:?}",
+                    toml_filepath.to_string_lossy()
+                ))?;
+
+                let enc = flate2::write::GzEncoder::new(tar_gz_file, Compression::default());
+                let mut tar = tar::Builder::new(enc);
+                tar.append_file(toml_filepath.file_name().unwrap(), &mut toml_file)?;
+                drop(toml_file);
+
+                std::fs::remove_file(toml_filepath)
+                    .context("failed to delete temporary toml file")?;
 
                 Ok(())
             }
@@ -269,17 +294,36 @@ impl ImportanceMap {
         }
     }
     pub fn load_baked<P: AsRef<Path>>(filepath: P) -> anyhow::Result<Self> {
-        let file = std::fs::File::open(filepath.as_ref()).context(format!(
-            "failed to open file {:?}",
-            filepath.as_ref().to_string_lossy()
-        ))?;
-        let mut reader = std::io::BufReader::new(file);
+        let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
+        assert!(&filepath_as_str[filepath_as_str.len() - 6..] == "tar.gz");
 
+        let parent_dir = filepath.as_ref().parent().unwrap();
+        warn!("parent dir is {}", parent_dir.to_string_lossy());
+
+        let tar_gz = File::open(filepath.as_ref()).context("failed to open tarball")?;
+        let tar = flate2::read::GzDecoder::new(tar_gz);
+        let mut archive = tar::Archive::new(tar);
+        archive.unpack(parent_dir).context(format!(
+            "failed to unpack archive to {}",
+            parent_dir.to_string_lossy()
+        ))?;
+
+        let toml_filepath = filepath.as_ref().with_extension("").with_extension("toml");
+        let toml_file = File::open(&toml_filepath).context(format!(
+            "failed to open toml file {:?}",
+            toml_filepath.to_string_lossy()
+        ))?;
+
+        let mut reader = std::io::BufReader::new(toml_file);
         let mut string = String::new();
         reader
             .read_to_string(&mut string)
             .context("failed to read data from file to string")?;
+
         let map: ImportanceMap = toml::from_str(&string)?;
+        drop(reader);
+
+        std::fs::remove_file(toml_filepath).context("failed to delete temporary toml file")?;
 
         Ok(map)
     }
