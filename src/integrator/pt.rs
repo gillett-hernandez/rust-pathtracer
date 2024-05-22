@@ -1,5 +1,5 @@
+use crate::power_heuristic_generic;
 use crate::texture::EvalAt;
-use crate::{power_heuristic_generic, prelude::*};
 
 use crate::hittable::{HitRecord, Hittable};
 use crate::integrator::utils::{random_walk, veach_v, LightSourceType, SurfaceVertex, VertexType};
@@ -7,7 +7,6 @@ use crate::integrator::*;
 
 use crate::world::World;
 
-use std::f32::INFINITY;
 use std::marker::PhantomData;
 use std::ops::Mul;
 use std::sync::Arc;
@@ -175,7 +174,7 @@ where
                 );
 
                 profile.shadow_rays += 1;
-                if let Some(shadow_hit) = self.world.hit(shadow_ray, 0.0, INFINITY) {
+                if let Some(shadow_hit) = self.world.hit(shadow_ray, 0.0, f32::INFINITY) {
                     if matches!(shadow_hit.material, MaterialId::Light(_)) {
                         let light_material = self.world.get_material(shadow_hit.material);
                         let light_local_frame = TangentFrame::from_normal(shadow_hit.normal);
@@ -238,7 +237,7 @@ where
             .environment
             .sample_env_uv_given_wavelength(sample, lambda);
         // direction is the direction to the sampled point on the environment
-        let direction = uv_to_direction(uv);
+        let direction = uv_to_direction(uv.into());
         let local_wo = frame.to_local(&direction);
 
         let local_cosine_theta = local_wo.z();
@@ -258,7 +257,7 @@ where
                 direction,
             ),
             0.0,
-            INFINITY,
+            f32::INFINITY,
         ) {
             // TODO: handle case where we intended to hit the world with the shadow ray but instead hit a light.
             T::ZERO
@@ -408,10 +407,10 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
         let lambda = sum.lambda;
 
         let camera_id = camera_sample.1;
-        let camera = self.world.get_camera(camera_id as usize);
+        let camera = self.world.get_camera(camera_id);
         let film_sample = Sample2D::new(
-            (camera_sample.0).0.clamp(0.0, 1.0 - std::f32::EPSILON),
-            (camera_sample.0).1.clamp(0.0, 1.0 - std::f32::EPSILON),
+            (camera_sample.0).0.clamp(0.0, 1.0 - f32::EPSILON),
+            (camera_sample.0).1.clamp(0.0, 1.0 - f32::EPSILON),
         );
 
         let (camera_ray, _lens_normal, throughput_and_pdf) =
@@ -435,7 +434,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
             Vec3::ZERO,
             camera_ray.origin,
             camera_ray.direction,
-            (0.0, 0.0),
+            UV(0.0, 0.0),
             MaterialId::Camera(0),
             0,
             *throughput_and_pdf,
@@ -477,10 +476,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                 profile,
                 true,
             );
-            path = surface_path
-                .into_iter()
-                .map(|e| Vertex::Surface(e))
-                .collect();
+            path = surface_path.into_iter().map(Vertex::Surface).collect();
         }
         for (index, vertex) in path.iter().enumerate().skip(1) {
             let prev_vertex = path[index - 1];
@@ -491,7 +487,7 @@ impl SamplerIntegrator for PathTracingIntegrator<f32> {
                         if light_source == LightSourceType::Environment {
                             // ray direction is stored in vertex.normal
                             let wo = vertex.normal;
-                            let uv = direction_to_uv(wo);
+                            let uv = direction_to_uv(wo).into();
                             let emission = self.world.environment.emission(uv, lambda);
                             let cos_i = (prev_vertex.normal * wo).abs();
                             let nee_psa_pdf = self

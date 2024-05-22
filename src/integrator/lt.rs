@@ -1,4 +1,3 @@
-use crate::prelude::*;
 use log_once::warn_once;
 
 use crate::world::World;
@@ -179,7 +178,7 @@ impl GenericIntegrator for LightTracingIntegrator {
             Vec3::ZERO,
             light_ray.origin,
             light_ray.direction,
-            (0.0, 0.0),
+            UV(0.0, 0.0),
             MaterialId::Light(0),
             0,
             radiance / *lambda_pdf,
@@ -298,7 +297,6 @@ impl GenericIntegrator for LightTracingIntegrator {
                         VertexType::Light => {
                             // hit camera from vertex in scene, analogous to hitting a light while random walking in PT
                             // TODO
-
                         }
                         _ => unreachable!(),
                     }

@@ -29,6 +29,8 @@ pub mod primitives;
 pub mod texture;
 pub mod tonemap;
 
+use anyhow::bail;
+use anyhow::Context;
 pub use cameras::*;
 use config::*;
 use environment::{parse_environment, EnvironmentData};
@@ -128,31 +130,22 @@ where
     Ok(data)
 }
 
-pub fn load_scene<T: AsRef<Path>>(filepath: T) -> Result<SceneData, Box<dyn Error>> {
-    // TODO: convert this to return Result<Settings, UnionOfErrors>
+pub fn load_scene<T: AsRef<Path>>(filepath: T) -> anyhow::Result<SceneData> {
     let mut input = String::new();
-    let result = File::open(filepath.as_ref()).and_then(|mut f| f.read_to_string(&mut input));
 
     info!("loading file, {}", filepath.as_ref().to_string_lossy());
-    let read_count = result.inspect_err(|e| {
-        error!("{}", e.to_string());
-    })?;
+
+    let read_count = File::open(filepath.as_ref())
+        .and_then(|mut f| f.read_to_string(&mut input))
+        .context("failed to load filepath")?;
 
     info!("done: {} bytes", read_count);
 
-    let scene: SceneData = toml::from_str(&input).inspect_err(|e| {
-        error!(
-            "encountered error when parsing scene file: {}",
-            e.to_string()
-        );
-        if let Some(source) = e.source() {
-            error!("caused by {}", source.to_string());
-        }
-    })?;
+    let scene: SceneData = toml::from_str(&input).context("failed to parse as SceneData")?;
     Ok(scene)
 }
 
-pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn Error>> {
+pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> anyhow::Result<World> {
     // layout of this function:
     // parse scene data from file
     // scan environment data for used textures/curves
@@ -375,7 +368,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
         .iter()
         .filter(|(name, _)| used_textures.contains(*name))
     {
-        if let Some(parsed) = parse_texture_stack(data.clone(), &curves) {
+        if let Ok(parsed) = parse_texture_stack(data.clone(), &curves) {
             textures_map.insert(name.clone(), parsed);
         } else {
             warn!("failed to parse texture {}", name);
@@ -385,9 +378,7 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> Result<World, Box<dyn E
     // parse enviroment
     let environment = parse_environment(scene.environment, &curves, &textures_map, &mauve);
     if environment.is_none() {
-        error!("failed to parse environment");
-        // TODO: change to return Err once an Errors enum exists
-        panic!();
+        bail!("failed to parse environment");
     }
 
     // parse mediums from disk or from literal
@@ -567,7 +558,7 @@ pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
-    File::open(&filepath)
+    File::open(filepath)
         .and_then(|mut f| f.read_to_string(&mut input))
         .unwrap();
     let num_cpus = num_cpus::get();

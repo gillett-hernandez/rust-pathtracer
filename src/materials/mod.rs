@@ -57,7 +57,7 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
     fn bsdf(
         &self,
         lambda: L,
-        uv: (f32, f32),
+        uv: UV,
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
@@ -65,7 +65,7 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
     fn generate_and_evaluate(
         &self,
         lambda: L,
-        uv: (f32, f32),
+        uv: UV,
         transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,
@@ -73,7 +73,7 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
     fn generate(
         &self,
         lambda: L,
-        uv: (f32, f32),
+        uv: UV,
         transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,
@@ -82,10 +82,10 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
             .1
     }
 
-    fn outer_medium_id(&self, uv: (f32, f32)) -> MediumId {
+    fn outer_medium_id(&self, uv: UV) -> MediumId {
         0
     }
-    fn inner_medium_id(&self, uv: (f32, f32)) -> MediumId {
+    fn inner_medium_id(&self, uv: UV) -> MediumId {
         0
     }
 
@@ -108,14 +108,14 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
     }
 
     // evaluate the spectral power distribution for the given light and angle
-    fn emission(&self, lambda: L, uv: (f32, f32), transport_mode: TransportMode, wi: Vec3) -> E {
+    fn emission(&self, lambda: L, uv: UV, transport_mode: TransportMode, wi: Vec3) -> E {
         E::ZERO
     }
     // evaluate the directional pdf if the spectral power distribution
     fn emission_pdf(
         &self,
         lambda: L,
-        uv: (f32, f32),
+        uv: UV,
         transport_mode: TransportMode,
         wo: Vec3,
     ) -> PDF<E, SolidAngle> {
@@ -126,7 +126,7 @@ pub trait Material<L: Field, E: Field>: Send + Sync {
     // method to sample the emission spectra at a given uv
     fn sample_emission_spectra(
         &self,
-        uv: (f32, f32),
+        uv: UV,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> Option<(L, PDF<E, Uniform01>)> {
@@ -143,7 +143,7 @@ macro_rules! generate_enum {
         impl Material<$l, $e> for $name {
             fn generate(&self,
                 lambda: $l,
-                uv: (f32, f32),
+                uv: UV,
                 transport_mode: TransportMode,
                 s: Sample2D,
                 wi: Vec3
@@ -154,7 +154,7 @@ macro_rules! generate_enum {
             }
             fn generate_and_evaluate(&self,
                 lambda: $l,
-                uv: (f32, f32),
+                uv: UV,
                 transport_mode: TransportMode,
                 s: Sample2D,
                 wi: Vec3,
@@ -181,7 +181,7 @@ macro_rules! generate_enum {
             fn bsdf(
                 &self,
                 lambda: $l,
-                uv: (f32, f32),
+                uv: UV,
                 transport_mode: TransportMode,
                 wi: Vec3,
                 wo: Vec3,
@@ -200,7 +200,7 @@ macro_rules! generate_enum {
             fn emission(
                 &self,
                 lambda: $l,
-                uv: (f32, f32),
+                uv: UV,
                 transport_mode: TransportMode,
                 wi: Vec3,
             ) -> $e {
@@ -210,20 +210,20 @@ macro_rules! generate_enum {
                 }
             }
 
-            fn outer_medium_id(&self, uv: (f32, f32)) -> u8 {
+            fn outer_medium_id(&self, uv: UV) -> u8 {
                 match self {
                     $($name::$s(inner) => inner.outer_medium_id(uv),)+
                 }
             }
 
-            fn inner_medium_id(&self, uv: (f32, f32)) -> u8 {
+            fn inner_medium_id(&self, uv: UV) -> u8 {
                 match self {
                     $($name::$s(inner) => inner.inner_medium_id(uv),)+
                 }
             }
             fn sample_emission_spectra(
                 &self,
-                uv: (f32, f32),
+                uv: UV,
                 wavelength_range: Bounds1D,
                 wavelength_sample: Sample1D,
             ) -> Option<($l, PDF<$e, Uniform01>)> {

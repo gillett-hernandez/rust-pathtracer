@@ -8,15 +8,7 @@ env_sampling_probability = 0.5
 type = "HDRI"
 strength = 1.0
 texture_name = "sunny_vondelpark_8k"
-# texture_name = "machine_shop_4k"
-# [environment]
-# type="Sun"
-# sun_direction=[0, 0, 1]
-# strength = 1.0
-# color = "D65"
-# angular_diameter = 0.565
 
-# instances are ignored
 [[instances]]
 material_name = "ggx_gold"
 # material_name = "ggx_glass_dispersive"
@@ -25,7 +17,6 @@ type = "Sphere"
 radius = 1.0
 origin = [0.0, 0.0, 0.0]
 
-# instances are ignored
 [[instances]]
 material_name = "diffuse_light"
 # material_name = "sharp_light_xenon"
@@ -34,8 +25,6 @@ type = "Sphere"
 radius = 1.0
 origin = [0.0, 0.0, 0.0]
 
-
-# instances are ignored
 [[instances]]
 material_name = "lambertian_white"
 [instances.aggregate]

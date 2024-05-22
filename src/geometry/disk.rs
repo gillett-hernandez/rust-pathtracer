@@ -1,4 +1,4 @@
-use crate::{ prelude::*};
+use crate::prelude::*;
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
@@ -52,7 +52,7 @@ impl Hittable for Disk {
             t,
             r.point_at_parameter(t),
             // TODO: compute UV for disk
-            (0.0, 0.0),
+            UV(0.0, 0.0),
             0.0,
             hit_normal,
             0.into(),

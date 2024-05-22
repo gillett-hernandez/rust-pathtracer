@@ -6,8 +6,8 @@ use crate::hittable::{HitRecord, Hittable};
 
 fn vec_shuffle(vec: Vec3, axis: &Axis) -> Vec3 {
     match axis {
-        Axis::X => Vec3(shuffle!(vec.0, [2, 1, 0, 3])),
-        Axis::Y => Vec3(shuffle!(vec.0, [0, 2, 1, 3])),
+        Axis::X => Vec3(simd_swizzle!(vec.0, [2, 1, 0, 3])),
+        Axis::Y => Vec3(simd_swizzle!(vec.0, [0, 2, 1, 3])),
         Axis::Z => vec,
     }
 }
@@ -94,7 +94,7 @@ impl Hittable for AARect {
         if self.two_sided && r.direction * hit_normal > 0.0 {
             hit_normal = -hit_normal;
         }
-        let uv = (
+        let uv = UV(
             (xh + self.half_size.0) / self.size.0,
             (yh + self.half_size.1) / self.size.1,
         );

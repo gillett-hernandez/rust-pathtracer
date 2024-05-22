@@ -1,5 +1,7 @@
+// only needed because the actual code that uses these imports is gated
+// behind a feature flag which the compiler does not seem to detect even though
+#![allow(unused_imports)]
 use super::prelude::*;
-use crate::prelude::*;
 
 use crate::parsing::config::{Config, RenderSettings, RendererType, Resolution};
 // use crate::integrator::*;
@@ -81,7 +83,7 @@ impl Renderer for PreviewRenderer {
             match Integrator::from_settings_and_world(
                 arc_world,
                 IntegratorType::from(render_settings.integrator),
-                &cameras,
+                &cameras[..],
                 &render_settings,
             ) {
                 None => {}
@@ -100,7 +102,7 @@ impl Renderer for PreviewRenderer {
                         panic!("{}", e);
                     });
                     // Limit to max ~60 fps update rate
-                    window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
+                    window.set_target_fps(60);
                     let mut buffer = vec![0u32; width * height];
                     let now = Instant::now();
 
@@ -172,7 +174,7 @@ impl Renderer for PreviewRenderer {
                         panic!("{}", e);
                     });
                     // Limit to max ~60 fps update rate
-                    light_window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
+                    light_window.set_target_fps(60);
                     let light_buffer = Arc::new(Mutex::new(vec![0u32; width * height]));
                     let light_buffer_ref = Arc::clone(&light_buffer);
                     let render_settings_copy = render_settings.clone();
@@ -301,10 +303,10 @@ impl Renderer for PreviewRenderer {
                                 let camera_uv = (
                                     ((x as f32 + sample.x)
                                         / (render_settings.resolution.width as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                     ((y as f32 + sample.y)
                                         / (render_settings.resolution.height as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                 );
                                 temp_color += integrator.color(
                                     &mut sampler,
@@ -400,7 +402,7 @@ impl Renderer for PreviewRenderer {
                         panic!("{}", e);
                     });
                     // Limit to max ~60 fps update rate
-                    window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
+                    window.set_target_fps(60);
                     let mut buffer = vec![0u32; width * height];
 
                     let max_samples = render_settings
@@ -567,7 +569,7 @@ impl Renderer for PreviewRenderer {
                         panic!("{}", e);
                     });
                     // Limit to max ~60 fps update rate
-                    light_window.limit_update_rate(Some(std::time::Duration::from_micros(16666)));
+                    light_window.set_target_fps(60);
                     let light_buffer = Arc::new(Mutex::new(vec![0u32; width * height]));
                     let light_buffer_ref = Arc::clone(&light_buffer);
                     let render_settings_copy = render_settings.clone();
@@ -673,10 +675,10 @@ impl Renderer for PreviewRenderer {
                                 let camera_uv = (
                                     ((x as f32 + sample.x)
                                         / (render_settings.resolution.width as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                     ((y as f32 + sample.y)
                                         / (render_settings.resolution.height as f32))
-                                        .clamp(0.0, 1.0 - std::f32::EPSILON),
+                                        .clamp(0.0, 1.0 - f32::EPSILON),
                                 );
                                 temp_color += integrator.color(
                                     &mut sampler,

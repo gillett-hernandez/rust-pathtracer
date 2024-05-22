@@ -144,7 +144,6 @@ mod test {
         // let wi = Vec3::new(0.0, 1.0, 1.0).normalized();
         let wi = Vec3::Z;
         let mut total_samples = 0;
-        let converter = crate::tonemap::sRGB;
 
         let (samples_per_iteration, exposure): (usize, f32) = match mode {
             TestMode::ViewPhase => (10, 1.0),
@@ -232,13 +231,7 @@ mod test {
                         1.0 / ((total_samples as f32).sqrt() + 1.0)
                     }
                 };
-                update_window_buffer(
-                    &mut window_buffer,
-                    &film,
-                    &mut tonemapper,
-                    converter,
-                    factor,
-                );
+                update_window_buffer(&mut window_buffer, &film, &mut tonemapper, factor);
             },
         );
     }

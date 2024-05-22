@@ -5,15 +5,15 @@ use crate::accelerator::{BHShape, BoundingHierarchy, FlatBVH};
 // use crate::geometry::triangle::Triangle;
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable};
 
-use packed_simd::{f32x4, i32x4};
+use std::simd::i32x4;
 
 use std::sync::Arc;
 
 pub fn vec_shuffle(vec: f32x4, m: u32) -> f32x4 {
     match m {
-        0 => shuffle!(vec, [1, 2, 0, 3]),
-        1 => shuffle!(vec, [2, 0, 1, 3]),
-        2 => shuffle!(vec, [0, 1, 2, 3]),
+        0 => simd_swizzle!(vec, [1, 2, 0, 3]),
+        1 => simd_swizzle!(vec, [2, 0, 1, 3]),
+        2 => simd_swizzle!(vec, [0, 1, 2, 3]),
         _ => vec,
     }
 }
@@ -77,11 +77,12 @@ impl Hittable for MeshTriangleRef {
         let mut p1t = p1 - r.origin;
         let mut p2t = p2 - r.origin;
         let direction = r.direction.0;
-        let max_axis_value = direction.abs().max_element();
-        let mask = direction.abs().ge(f32x4::splat(max_axis_value));
+        let dir_abs = SimdFloat::abs(direction);
+        let max_axis_value = dir_abs.reduce_max();
+        let mask = dir_abs.simd_ge(f32x4::splat(max_axis_value));
         let max_axis = mask
-            .select(i32x4::new(0, 1, 2, 3), i32x4::splat(0))
-            .max_element() as u32;
+            .select(i32x4::from_array([0, 1, 2, 3]), i32x4::splat(0))
+            .reduce_max() as u32;
         let kz = max_axis;
         let d: f32x4 = vec_shuffle(direction, kz);
         let [dx, dy, dz, _]: [f32; 4] = d.into();
@@ -179,7 +180,7 @@ impl Hittable for MeshTriangleRef {
         let hit = HitRecord::new(
             t_scaled * inv_det,
             Point3::from(b0 * Vec3::from(p0) + b1 * Vec3::from(p1) + b2 * Vec3::from(p2)),
-            (0.0, 0.0),
+            UV(0.0, 0.0),
             0.0,
             shading_normal.unwrap_or(geometric_normal),
             mat_id,

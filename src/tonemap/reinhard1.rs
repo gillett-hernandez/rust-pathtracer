@@ -12,7 +12,7 @@ pub struct Reinhard1 {
 }
 
 impl Reinhard1 {
-    const DELTA: f64 = 0.001;
+    const DELTA: f32 = 0.001;
     pub fn new(key_value: f32, max_white: f32, silenced: bool) -> Self {
         Self {
             key_value,
@@ -26,7 +26,7 @@ impl Reinhard1 {
 impl Tonemapper for Reinhard1 {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
@@ -43,7 +43,7 @@ impl Tonemapper for Reinhard1 {
                     continue;
                 }
                 total_luminance += lum;
-                sum_of_log += (Self::DELTA + lum as f64).ln();
+                sum_of_log += ((Self::DELTA + lum) as f64).ln();
                 if lum > max_luminance {
                     // println!("max lum {} at ({}, {})", max_luminance, x, y);
                     max_luminance = lum;
@@ -56,11 +56,11 @@ impl Tonemapper for Reinhard1 {
             }
         }
 
-        if min_luminance < Self::DELTA as f32 {
+        if min_luminance < Self::DELTA {
             if !self.silenced {
                 warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY")
             };
-            min_luminance = Self::DELTA as f32;
+            min_luminance = Self::DELTA;
         }
 
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
@@ -108,7 +108,7 @@ impl Tonemapper for Reinhard1 {
             cie_xyz_color = MAUVE;
         }
 
-        XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
+        XYZColor::from_raw(f32x4::splat(scaling_factor) * cie_xyz_color.0)
     }
 
     fn get_name(&self) -> &str {
@@ -118,8 +118,8 @@ impl Tonemapper for Reinhard1 {
 
 #[derive(Clone, Debug)]
 pub struct Reinhard1x3 {
-    key_value: f32,
-    max_white: f32,
+    key_value: f32x4,
+    max_white: f32x4,
     l_w: Option<f32x4>,
     silenced: bool,
 }
@@ -128,8 +128,8 @@ impl Reinhard1x3 {
     const DELTA: f32 = 0.001;
     pub fn new(key_value: f32, max_white: f32, silenced: bool) -> Self {
         Self {
-            key_value,
-            max_white,
+            key_value: f32x4::splat(key_value),
+            max_white: f32x4::splat(max_white),
             l_w: None,
             silenced,
         }
@@ -139,7 +139,7 @@ impl Reinhard1x3 {
 impl Tonemapper for Reinhard1x3 {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
@@ -156,7 +156,7 @@ impl Tonemapper for Reinhard1x3 {
                     continue;
                 }
                 total_luminance += lum;
-                sum_of_log += (Self::DELTA + color.0).ln();
+                sum_of_log += (f32x4::splat(Self::DELTA) + color.0).ln();
                 if lum > max_luminance {
                     // println!("max lum {} at ({}, {})", max_luminance, x, y);
                     max_luminance = lum;
@@ -169,23 +169,23 @@ impl Tonemapper for Reinhard1x3 {
             }
         }
 
-        if min_luminance < Self::DELTA as f32 {
+        if min_luminance < Self::DELTA {
             if !self.silenced {
                 warn!("clamping min_luminance to avoid taking log(0) == NEG_INFINITY");
             }
-            min_luminance = Self::DELTA as f32;
+            min_luminance = Self::DELTA;
         }
 
         let dynamic_range = max_luminance.log10() - min_luminance.log10();
 
         let avg_luminance = total_luminance / (total_pixels as f32);
-        let l_w = (sum_of_log / (total_pixels as f32)).exp() / factor;
+        let l_w = (sum_of_log / (f32x4::splat(total_pixels as f32))).exp() / f32x4::splat(factor);
         if !self.silenced {
             info!(
                 "computed tonemapping: avg luminance {}, l_w = {:?} (avg_log = {:?})",
                 avg_luminance,
                 l_w,
-                sum_of_log / total_pixels as f32
+                sum_of_log / f32x4::splat(total_pixels as f32)
             );
             info!("dynamic range is {} dB", dynamic_range);
             info!(
@@ -212,13 +212,13 @@ impl Tonemapper for Reinhard1x3 {
             / self
                 .l_w
                 .expect("tonemapper data not set correctly. was this tonemapper initialized?");
-        let mul = self.max_white.powi(2).recip();
-        let one_l_lm2 = mul * l + 1.0;
+        let mul = self.max_white.powf(f32x4::splat(2.0)).recip();
+        let one_l_lm2 = mul * l + f32x4::ONE;
 
-        let scaling_factor = l * one_l_lm2 / (1.0 + l);
+        let scaling_factor = l * one_l_lm2 / (f32x4::ONE + l);
 
         // the last lane likely got set to nan or something nonzero when the division by l_w occurred, so set it to 0
-        let mut mapped = (scaling_factor * cie_xyz_color.0).replace(3, 0.0);
+        let mut mapped = (scaling_factor * cie_xyz_color.0) * Vec3::MASK;
         if !mapped.is_finite().all() || mapped.is_nan().any() {
             warn_once!("detected nan or infinity value in film after tonemapping");
             mapped = MAUVE.0;

@@ -116,7 +116,7 @@ impl RealisticCamera {
     }
 }
 
-impl Camera for RealisticCamera {
+impl Camera<f32, f32> for RealisticCamera {
     fn get_ray(&self, sampler: &mut Box<dyn Sampler>, lambda: f32, s: f32, t: f32) -> (Ray, f32) {
         // crop sensor to match aspect ratio
         // aspect ratio is something like 16/9 for normal screens, where 16 == width and 9 == height
@@ -166,6 +166,7 @@ impl Camera for RealisticCamera {
                 Input::new(ray, lambda / 1000.0),
                 1.0,
                 |e| (self.aperture.intersects(self.aperture_radius, e), false),
+                drop,
             );
             if let Some(Output {
                 ray: mut pupil_ray,
@@ -198,8 +199,8 @@ impl Camera for RealisticCamera {
         todo!();
     }
 
-    fn eval_we(&self, lambda: f32, normal: Vec3, from: Point3, to: Point3) -> (f32, PDF) {
-        // TODO
+    fn eval_we(&self, _lambda: f32, _normal: Vec3, _from: Point3, _to: Point3) -> (f32, PDF<f32, SolidAngle>) {
+        // TODO implement We, requires backwards tracing to be robust
         todo!()
     }
 
@@ -208,7 +209,7 @@ impl Camera for RealisticCamera {
         film_sample: Sample2D,
         sampler: &mut Box<dyn Sampler>,
         lambda: f32,
-    ) -> (Ray, Vec3, PDF) {
+    ) -> (Ray, Vec3, PDF<f32, SolidAngle>) {
         let (ray, tau) = self.get_ray(sampler, lambda, film_sample.x, film_sample.y);
         (ray, self.direction, tau.into())
     }
@@ -333,8 +334,12 @@ mod test {
         let result = camera_surface.sample(sample, sample_from);
         println!("{:?}", result);
         let to = transform.to_world(Point3::ORIGIN);
-        let result2 =
-            camera_surface.psa_pdf(Vec3::X * (to - sample_from).normalized(), sample_from, to);
+        let result2 = camera_surface.psa_pdf(
+            Vec3::X * (to - sample_from).normalized(),
+            1.0,
+            sample_from,
+            to,
+        );
         println!("{:?}", result2);
     }
 }

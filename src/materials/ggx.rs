@@ -256,7 +256,7 @@ impl Material<f32, f32> for GGX {
     fn bsdf(
         &self,
         lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
@@ -401,7 +401,7 @@ impl Material<f32, f32> for GGX {
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        _: (f32, f32),
+        _: UV,
         transport_mode: TransportMode,
         sample: Sample2D,
         wi: Vec3,
@@ -589,10 +589,10 @@ impl Material<f32, f32> for GGX {
         (f, Some(wo), pdf.into())
     }
 
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+    fn outer_medium_id(&self, _uv: UV) -> MediumId {
         self.outer_medium_id
     }
-    fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+    fn inner_medium_id(&self, _uv: UV) -> MediumId {
         self.inner_medium_id
     }
 }
@@ -641,7 +641,7 @@ mod test {
         let fake_hit_record: HitRecord = HitRecord::new(
             0.0,
             Point3::ZERO,
-            (0.0f32, 0.0f32),
+            UV(0.0f32, 0.0f32),
             lambda,
             Vec3::Z,
             MaterialId::Material(0),
@@ -766,7 +766,7 @@ mod test {
 
         let ggx_glass = ggx_glass(0.001);
 
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("{:?} {:?}", f, pdf);
     }
     //wi: Vec3(f32x4(0.48507738, 0.4317013, -0.76048267, -0.0)), wo: Vec3(f32x4(-0.7469567, -0.66481555, 0.00871551, 0.0))
@@ -779,9 +779,9 @@ mod test {
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
         let wo = Vec3::new(-0.7469567, -0.66481555, 0.00871551);
 
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("normal   {:?} {:?}", f, pdf);
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wo, wi);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wo, wi);
         println!("reversed {:?} {:?}", f, pdf);
     }
     #[test]
@@ -791,7 +791,7 @@ mod test {
         let wo = Vec3::new(0.048132252, 0.5836164, -0.81060183);
         let ggx_glass = ggx_glass(0.01);
 
-        let (f, pdf) = ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("{:?} {:?}", f, pdf);
     }
 
@@ -816,14 +816,14 @@ mod test {
                 let wo = ggx_glass
                     .generate(
                         lambda,
-                        (0.0, 0.0),
+                        UV(0.0, 0.0),
                         TransportMode::Importance,
                         Sample2D::new_random_sample(),
                         wi,
                     )
                     .unwrap();
                 let (f, pdf) =
-                    ggx_glass.bsdf(lambda, (0.0, 0.0), TransportMode::Importance, wi, wo);
+                    ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
                 if *pdf == 0.0 {
                     0.0
                 } else {
@@ -832,5 +832,174 @@ mod test {
             })
             .sum();
         println!("{}", sum / n as f32);
+    }
+
+    #[cfg(feature = "preview")]
+    #[test]
+    fn test_sampling_direction() {
+        use minifb::{Key, WindowOptions};
+        use ordered_float::Float;
+        use rand::random;
+
+        #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+        enum Mode {
+            ViewGenerate,
+            ViewGeneratePDF,
+            ViewEval,
+            ViewPDF,
+        }
+
+        use crate::tonemap::Clamp;
+
+        let mut mat = GGX::new(
+            0.001,
+            Curve::Cauchy { a: 1.4, b: 30000.0 },
+            Curve::Const(1.0),
+            Curve::Const(0.0),
+            0,
+            0,
+        );
+        // rayon::ThreadPoolBuilder::new()
+        //     .num_threads(1usize)
+        //     .build_global()
+        //     .unwrap();
+
+        let (width, height) = (500, 500);
+        let mut film = Vec2D::new(width, height, XYZColor::BLACK);
+
+        let mut tonemapper = Clamp::new(0.0, true, true);
+        let mut total_samples = 10000;
+        let samples_per_iteration = 10;
+        let mut incoming_direction = Vec3::Z;
+        let mut incoming_direction_zenithal = 0.0; // ranges from 0 to pi
+        let mut incoming_direction_azimuthal = 0.0; // ranges from 0 to 2pi
+        let mut mode = Mode::ViewGenerate;
+
+        window_loop(
+            width,
+            height,
+            144,
+            WindowOptions::default(),
+            true,
+            |window, mut window_buffer, width, height| {
+                let mut reset = false;
+                if window.is_key_down(Key::W) {
+                    incoming_direction_zenithal =
+                        (incoming_direction_zenithal - 0.01).clamp(0.0, PI);
+                    reset = true;
+                }
+                if window.is_key_down(Key::S) {
+                    incoming_direction_zenithal =
+                        (incoming_direction_zenithal + 0.01).clamp(0.0, PI);
+                    reset = true;
+                }
+                if window.is_key_down(Key::A) {
+                    incoming_direction_azimuthal =
+                        (incoming_direction_azimuthal - 0.05).clamp(0.0, 2.0 * PI);
+                    reset = true;
+                }
+                if window.is_key_down(Key::D) {
+                    incoming_direction_azimuthal =
+                        (incoming_direction_azimuthal + 0.05).clamp(0.0, 2.0 * PI);
+                    reset = true;
+                }
+
+                if window.is_key_down(Key::LeftBracket) {
+                    mat.alpha = (mat.alpha * 1.1).clamp(0.0, 1.0);
+                    reset = true;
+                }
+                if window.is_key_down(Key::RightBracket) {
+                    mat.alpha = (mat.alpha / 1.1).clamp(0.0, 1.0);
+                    reset = true;
+                }
+
+                if window.is_key_pressed(Key::Space, minifb::KeyRepeat::No) {
+                    mode = match mode {
+                        Mode::ViewGenerate => Mode::ViewGeneratePDF,
+                        Mode::ViewGeneratePDF => Mode::ViewEval,
+                        Mode::ViewEval => Mode::ViewPDF,
+                        Mode::ViewPDF => Mode::ViewGenerate,
+                    };
+                    println!("new mode is now {:?}, resetting film", mode);
+                    reset = true;
+                }
+
+                if reset {
+                    film.buffer.fill(XYZColor::BLACK);
+                    incoming_direction = uv_to_direction((
+                        incoming_direction_azimuthal / 2.0 / PI,
+                        incoming_direction_zenithal / PI,
+                    ));
+                    total_samples = 0;
+                }
+
+                let lambda = EXTENDED_VISIBLE_RANGE.sample(random());
+                match mode {
+                    Mode::ViewGenerate | Mode::ViewGeneratePDF => {
+                        for _ in 0..samples_per_iteration {
+                            let (eval, dir, pdf) = mat.generate_and_evaluate(
+                                lambda,
+                                UV(0.0, 0.0),
+                                Default::default(),
+                                Sample2D::new_random_sample(),
+                                incoming_direction,
+                            );
+                            let uv = direction_to_uv(dir.unwrap().normalized());
+                            let p = (
+                                (uv.0.clamp(0.0, 1.0 - f32::EPSILON) * width as f32) as usize,
+                                (uv.1.clamp(0.0, 1.0 - f32::EPSILON) * height as f32) as usize,
+                            );
+
+                            let jacobian = (uv.1 * PI).sin().abs() * 2.0 * PI * PI;
+                            let pixel = film.at(p.0, p.1);
+                            let sw = if mode == Mode::ViewGenerate {
+                                SingleWavelength::new(lambda, eval)
+                            } else {
+                                SingleWavelength::new(lambda, *pdf / jacobian)
+                            };
+                            film.write_at(p.0, p.1, pixel + sw.into());
+                        }
+                        total_samples += samples_per_iteration;
+                    }
+                    Mode::ViewEval | Mode::ViewPDF => {
+                        film.buffer
+                            .par_iter_mut()
+                            .enumerate()
+                            .for_each(|(idx, pixel)| {
+                                let (x, y) = (idx % width, idx / width);
+                                let (u, v) = (
+                                    (x as f32 + 0.5) / width as f32,
+                                    (y as f32 + 0.5) / height as f32,
+                                );
+                                let out_dir = uv_to_direction((u, v));
+
+                                let (eval, pdf) = mat.bsdf(
+                                    lambda,
+                                    UV(0.0, 0.0),
+                                    Default::default(),
+                                    incoming_direction,
+                                    out_dir,
+                                );
+
+                                if (*pdf) == 0.0 {
+                                    return;
+                                }
+
+                                let sw = if mode == Mode::ViewEval {
+                                    SingleWavelength::new(lambda, eval)
+                                } else {
+                                    SingleWavelength::new(lambda, *pdf)
+                                };
+
+                                *pixel += sw.into();
+                            });
+                        total_samples += 1;
+                    }
+                }
+
+                let factor = 1.0 / ((total_samples as f32).sqrt() + 1.0);
+                update_window_buffer(&mut window_buffer, &film, &mut tonemapper, factor);
+            },
+        );
     }
 }

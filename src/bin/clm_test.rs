@@ -12,9 +12,8 @@ pub fn balance(f: f32, g: f32) -> f32 {
 
 #[derive(Clone)]
 pub enum Layer {
-    Diffuse { color: Curve },
+    Diffuse { color: Curve }, // lambertian
     Dielectric(GGX),
-    HGMedium { g: f32, attenuation: Curve },
     None,
 }
 
@@ -32,15 +31,11 @@ impl Layer {
                 if cosine * wi.z() > 0.0 {
                     (color.evaluate(lambda).min(1.0) / PI, (cosine / PI).into())
                 } else {
-                    (0.0.into(), 0.0.into())
+                    (0.0, 0.0.into())
                 }
             }
-            Layer::Dielectric(ggx) => ggx.bsdf(lambda, (0.0, 0.0), transport_mode, wi, wo),
-            Layer::HGMedium {
-                g: _,
-                attenuation: _,
-            } => (0.0.into(), 0.0.into()),
-            Layer::None => (0.0.into(), 0.0.into()),
+            Layer::Dielectric(ggx) => ggx.bsdf(lambda, UV(0.0, 0.0), transport_mode, wi, wo),
+            Layer::None => (0.0, 0.0.into()),
         }
     }
     pub fn generate(
@@ -52,19 +47,17 @@ impl Layer {
     ) -> Option<Vec3> {
         match self {
             Layer::Diffuse { color: _ } => Some(random_cosine_direction(sample)),
-            Layer::Dielectric(ggx) => ggx.generate(lambda, (0.0, 0.0), transport_mode, sample, wi),
-            Layer::HGMedium {
-                g: _,
-                attenuation: _,
-            } => None,
+            Layer::Dielectric(ggx) => {
+                ggx.generate(lambda, UV(0.0, 0.0), transport_mode, sample, wi)
+            }
             Layer::None => None,
         }
     }
     /*fn transmit(&self, data: &LayerData, wo: Vector3) -> Option<Vector3> {
         let eta = Self::eta(data, wo)?;
-        Vector3::new(0.0, 0.0, 1.0).refract(wo, 1.0 / eta.extract(0))
+        Vector3::new(0.0, 0.0, 1.0).refract(wo, 1.0 / eta[0])
     }*/
-    pub fn perfect_transmission(&self, lambda: f32, wo: Vec3) -> Option<Vec3> {
+    pub fn ideal_transmit(&self, lambda: f32, wo: Vec3) -> Option<Vec3> {
         match self {
             Layer::Dielectric(ggx) => {
                 println!("ggx perfect transmission");
@@ -74,13 +67,6 @@ impl Layer {
             Layer::Diffuse { .. } => {
                 println!("diffuse perfect transmission (no transmission)");
                 None
-            }
-            Layer::HGMedium { g, .. } => {
-                if *g > -1.0 {
-                    Some(-wo)
-                } else {
-                    None
-                }
             }
             Layer::None => None,
         }
@@ -135,7 +121,7 @@ impl CLM {
                 "calling perfect transmission on layer {} with wo = {:?}",
                 index, wo
             );
-            let wi = match layer.perfect_transmission(lambda, wo) {
+            let wi = match layer.ideal_transmit(lambda, wo) {
                 Some(wi) => {
                     path.push(CLMVertex {
                         wi,
@@ -322,7 +308,7 @@ impl CLM {
                 path_pdf *= *pdf;
             }
         }
-        (sum.into(), pdf_sum.into())
+        (sum, pdf_sum.into())
     }
 }
 

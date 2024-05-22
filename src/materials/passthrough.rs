@@ -27,7 +27,7 @@ impl Material<f32, f32> for PassthroughFilter {
     fn bsdf(
         &self,
         lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         _transport_mode: TransportMode,
         _wi: Vec3,
         wo: Vec3,
@@ -39,24 +39,24 @@ impl Material<f32, f32> for PassthroughFilter {
     fn generate(
         &self,
         _lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         _transport_mode: TransportMode,
         _s: Sample2D,
         wi: Vec3,
     ) -> Option<Vec3> {
         Some(-wi)
     }
-    fn outer_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+    fn outer_medium_id(&self, _uv: UV) -> MediumId {
         self.outer_medium_id
     }
-    fn inner_medium_id(&self, _uv: (f32, f32)) -> MediumId {
+    fn inner_medium_id(&self, _uv: UV) -> MediumId {
         self.inner_medium_id
     }
 
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        uv: (f32, f32),
+        uv: UV,
         transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,

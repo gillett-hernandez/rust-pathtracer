@@ -16,12 +16,10 @@ use root::world::*;
 
 #[macro_use]
 extern crate log;
-extern crate simplelog;
 
 // use simplelog::*;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 
-use std::error::Error;
 use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
@@ -48,7 +46,7 @@ struct Opt {
     pub write_log_level: String,
 }
 
-fn construct_scene(config: &Config) -> Result<World, Box<dyn Error>> {
+fn construct_scene(config: &Config) -> anyhow::Result<World> {
     construct_world(PathBuf::from(config.scene_file.clone()))
 }
 

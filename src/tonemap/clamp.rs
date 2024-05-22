@@ -1,8 +1,6 @@
 use super::Tonemapper;
 use crate::prelude::*;
 
-use packed_simd::f32x4;
-
 #[derive(Clone, Debug)]
 pub struct Clamp {
     exposure: f32,
@@ -26,7 +24,7 @@ impl Tonemapper for Clamp {
     fn initialize(&mut self, film: &Vec2D<XYZColor>, factor: f32) {
         self.factor = factor;
         let mut max_luminance = 0.0;
-        let mut min_luminance = INFINITY;
+        let mut min_luminance = f32::INFINITY;
         let mut max_lum_xy = (0, 0);
         let mut min_lum_xy = (0, 0);
         let mut total_luminance = 0.0;
@@ -92,7 +90,7 @@ impl Tonemapper for Clamp {
             let scaling_factor = new_lum / lum;
             // TODO: determine if this needs to be done per channel.
 
-            XYZColor::from_raw(scaling_factor * cie_xyz_color.0)
+            XYZColor::from_raw(f32x4::splat(scaling_factor) * cie_xyz_color.0)
         } else {
             XYZColor::from_raw(
                 (cie_xyz_color * exposure_mult)

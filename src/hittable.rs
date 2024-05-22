@@ -7,7 +7,7 @@ pub use crate::aabb::{HasBoundingBox, AABB};
 pub struct HitRecord {
     pub time: f32,
     pub point: Point3,
-    pub uv: (f32, f32),
+    pub uv: UV,
     pub lambda: f32,
     pub normal: Vec3,
     pub material: MaterialId,
@@ -19,7 +19,7 @@ impl HitRecord {
     pub fn new(
         time: f32,
         point: Point3,
-        uv: (f32, f32),
+        uv: UV,
         lambda: f32,
         normal: Vec3,
         material: MaterialId,

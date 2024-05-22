@@ -1,22 +1,20 @@
-#![feature(fs_try_exists)]
+#![feature(fs_try_exists, portable_simd)]
 
 #[macro_use]
 extern crate smallvec;
 #[macro_use]
 extern crate log;
 #[macro_use]
-extern crate packed_simd;
-#[macro_use]
 extern crate paste;
 
 #[cfg(feature = "minifb")]
-extern crate minifb;
-
-#[cfg(feature = "minifb")]
 use minifb::{Key, Window, WindowOptions};
+#[cfg(feature = "minifb")]
 use rayon::prelude::*;
-use renderer::Vec2D;
+#[cfg(feature = "minifb")]
 use tonemap::{sRGB, Color, Tonemapper, OETF};
+#[cfg(feature = "minifb")]
+use vec2d::Vec2D;
 
 use math::{
     prelude::XYZColor,
@@ -26,8 +24,6 @@ use math::{
 pub mod aabb;
 pub mod accelerator;
 pub mod camera;
-pub mod prelude;
-
 pub mod curves;
 pub mod geometry;
 pub mod hittable;
@@ -35,10 +31,12 @@ pub mod integrator;
 pub mod materials;
 pub mod mediums;
 pub mod parsing;
+pub mod prelude;
 pub mod profile;
 pub mod renderer;
 pub mod texture;
 pub mod tonemap;
+pub mod vec2d;
 pub mod world;
 
 // mauve. universal sign of danger
@@ -47,16 +45,11 @@ pub const MAUVE: XYZColor = XYZColor::new(0.5199467, 51.48687, 1.0180528);
 pub const NORMAL_OFFSET: f32 = 0.001;
 pub const INTERSECTION_TIME_OFFSET: f32 = 0.000001;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Default, Debug)]
 pub enum TransportMode {
     Radiance,
+    #[default]
     Importance,
-}
-
-impl Default for TransportMode {
-    fn default() -> Self {
-        TransportMode::Importance
-    }
 }
 
 pub fn rgb_to_u32(r: u8, g: u8, b: u8) -> u32 {
@@ -75,9 +68,7 @@ pub fn window_loop<F>(
     F: FnMut(&Window, &mut Vec<u32>, usize, usize) -> (),
 {
     let mut window = Window::new("Window", width, height, options).unwrap();
-    window.limit_update_rate(Some(std::time::Duration::from_micros(
-        (1000000 / max_framerate) as u64,
-    )));
+    window.set_target_fps(max_framerate);
 
     let mut film = Vec2D::new(width, height, 0u32);
     while window.is_open() && !window.is_key_down(Key::Escape) {
@@ -121,8 +112,7 @@ pub fn power_heuristic_generic<T>(a: T, b: T) -> T
 where
     T: Field + ToScalar<f32>,
 {
-    let w = a / (a + b);
-    w
+    a / (a + b)
 }
 
 #[cfg(test)]

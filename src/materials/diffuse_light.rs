@@ -29,7 +29,7 @@ impl Material<f32, f32> for DiffuseLight {
     fn bsdf(
         &self,
         lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         _transport_mode: TransportMode,
         wi: Vec3,
         wo: Vec3,
@@ -40,13 +40,13 @@ impl Material<f32, f32> for DiffuseLight {
                 (wo.z().abs() / PI).into(),
             )
         } else {
-            (0.0.into(), 0.0.into())
+            (0.0, 0.0.into())
         }
     }
     fn generate(
         &self,
         _lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         _transport_mode: TransportMode,
         s: Sample2D,
         wi: Vec3,
@@ -60,7 +60,7 @@ impl Material<f32, f32> for DiffuseLight {
     fn generate_and_evaluate(
         &self,
         lambda: f32,
-        _: (f32, f32),
+        _: UV,
         _: TransportMode,
         s: Sample2D,
         wi: Vec3,
@@ -120,13 +120,7 @@ impl Material<f32, f32> for DiffuseLight {
         ))
     }
 
-    fn emission(
-        &self,
-        lambda: f32,
-        _uv: (f32, f32),
-        _transport_mode: TransportMode,
-        wi: Vec3,
-    ) -> f32 {
+    fn emission(&self, lambda: f32, _uv: UV, _transport_mode: TransportMode, wi: Vec3) -> f32 {
         let cosine = wi.z();
         if (cosine > 0.0 && self.sidedness == Sidedness::Forward)
             || (cosine < 0.0 && self.sidedness == Sidedness::Reverse)
@@ -141,7 +135,7 @@ impl Material<f32, f32> for DiffuseLight {
     fn emission_pdf(
         &self,
         _lambda: f32,
-        _uv: (f32, f32),
+        _uv: UV,
         _transport_mode: TransportMode,
         wo: Vec3,
     ) -> PDF<f32, SolidAngle> {
@@ -160,7 +154,7 @@ impl Material<f32, f32> for DiffuseLight {
 
     fn sample_emission_spectra(
         &self,
-        _uv: (f32, f32),
+        _uv: UV,
         wavelength_range: Bounds1D,
         wavelength_sample: Sample1D,
     ) -> Option<(f32, PDF<f32, Uniform01>)> {

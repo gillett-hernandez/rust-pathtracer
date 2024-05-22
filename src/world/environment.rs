@@ -38,7 +38,7 @@ impl EnvironmentMap {
     // assuming that the wavelength shouldn't have already been sampled based on the camera's spectral sensitivity
     // pub fn _sample_spd(
     //     &self,
-    //     _uv: (f32, f32),
+    //     _uv: UV,
     //     wavelength_range: Bounds1D,
     //     wavelength_sample: Sample1D,
     // ) -> Option<(SingleWavelength, PDF)> {
@@ -53,7 +53,7 @@ impl EnvironmentMap {
     // evaluate env map given a uv and wavelength
     // used when a camera ray with a given wavelength intersects the environment map
 
-    pub fn emission<T>(&self, uv: (f32, f32), lambda: T) -> T
+    pub fn emission<T>(&self, uv: UV, lambda: T) -> T
     where
         CurveWithCDF: SpectralPowerDistributionFunction<T>,
         TexStack: EvalAt<T>,
@@ -72,7 +72,7 @@ impl EnvironmentMap {
                 angular_diameter,
                 sun_direction,
             } => {
-                let direction = uv_to_direction(uv);
+                let direction = uv_to_direction(uv.into());
                 let cos = *sun_direction * direction;
                 let sin = (1.0 - cos * cos).sqrt();
                 if sin.abs() < (*angular_diameter / 2.0).sin() && cos > 0.0 {
@@ -88,12 +88,11 @@ impl EnvironmentMap {
                 strength,
                 ..
             } => {
-                let direction = uv_to_direction(uv);
+                let direction = uv_to_direction(uv.into());
                 // use to_local to transform ray direction to "uv space"
                 let new_direction = rotation.to_local(direction);
-                let uv = direction_to_uv(new_direction);
-                let result = texture.eval_at(lambda, uv) * *strength;
-                result
+                let uv = direction_to_uv(new_direction).into();
+                texture.eval_at(lambda, uv) * *strength
             }
         }
     }
@@ -144,7 +143,7 @@ impl EnvironmentMap {
                 let (uv, directional_pdf) =
                     self.sample_env_uv_given_wavelength(direction_sample, sw.lambda);
 
-                let direction = uv_to_direction(uv);
+                let direction = uv_to_direction(uv.into());
                 let frame = TangentFrame::from_normal(direction);
                 let random_on_normal_disk = world_radius * random_in_unit_disk(position_sample);
                 let point = world_center
@@ -178,7 +177,7 @@ impl EnvironmentMap {
                 sw.energy = texture.eval_at(sw.lambda, uv) * strength;
 
                 // NOTE: sample_env_uv already translates uv through `rotation`, so don't do it again here.
-                let direction = uv_to_direction(uv);
+                let direction = uv_to_direction(uv.into());
                 let frame = TangentFrame::from_normal(direction);
                 let random_on_normal_disk = world_radius * random_in_unit_disk(position_sample);
                 let point = world_center
@@ -196,7 +195,7 @@ impl EnvironmentMap {
         }
     }
 
-    pub fn pdf_for(&self, uv: (f32, f32)) -> PDF<f32, SolidAngle> {
+    pub fn pdf_for(&self, uv: UV) -> PDF<f32, SolidAngle> {
         // pdf is solid angle pdf, since projected solid angle doesn't apply to environments.
         match self {
             EnvironmentMap::Constant { .. } => (4.0 * PI).recip().into(),
@@ -206,7 +205,7 @@ impl EnvironmentMap {
                 ..
             } => {
                 // TODO: verify this pdf integrates to one over the sphere
-                let direction = uv_to_direction(uv);
+                let direction = uv_to_direction(uv.into());
                 let cos = *sun_direction * direction;
                 let sin = (1.0 - cos * cos).sqrt();
                 if sin.abs() < (*angular_diameter / 2.0).sin() && cos > 0.0 {
@@ -225,7 +224,7 @@ impl EnvironmentMap {
                     data, marginal_cdf, ..
                 } = importance_map
                 {
-                    let direction = uv_to_direction(uv);
+                    let direction = uv_to_direction(uv.into());
                     let new_direction = rotation.to_local(direction);
                     let uv = direction_to_uv(new_direction);
 
@@ -245,7 +244,7 @@ impl EnvironmentMap {
 
                     PDF::from(
                         marginal_cdf.evaluate_power(uv.0)
-                            * data[(uv.0.clamp(0.0, 1.0 - std::f32::EPSILON) * data.len() as f32)
+                            * data[(uv.0.clamp(0.0, 1.0 - f32::EPSILON) * data.len() as f32)
                                 as usize]
                                 .evaluate_power(uv.1)
                             * (2.0 * PI * PI * (PI * uv.1).sin() + 0.001)
@@ -264,7 +263,7 @@ impl EnvironmentMap {
         lambda: f32,
     ) -> (Vec3, PDF<f32, SolidAngle>) {
         let (uv, pdf) = self.sample_env_uv_given_wavelength(sample, lambda);
-        let direction = uv_to_direction(uv);
+        let direction = uv_to_direction(uv.into());
 
         (direction, pdf)
     }
@@ -285,7 +284,7 @@ impl EnvironmentMap {
         &self,
         sample: Sample2D,
         _lambda: T,
-    ) -> ((f32, f32), PDF<f32, SolidAngle>)
+    ) -> (UV, PDF<f32, SolidAngle>)
     where
         CurveWithCDF: SpectralPowerDistributionFunction<T>,
         TexStack: EvalAt<T>,
@@ -301,12 +300,14 @@ impl EnvironmentMap {
     }
 
     // sample env UV, based on env luminosity CDF (w/o prescribed wavelength)
-    pub fn sample_env_uv(&self, sample: Sample2D) -> ((f32, f32), PDF<f32, SolidAngle>) {
+    pub fn sample_env_uv(&self, sample: Sample2D) -> (UV, PDF<f32, SolidAngle>) {
         // samples env CDF to find bright luminosity spikes. returns UV of those spots.
         // CDF for this situation can be stored as the Y values of the XYZ representation, as a greyscale image potentially.
         // consider summed area table as well.
         match self {
-            EnvironmentMap::Constant { .. } => ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI))),
+            EnvironmentMap::Constant { .. } => {
+                (UV(sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
+            }
             EnvironmentMap::Sun {
                 angular_diameter,
                 sun_direction,
@@ -318,7 +319,7 @@ impl EnvironmentMap {
                 let frame = TangentFrame::from_normal(sun_direction);
                 let direction = frame.to_world(&local_wo);
                 (
-                    direction_to_uv(direction.normalized()),
+                    direction_to_uv(direction.normalized()).into(),
                     PDF::from(1.0 / (2.0 * PI * (1.0 - angular_diameter.cos()))),
                     // 1.0.into()
                 )
@@ -333,9 +334,9 @@ impl EnvironmentMap {
                     let (uv, pdf) = importance_map.sample_uv(sample);
 
                     let (row_pdf, column_pdf) = pdf;
-                    let local_wo = uv_to_direction(uv);
+                    let local_wo = uv_to_direction(uv.into());
                     let new_wo = rotation.to_world(local_wo);
-                    let uv = direction_to_uv(new_wo);
+                    let uv = direction_to_uv(new_wo).into();
                     (
                         uv,
                         PDF::from(
@@ -345,7 +346,7 @@ impl EnvironmentMap {
                     )
                     // ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
                 } else {
-                    ((sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
+                    (UV(sample.x, sample.y), PDF::from(1.0 / (4.0 * PI)))
                 }
             }
         }

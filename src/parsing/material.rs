@@ -79,12 +79,10 @@ impl MaterialData {
                         eta_o,
                         kappa,
                         data.outer_medium_id
-                            .map(|name| medium_id_map.get(&name).cloned())
-                            .flatten()
+                            .and_then(|name| medium_id_map.get(&name).cloned())
                             .unwrap_or(0),
                         data.inner_medium_id
-                            .map(|name| medium_id_map.get(&name).cloned())
-                            .flatten()
+                            .and_then(|name| medium_id_map.get(&name).cloned())
                             .unwrap_or(0),
                     )))
                 } else {

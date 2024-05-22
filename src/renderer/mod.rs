@@ -2,7 +2,6 @@ use crate::prelude::*;
 use crate::tonemap::{sRGB, write_to_files, Rec2020, Rec2020Primaries, Rec709, Rec709Primaries};
 
 mod prelude;
-mod vec2d;
 
 // integrators
 mod naive;
@@ -10,7 +9,6 @@ mod preview;
 // mod sppm;
 mod tiled;
 
-pub use vec2d::Vec2D;
 
 pub use naive::NaiveRenderer;
 #[cfg(feature = "preview")]

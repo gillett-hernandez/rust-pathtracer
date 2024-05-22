@@ -2,9 +2,12 @@ use crate::aabb::{HasBoundingBox, AABB};
 // use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use math::prelude::Ray;
 
-use std::f32;
+use std::{
+    f32,
+    simd::{cmp::SimdPartialOrd, f32x4, num::{SimdFloat, SimdInt}},
+};
 
-use packed_simd::{f32x4, i32x4};
+use std::simd::i32x4;
 
 pub trait BHShape: HasBoundingBox {
     /// Sets the index of the referenced [`BoundingHierarchy`] node.
@@ -341,18 +344,17 @@ impl BVHNode {
 
         // Find the axis along which the shapes are spread the most.
         let size = centroid_bounds.size().0;
-        let max_axis = size.max_element();
-        let mask = size.ge(f32x4::splat(max_axis));
+        let max_axis = size.reduce_max();
+        let mask = size.simd_ge(f32x4::splat(max_axis));
         let split_axis = mask
-            .select(i32x4::new(0, 1, 2, 3), i32x4::splat(0))
-            .max_element() as usize;
+            .select(i32x4::from_array([0, 1, 2, 3]), i32x4::splat(0))
+            .reduce_max() as usize;
         // println!(
         //     "size: {:?}, max_axis: {:?}, split_axis: {:?}",
         //     size, max_axis, split_axis
         // );
         // let split_axis = split_axis;
-        let split_axis_size =
-            centroid_bounds.max.0.extract(split_axis) - centroid_bounds.min.0.extract(split_axis);
+        let split_axis_size = centroid_bounds.max.0[split_axis] - centroid_bounds.min.0[split_axis];
 
         // The following `if` partitions `indices` for recursively calling `BVH::build`.
         let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size
@@ -387,8 +389,8 @@ impl BVHNode {
                 let shape_center = shape_aabb.center();
 
                 // Get the relative position of the shape centroid `[0.0..1.0]`.
-                let bucket_num_relative = (shape_center.0.extract(split_axis)
-                    - centroid_bounds.min.0.extract(split_axis))
+                let bucket_num_relative = (shape_center.0[split_axis]
+                    - centroid_bounds.min.0[split_axis])
                     / split_axis_size;
 
                 // Convert that to the actual `Bucket` number.

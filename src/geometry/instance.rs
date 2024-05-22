@@ -1,5 +1,3 @@
-use crate::prelude::*;
-
 use crate::hittable::{HasBoundingBox, HitRecord, Hittable, AABB};
 
 use crate::accelerator::BHShape;
@@ -227,8 +225,8 @@ mod tests {
 
         let test_ray = Ray::new(Point3::ORIGIN + 10.0 * Vec3::Z, -Vec3::Z);
 
-        let isect1 = instance1.hit(test_ray, 0.0, INFINITY);
-        let isect2 = instance2.hit(test_ray, 0.0, INFINITY);
+        let isect1 = instance1.hit(test_ray, 0.0, f32::INFINITY);
+        let isect2 = instance2.hit(test_ray, 0.0, f32::INFINITY);
 
         println!("ray was {:?}", test_ray);
         println!(
