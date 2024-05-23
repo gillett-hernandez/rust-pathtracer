@@ -1,7 +1,6 @@
 use super::Tonemapper;
 use crate::prelude::*;
-
-use log_once::warn_once;
+use lazy_static::lazy_static;
 
 #[derive(Clone, Debug)]
 pub struct Reinhard1 {
@@ -219,8 +218,15 @@ impl Tonemapper for Reinhard1x3 {
 
         // the last lane likely got set to nan or something nonzero when the division by l_w occurred, so set it to 0
         let mut mapped = (scaling_factor * cie_xyz_color.0) * Vec3::MASK;
+
         if !mapped.is_finite().all() || mapped.is_nan().any() {
-            warn_once!("detected nan or infinity value in film after tonemapping");
+            lazy_static! {
+                static ref LOGGED_CELL: std::sync::atomic::AtomicBool =
+                    std::sync::atomic::AtomicBool::new(false);
+            }
+            if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                warn!("detected nan or infinity value in film after tonemapping");
+            }
             mapped = MAUVE.0;
         }
         XYZColor::from_raw(mapped)

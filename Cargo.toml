@@ -36,8 +36,9 @@ egui_extras = { version = "~0", optional = true }
 egui_plot = { version = "~0", optional = true }
 exr = "~1.72"
 image = { version = "~0.25", features = ["hdr"] }
-log = "~0.4"
-log-once = "~0.4"
+# log = "~0.4"
+# log-once = "~0.4"
+lazy_static = "~1.4"
 math = { git = "https://github.com/gillett-hernandez/rust_cg_math", features = [
     "serde",
     "deepsize",
@@ -55,12 +56,13 @@ rayon = "~1.10"
 rust_optics = { git = "https://github.com/gillett-hernandez/rust_optics", optional = true }
 sdfu = { git = "https://github.com/fu5ha/sdfu", optional = true }
 serde = { version = "~1.0", features = ["derive"] }
-simplelog = "0.12"
+# simplelog = "0.12"
 smallvec = "~1.13"
 structopt = "~0.3"
 tobj = "~4.0"
 toml = "~0.8"
 tracing = "~0.1"
+tracing-subscriber = "~0.3"
 ultraviolet = { version = "~0.8", optional = true }
 
 [target.'cfg(windows)'.dependencies]

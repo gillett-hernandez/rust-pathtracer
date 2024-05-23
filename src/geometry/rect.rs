@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use log_once::warn_once;
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
@@ -126,7 +125,12 @@ impl Hittable for AARect {
         let pdf = area_pdf.convert_to_solid_angle(cos_i, direction.norm_squared());
 
         if !pdf.is_finite() || pdf.is_nan() {
-            warn_once!("pdf was inf or nan, {:?}, {:?}", direction, cos_i);
+            lazy_static! {
+                static ref LOGGED_CELL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+            }
+            if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                warn!("pdf was inf or nan, {:?}, {:?}", direction, cos_i);
+            }
             (direction.normalized(), 0.0.into())
         } else {
             (direction.normalized(), pdf)

@@ -1,6 +1,8 @@
 extern crate rust_pathtracer as root;
 use parking_lot::RwLock;
 use root::{prelude::*, update_window_buffer};
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 use std::ops::RangeInclusive;
 use std::{fs::File, sync::Arc};
@@ -13,14 +15,12 @@ use root::parsing::*;
 use root::tonemap::Tonemapper;
 
 #[macro_use]
-extern crate log;
+extern crate tracing;
 
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use eframe::egui;
-use log::LevelFilter;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -597,20 +597,14 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
 }
 
 fn main() {
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            LevelFilter::Warn,
-            simplelog::Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        WriteLogger::new(
-            LevelFilter::Info,
-            simplelog::Config::default(),
-            File::create("color_test.log").unwrap(),
-        ),
-    ])
-    .unwrap();
+    let subscriber = FmtSubscriber::builder()
+        // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+        // will be written to stdout.
+        .with_max_level(Level::TRACE)
+        // completes the builder.
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     let opts = Opt::from_args();
 

@@ -1,18 +1,16 @@
 #![feature(portable_simd)]
 extern crate rust_pathtracer as root;
+#[macro_use]
+extern crate tracing;
 
 // std imports
 use std::cmp::Ordering;
-use std::fs::File;
 
 // third party but non-subject-matter imports
-use log::LevelFilter;
-use log_once::warn_once;
 #[cfg(feature = "preview")]
 use minifb::WindowOptions;
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
-use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
 use structopt::StructOpt;
 
 // our imports
@@ -29,6 +27,8 @@ use root::world::{EnvironmentMap, Material, MaterialEnum};
 // third party but subject-matter-relevant imports
 use sdfu::ops::{HardMin, Union};
 use sdfu::SDF;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 use ultraviolet::vec::Vec3 as uvVec3;
 
 trait Convert {
@@ -352,7 +352,13 @@ impl<S: SDF<f32, uvVec3> + MaterialTag> Scene<S> {
                             }
                         }
                         None => {
-                            warn_once!("didn't bounce");
+                            lazy_static! {
+                                static ref LOGGED_CELL: std::sync::atomic::AtomicBool =
+                                    std::sync::atomic::AtomicBool::new(false);
+                            }
+                            if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                                warn!("didn't bounce");
+                            }
                             break;
                         }
                     }
@@ -389,21 +395,14 @@ macro_rules! find_and_add_material {
 }
 
 fn main() {
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            LevelFilter::Warn,
-            simplelog::Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        WriteLogger::new(
-            LevelFilter::Info,
-            simplelog::Config::default(),
-            File::create("main.log").unwrap(),
-        ),
-    ])
-    .unwrap();
+    let subscriber = FmtSubscriber::builder()
+        // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+        // will be written to stdout.
+        .with_max_level(Level::TRACE)
+        // completes the builder.
+        .finish();
 
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
     let opt = Opt::from_args();
 
     let settings = get_settings(opt.config).unwrap();
