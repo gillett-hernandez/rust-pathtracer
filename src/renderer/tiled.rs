@@ -551,7 +551,7 @@ impl TiledRenderer {
 }
 
 impl Renderer for TiledRenderer {
-    fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {
+    fn render(&self, mut world: World, config: &Config) {
         // bin the render settings into bins corresponding to what integrator they need.
 
         let mut bundled_cameras: Vec<CameraEnum> = Vec::new();
@@ -575,7 +575,9 @@ impl Renderer for TiledRenderer {
             let aspect_ratio = width as f32 / height as f32;
 
             // copy camera and modify its aspect ratio (so that uv splatting works correctly)
-            let copied_camera = cameras[camera_id].clone().with_aspect_ratio(aspect_ratio);
+            let copied_camera = world.cameras[camera_id]
+                .clone()
+                .with_aspect_ratio(aspect_ratio);
 
             let integrator_type: IntegratorType = IntegratorType::from(render_settings.integrator);
 
@@ -602,8 +604,6 @@ impl Renderer for TiledRenderer {
         for (integrator_type, render_settings) in sampled_renders.iter() {
             match integrator_type {
                 IntegratorType::PathTracing => {
-                    world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
-
                     let env_sampling_probability = world.get_env_sampling_probability();
                     if let EnvironmentMap::HDR {
                         texture,
@@ -639,7 +639,7 @@ impl Renderer for TiledRenderer {
                             self.render_sampled(
                                 integrator,
                                 render_settings,
-                                &cameras[render_settings.camera_id],
+                                &world.cameras[render_settings.camera_id],
                             ),
                         );
                         output_film(&render_settings, &film, 1.0);

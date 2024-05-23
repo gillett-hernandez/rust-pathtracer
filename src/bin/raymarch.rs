@@ -4,6 +4,7 @@ extern crate rust_pathtracer as root;
 // std imports
 use std::cmp::Ordering;
 use std::fs::File;
+use std::path::PathBuf;
 
 // third party but non-subject-matter imports
 use log::LevelFilter;
@@ -19,9 +20,7 @@ use structopt::StructOpt;
 use math::prelude::*;
 use root::hittable::{HasBoundingBox, AABB};
 use root::parsing::tonemap::TonemapSettings;
-use root::parsing::{
-    config::*, construct_world, get_settings, parse_config_and_cameras, parse_tonemap_settings,
-};
+use root::parsing::{config::*, construct_world, get_settings, parse_tonemap_settings};
 use root::prelude::*;
 use root::renderer::output_film;
 use root::world::{EnvironmentMap, Material, MaterialEnum};
@@ -408,7 +407,7 @@ fn main() {
 
     let settings = get_settings(opt.config).unwrap();
 
-    let (config, cameras) = parse_config_and_cameras(settings);
+    let config = Config::from(settings);
     let render_settings = &config.render_settings[0];
     let (width, height) = (
         render_settings.resolution.width,
@@ -434,12 +433,12 @@ fn main() {
     //     0.0,
     //     1.0,
     // )
-    let camera = cameras[0]
+
+    let world = construct_world(&config, PathBuf::from(config.scene_file.clone())).unwrap();
+
+    let camera = world.cameras[0]
         .clone()
         .with_aspect_ratio(height as f32 / width as f32);
-
-    let world = construct_world(config.scene_file).unwrap();
-
     // let mut primitives: Vec<PrimitiveEnum> = Vec::new();
     let mut material_map = Vec::new();
 

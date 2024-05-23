@@ -4,7 +4,7 @@ materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 env_sampling_probability = 0.5
 [environment]
-type="HDRI"
+type = "HDRI"
 strength = 0.4
 texture_name = "moonlit_golf_8k"
 
@@ -25,3 +25,12 @@ two_sided = true
 [instances.aggregate]
 type = "Mesh"
 name = "caustic_test_obj"
+
+[[cameras]]
+type = "SimpleCamera"
+name = "caustic test camera"
+look_from = [18, 5, 3]
+look_at = [0.0, 0.0, -0.4]
+aperture_size = 0.03
+focal_distance = 25.0
+vfov = 70.2

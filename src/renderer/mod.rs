@@ -9,13 +9,11 @@ mod preview;
 // mod sppm;
 mod tiled;
 
-
 pub use naive::NaiveRenderer;
 #[cfg(feature = "preview")]
 pub use preview::PreviewRenderer;
 pub use tiled::TiledRenderer;
 
-use crate::camera::CameraEnum;
 
 use crate::parsing::config::{ColorSpaceSettings, Config, RenderSettings};
 use crate::parsing::parse_tonemap_settings;
@@ -107,7 +105,7 @@ pub fn calculate_widest_wavelength_bounds(
 }
 
 pub trait Renderer {
-    fn render(&self, world: World, cameras: Vec<CameraEnum>, config: &Config);
+    fn render(&self, world: World, config: &Config);
     fn supported_integrators(&self) -> &[IntegratorKind] {
         &[]
     }

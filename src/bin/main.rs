@@ -2,8 +2,7 @@
 extern crate rust_pathtracer as root;
 
 use log::LevelFilter;
-use root::parsing::cameras::parse_config_and_cameras;
-// use root::prelude::*;
+
 use root::parsing::config::*;
 use root::parsing::construct_world;
 use root::parsing::get_settings;
@@ -47,7 +46,7 @@ struct Opt {
 }
 
 fn construct_scene(config: &Config) -> anyhow::Result<World> {
-    construct_world(PathBuf::from(config.scene_file.clone()))
+    construct_world(config, PathBuf::from(config.scene_file.clone()))
 }
 
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
@@ -101,7 +100,7 @@ fn main() {
             .expect("Failed to create cache directory. Does this process have permissions?");
     }
 
-    let mut config: TOMLConfig = match get_settings(opts.config) {
+    let mut toml_config: TOMLConfig = match get_settings(opts.config) {
         Ok(expr) => expr,
         Err(v) => {
             error!("couldn't read config.toml, {:?}", v);
@@ -110,7 +109,7 @@ fn main() {
         }
     };
 
-    let threads = config
+    let threads = toml_config
         .render_settings
         .iter()
         .map(|i| &i.threads)
@@ -121,8 +120,9 @@ fn main() {
         .unwrap();
 
     // override scene file based on provided command line argument
-    config.default_scene_file = opts.scene.unwrap_or(config.default_scene_file);
-    let (config, cameras) = parse_config_and_cameras(config);
+    toml_config.default_scene_file = opts.scene.unwrap_or(toml_config.default_scene_file);
+
+    let config = Config::from(toml_config);
     let world = construct_scene(&config);
     if world.is_err() {
         error!(
@@ -143,7 +143,7 @@ fn main() {
     let renderer: Box<dyn Renderer> = construct_renderer(&config);
 
     if !opts.dry_run {
-        renderer.render(world.unwrap(), cameras, &config);
+        renderer.render(world.unwrap(), &config);
         println!("render done");
     }
 

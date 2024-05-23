@@ -1,149 +1,105 @@
 default_scene_file = "data/scenes/cornell_box.toml"
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "distant camera"
-look_from = [-100, 0, 0]
-look_at = [0, 0, 0]
-aperture_size = 0.03
-vfov = 20
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "distant camera"
+# look_from = [-100, 0, 0]
+# look_at = [0, 0, 0]
+# aperture_size = 0.03
+# vfov = 20
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "true cornell camera"
-look_from = [-0.8, 0.278, 0.273]
-look_at = [0.0, 0.278, 0.273]
-aperture_size = 0.01
-focal_distance = 1.1
-vfov = 37.8
-
-[[cameras]]
-type = "SimpleCamera"
-name = "cube camera"
-look_from = [4, 3, 1]
-look_at = [0, 0, 0]
-aperture_size = 0.2
-focal_distance = 5
-vfov = 35.4
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "cube camera"
+# look_from = [4, 3, 1]
+# look_at = [0, 0, 0]
+# aperture_size = 0.2
+# focal_distance = 5
+# vfov = 35.4
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "blackbox camera"
-look_from = [0.5, 0.0, 0.0]
-look_at = [0, 0, 0]
-aperture_size = 0.001
-focal_distance = 0.5
-vfov = 70.4
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "tower camera"
-look_from = [-3.5, -3.5, 0.0]
-look_at = [0, 0, 100]
-aperture_size = 0.01
-focal_distance = 50.0
-vfov = 45.2
-
-[[cameras]]
-type = "SimpleCamera"
-name = "sun test camera"
-look_from = [-5.0, 0.0, 0.4]
-look_at = [0.0, 0.0, -0.7]
-aperture_size = 0.001
-focal_distance = 5.0
-vfov = 16.2
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "sun test camera"
+# look_from = [-5.0, 0.0, 0.4]
+# look_at = [0.0, 0.0, -0.7]
+# aperture_size = 0.001
+# focal_distance = 5.0
+# vfov = 16.2
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "wideangle sun test camera reverse"
-look_from = [5, 0, 0]
-look_at = [0.0, 0.0, -0.4]
-aperture_size = 0.02
-focal_distance = 5.0
-vfov = 90.0
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "wideangle sun test camera reverse"
+# look_from = [5, 0, 0]
+# look_at = [0.0, 0.0, -0.4]
+# aperture_size = 0.02
+# focal_distance = 5.0
+# vfov = 90.0
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "wideangle sun test camera side"
-look_from = [0, -5, 0]
-look_at = [0.0, 0.0, -0.4]
-aperture_size = 0.02
-focal_distance = 5.0
-vfov = 90.0
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "wideangle sun test camera side"
+# look_from = [0, -5, 0]
+# look_at = [0.0, 0.0, -0.4]
+# aperture_size = 0.02
+# focal_distance = 5.0
+# vfov = 90.0
+
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "closeup camera"
+# look_from = [-1, 0, 0]
+# look_at = [0, 0, 0]
+# aperture_size = 0.03
+# focal_distance = 1.0
+# vfov = 45
+
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "closeup zoom camera"
+# look_from = [-1, 0, 0]
+# look_at = [0.0, 0.0, -0.1]
+# aperture_size = 0.03
+# focal_distance = 1.0
+# vfov = 5
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "caustic test camera"
-look_from = [18, 5, 3]
-look_at = [0.0, 0.0, -0.4]
-aperture_size = 0.03
-focal_distance = 25.0
-vfov = 70.2
-
-[[cameras]]
-type = "SimpleCamera"
-name = "closeup camera"
-look_from = [-1, 0, 0]
-look_at = [0, 0, 0]
-aperture_size = 0.03
-focal_distance = 1.0
-vfov = 45
-
-[[cameras]]
-type = "SimpleCamera"
-name = "closeup zoom camera"
-look_from = [-1, 0, 0]
-look_at = [0.0, 0.0, -0.1]
-aperture_size = 0.03
-focal_distance = 1.0
-vfov = 5
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "veach mis camera"
+# look_from = [-10.0, 0.0, 3.0]
+# look_at = [0.0, 0.0, 0.0]
+# aperture_size = 0.001
+# focal_distance = 10.0
+# vfov = 60.8
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "veach mis camera"
-look_from = [-10.0, 0.0, 3.0]
-look_at = [0.0, 0.0, 0.0]
-aperture_size = 0.001
-focal_distance = 10.0
-vfov = 60.8
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "wideangle sun test camera"
+# look_from = [-5.0, 0.0, 0.5]
+# look_at = [0.0, 0.0, 0.4]
+# aperture_size = 0.1
+# focal_distance = 5.0
+# vfov = 45.0
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "wideangle sun test camera"
-look_from = [-5.0, 0.0, 0.5]
-look_at = [0.0, 0.0, 0.4]
-aperture_size = 0.1
-focal_distance = 5.0
-vfov = 45.0
 
 
-[[cameras]]
-type = "SimpleCamera"
-name = "cornell camera"
-look_from = [-5.0, 0.0, 0.0]
-look_at = [0.0, 0.0, 0.0]
-aperture_size = 0.02
-focal_distance = 5.0
-vfov = 27.8
-
-
-[[cameras]]
-type = "SimpleCamera"
-name = "debug"
-look_from = [-1.3, 0.0, 0.0]
-look_at = [0.0, 0.0, 0.0]
-aperture_size = 0.02
-focal_distance = 5.0
-vfov = 60.0
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "debug"
+# look_from = [-1.3, 0.0, 0.0]
+# look_at = [0.0, 0.0, 0.0]
+# aperture_size = 0.02
+# focal_distance = 5.0
+# vfov = 60.0
 
 
 # somewhat focused
@@ -232,21 +188,21 @@ vfov = 60.0
 # sharpness = 2.0
 
 
-[[cameras]]
-type = "PanoramaCamera"
-name = "panorama"
-look_from = [0.0, 0.0, -0.5]
-look_at = [1.0, 0.0, -0.5]
-fov = [360, 180]
+# [[cameras]]
+# type = "PanoramaCamera"
+# name = "panorama"
+# look_from = [0.0, 0.0, -0.5]
+# look_at = [1.0, 0.0, -0.5]
+# fov = [360, 180]
 
-[[cameras]]
-type = "SimpleCamera"
-name = "simple camera"
-look_from = [-5, 0, 0]
-look_at = [0, 0, 0]
-aperture_size = 0.01
-focal_distance = 5.0
-vfov = 30.0
+# [[cameras]]
+# type = "SimpleCamera"
+# name = "simple camera"
+# look_from = [-5, 0, 0]
+# look_at = [0, 0, 0]
+# aperture_size = 0.01
+# focal_distance = 5.0
+# vfov = 30.0
 
 
 [renderer]

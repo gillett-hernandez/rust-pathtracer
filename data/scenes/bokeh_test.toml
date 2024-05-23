@@ -666,3 +666,14 @@ material_name = "diffuse_light"
 type = "Sphere"
 radius = 0.01
 origin = [0.5, 20.0, 0.0]
+
+
+[[cameras]]
+type = "SimpleCamera"
+name = "wideangle sun test camera"
+look_from = [-5.0, 0.0, 0.5]
+look_at = [0.0, 0.0, 0.4]
+aperture_size = 0.1
+focal_distance = 5.0
+vfov = 45.0
+

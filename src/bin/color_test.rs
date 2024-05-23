@@ -7,8 +7,7 @@ use std::{fs::File, sync::Arc};
 
 use math::curves::*;
 
-use root::parsing::config::TOMLConfig;
-use root::parsing::parse_config_and_cameras;
+use root::parsing::config::{Config, TOMLConfig};
 use root::parsing::*;
 use root::tonemap::Tonemapper;
 
@@ -524,7 +523,7 @@ fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
         .unwrap();
 
     // override scene file based on provided command line argument
-    let (config, _) = parse_config_and_cameras(config);
+    let config = Config::from(config);
 
     let curves = load_scene(config.scene_file)
         .expect("failed to load scene")

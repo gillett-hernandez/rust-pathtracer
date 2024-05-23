@@ -33,6 +33,7 @@ impl World {
         materials: MaterialTable,
         mediums: MediumTable,
         environment: EnvironmentMap,
+        cameras: Vec<CameraEnum>,
         mut env_sampling_probability: f32,
         accelerator_type: AcceleratorType,
     ) -> Self {
@@ -80,7 +81,7 @@ impl World {
         let world = World {
             accelerator,
             lights,
-            cameras: Vec::new(),
+            cameras,
             materials,
             mediums,
             environment,
@@ -174,75 +175,77 @@ impl World {
         }
     }
 
-    pub fn assign_cameras(&mut self, cameras: Vec<CameraEnum>, add_and_rebuild_scene: bool) {
-        // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
-        if add_and_rebuild_scene {
-            match &mut self.accelerator {
-                Accelerator::List { ref mut instances } => {
-                    for camera in self.cameras.iter() {
-                        if let Some(camera_surface) = camera.get_surface() {
-                            println!("removing camera surface {:?}", &camera_surface);
-                            // instances.remove_item(&camera_surface);
-                            let maybe_id = instances.binary_search(camera_surface);
-                            if let Ok(id) = maybe_id {
-                                instances.remove(id);
-                            }
-                        }
-                    }
-                }
-                Accelerator::BVH {
-                    ref mut instances,
-                    bvh: _,
-                } => {
-                    for camera in self.cameras.iter() {
-                        if let Some(camera_surface) = camera.get_surface() {
-                            println!("removing camera surface {:?}", &camera_surface);
-                            // instances.remove_item(&camera_surface);
-                            let maybe_id = instances.binary_search(camera_surface);
-                            if let Ok(id) = maybe_id {
-                                instances.remove(id);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    #[deprecated]
+    pub fn assign_cameras(&mut self, _: Vec<CameraEnum>, _: bool) {
+        unimplemented!()
+        // // reconfigures the scene's cameras and rebuilds the scene accelerator if specified
+        // if add_and_rebuild_scene {
+        //     match &mut self.accelerator {
+        //         Accelerator::List { ref mut instances } => {
+        //             for camera in self.cameras.iter() {
+        //                 if let Some(camera_surface) = camera.get_surface() {
+        //                     println!("removing camera surface {:?}", &camera_surface);
+        //                     // instances.remove_item(&camera_surface);
+        //                     let maybe_id = instances.binary_search(camera_surface);
+        //                     if let Ok(id) = maybe_id {
+        //                         instances.remove(id);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         Accelerator::BVH {
+        //             ref mut instances,
+        //             bvh: _,
+        //         } => {
+        //             for camera in self.cameras.iter() {
+        //                 if let Some(camera_surface) = camera.get_surface() {
+        //                     println!("removing camera surface {:?}", &camera_surface);
+        //                     // instances.remove_item(&camera_surface);
+        //                     let maybe_id = instances.binary_search(camera_surface);
+        //                     if let Ok(id) = maybe_id {
+        //                         instances.remove(id);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
-        self.cameras = cameras;
+        // self.cameras = cameras;
 
-        if add_and_rebuild_scene {
-            match &mut self.accelerator {
-                Accelerator::List { ref mut instances } => {
-                    for (cam_id, cam) in self.cameras.iter().enumerate() {
-                        if let Some(surface) = cam.get_surface() {
-                            let mut surface = surface.clone();
-                            let id = instances.len() as InstanceId;
-                            surface.instance_id = id;
-                            surface.material_id = Some(MaterialId::Camera(cam_id as u16));
-                            println!("adding camera {:?} with id {}", &surface, cam_id);
-                            instances.push(surface);
-                        }
-                    }
-                }
-                Accelerator::BVH {
-                    ref mut instances,
-                    bvh: _,
-                } => {
-                    for (cam_id, cam) in self.cameras.iter().enumerate() {
-                        if let Some(surface) = cam.get_surface() {
-                            let mut surface = surface.clone();
-                            let id = instances.len() as InstanceId;
-                            surface.instance_id = id;
-                            surface.material_id = Some(MaterialId::Camera(cam_id as u16));
-                            println!("adding camera {:?} with id {}", &surface, cam_id);
-                            instances.push(surface);
-                        }
-                    }
-                }
-            }
+        // if add_and_rebuild_scene {
+        //     match &mut self.accelerator {
+        //         Accelerator::List { ref mut instances } => {
+        //             for (cam_id, cam) in self.cameras.iter().enumerate() {
+        //                 if let Some(surface) = cam.get_surface() {
+        //                     let mut surface = surface.clone();
+        //                     let id = instances.len() as InstanceId;
+        //                     surface.instance_id = id;
+        //                     surface.material_id = Some(MaterialId::Camera(cam_id as u16));
+        //                     println!("adding camera {:?} with id {}", &surface, cam_id);
+        //                     instances.push(surface);
+        //                 }
+        //             }
+        //         }
+        //         Accelerator::BVH {
+        //             ref mut instances,
+        //             bvh: _,
+        //         } => {
+        //             for (cam_id, cam) in self.cameras.iter().enumerate() {
+        //                 if let Some(surface) = cam.get_surface() {
+        //                     let mut surface = surface.clone();
+        //                     let id = instances.len() as InstanceId;
+        //                     surface.instance_id = id;
+        //                     surface.material_id = Some(MaterialId::Camera(cam_id as u16));
+        //                     println!("adding camera {:?} with id {}", &surface, cam_id);
+        //                     instances.push(surface);
+        //                 }
+        //             }
+        //         }
+        //     }
 
-            self.accelerator.rebuild();
-        }
+        //     self.accelerator.rebuild();
+        // }
     }
 }
 
@@ -256,7 +259,7 @@ impl HasBoundingBox for World {
 mod test {
     use std::path::PathBuf;
 
-    use crate::parsing::construct_world;
+    use crate::parsing::{config::Config, construct_world};
 
     use super::*;
 
@@ -264,7 +267,12 @@ mod test {
 
     fn test_world_intersection() {
         crate::log_test_setup();
-        let world = construct_world(PathBuf::from("data/scenes/test_lighting_north.toml")).unwrap();
+        let default_config = Config::load_default();
+        let world = construct_world(
+            &default_config,
+            PathBuf::from("data/scenes/test_lighting_north.toml"),
+        )
+        .unwrap();
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 7.0), -Vec3::Z);
 

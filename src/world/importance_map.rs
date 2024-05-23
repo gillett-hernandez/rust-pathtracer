@@ -265,7 +265,6 @@ impl ImportanceMap {
                 bincode::serialize_into(file, self)
                     .context("failed to bincode-serialize data to disk")?;
 
-
                 Ok(())
             }
             _ => {
@@ -334,6 +333,7 @@ mod test {
     use math::spectral::{y_bar, BOUNDED_VISIBLE_RANGE};
 
     use super::*;
+    use crate::parsing::config::Config;
     use crate::texture::EvalAt;
     use crate::tonemap::{sRGB, write_to_files, Clamp, Rec709Primaries, Tonemapper};
     use crate::vec2d::Vec2D;
@@ -455,7 +455,12 @@ mod test {
 
     #[test]
     fn test_env_importance_sampling() {
-        let mut world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let default_config = Config::load_default();
+        let mut world = construct_world(
+            &default_config,
+            PathBuf::from("data/scenes/hdri_test_2.toml"),
+        )
+        .unwrap();
 
         if let EnvironmentMap::HDR {
             importance_map,
@@ -607,7 +612,12 @@ mod test {
 
     #[test]
     fn test_env_direct_access() {
-        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let default_config = Config::load_default();
+        let world = construct_world(
+            &default_config,
+            PathBuf::from("data/scenes/hdri_test_2.toml"),
+        )
+        .unwrap();
         let env = &world.environment;
 
         let wavelength_range = BOUNDED_VISIBLE_RANGE;
@@ -699,7 +709,12 @@ mod test {
 
     #[test]
     fn test_env_scene_ray_sampling() {
-        let mut world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let default_config = Config::load_default();
+        let mut world = construct_world(
+            &default_config,
+            PathBuf::from("data/scenes/hdri_test_2.toml"),
+        )
+        .unwrap();
 
         let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
         if let EnvironmentMap::HDR {

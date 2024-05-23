@@ -38,7 +38,7 @@ impl PreviewRenderer {
 
 #[cfg(feature = "preview")]
 impl Renderer for PreviewRenderer {
-    fn render(&self, mut world: World, cameras: Vec<CameraEnum>, config: &Config) {
+    fn render(&self, mut world: World, config: &Config) {
         if let RendererType::Preview {
             selected_preview_film_id,
         } = config.renderer
@@ -48,7 +48,6 @@ impl Renderer for PreviewRenderer {
                 let Resolution { width, height } = render_settings.resolution;
                 films.push(Vec2D::new(width, height, XYZColor::BLACK));
             }
-            println!("num cameras {}", cameras.len());
             println!("num cameras {}", world.cameras.len());
 
             let film_idx = selected_preview_film_id;
@@ -57,7 +56,6 @@ impl Renderer for PreviewRenderer {
             render_settings.tonemap_settings = render_settings.tonemap_settings.silenced();
             let mut tonemapper = parse_tonemap_settings(render_settings.tonemap_settings);
 
-            world.assign_cameras(vec![cameras[render_settings.camera_id].clone()], false);
             let env_sampling_probability = world.get_env_sampling_probability();
             if let EnvironmentMap::HDR {
                 texture,
@@ -86,7 +84,7 @@ impl Renderer for PreviewRenderer {
             match Integrator::from_settings_and_world(
                 arc_world,
                 IntegratorType::from(render_settings.integrator),
-                &cameras[..],
+                &world.cameras[..],
                 &render_settings,
             ) {
                 None => {}

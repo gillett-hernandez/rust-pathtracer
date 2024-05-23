@@ -11,12 +11,12 @@ use std::io::Read;
 
 use serde::{Deserialize, Serialize};
 
-use super::config::{Config, TOMLConfig};
-
 #[cfg(feature = "realistic_camera")]
 use optics::aperture::{ApertureEnum, CircularAperture, SimpleBladedAperture};
 #[cfg(feature = "realistic_camera")]
 use optics::parse_lenses_from;
+
+use super::Config;
 
 #[cfg(feature = "realistic_camera")]
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -88,43 +88,41 @@ pub struct PanoramaCameraData {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
-pub enum CameraSettings {
+pub enum CameraData {
     SimpleCamera(SimpleCameraData),
     PanoramaCamera(PanoramaCameraData),
     #[cfg(feature = "realistic_camera")]
     RealisticCamera(RealisticCameraData),
 }
 
-impl CameraSettings {
+impl CameraData {
     pub fn get_name(&self) -> &str {
         match self {
-            CameraSettings::SimpleCamera(data) => &data.name,
-            CameraSettings::PanoramaCamera(data) => &data.name,
+            CameraData::SimpleCamera(data) => &data.name,
+            CameraData::PanoramaCamera(data) => &data.name,
             #[cfg(feature = "realistic_camera")]
-            CameraSettings::RealisticCamera(data) => &data.name,
+            CameraData::RealisticCamera(data) => &data.name,
         }
     }
 }
 
-pub fn parse_config_and_cameras(settings: TOMLConfig) -> (Config, Vec<CameraEnum>) {
-    // this function is necessary because different render settings change the aspect ratio of the camera,
-    // even if they're using the "same" camera
+pub fn parse_cameras(config: &Config, camera_data: Vec<CameraData>) -> Vec<CameraEnum> {
     let mut cameras: Vec<CameraEnum> = Vec::new();
     let mut camera_map: HashMap<String, CameraEnum> = HashMap::new();
-    let mut config = Config::from(settings.clone());
     let mut camera_ids = Vec::new();
 
-    for toml_settings in settings.render_settings.iter() {
-        if !camera_ids.contains(&toml_settings.camera_id) {
-            camera_ids.push(toml_settings.camera_id.clone());
+    for settings in config.render_settings.iter() {
+        if !camera_ids.contains(&settings.camera_id) {
+            camera_ids.push(settings.camera_id.clone());
         }
     }
-    for camera_config in &settings.cameras {
+
+    for camera_config in &camera_data {
         if !camera_ids.contains(&camera_config.get_name().to_owned()) {
             continue;
         }
         let (name, camera): (String, CameraEnum) = match camera_config {
-            CameraSettings::SimpleCamera(cam) => {
+            CameraData::SimpleCamera(cam) => {
                 // let shutter_open_time = cam.shutter_open_time.unwrap_or(0.0);
 
                 (
@@ -141,7 +139,7 @@ pub fn parse_config_and_cameras(settings: TOMLConfig) -> (Config, Vec<CameraEnum
                     )),
                 )
             }
-            CameraSettings::PanoramaCamera(cam) => (
+            CameraData::PanoramaCamera(cam) => (
                 cam.name.clone(),
                 CameraEnum::PanoramaCamera(PanoramaCamera::new(
                     Point3::from(cam.look_from),
@@ -152,7 +150,7 @@ pub fn parse_config_and_cameras(settings: TOMLConfig) -> (Config, Vec<CameraEnum
                 )),
             ),
             #[cfg(feature = "realistic_camera")]
-            CameraSettings::RealisticCamera(cam) => {
+            CameraData::RealisticCamera(cam) => {
                 let mut camera_file = File::open(&cam.lens_spec).unwrap();
                 let mut camera_spec = String::new();
                 camera_file.read_to_string(&mut camera_spec).unwrap();
@@ -182,19 +180,14 @@ pub fn parse_config_and_cameras(settings: TOMLConfig) -> (Config, Vec<CameraEnum
         };
         camera_map.insert(name, camera);
     }
-    for (render_settings, toml_settings) in config
-        .render_settings
-        .iter_mut()
-        .zip(settings.render_settings.iter())
+    for render_settings in &config.render_settings
     {
-        let cam_id = cameras.len();
-        let camera = camera_map[&toml_settings.camera_id]
+        let camera = camera_map[&render_settings.camera_id]
             .clone()
             .with_aspect_ratio(
                 render_settings.resolution.width as f32 / render_settings.resolution.height as f32,
             );
-        render_settings.camera_id = cam_id;
         cameras.push(camera);
     }
-    (config, cameras)
+    cameras
 }

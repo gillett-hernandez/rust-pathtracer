@@ -94,3 +94,12 @@ material_name = "lambertian_red"
 type = "Sphere"
 radius = 0.2
 origin = [0.6, -0.8, -0.8]
+
+[[cameras]]
+type = "SimpleCamera"
+name = "sun test camera"
+look_from = [-5.0, 0.0, 0.4]
+look_at = [0.0, 0.0, -0.7]
+aperture_size = 0.001
+focal_distance = 5.0
+vfov = 16.2

@@ -112,6 +112,7 @@ pub struct SceneData {
     pub mediums: Option<MaybeMediumLib>,
     pub meshes: MaybeMeshLib,
     pub instances: Vec<InstanceData>,
+    pub cameras: Vec<CameraData>,
 }
 
 pub fn load_arbitrary<T: AsRef<Path>, O>(filepath: T) -> Result<O, Box<dyn Error>>
@@ -144,7 +145,7 @@ pub fn load_scene<T: AsRef<Path>>(filepath: T) -> anyhow::Result<SceneData> {
     Ok(scene)
 }
 
-pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> anyhow::Result<World> {
+pub fn construct_world<P: AsRef<Path>>(config: &Config, scene_file: P) -> anyhow::Result<World> {
     // layout of this function:
     // parse scene data from file
     // scan environment data for used textures/curves
@@ -540,11 +541,14 @@ pub fn construct_world<P: AsRef<Path>>(scene_file: P) -> anyhow::Result<World> {
         }
     }
 
+    let cameras = parse_cameras(config, scene.cameras);
+
     let world = World::new(
         instances,
         materials,
         mediums,
         environment,
+        cameras,
         scene.env_sampling_probability.unwrap_or(0.5),
         AcceleratorType::BVH,
     );
@@ -619,7 +623,8 @@ mod test {
 
     #[test]
     fn test_parsing_complex_scene() {
-        let world = construct_world(PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let default_config = Config::load_default();
+        let world = construct_world(&default_config, PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
         println!("constructed world");
         for mat in &world.materials {
             let name = match mat {
@@ -635,7 +640,8 @@ mod test {
 
     #[test]
     fn test_world() {
-        let _world = construct_world(PathBuf::from("data/scenes/test_prism.toml")).unwrap();
+        let default_config = Config::load_default();
+        let _world = construct_world(&default_config, PathBuf::from("data/scenes/test_prism.toml")).unwrap();
     }
 
     #[test]

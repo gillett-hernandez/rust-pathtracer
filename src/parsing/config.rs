@@ -1,10 +1,11 @@
 // use crate::prelude::*;
 
+use std::fs::read_to_string;
+
 use crate::parsing::tonemap::TonemapSettings;
 
 use serde::{Deserialize, Serialize};
 
-use super::cameras::CameraSettings;
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
 pub struct Resolution {
@@ -47,7 +48,7 @@ pub struct RenderSettings {
     pub threads: Option<u16>,
     pub min_samples: u16,
     pub max_samples: Option<u16>,
-    pub camera_id: usize,
+    pub camera_id: String,
     pub russian_roulette: Option<bool>,
     pub only_direct: Option<bool>,
     pub wavelength_bounds: Option<(f32, f32)>,
@@ -89,7 +90,7 @@ impl From<TOMLRenderSettings> for RenderSettings {
             hwss: data.hwss,
             min_samples: data.min_samples,
             max_samples: data.max_samples,
-            camera_id: 0,
+            camera_id: data.camera_id,
             russian_roulette: data.russian_roulette,
             only_direct: data.only_direct,
             premultiply: data.premultiply,
@@ -117,7 +118,6 @@ pub enum RendererType {
 pub struct TOMLConfig {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub default_scene_file: String,
-    pub cameras: Vec<CameraSettings>,
     pub renderer: RendererType,
     pub render_settings: Vec<TOMLRenderSettings>,
 }
@@ -126,9 +126,16 @@ pub struct TOMLConfig {
 pub struct Config {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub scene_file: String,
-    pub cameras: Vec<CameraSettings>,
     pub renderer: RendererType,
     pub render_settings: Vec<RenderSettings>,
+}
+
+impl Config {
+    pub fn load_default() -> Self {
+        let s = read_to_string("./data/config.toml").expect("failed to find default config file");
+        let settings: TOMLConfig = toml::from_str(&s).expect("failed to parse default config file");
+        settings.into()
+    }
 }
 
 impl From<TOMLConfig> for Config {
@@ -136,7 +143,6 @@ impl From<TOMLConfig> for Config {
         Config {
             env_sampling_probability: data.env_sampling_probability,
             scene_file: data.default_scene_file,
-            cameras: data.cameras,
             renderer: data.renderer,
             render_settings: data
                 .render_settings
