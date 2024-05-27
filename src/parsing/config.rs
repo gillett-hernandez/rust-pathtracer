@@ -1,6 +1,7 @@
 // use crate::prelude::*;
 
 use std::fs::read_to_string;
+use std::collections::HashMap;
 
 use crate::parsing::tonemap::TonemapSettings;
 
@@ -126,6 +127,8 @@ pub struct TOMLConfig {
 pub struct Config {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub scene_file: String,
+    // pub cameras: Vec<CameraSettings>,
+    pub camera_names_to_index: HashMap<String, usize>,
     pub renderer: RendererType,
     pub render_settings: Vec<RenderSettings>,
 }
@@ -149,6 +152,7 @@ impl From<TOMLConfig> for Config {
                 .iter()
                 .map(|e| RenderSettings::from(e.clone()))
                 .collect(),
+            camera_names_to_index: HashMap::new(),
         }
     }
 }
