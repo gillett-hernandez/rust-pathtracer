@@ -59,9 +59,7 @@ macro_rules! generate_camera_enum {
 }
 
 macro_rules! generate_camera_impl {
-
     ($name: ident, $l: ty, $e: ty, $($item:ident),+) => {
-
         impl Camera<$l, $e> for $name {
              fn get_ray(
                 &self,
