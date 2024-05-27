@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use log_once::warn_once;
 
 use crate::aabb::{HasBoundingBox, AABB};
 use crate::hittable::{HitRecord, Hittable};
@@ -114,12 +113,16 @@ impl Hittable for Sphere {
         let pdf: PDF<f32, SolidAngle> =
             PDF::new(*area_pdf * direction.norm_squared() / normal_dot_direction);
         if !(*pdf).is_finite() {
-            warn_once!(
-                "pdf was inf, {:?}, area_pdf: {:?}, n * d: {:?}",
-                pdf,
-                area_pdf,
-                normal_dot_direction,
-            );
+            lazy_static! {
+                static ref LOGGED_CELL: std::sync::atomic::AtomicBool =
+                    std::sync::atomic::AtomicBool::new(false);
+            }
+            if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                warn!(
+                    "pdf was inf, {:?}, area_pdf: {:?}, n * d: {:?}",
+                    pdf, area_pdf, normal_dot_direction,
+                );
+            }
 
             (direction.normalized(), 0.0.into())
         } else {

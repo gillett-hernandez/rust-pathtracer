@@ -1,4 +1,3 @@
-use log_once::warn_once;
 
 use crate::world::World;
 // use crate::config::Settings;
@@ -302,7 +301,12 @@ impl GenericIntegrator for LightTracingIntegrator {
                     }
                 }
                 VertexType::LightSource(_) => {
-                    warn_once!("hit light source while doing light tracing");
+                    lazy_static! {
+                        static ref LOGGED_CELL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+                    }
+                    if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                        warn!("hit light source while doing light tracing");
+                    }
                     // could potentially add energy to the path if light sources are hit while tracing
                 }
                 VertexType::Eye => unreachable!(),

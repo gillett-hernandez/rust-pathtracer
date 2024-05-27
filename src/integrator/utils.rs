@@ -1,6 +1,5 @@
 use crate::{mediums::MediumEnum, prelude::*};
 
-use log_once::warn_once;
 
 use crate::hittable::HitRecord;
 use crate::mediums::Medium;
@@ -231,13 +230,18 @@ pub fn random_walk<L, E>(
                 let cos_i = wi.z().abs();
                 vertex.veach_g = veach_g(hit.point, cos_i, ray.origin, cos_o);
                 if !vertex.veach_g.is_finite() {
-                    warn_once!(
-                        "veach g was inf, {:?} {:?} {} {}",
-                        hit.point,
-                        ray.origin,
-                        cos_i,
-                        cos_o
-                    );
+                    lazy_static! {
+                        static ref LOGGED_CELL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+                    }
+                    if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                        warn!(
+                            "veach g was inf, {:?} {:?} {} {}",
+                            hit.point,
+                            ray.origin,
+                            cos_i,
+                            cos_o
+                        );
+                    }
                 }
 
                 if !matches!(

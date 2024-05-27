@@ -14,10 +14,11 @@ use root::renderer::PreviewRenderer;
 use root::world::*;
 
 #[macro_use]
-extern crate log;
+extern crate tracing;
 
-// use simplelog::*;
-use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode, WriteLogger};
+use tracing::level_filters::LevelFilter;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 use std::fs;
 use std::fs::File;
@@ -40,7 +41,7 @@ struct Opt {
     #[structopt(short = "n", long)]
     pub dry_run: bool,
     #[structopt(short = "pll", long, default_value = "warn")]
-    pub print_log_level: String,
+    pub stdout_log_level: String,
     #[structopt(short = "wll", long, default_value = "info")]
     pub write_log_level: String,
 }
@@ -60,36 +61,47 @@ fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
     }
 }
 
-fn parse_log_level(level: String, default: LevelFilter) -> LevelFilter {
+fn parse_level_filter(level: String, default: LevelFilter) -> LevelFilter {
     match level.to_lowercase().as_str() {
-        "warn" => LevelFilter::Warn,
-        "info" => LevelFilter::Info,
-        "trace" => LevelFilter::Trace,
-        "error" => LevelFilter::Error,
-        "debug" => LevelFilter::Debug,
+        "warn" => LevelFilter::WARN,
+        "info" => LevelFilter::INFO,
+        "trace" => LevelFilter::TRACE,
+        "error" => LevelFilter::ERROR,
+        "debug" => LevelFilter::DEBUG,
         _ => default,
     }
 }
 
 fn main() {
     let opts = Opt::from_args();
-    let term_log_level = parse_log_level(opts.print_log_level, LevelFilter::Warn);
-    let write_log_level = parse_log_level(opts.write_log_level, LevelFilter::Info);
+    let stdout_log_level = parse_level_filter(opts.stdout_log_level, LevelFilter::WARN);
+    let write_log_level = parse_level_filter(opts.write_log_level, LevelFilter::INFO);
 
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            term_log_level,
-            simplelog::Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        WriteLogger::new(
-            write_log_level,
-            simplelog::Config::default(),
-            File::create("main.log").unwrap(),
-        ),
-    ])
-    .unwrap();
+    use std::{fs::File, sync::Arc};
+    use tracing_subscriber::prelude::*;
+
+    // A layer that logs events to stdout using the human-readable "pretty"
+    // format.
+    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+
+    // A layer that logs events to a file.
+    let file = File::create("main.log").unwrap();
+    let write_log = tracing_subscriber::fmt::layer().with_writer(Arc::new(file));
+
+    tracing_subscriber::registry()
+        .with(stdout_log.with_filter(stdout_log_level))
+        .with(write_log.with_filter(write_log_level))
+        .init();
+
+    // // a builder for `FmtSubscriber`.
+    // let subscriber = FmtSubscriber::builder()
+    //     // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+    //     // will be written to stdout.
+    //     .with_max_level(stdout_log_level)
+    //     // completes the builder.
+    //     .finish();
+
+    // tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     let mut cache_path = PathBuf::new();
     cache_path.push(".");

@@ -14,6 +14,7 @@ pub use crate::texture::TexStack;
 pub use crate::tonemap::{Color, Tonemapper};
 pub use crate::vec2d::{Vec2D, UV};
 pub use crate::{rgb_to_u32, TransportMode, INTERSECTION_TIME_OFFSET, MAUVE, NORMAL_OFFSET};
+pub use lazy_static::lazy_static;
 
 #[cfg(feature = "preview")]
 pub use crate::{update_window_buffer, window_loop};

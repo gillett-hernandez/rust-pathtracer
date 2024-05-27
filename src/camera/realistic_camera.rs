@@ -1,7 +1,6 @@
 use crate::prelude::*;
 
 use crate::geometry::*;
-use log_once::warn_once;
 use optics::aperture::{Aperture, ApertureEnum};
 use optics::{lens_sampler::RadialSampler, Input, LensAssembly, LensInterface, Output};
 
@@ -184,7 +183,13 @@ impl Camera<f32, f32> for RealisticCamera {
         if let Some(r) = result {
             r
         } else {
-            warn_once!("failed to sample ray, returning ray with tau/pdf 0");
+            lazy_static! {
+                static ref LOGGED_CELL: std::sync::atomic::AtomicBool =
+                    std::sync::atomic::AtomicBool::new(false);
+            }
+            if !LOGGED_CELL.fetch_or(true, std::sync::atomic::Ordering::AcqRel) {
+                warn!("failed to sample ray, returning ray with tau/pdf 0");
+            }
             (Ray::new(central_point, Vec3::Z), 0.0)
         }
     }
@@ -199,7 +204,13 @@ impl Camera<f32, f32> for RealisticCamera {
         todo!();
     }
 
-    fn eval_we(&self, _lambda: f32, _normal: Vec3, _from: Point3, _to: Point3) -> (f32, PDF<f32, SolidAngle>) {
+    fn eval_we(
+        &self,
+        _lambda: f32,
+        _normal: Vec3,
+        _from: Point3,
+        _to: Point3,
+    ) -> (f32, PDF<f32, SolidAngle>) {
         // TODO implement We, requires backwards tracing to be robust
         todo!()
     }
