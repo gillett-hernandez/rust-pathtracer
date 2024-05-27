@@ -455,9 +455,9 @@ mod test {
 
     #[test]
     fn test_env_importance_sampling() {
-        let default_config = Config::load_default();
+        let mut default_config = Config::load_default();
         let mut world = construct_world(
-            &default_config,
+            &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
         )
         .unwrap();
@@ -612,9 +612,9 @@ mod test {
 
     #[test]
     fn test_env_direct_access() {
-        let default_config = Config::load_default();
+        let mut default_config = Config::load_default();
         let world = construct_world(
-            &default_config,
+            &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
         )
         .unwrap();
@@ -709,9 +709,9 @@ mod test {
 
     #[test]
     fn test_env_scene_ray_sampling() {
-        let default_config = Config::load_default();
+        let mut default_config = Config::load_default();
         let mut world = construct_world(
-            &default_config,
+            &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
         )
         .unwrap();

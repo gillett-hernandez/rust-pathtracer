@@ -566,7 +566,7 @@ impl Renderer for TiledRenderer {
 
         // phase 1, gather and sort what renders need to be done
         for render_settings in config.render_settings.iter() {
-            let camera_id = render_settings.camera_id;
+            let camera_id = &render_settings.camera_id;
 
             let (width, height) = (
                 render_settings.resolution.width,
@@ -575,7 +575,7 @@ impl Renderer for TiledRenderer {
             let aspect_ratio = width as f32 / height as f32;
 
             // copy camera and modify its aspect ratio (so that uv splatting works correctly)
-            let copied_camera = world.cameras[camera_id]
+            let copied_camera = world.cameras[config.camera_names_to_index[camera_id]]
                 .clone()
                 .with_aspect_ratio(aspect_ratio);
 
@@ -584,7 +584,7 @@ impl Renderer for TiledRenderer {
             match integrator_type {
                 IntegratorType::PathTracing => {
                     let mut updated_render_settings = render_settings.clone();
-                    updated_render_settings.camera_id = camera_id;
+                    updated_render_settings.camera_id = camera_id.clone();
                     bundled_cameras.push(copied_camera);
                     sampled_renders.push((IntegratorType::PathTracing, updated_render_settings));
                 }
@@ -592,7 +592,7 @@ impl Renderer for TiledRenderer {
                     // then determine new camera id
                     let list = splatting_renders_and_cameras.get_mut(&t).unwrap();
                     let mut updated_render_settings = render_settings.clone();
-                    updated_render_settings.camera_id = camera_id;
+                    updated_render_settings.camera_id = camera_id.clone();
 
                     list.push((updated_render_settings, copied_camera))
                 }
@@ -639,7 +639,8 @@ impl Renderer for TiledRenderer {
                             self.render_sampled(
                                 integrator,
                                 render_settings,
-                                &world.cameras[render_settings.camera_id],
+                                &world.cameras
+                                    [config.camera_names_to_index[&render_settings.camera_id]],
                             ),
                         );
                         output_film(&render_settings, &film, 1.0);

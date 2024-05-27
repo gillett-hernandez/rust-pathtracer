@@ -407,8 +407,8 @@ fn main() {
 
     let settings = get_settings(opt.config).unwrap();
 
-    let config = Config::from(settings);
-    let render_settings = &config.render_settings[0];
+    let mut config = Config::from(settings);
+    let render_settings = config.render_settings[0].clone();
     let (width, height) = (
         render_settings.resolution.width,
         render_settings.resolution.height,
@@ -434,7 +434,8 @@ fn main() {
     //     1.0,
     // )
 
-    let world = construct_world(&config, PathBuf::from(config.scene_file.clone())).unwrap();
+    let scene_file_path = config.scene_file.clone();
+    let world = construct_world(&mut config, PathBuf::from(scene_file_path)).unwrap();
 
     let camera = world.cameras[0]
         .clone()
@@ -634,7 +635,7 @@ fn main() {
         }
     }
     output_film(
-        render_settings,
+        &render_settings,
         &render_film,
         1.0 / (total_samples as f32 + 1.0),
     );

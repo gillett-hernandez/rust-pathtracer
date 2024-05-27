@@ -267,9 +267,9 @@ mod test {
 
     fn test_world_intersection() {
         crate::log_test_setup();
-        let default_config = Config::load_default();
+        let mut default_config = Config::load_default();
         let world = construct_world(
-            &default_config,
+            &mut default_config,
             PathBuf::from("data/scenes/test_lighting_north.toml"),
         )
         .unwrap();

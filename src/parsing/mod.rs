@@ -145,7 +145,10 @@ pub fn load_scene<T: AsRef<Path>>(filepath: T) -> anyhow::Result<SceneData> {
     Ok(scene)
 }
 
-pub fn construct_world<P: AsRef<Path>>(config: &Config, scene_file: P) -> anyhow::Result<World> {
+pub fn construct_world<P: AsRef<Path>>(
+    mut config: &mut Config,
+    scene_file: P,
+) -> anyhow::Result<World> {
     // layout of this function:
     // parse scene data from file
     // scan environment data for used textures/curves
@@ -541,7 +544,7 @@ pub fn construct_world<P: AsRef<Path>>(config: &Config, scene_file: P) -> anyhow
         }
     }
 
-    let cameras = parse_cameras(config, scene.cameras);
+    let cameras = parse_cameras(&mut config, scene.cameras);
 
     let world = World::new(
         instances,
@@ -623,8 +626,12 @@ mod test {
 
     #[test]
     fn test_parsing_complex_scene() {
-        let default_config = Config::load_default();
-        let world = construct_world(&default_config, PathBuf::from("data/scenes/hdri_test_2.toml")).unwrap();
+        let mut default_config = Config::load_default();
+        let world = construct_world(
+            &mut default_config,
+            PathBuf::from("data/scenes/hdri_test_2.toml"),
+        )
+        .unwrap();
         println!("constructed world");
         for mat in &world.materials {
             let name = match mat {
@@ -640,8 +647,12 @@ mod test {
 
     #[test]
     fn test_world() {
-        let default_config = Config::load_default();
-        let _world = construct_world(&default_config, PathBuf::from("data/scenes/test_prism.toml")).unwrap();
+        let mut default_config = Config::load_default();
+        let _world = construct_world(
+            &mut default_config,
+            PathBuf::from("data/scenes/test_prism.toml"),
+        )
+        .unwrap();
     }
 
     #[test]

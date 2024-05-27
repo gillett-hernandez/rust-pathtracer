@@ -106,7 +106,7 @@ impl CameraData {
     }
 }
 
-pub fn parse_cameras(config: &Config, camera_data: Vec<CameraData>) -> Vec<CameraEnum> {
+pub fn parse_cameras(config: &mut Config, camera_data: Vec<CameraData>) -> Vec<CameraEnum> {
     let mut cameras: Vec<CameraEnum> = Vec::new();
     let mut camera_map: HashMap<String, CameraEnum> = HashMap::new();
     let mut camera_ids = Vec::new();
@@ -180,8 +180,11 @@ pub fn parse_cameras(config: &Config, camera_data: Vec<CameraData>) -> Vec<Camer
         };
         camera_map.insert(name, camera);
     }
-    for render_settings in &config.render_settings
-    {
+    for render_settings in &config.render_settings {
+        config
+            .camera_names_to_index
+            .insert(render_settings.camera_id.clone(), cameras.len());
+
         let camera = camera_map[&render_settings.camera_id]
             .clone()
             .with_aspect_ratio(

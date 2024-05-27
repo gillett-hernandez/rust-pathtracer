@@ -1,8 +1,6 @@
 #![feature(fs_try_exists)]
 extern crate rust_pathtracer as root;
 
-use log::LevelFilter;
-
 use root::parsing::config::*;
 use root::parsing::construct_world;
 use root::parsing::get_settings;
@@ -46,7 +44,7 @@ struct Opt {
     pub write_log_level: String,
 }
 
-fn construct_scene(config: &Config) -> anyhow::Result<World> {
+fn construct_scene(config: &mut Config) -> anyhow::Result<World> {
     construct_world(config, PathBuf::from(config.scene_file.clone()))
 }
 
@@ -134,8 +132,8 @@ fn main() {
     // override scene file based on provided command line argument
     toml_config.default_scene_file = opts.scene.unwrap_or(toml_config.default_scene_file);
 
-    let config = Config::from(toml_config);
-    let world = construct_scene(&config);
+    let mut config = Config::from(toml_config);
+    let world = construct_scene(&mut config);
     if world.is_err() {
         error!(
             "fatal error parsing world, aborting. error is {:?}",

@@ -684,7 +684,10 @@ impl Renderer for PreviewRenderer {
                                 temp_color += integrator.color(
                                     &mut sampler,
                                     &render_settings,
-                                    (camera_uv, render_settings.camera_id),
+                                    (
+                                        camera_uv,
+                                        config.camera_names_to_index[&render_settings.camera_id],
+                                    ),
                                     s as usize,
                                     &mut local_additional_splats,
                                     &mut profile,
