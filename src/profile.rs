@@ -79,13 +79,3 @@ impl Profile {
         );
     }
 }
-
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn test_default_macro() {
-        let empty = Profile::default();
-    }
-}

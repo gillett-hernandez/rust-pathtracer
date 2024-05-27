@@ -260,7 +260,9 @@ impl ImportanceMap {
 
                 let cloned_filepath = filepath.clone();
                 let clone = self.clone();
-                let join_handle = std::thread::spawn(move || {
+
+                // intentionally not joining, the thread should finish or panic eventually.
+                let _join_handle = std::thread::spawn(move || {
                     let timestamp = std::time::Instant::now();
                     let Ok(file) = File::create(&cloned_filepath).context(format!(
                         "failed to create file {:?}",
@@ -287,7 +289,10 @@ impl ImportanceMap {
             }
         }
     }
-    pub fn load_baked<P>(filepath: P) -> anyhow::Result<Self> where P: AsRef<Path> + std::fmt::Debug {
+    pub fn load_baked<P>(filepath: P) -> anyhow::Result<Self>
+    where
+        P: AsRef<Path> + std::fmt::Debug,
+    {
         let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
 
         warn!("deserializing importance map from {}", filepath_as_str);
