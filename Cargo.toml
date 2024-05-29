@@ -16,6 +16,7 @@ assigning_clones = "deny"
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 color_grad = ["colorgrad"]
 # for scenes with many non-dense meshes, disable sort_mesh_aabb_hits
+pbr = ["dep:pbr"]
 default = [
     "realistic_camera",
     "sort_mesh_aabb_hits",
@@ -55,7 +56,7 @@ num_cpus = "~1.16"
 ordered-float = "~4.2"
 parking_lot = "~0.12"
 paste = "~1.0"
-pbr = "~1.1"
+pbr = { version = "~1.1", optional = true }
 png = "~0.17"
 rand = "~0.8"
 rayon = "~1.10"

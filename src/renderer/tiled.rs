@@ -22,7 +22,6 @@ use std::time::{Duration, Instant};
 
 // use crossbeam::channel::unbounded;
 // use crossbeam::channel::bounded;
-use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 
 #[derive(Default, Copy, Clone)]

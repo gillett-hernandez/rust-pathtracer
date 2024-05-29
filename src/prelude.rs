@@ -25,3 +25,36 @@ pub use math::traits::{CheckInf, CheckNAN, CheckResult, FromScalar, ToScalar};
 
 pub use std::cmp::Ordering;
 pub use std::f32::consts::{PI, SQRT_2, TAU};
+
+#[cfg(feature = "pbr")]
+pub use pbr::ProgressBar;
+
+// dummy ProgressBar implementation that gets used instead of the actual one, to avoid having to put #[cfg] directives around every use and method call of ProgressBar
+#[cfg(not(feature = "pbr"))]
+use std::io::{Stdout, Write};
+#[cfg(not(feature = "pbr"))]
+use std::marker::PhantomData;
+#[cfg(not(feature = "pbr"))]
+pub struct ProgressBar<T: Write + Send + Sync> {
+    phantom: PhantomData<T>,
+}
+
+#[cfg(not(feature = "pbr"))]
+
+impl ProgressBar<Stdout> {
+    pub fn new(width: u64) -> Self {
+        ProgressBar {
+            phantom: PhantomData,
+        }
+    }
+}
+#[cfg(not(feature = "pbr"))]
+impl<T: Write + Send + Sync> ProgressBar<T> {
+    pub fn on(write: T, total: u64) -> Self {
+        ProgressBar {
+            phantom: PhantomData,
+        }
+    }
+    pub fn add(&mut self, n: u64) {}
+    pub fn finish(&mut self) {}
+}

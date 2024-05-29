@@ -15,7 +15,6 @@ use crate::prelude::*;
 
 #[cfg(feature = "preview")]
 use minifb::{Scale, Window, WindowOptions};
-use pbr::ProgressBar;
 
 use rayon::iter::ParallelIterator;
 
@@ -588,8 +587,8 @@ mod test {
                     estimate2 +=
                         y_bar(sw.lambda * 10.0) * sw.energy / pdf_solid_angle_1 / wavelength_pdf;
                     let (px, py) = (
-                        (uv.0 * width as f32) as usize,
-                        (uv.1 * height as f32) as usize,
+                        (uv.0 * width as f32).clamp(0.0, (width - 1) as f32) as usize,
+                        (uv.1 * height as f32).clamp(0.0, (height - 1) as f32) as usize,
                     );
 
                     // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
@@ -698,8 +697,8 @@ mod test {
                 // sum += y_bar(sw.lambda * 10.0) * sw.energy;
                 estimate += y_bar(sw.lambda * 10.0) * sw.energy / wavelength_pdf;
                 let (px, py) = (
-                    (uv.0 * width as f32) as usize,
-                    (uv.1 * height as f32) as usize,
+                    (uv.0 * width as f32).clamp(0.0, (width - 1) as f32) as usize,
+                    (uv.1 * height as f32).clamp(0.0, (height - 1) as f32) as usize,
                 );
                 film.buffer[px + width * py] += XYZColor::from(sw) / wavelength_pdf / (*pdf + 0.01);
             }
