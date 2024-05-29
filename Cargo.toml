@@ -15,7 +15,7 @@ assigning_clones = "deny"
 [features]
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 color_grad = ["colorgrad"]
-default = ["realistic_camera", "build_raymarch"]
+default = ["realistic_camera", "sort_mesh_aabb_hits"]
 gui = ["eframe", "egui_extras", "egui", "egui_plot", "minifb"]
 notification = []
 preview = ["minifb"]
