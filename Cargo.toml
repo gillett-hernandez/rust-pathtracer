@@ -15,12 +15,18 @@ assigning_clones = "deny"
 [features]
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 color_grad = ["colorgrad"]
-default = ["realistic_camera", "sort_mesh_aabb_hits"]
+# for scenes with many non-dense meshes, disable sort_mesh_aabb_hits
+default = [
+    "realistic_camera",
+    "sort_mesh_aabb_hits",
+    "sort_accelerator_aabb_hits",
+]
 gui = ["eframe", "egui_extras", "egui", "egui_plot", "minifb"]
 notification = []
 preview = ["minifb"]
 realistic_camera = ["rust_optics"]
 sort_mesh_aabb_hits = []
+sort_accelerator_aabb_hits = []
 visualize_importance_map = ["minifb"]
 
 
