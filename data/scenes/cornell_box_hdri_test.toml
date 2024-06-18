@@ -5,8 +5,8 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 1.0
 [environment]
-type="HDRI"
-strength =1.0
+type = "HDRI"
+strength = 1.0
 texture_name = "machine_shop_4k"
 # [environment.importance_map]
 # # width = 2048
@@ -25,7 +25,6 @@ texture_name = "machine_shop_4k"
 # filename = "data/curves/csv/D65.csv"
 # column = 1
 # interpolation_mode = "Cubic"
-
 
 
 [[instances]]
@@ -85,7 +84,7 @@ two_sided = true
 
 [[cameras]]
 type = "SimpleCamera"
-name = "cornell camera"
+name = "main"
 look_from = [-5.0, 0.0, 0.0]
 look_at = [0.0, 0.0, 0.0]
 aperture_size = 0.02

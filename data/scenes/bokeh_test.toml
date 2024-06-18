@@ -5,11 +5,10 @@ meshes = "data/lib_meshes.toml"
 env_sampling_probability = 0.5
 
 [environment]
-type="HDRI"
+type = "HDRI"
 strength = 0.1
 texture_name = "autumn_park_8k"
 # texture_name = "moonlit_golf_8k"
-
 
 
 [[instances]]
@@ -670,10 +669,9 @@ origin = [0.5, 20.0, 0.0]
 
 [[cameras]]
 type = "SimpleCamera"
-name = "wideangle sun test camera"
+name = "main"
 look_from = [-5.0, 0.0, 0.5]
 look_at = [0.0, 0.0, 0.4]
 aperture_size = 0.1
 focal_distance = 5.0
 vfov = 45.0
-

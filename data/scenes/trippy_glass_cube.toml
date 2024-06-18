@@ -5,13 +5,11 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 1.0
 [environment]
-type="Sun"
+type = "Sun"
 strength = 0.01
 angular_diameter = 0.04
 sun_direction = [10.0, 0.0, 1.0]
 color = "D65"
-
-
 
 
 # [[instances]]
@@ -80,3 +78,12 @@ translate = [0.0, 0.0, -0.3]
 # [[instances.transform.rotation]]
 # axis = [1, 1, 0]
 # angle = 45.0
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [0.5, 0.0, 0.0]
+look_at = [0, 0, 0]
+aperture_size = 0.001
+focal_distance = 0.5
+vfov = 70.4

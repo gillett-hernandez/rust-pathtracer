@@ -23,11 +23,14 @@ use super::Config;
 #[serde(tag = "type")]
 pub enum ApertureData {
     Circular,
-    // only 6 blades are supported right now.
-    // sharpness should be between -2 and 2.3
-    // 2.3 is very close to a circular aperture
-    // -2 is something like a pointy star
-    Bladed { blades: u8, sharpness: f32 },
+    /// only 6 blades are supported right now.
+    /// sharpness should be between -2 and 2.3
+    /// 2.3 is very close to a circular aperture
+    /// -2 is something like a pointy star
+    Bladed {
+        blades: u8,
+        sharpness: f32,
+    },
 }
 
 #[cfg(feature = "realistic_camera")]

@@ -4,10 +4,9 @@ materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 env_sampling_probability = 0.0
 [environment]
-type="Constant"
+type = "Constant"
 strength = 0.0
 color = "D65"
-
 
 
 # floor on side
@@ -20,7 +19,7 @@ origin = [0.0, 0.0, 0.0]
 
 [[cameras]]
 type = "SimpleCamera"
-name = "cornell camera"
+name = "main"
 look_from = [-5.0, 0.0, 0.0]
 look_at = [0.0, 0.0, 0.0]
 aperture_size = 0.02

@@ -7,7 +7,7 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
-type="HDRI"
+type = "HDRI"
 strength = 0.1
 texture_name = "machine_shop_4k"
 
@@ -104,7 +104,6 @@ axis = [0.0, 1.0, 0.0]
 angle = -20.9
 
 
-
 [[instances]]
 material_name = "ggx_iron_roughness0_0002"
 [instances.aggregate]
@@ -118,3 +117,12 @@ translate = [0.0, 0.0, 0.0]
 [[instances.transform.rotate]]
 axis = [0.0, 1.0, 0.0]
 angle = -8.9
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [0.5, 0.0, 0.0]
+look_at = [0, 0, 0]
+aperture_size = 0.001
+focal_distance = 0.5
+vfov = 70.4

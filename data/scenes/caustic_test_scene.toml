@@ -28,7 +28,7 @@ name = "caustic_test_obj"
 
 [[cameras]]
 type = "SimpleCamera"
-name = "caustic test camera"
+name = "main"
 look_from = [18, 5, 3]
 look_at = [0.0, 0.0, -0.4]
 aperture_size = 0.03

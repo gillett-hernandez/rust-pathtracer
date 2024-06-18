@@ -31,3 +31,12 @@ material_name = "lambertian_white"
 type = "Sphere"
 radius = 1.0
 origin = [0.0, 0.0, 0.0]
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [-5.0, 0.0, 0.4]
+look_at = [0.0, 0.0, -0.7]
+aperture_size = 0.001
+focal_distance = 5.0
+vfov = 16.2

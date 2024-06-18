@@ -5,7 +5,7 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
-type="Sun"
+type = "Sun"
 strength = 0.0
 angular_diameter = 0.0565
 sun_direction = [0.0, 0.0, 1.0]
@@ -83,3 +83,12 @@ size = [20, 20]
 origin = [16.0, 0.0, 0.0]
 normal = "X"
 two_sided = true
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [0.5, 0.0, 0.0]
+look_at = [0, 0, 0]
+aperture_size = 0.001
+focal_distance = 0.5
+vfov = 70.4

@@ -94,7 +94,7 @@ impl Camera<f32, f32> for PanoramaCamera {
     }
     // returns None if the point on the lens was not from a valid pixel
     fn get_pixel_for_ray(&self, _ray: Ray, _lambda: f32) -> Option<(f32, f32)> {
-        // TODO
+        // TODO: implement this
         todo!()
     }
 
@@ -108,7 +108,7 @@ impl Camera<f32, f32> for PanoramaCamera {
         // pdf is projected solid angle wrt `to` point unless (from - self.origin).norm_squared() > self.radius * self.radius
         // if radius is very small, then the projected solid angle becomes very small
         // becomes a delta distribution
-        // TODO
+        // TODO: implement this
         todo!()
     }
 

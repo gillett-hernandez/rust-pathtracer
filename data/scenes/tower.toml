@@ -5,12 +5,11 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.7
 [environment]
-type="Sun"
+type = "Sun"
 strength = 0.1
 angular_diameter = 0.1
 sun_direction = [0.0, 1.0, 1.0]
 color = "D65"
-
 
 
 [[instances]]
@@ -32,7 +31,7 @@ name = "tower"
 
 [[cameras]]
 type = "SimpleCamera"
-name = "tower camera"
+name = "main"
 look_from = [-3.5, -3.5, 0.0]
 look_at = [0, 0, 100]
 aperture_size = 0.01

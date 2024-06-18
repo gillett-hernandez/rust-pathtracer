@@ -5,10 +5,9 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
-type="Constant"
+type = "Constant"
 strength = 0.00000
 color = "D65"
-
 
 
 [[instances]]
@@ -66,8 +65,6 @@ normal = "X"
 two_sided = true
 
 
-
-
 # sphere on top
 [[instances]]
 material_name = "ggx_glass_dispersive"
@@ -75,7 +72,6 @@ material_name = "ggx_glass_dispersive"
 type = "Sphere"
 radius = 0.3
 origin = [0.1, 0.1, -0.15]
-
 
 
 # [[instances]]
@@ -87,7 +83,7 @@ origin = [0.1, 0.1, -0.15]
 
 [[cameras]]
 type = "SimpleCamera"
-name = "cornell camera"
+name = "main"
 look_from = [-5.0, 0.0, 0.0]
 look_at = [0.0, 0.0, 0.0]
 aperture_size = 0.02

@@ -5,7 +5,7 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
-type="Constant"
+type = "Constant"
 strength = 1.0
 color = "simple_sky_blue"
 
@@ -16,7 +16,6 @@ material_name = "diffuse_light_flat_x10"
 type = "Sphere"
 radius = 5.0
 origin = [3.0, -6.0, 8.0]
-
 
 
 # colored spheres
@@ -57,3 +56,12 @@ size = [40, 40]
 origin = [0.0, 0.0, -0.5]
 normal = "Z"
 two_sided = true
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [0.5, 0.0, 0.0]
+look_at = [0, 0, 0]
+aperture_size = 0.001
+focal_distance = 0.5
+vfov = 70.4

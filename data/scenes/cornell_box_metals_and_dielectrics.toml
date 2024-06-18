@@ -6,19 +6,17 @@ meshes = "data/lib_meshes.toml"
 env_sampling_probability = 0.9
 
 [environment]
-type="HDRI"
-strength =0.4
+type = "HDRI"
+strength = 0.4
 texture_name = "kiara_dawn_8k"
 [[environment.rotation]]
-axis=[0, 0, 1]
-angle=140
+axis = [0, 0, 1]
+angle = 140
 [environment.importance_map]
 # width = 2048
 # height = 2048
 width = 512
 height = 512
-
-
 
 
 [[instances]]
@@ -125,7 +123,7 @@ origin = [-0.51, -0.71, -0.79]
 
 [[cameras]]
 type = "SimpleCamera"
-name = "cornell camera"
+name = "main"
 look_from = [-5.0, 0.0, 0.0]
 look_at = [0.0, 0.0, 0.0]
 aperture_size = 0.02

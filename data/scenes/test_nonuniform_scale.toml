@@ -5,7 +5,7 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.9
 [environment]
-type="HDRI"
+type = "HDRI"
 strength = 1.0
 texture_name = "autumn_park_8k"
 [environment.importance_map]
@@ -27,3 +27,12 @@ translate = [0.0, 0.0, 0.0]
 [[instances.transform.rotate]]
 axis = [1.0, 0.0, 0.0]
 angle = 20
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [0.5, 0.0, 0.0]
+look_at = [0, 0, 0]
+aperture_size = 0.001
+focal_distance = 0.5
+vfov = 70.4

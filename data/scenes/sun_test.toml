@@ -4,12 +4,11 @@ materials = "data/lib_materials.toml"
 meshes = "data/lib_meshes.toml"
 env_sampling_probability = 0.5
 [environment]
-type="Sun"
+type = "Sun"
 strength = 0.4
 angular_diameter = 0.0565
 sun_direction = [1.0, 0.0, 1.0]
 color = "D65"
-
 
 
 # # light above
@@ -91,3 +90,12 @@ type = "Sphere"
 radius = 0.2
 origin = [0.6, -0.8, -0.8]
 
+
+[[cameras]]
+type = "SimpleCamera"
+name = "main"
+look_from = [-5.0, 0.0, 0.4]
+look_at = [0.0, 0.0, -0.7]
+aperture_size = 0.001
+focal_distance = 5.0
+vfov = 16.2
