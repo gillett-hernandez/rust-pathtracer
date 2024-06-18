@@ -174,6 +174,7 @@ impl Iterator for TileIndicesIter {
 }
 
 pub struct Tiles<'a> {
+    #[cfg(feature = "preview")]
     film: &'a mut Vec2D<XYZColor>,
     tiles: Vec<Tile<XYZColor>>,
 }
