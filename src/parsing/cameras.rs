@@ -108,17 +108,17 @@ impl CameraData {
 
 pub fn parse_cameras(config: &mut Config, camera_data: Vec<CameraData>) -> Vec<CameraEnum> {
     let mut cameras: Vec<CameraEnum> = Vec::new();
-    let mut camera_map: HashMap<String, CameraEnum> = HashMap::new();
-    let mut camera_ids = Vec::new();
+    let mut camera_names_to_cameras: HashMap<String, CameraEnum> = HashMap::new();
+    let mut camera_names = Vec::new();
 
     for settings in config.render_settings.iter() {
-        if !camera_ids.contains(&settings.camera_id) {
-            camera_ids.push(settings.camera_id.clone());
+        if !camera_names.contains(&settings.camera_id) {
+            camera_names.push(settings.camera_id.clone());
         }
     }
 
     for camera_config in &camera_data {
-        if !camera_ids.contains(&camera_config.get_name().to_owned()) {
+        if !camera_names.contains(&camera_config.get_name().to_owned()) {
             continue;
         }
         let (name, camera): (String, CameraEnum) = match camera_config {
@@ -178,14 +178,14 @@ pub fn parse_cameras(config: &mut Config, camera_data: Vec<CameraData>) -> Vec<C
                 )
             }
         };
-        camera_map.insert(name, camera);
+        camera_names_to_cameras.insert(name, camera);
     }
     for render_settings in &config.render_settings {
         config
             .camera_names_to_index
             .insert(render_settings.camera_id.clone(), cameras.len());
 
-        let camera = camera_map[&render_settings.camera_id]
+        let camera = camera_names_to_cameras[&render_settings.camera_id]
             .clone()
             .with_aspect_ratio(
                 render_settings.resolution.width as f32 / render_settings.resolution.height as f32,
