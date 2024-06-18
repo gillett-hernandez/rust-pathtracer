@@ -657,7 +657,7 @@ mod test {
         wi_s.push(Vec3::new(0.8, -0.1, -0.49).normalized());
 
         if test_many {
-            for _ in 0..100000 {
+            for _ in 0..1000000 {
                 wi_s.push(random_on_unit_sphere(sampler.draw_2d()));
             }
         }
@@ -701,6 +701,7 @@ mod test {
         println!("{} succeeded, {} failed", succeeded, wi_s.len() - succeeded);
         let wi = Vec3::new(0.9709351, 0.18724124, 0.14908342);
         let wo = Vec3::new(-0.008856451, 0.6295874, -0.7768792);
+
         let (orig_f, orig_pdf) = ggx_glass.bsdf(
             fake_hit_record.lambda,
             fake_hit_record.uv,
@@ -758,6 +759,7 @@ mod test {
         );
     }
 
+    // TODO: debug this failure case
     #[test]
     fn test_failure_case() {
         let lambda = 762.2971;
@@ -770,6 +772,7 @@ mod test {
         println!("{:?} {:?}", f, pdf);
     }
     //wi: Vec3(f32x4(0.48507738, 0.4317013, -0.76048267, -0.0)), wo: Vec3(f32x4(-0.7469567, -0.66481555, 0.00871551, 0.0))
+    // TODO: debug this failure case
     #[test]
     fn test_failure_case2() {
         let lambda = 500.0;
@@ -778,6 +781,24 @@ mod test {
         // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
         let wi = Vec3::new(0.48507738, 0.4317013, -0.76048267);
         let wo = Vec3::new(-0.7469567, -0.66481555, 0.00871551);
+
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
+        println!("normal   {:?} {:?}", f, pdf);
+        let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wo, wi);
+        println!("reversed {:?} {:?}", f, pdf);
+    }
+
+    // Vec3(0.95028764, -0.24520797, 0.19190234), wo: Vec3(-0.19736944, 0.961363, -0.19190234)
+    // TODO: debug this failure case
+    #[test]
+    fn test_failure_case3() {
+        let lambda = 500.0;
+        let ggx_glass = ggx_glass(0.01);
+
+        // let mut sampler: Box<dyn Sampler> = Box::new(StratifiedSampler::new(20, 20, 10));
+
+        let wi = Vec3::new(0.95028764, -0.24520797, 0.19190234);
+        let wo = Vec3::new(-0.19736944, 0.961363, -0.19190234);
 
         let (f, pdf) = ggx_glass.bsdf(lambda, UV(0.0, 0.0), TransportMode::Importance, wi, wo);
         println!("normal   {:?} {:?}", f, pdf);

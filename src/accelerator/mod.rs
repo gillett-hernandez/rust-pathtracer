@@ -106,13 +106,15 @@ impl Accelerator {
             }
             Accelerator::BVH { instances, bvh } => {
                 // trace!("BVH:  calling hit with {:?}, {}, {}", r, t0, t1);
-                let possible_hit_instances = bvh.traverse(&r, instances);
-                // possible_hit_instances.sort_unstable_by(|a, b| {
-                //     // let hit0_t1 = a.2;
-                //     // let hit1_t1 = b.2;
-                //     // let sign = (hit1_t1-hit0_t1).signum();
-                //     (a.2).partial_cmp(&b.2).unwrap()
-                // });
+                let mut possible_hit_instances = bvh.traverse(&r, instances);
+
+                #[cfg(feature = "sort_accelerator_aabb_hits")]
+                possible_hit_instances.sort_unstable_by(|a, b| {
+                    // let hit0_t1 = a.2;
+                    // let hit1_t1 = b.2;
+                    // let sign = (hit1_t1-hit0_t1).signum();
+                    (a.1).partial_cmp(&b.1).unwrap()
+                });
                 // let mut closest_so_far: f32 = t1;
                 // debug_assert!(!t1.is_nan());
                 // let mut hit_record: Option<HitRecord> = None;
@@ -148,11 +150,16 @@ impl Accelerator {
                     }
 
                     let tmp_hit_record = instance.hit(r, t0, closest_so_far);
-                    // trace!(
-                    //     "instance {} hit: {:?}",
-                    //     instance.instance_id,
-                    //     tmp_hit_record
-                    // );
+                    #[cfg(feature = "sort_accelerator_aabb_hits")]
+                    if t0_aabb_hit > closest_so_far && hit_record.is_some() {
+                        // break iteration since we have a closest hit and all other tri AABBs are after this
+                        break;
+                    }
+                    #[cfg(not(feature = "sort_accelerator_aabb_hits"))]
+                    if t0_aabb_hit > closest_so_far {
+                        // ignore aabb hit that happened after closest so far
+                        continue;
+                    }
                     if let Some(hit) = &tmp_hit_record {
                         closest_so_far = hit.time;
                         hit_record = tmp_hit_record;

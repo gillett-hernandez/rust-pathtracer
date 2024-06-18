@@ -14,13 +14,11 @@ use root::world::*;
 #[macro_use]
 extern crate tracing;
 
-use tracing::level_filters::LevelFilter;
-use tracing::Level;
-use tracing_subscriber::FmtSubscriber;
-
 use std::fs;
-use std::fs::File;
 use std::path::PathBuf;
+use std::{fs::File, sync::Arc};
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::prelude::*;
 
 use structopt::StructOpt;
 
@@ -74,9 +72,6 @@ fn main() {
     let opts = Opt::from_args();
     let stdout_log_level = parse_level_filter(opts.stdout_log_level, LevelFilter::WARN);
     let write_log_level = parse_level_filter(opts.write_log_level, LevelFilter::INFO);
-
-    use std::{fs::File, sync::Arc};
-    use tracing_subscriber::prelude::*;
 
     // A layer that logs events to stdout using the human-readable "pretty"
     // format.

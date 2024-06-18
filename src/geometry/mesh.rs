@@ -316,16 +316,17 @@ impl Hittable for Mesh {
         let mut possible_hit_triangles = bvh.traverse(&r, self.triangles.as_ref().unwrap());
         // maybe sort AABB intersections so that the earliest aabb hit end is first.
         // TODO: run a performance test to see if doing this speeds up renders with meshs
-        if cfg!(feature = "sort_mesh_aabb_hits") {
-            possible_hit_triangles.sort_unstable_by(
-                |(_, _, aabb_hit_end_time0), (_, _, aabb_hit_end_time1)| {
-                    // let hit0_t1 = a.2;
-                    // let hit1_t1 = b.2;
-                    // let sign = (hit1_t1-hit0_t1).signum();
-                    PartialOrd::partial_cmp(aabb_hit_end_time0, aabb_hit_end_time1).unwrap()
-                },
-            );
-        }
+
+        #[cfg(feature = "sort_mesh_aabb_hits")]
+        possible_hit_triangles.sort_unstable_by(
+            |(_, aabb_hit_start0, _aabb_hit_end0), (_, aabb_hit_start1, _aabb_hit_end1)| {
+                // let hit0_t1 = a.2;
+                // let hit1_t1 = b.2;
+                // let sign = (hit1_t1-hit0_t1).signum();
+                PartialOrd::partial_cmp(aabb_hit_start0, aabb_hit_start1).unwrap()
+            },
+        );
+
         let mut closest_so_far: f32 = t1;
         let mut hit_record: Option<HitRecord> = None;
         for (tri, t0_aabb_hit, t1_aabb_hit) in possible_hit_triangles {
@@ -333,6 +334,12 @@ impl Hittable for Mesh {
                 // if bounding box hit was outside of hit time bounds
                 continue;
             }
+            #[cfg(feature = "sort_mesh_aabb_hits")]
+            if t0_aabb_hit > closest_so_far && hit_record.is_some() {
+                // break iteration since we have a closest hit and all other tri AABBs are after this
+                break;
+            }
+            #[cfg(not(feature = "sort_mesh_aabb_hits"))]
             if t0_aabb_hit > closest_so_far {
                 // ignore aabb hit that happened after closest so far
                 continue;

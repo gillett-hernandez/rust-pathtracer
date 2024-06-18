@@ -22,7 +22,6 @@ use std::time::{Duration, Instant};
 
 // use crossbeam::channel::unbounded;
 // use crossbeam::channel::bounded;
-use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
 
 #[derive(Default, Copy, Clone)]
@@ -175,6 +174,7 @@ impl Iterator for TileIndicesIter {
 }
 
 pub struct Tiles<'a> {
+    #[cfg(feature = "preview")]
     film: &'a mut Vec2D<XYZColor>,
     tiles: Vec<Tile<XYZColor>>,
 }

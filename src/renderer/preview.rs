@@ -19,7 +19,6 @@ use std::time::{Duration, Instant};
 
 use crossbeam::channel::unbounded;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
-use pbr::ProgressBar;
 
 #[cfg(feature = "preview")]
 use minifb::{Key, Scale, Window, WindowOptions};

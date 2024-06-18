@@ -140,7 +140,7 @@ pub fn parse_environment(
                             let is_baked = unbaked.bake_in_place(&texture, BOUNDED_VISIBLE_RANGE);
                             assert!(is_baked);
                             let baked = unbaked;
-                            let res = baked.save_baked(&path);
+                            let res = baked.save_baked(path.clone());
                             if res.is_err() {
                                 let e = res.unwrap_err();
                                 error!(

@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     /* io::{Read, Write}, */
-    path::{Path /* , PathBuf */},
+    path::{Path, PathBuf /* , PathBuf */},
     sync::Arc,
 };
 
@@ -15,7 +15,6 @@ use crate::prelude::*;
 
 #[cfg(feature = "preview")]
 use minifb::{Scale, Window, WindowOptions};
-use pbr::ProgressBar;
 
 use rayon::iter::ParallelIterator;
 
@@ -249,21 +248,37 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
-    pub fn save_baked<P: AsRef<Path>>(&self, filepath: P) -> anyhow::Result<()> {
+    pub fn save_baked(&self, filepath: PathBuf) -> anyhow::Result<()> {
         match &self {
             ImportanceMap::Baked { .. } => {
-                let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
+                let filepath_as_str = filepath.file_name().unwrap().to_string_lossy();
                 warn!(
                     "serializing importance map, which has an in-memory size of {} bytes to path {}",
                     self.deep_size_of(), filepath_as_str
                 );
 
-                let file = File::create(filepath.as_ref()).context(format!(
-                    "failed to create file {:?}",
-                    filepath.as_ref().to_string_lossy()
-                ))?;
-                bincode::serialize_into(file, self)
-                    .context("failed to bincode-serialize data to disk")?;
+                let cloned_filepath = filepath.clone();
+                let clone = self.clone();
+
+                // intentionally not joining, the thread should finish or panic eventually.
+                let _join_handle = std::thread::spawn(move || {
+                    let timestamp = std::time::Instant::now();
+                    let Ok(file) = File::create(&cloned_filepath).context(format!(
+                        "failed to create file {:?}",
+                        cloned_filepath.to_string_lossy()
+                    )) else {
+                        return;
+                    };
+                    let Ok(_) = bincode::serialize_into(file, &clone)
+                        .context("failed to bincode-serialize data to disk")
+                    else {
+                        return;
+                    };
+                    warn!(
+                        "serialized importance map, took {}s",
+                        timestamp.elapsed().as_millis() as f32 / 1000.0
+                    );
+                });
 
                 Ok(())
             }
@@ -273,17 +288,25 @@ impl ImportanceMap {
             }
         }
     }
-    pub fn load_baked<P: AsRef<Path>>(filepath: P) -> anyhow::Result<Self> {
+    pub fn load_baked<P>(filepath: P) -> anyhow::Result<Self>
+    where
+        P: AsRef<Path> + std::fmt::Debug,
+    {
         let filepath_as_str = filepath.as_ref().file_name().unwrap().to_string_lossy();
 
         warn!("deserializing importance map from {}", filepath_as_str);
 
+        let timestamp = std::time::Instant::now();
         let file = File::open(filepath.as_ref()).context(format!(
             "failed to open file {:?}",
             filepath.as_ref().to_string_lossy()
         ))?;
         let map: ImportanceMap = bincode::deserialize_from::<_, ImportanceMap>(file)?;
 
+        info!(
+            "deserialized struct through bincode to disk in {}s",
+            timestamp.elapsed().as_millis() as f32 / 1000.0
+        );
         warn!(
             "success! importance map now has an in-memory size of {} bytes",
             map.deep_size_of()
@@ -570,8 +593,8 @@ mod test {
                     estimate2 +=
                         y_bar(sw.lambda * 10.0) * sw.energy / pdf_solid_angle_1 / wavelength_pdf;
                     let (px, py) = (
-                        (uv.0 * width as f32) as usize,
-                        (uv.1 * height as f32) as usize,
+                        (uv.0 * width as f32).clamp(0.0, (width - 1) as f32) as usize,
+                        (uv.1 * height as f32).clamp(0.0, (height - 1) as f32) as usize,
                     );
 
                     // film.buffer[px + width * py] += XYZColor::from(sw) / (pdf.0 + 0.01) / wavelength_pdf;
@@ -685,8 +708,8 @@ mod test {
                 // sum += y_bar(sw.lambda * 10.0) * sw.energy;
                 estimate += y_bar(sw.lambda * 10.0) * sw.energy / wavelength_pdf;
                 let (px, py) = (
-                    (uv.0 * width as f32) as usize,
-                    (uv.1 * height as f32) as usize,
+                    (uv.0 * width as f32).clamp(0.0, (width - 1) as f32) as usize,
+                    (uv.1 * height as f32).clamp(0.0, (height - 1) as f32) as usize,
                 );
                 film.buffer[px + width * py] += XYZColor::from(sw) / wavelength_pdf / (*pdf + 0.01);
             }
