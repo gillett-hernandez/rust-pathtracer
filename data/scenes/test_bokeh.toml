@@ -670,8 +670,10 @@ origin = [0.5, 20.0, 0.0]
 [[cameras]]
 type = "SimpleCamera"
 name = "main"
-look_from = [-5.0, 0.0, 0.5]
-look_at = [0.0, 0.0, 0.4]
-aperture_size = 0.1
+look_from = [0.0, -5.0, 0.5]
+look_at = [0.0, 0.0, 0.2]
+lens_diameter = 0.1
+aperture_diameter = 0.1
+aperture = {type = "Bladed", blades = 3, sharpness = 0.5}
 focal_distance = 5.0
 vfov = 45.0

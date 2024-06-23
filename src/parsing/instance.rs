@@ -21,10 +21,19 @@ pub struct AxisAngleData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Transform3Data {
     pub scale: Option<Vec3Data>,            // scale
     pub rotate: Option<Vec<AxisAngleData>>, // axis angle
     pub translate: Option<Vec3Data>,        // translation
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct InstanceData {
+    pub aggregate: AggregateData,
+    pub transform: Option<Transform3Data>,
+    pub material_name: Option<String>,
 }
 
 impl From<Transform3Data> for Transform3 {
@@ -58,13 +67,6 @@ impl From<Transform3Data> for Transform3 {
         });
         Transform3::from_stack(maybe_scale, maybe_rotate, maybe_translate)
     }
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct InstanceData {
-    pub aggregate: AggregateData,
-    pub transform: Option<Transform3Data>,
-    pub material_name: Option<String>,
 }
 
 pub fn parse_instance(

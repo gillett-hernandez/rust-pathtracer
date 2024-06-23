@@ -12,6 +12,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct DomainMapping {
     pub x_offset: Option<f32>,
     pub x_scale: Option<f32>,
@@ -41,6 +42,7 @@ impl Default for DomainMapping {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
+#[serde(deny_unknown_fields)]
 pub enum CurveData {
     Blackbody {
         temperature: f32,

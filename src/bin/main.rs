@@ -16,10 +16,12 @@ extern crate tracing;
 
 use std::fs;
 use std::path::PathBuf;
+use std::thread::JoinHandle;
 use std::{fs::File, sync::Arc};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::prelude::*;
 
+// TODO: switch to clap
 use structopt::StructOpt;
 
 #[cfg(all(target_os = "windows", feature = "notification"))]
@@ -32,18 +34,29 @@ use win32_notification::NotificationBuilder;
 struct Opt {
     #[structopt(long)]
     pub scene: Option<String>,
+
     #[structopt(long, default_value = "data/config.toml")]
     pub config: String,
+
     #[structopt(short = "n", long)]
     pub dry_run: bool,
-    #[structopt(short = "pll", long, default_value = "warn")]
+
+    #[structopt(long, default_value = "warn")]
     pub stdout_log_level: String,
-    #[structopt(short = "wll", long, default_value = "info")]
+
+    #[structopt(long, default_value = "info")]
     pub write_log_level: String,
 }
 
-fn construct_scene(config: &mut Config) -> anyhow::Result<World> {
-    construct_world(config, PathBuf::from(config.scene_file.clone()))
+fn construct_scene(
+    config: &mut Config,
+    mut handles: &mut Vec<JoinHandle<()>>,
+) -> anyhow::Result<World> {
+    construct_world(
+        config,
+        PathBuf::from(config.scene_file.clone()),
+        &mut handles,
+    )
 }
 
 fn construct_renderer(config: &Config) -> Box<dyn Renderer> {
@@ -128,12 +141,21 @@ fn main() {
     toml_config.default_scene_file = opts.scene.unwrap_or(toml_config.default_scene_file);
 
     let mut config = Config::from(toml_config);
-    let world = construct_scene(&mut config);
+
+    let mut handles = Vec::new();
+    let world = construct_scene(&mut config, &mut handles);
     if world.is_err() {
-        error!(
-            "fatal error parsing world, aborting. error is {:?}",
-            world.err().unwrap()
-        );
+        let as_error = world.unwrap_err();
+        // error!(
+        //     "fatal error parsing world, aborting. error is {:?}",
+        //     as_error
+        // );
+        for frame in as_error.chain() {
+            error!("{}", frame);
+        }
+        for handle in handles {
+            let _ = handle.join();
+        }
         return;
     }
 
@@ -156,6 +178,9 @@ fn main() {
     {
         if opts.dry_run {
             // don't send notification if it's a dry run, since no rendering occurred
+            for handle in handles {
+                let _ = handle.join();
+            }
             return;
         }
         let notification = NotificationBuilder::new()
@@ -169,5 +194,8 @@ fn main() {
         notification
             .delete()
             .expect("Failed to delete notification");
+    }
+    for handle in handles {
+        let _ = handle.join();
     }
 }

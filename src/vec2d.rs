@@ -13,7 +13,7 @@ impl From<UV> for (f32, f32) {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Vec2D<T> {
     pub buffer: Vec<T>,
     pub width: usize,

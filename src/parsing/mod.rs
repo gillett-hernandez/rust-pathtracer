@@ -1,4 +1,6 @@
+use crate::materials::MaterialTable;
 use crate::mediums::MediumEnum;
+use crate::mediums::MediumTable;
 use crate::prelude::*;
 
 use crate::accelerator::AcceleratorType;
@@ -9,13 +11,13 @@ use crate::world::World;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::error::Error;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::thread::JoinHandle;
 
 pub mod cameras;
 pub mod config;
@@ -52,22 +54,6 @@ use self::primitives::{AggregateData, MeshRef};
 pub type Vec3Data = [f32; 3];
 pub type Point3Data = [f32; 3];
 
-macro_rules! unpack_or_LaP {
-    ($e:expr, $($message: tt)*) => {
-        match $e {
-            Ok(inner) => inner,
-            Err(err) => {
-                error!($($message)*);
-                error!("{:?}", err.to_string());
-                // if let Some(backtrace) = err.backtrace() {
-                //     error!("{:?}", backtrace);
-                // }
-                panic!()
-            }
-        }
-    };
-}
-
 macro_rules! generate_maybe_libs {
     ($($e:ident),+) => {
         $(
@@ -85,8 +71,7 @@ macro_rules! generate_maybe_libs {
                         match self {
                             Self::Literal(data) => data,
                             Self::Path(path) =>
-                                unpack_or_LaP!(load_arbitrary(PathBuf::from(path.clone())), "failed to resolve path {}", path)
-
+                                load_arbitrary(PathBuf::from(path.clone())).context(format!("failed to resolve path {}", path)).unwrap()
                         }
                     }
                 }
@@ -103,6 +88,7 @@ generate_maybe_libs! {Curve, TextureStack, Material, Mesh, Medium}
 // verify how much arcs mess with performance compared to unsafe raw ptr access
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct SceneData {
     pub env_sampling_probability: Option<f32>,
     pub environment: EnvironmentData,
@@ -115,7 +101,7 @@ pub struct SceneData {
     pub cameras: Vec<CameraData>,
 }
 
-pub fn load_arbitrary<T: AsRef<Path>, O>(filepath: T) -> Result<O, Box<dyn Error>>
+pub fn load_arbitrary<T: AsRef<Path>, O>(filepath: T) -> anyhow::Result<O>
 where
     O: DeserializeOwned,
 {
@@ -148,6 +134,7 @@ pub fn load_scene<T: AsRef<Path>>(filepath: T) -> anyhow::Result<SceneData> {
 pub fn construct_world<P: AsRef<Path>>(
     mut config: &mut Config,
     scene_file: P,
+    mut handles: &mut Vec<JoinHandle<()>>,
 ) -> anyhow::Result<World> {
     // layout of this function:
     // parse scene data from file
@@ -164,7 +151,7 @@ pub fn construct_world<P: AsRef<Path>>(
 
     // parse scene from disk
 
-    let scene = unpack_or_LaP!(load_scene(scene_file), "failed to resolve scene file");
+    let scene = load_scene(scene_file).context("failed to resolve scene file")?;
 
     // collect information from instances, materials, and env map data to determine what textures and materials actually need to be parsed and what can be discarded.
 
@@ -379,8 +366,14 @@ pub fn construct_world<P: AsRef<Path>>(
     }
 
     // parse enviroment
-    let environment = parse_environment(scene.environment, &curves, &textures_map, &mauve)
-        .context("failed to parse environment")?;
+    let environment = parse_environment(
+        scene.environment,
+        &curves,
+        &textures_map,
+        &mauve,
+        &mut handles,
+    )
+    .context("failed to parse environment")?;
 
     // parse mediums from disk or from literal
     let mut mediums_map: HashMap<String, _> = HashMap::new();
@@ -548,8 +541,8 @@ pub fn construct_world<P: AsRef<Path>>(
 
     let world = World::new(
         instances,
-        materials,
-        mediums,
+        MaterialTable(materials),
+        MediumTable(mediums),
         environment,
         cameras,
         scene.env_sampling_probability.unwrap_or(0.5),
@@ -627,13 +620,15 @@ mod test {
     #[test]
     fn test_parsing_complex_scene() {
         let mut default_config = Config::load_default();
+        let mut handles = Vec::new();
         let world = construct_world(
             &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
+            &mut handles,
         )
         .unwrap();
         println!("constructed world");
-        for mat in &world.materials {
+        for mat in &*world.materials {
             let name = match mat {
                 MaterialEnum::DiffuseLight(_) => "diffuse_light",
                 MaterialEnum::Lambertian(_) => "lambertian",
@@ -648,9 +643,11 @@ mod test {
     #[test]
     fn test_world() {
         let mut default_config = Config::load_default();
+        let mut handles = Vec::new();
         let _world = construct_world(
             &mut default_config,
             PathBuf::from("data/scenes/test_prism.toml"),
+            &mut handles,
         )
         .unwrap();
     }

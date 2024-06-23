@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PassthroughFilter {
     pub color: Curve,
     pub outer_medium_id: MediumId,

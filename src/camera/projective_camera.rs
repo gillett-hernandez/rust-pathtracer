@@ -1,3 +1,6 @@
+use optics::aperture::ApertureSample;
+use optics::ApertureEnum;
+
 use crate::geometry::*;
 use crate::prelude::*;
 
@@ -5,19 +8,19 @@ use crate::prelude::*;
 pub struct ProjectiveCamera {
     pub origin: Point3,
     pub direction: Vec3,
-    // half_height: f32,
-    // half_width: f32,
-    focal_distance: f32,
-    lower_left_corner: Point3,
     vfov: f32,
+    focal_distance: f32, // in meters
     pub lens: Instance,
-    pub horizontal: Vec3,
-    pub vertical: Vec3,
+    aspect_ratio: f32,
     u: Vec3,
     v: Vec3,
     w: Vec3,
     // TODO: change this to aperture from rust_optics crate
-    aperture_radius: f32,
+    pub aperture_diameter: f32,
+    pub aperture: ApertureEnum,
+    lower_left_corner: Point3,
+    vertical: Vec3,
+    horizontal: Vec3,
 }
 
 impl ProjectiveCamera {
@@ -27,10 +30,11 @@ impl ProjectiveCamera {
         v_up: Vec3,
         vertical_fov: f32, // vertical_fov should be given in degrees, since it is converted to radians
         focal_distance: f32,
-        aperture: f32,
+        lens_diameter: f32,
+        aperture_diameter: f32,
+        aperture: ApertureEnum,
     ) -> ProjectiveCamera {
         let direction = (look_at - look_from).normalized();
-        let lens_radius = aperture / 2.0;
         let theta: f32 = vertical_fov.to_radians();
         let half_height = (theta / 2.0).tan();
         let half_width = 1.0 * half_height;
@@ -44,10 +48,10 @@ impl ProjectiveCamera {
         let w = -direction;
         let u = -v_up.cross(w).normalized();
         let v = w.cross(u).normalized();
-        // println!(
-        //     "constructing camera with point, direction, and uvw = {:?} {:?} {:?} {:?} {:?}",
-        //     look_from, direction, u, v, w
-        // );
+        info!(
+            "constructing camera with point, direction, and uvw = {:?} {:?} {:?} {:?} {:?}",
+            look_from, direction, u, v, w
+        );
 
         let transform = Transform3::from_stack(
             None,
@@ -56,6 +60,7 @@ impl ProjectiveCamera {
         )
         .inverse();
 
+        let lens_radius = lens_diameter / 2.0;
         if lens_radius == 0.0 {
             warn!("Warn: lens radius is 0.0");
         }
@@ -63,26 +68,28 @@ impl ProjectiveCamera {
         ProjectiveCamera {
             origin: look_from,
             direction,
-            // half_height,
-            // half_width,
-            focal_distance,
+            vfov: vertical_fov,
+            aspect_ratio,
+            lens: Instance::new(
+                Aggregate::from(Disk::new(lens_radius, Point3::ORIGIN, true)),
+                Some(transform),
+                // use some placeholder ids, to be overwritten later when the world is constructed
+                Some(MaterialId::Camera(0)),
+                0,
+            ),
+            u,
+            v,
+            w,
             lower_left_corner: look_from
                 - u * half_width * focal_distance
                 - v * half_height * focal_distance
                 - w * focal_distance,
-            vfov: vertical_fov,
-            lens: Instance::new(
-                Aggregate::from(Disk::new(lens_radius, Point3::ORIGIN, true)),
-                Some(transform),
-                Some(MaterialId::Camera(0)),
-                0,
-            ),
             horizontal: u * 2.0 * half_width * focal_distance,
             vertical: v * 2.0 * half_height * focal_distance,
-            u,
-            v,
-            w,
-            aperture_radius: aperture / 2.0,
+
+            aperture_diameter,
+            aperture,
+            focal_distance,
         }
     }
     pub fn get_surface(&self) -> Option<&Instance> {
@@ -91,9 +98,15 @@ impl ProjectiveCamera {
 }
 
 impl Camera<f32, f32> for ProjectiveCamera {
-    fn get_ray(&self, sampler: &mut Box<dyn Sampler>, _lambda: f32, u: f32, v: f32) -> (Ray, f32) {
-        // circular aperture/lens
-        let rd: Vec3 = self.aperture_radius * random_in_unit_disk(sampler.draw_2d());
+    fn get_ray(&self, sampler: &mut Box<dyn Sampler>, lambda: f32, u: f32, v: f32) -> (Ray, f32) {
+        let vec: Vec3 = loop {
+            if let Ok(p) = self.aperture.sample(sampler.draw_2d()) {
+                break p;
+            }
+        }
+        .into();
+        let rd = self.aperture_diameter * vec;
+
         let offset = self.u * rd.x() + self.v * rd.y();
         let ray_origin: Point3 = self.origin + offset;
 
@@ -195,6 +208,7 @@ unsafe impl Sync for ProjectiveCamera {}
 mod tests {
     use super::*;
     use math::prelude::*;
+    use optics::CircularAperture;
 
     #[test]
     fn test_camera() {
@@ -205,6 +219,8 @@ mod tests {
             35.2,
             5.0,
             0.08,
+            0.08,
+            ApertureEnum::CircularAperture(CircularAperture::default()),
         )
         .with_aspect_ratio(0.6);
         let s = debug_random();
@@ -231,6 +247,8 @@ mod tests {
             35.2,
             5.0,
             0.08,
+            0.08,
+            ApertureEnum::CircularAperture(CircularAperture::default()),
         )
         .with_aspect_ratio(width as f32 / height as f32);
         let px = (0.99 * width) as usize;
@@ -265,6 +283,8 @@ mod tests {
             27.0,
             5.0,
             0.08,
+            0.08,
+            ApertureEnum::CircularAperture(CircularAperture::default()),
         )
         .with_aspect_ratio(0.6);
 

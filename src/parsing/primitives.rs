@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct DiskData {
     pub radius: f32,
     pub origin: Point3Data,
@@ -15,12 +16,14 @@ pub struct DiskData {
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct SphereData {
     pub radius: f32,
     pub origin: Point3Data,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct RectData {
     pub size: (f32, f32),
     pub normal: Axis,
@@ -29,6 +32,7 @@ pub struct RectData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct MeshRef {
     pub name: String,
     pub index: Option<usize>,

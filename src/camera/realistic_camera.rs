@@ -164,7 +164,7 @@ impl Camera<f32, f32> for RealisticCamera {
                 self.lens_zoom,
                 Input::new(ray, lambda / 1000.0),
                 1.0,
-                |e| (self.aperture.intersects(self.aperture_radius, e), false),
+                |e| (self.aperture.is_rejected(self.aperture_radius, e.origin), false),
                 drop,
             );
             if let Some(Output {

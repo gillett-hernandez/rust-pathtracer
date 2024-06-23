@@ -13,7 +13,7 @@ pub fn phase_hg(cos_theta: f32, g: f32) -> f32 {
     );
     (1.0 - g * g) / (denom * denom.sqrt() * 2.0 * std::f32::consts::TAU)
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HenyeyGreensteinHomogeneous {
     // domain: visible range
     // range: 0..2

@@ -435,7 +435,8 @@ fn main() {
     // )
 
     let scene_file_path = config.scene_file.clone();
-    let world = construct_world(&mut config, PathBuf::from(scene_file_path)).unwrap();
+    let mut handles = Vec::new();
+    let world = construct_world(&mut config, PathBuf::from(scene_file_path), &mut handles).unwrap();
 
     let camera = world.cameras[0]
         .clone()
@@ -500,7 +501,7 @@ fn main() {
         primitives: scene_sdf,
 
         environment: env_map,
-        materials: world.materials,
+        materials: (*world.materials).clone(),
         material_map,
         // max_depth: 20,
         // world aabb needs to encompass camera

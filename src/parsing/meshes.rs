@@ -150,6 +150,7 @@ pub fn parse_obj_mesh(
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct MeshData {
     pub filename: String,
     pub mesh_index: Option<usize>,

@@ -14,7 +14,7 @@ pub use crate::accelerator::{Accelerator, AcceleratorType};
 pub use crate::geometry::*;
 pub use crate::materials::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct World {
     pub accelerator: Accelerator,
     pub lights: Vec<InstanceId>,
@@ -268,9 +268,11 @@ mod test {
     fn test_world_intersection() {
         crate::log_test_setup();
         let mut default_config = Config::load_default();
+        let mut handles = Vec::new();
         let world = construct_world(
             &mut default_config,
             PathBuf::from("data/scenes/test_lighting_north.toml"),
+            &mut handles,
         )
         .unwrap();
 

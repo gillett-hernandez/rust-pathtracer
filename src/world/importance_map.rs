@@ -3,6 +3,7 @@ use std::{
     /* io::{Read, Write}, */
     path::{Path, PathBuf /* , PathBuf */},
     sync::Arc,
+    thread::JoinHandle,
 };
 
 use anyhow::{bail, Context};
@@ -24,7 +25,7 @@ use rayon::iter::ParallelIterator;
 // would change memory usage complexity from O(n*m) to O(k*n*m) where k is the number of channels in the texstack
 // which is 4 for every tex4, 1 for every tex1, etc.
 
-#[derive(Clone, Deserialize, Serialize, DeepSizeOf)]
+#[derive(Clone, Deserialize, Serialize, DeepSizeOf, Debug)]
 
 pub enum ImportanceMap {
     Baked {
@@ -248,7 +249,11 @@ impl ImportanceMap {
             luminance_curve,
         }
     }
-    pub fn save_baked(&self, filepath: PathBuf) -> anyhow::Result<()> {
+    pub fn save_baked(
+        &self,
+        filepath: PathBuf,
+        handles: &mut Vec<JoinHandle<()>>,
+    ) -> anyhow::Result<()> {
         match &self {
             ImportanceMap::Baked { .. } => {
                 let filepath_as_str = filepath.file_name().unwrap().to_string_lossy();
@@ -261,7 +266,7 @@ impl ImportanceMap {
                 let clone = self.clone();
 
                 // intentionally not joining, the thread should finish or panic eventually.
-                let _join_handle = std::thread::spawn(move || {
+                let join_handle = std::thread::spawn(move || {
                     let timestamp = std::time::Instant::now();
                     let Ok(file) = File::create(&cloned_filepath).context(format!(
                         "failed to create file {:?}",
@@ -279,6 +284,7 @@ impl ImportanceMap {
                         timestamp.elapsed().as_millis() as f32 / 1000.0
                     );
                 });
+                handles.push(join_handle);
 
                 Ok(())
             }
@@ -479,9 +485,11 @@ mod test {
     #[test]
     fn test_env_importance_sampling() {
         let mut default_config = Config::load_default();
+        let mut handles = Vec::new();
         let mut world = construct_world(
             &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
+            &mut handles,
         )
         .unwrap();
 
@@ -636,9 +644,11 @@ mod test {
     #[test]
     fn test_env_direct_access() {
         let mut default_config = Config::load_default();
+        let mut handles = Vec::new();
         let world = construct_world(
             &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
+            &mut handles,
         )
         .unwrap();
         let env = &world.environment;
@@ -733,9 +743,12 @@ mod test {
     #[test]
     fn test_env_scene_ray_sampling() {
         let mut default_config = Config::load_default();
+
+        let mut handles = Vec::new();
         let mut world = construct_world(
             &mut default_config,
             PathBuf::from("data/scenes/hdri_test_2.toml"),
+            &mut handles,
         )
         .unwrap();
 

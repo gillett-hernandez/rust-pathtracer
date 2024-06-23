@@ -73,11 +73,11 @@ pub struct SimpleCameraData {
     pub v_up: Option<[f32; 3]>,
     pub vfov: f32,
     pub focal_distance: Option<f32>,
-    pub aperture_size: Option<f32>, // in meters
-    #[cfg(feature = "realistic_camera")]
+    pub aperture_diameter: Option<f32>, // in meters
+    pub lens_diameter: Option<f32>,     // in meters
     pub aperture: Option<ApertureData>, // defaults to Circular
-                                    // pub shutter_open_time: Option<f32>,
-                                    // pub shutter_close_time: Option<f32>,
+                                        // pub shutter_open_time: Option<f32>,
+                                        // pub shutter_close_time: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -136,9 +136,10 @@ pub fn parse_cameras(config: &mut Config, camera_data: Vec<CameraData>) -> Vec<C
                         Vec3::from(cam.v_up.unwrap_or([0.0, 0.0, 1.0])).normalized(),
                         cam.vfov,
                         cam.focal_distance.unwrap_or(10.0),
-                        cam.aperture_size.unwrap_or(0.0),
-                        // shutter_open_time,
-                        // cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
+                        cam.lens_diameter.unwrap_or(0.01),
+                        cam.aperture_diameter.unwrap_or(0.01),
+                        cam.aperture.unwrap_or(ApertureData::Circular).into(), // shutter_open_time,
+                                                                               // cam.shutter_close_time.unwrap_or(1.0).max(shutter_open_time),
                     )),
                 )
             }

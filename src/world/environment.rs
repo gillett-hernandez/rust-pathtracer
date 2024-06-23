@@ -3,7 +3,7 @@ use crate::texture::EvalAt;
 use crate::world::importance_map::ImportanceMap;
 use std::ops::Mul;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum EnvironmentMap {
     Constant {
         color: CurveWithCDF,

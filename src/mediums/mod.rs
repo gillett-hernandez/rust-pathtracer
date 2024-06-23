@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 use std::marker::{Send, Sync};
+use std::ops::{Deref, DerefMut};
 
 mod hg;
 mod rayleigh;
@@ -50,7 +51,7 @@ pub trait Medium<L: Field, E: Field> {
 macro_rules! generate_medium_enum {
     ( $name:ident, $l: ty, $e: ty, $( $s:ident),+) => {
 
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub enum $name {
             $(
                 $s($s),
@@ -110,4 +111,16 @@ generate_medium_enum! {MediumEnum, f32, f32, HenyeyGreensteinHomogeneous, Raylei
 unsafe impl Send for MediumEnum {}
 unsafe impl Sync for MediumEnum {}
 
-pub type MediumTable = Vec<MediumEnum>;
+#[derive(Debug, Clone)]
+pub struct MediumTable(pub Vec<MediumEnum>);
+impl Deref for MediumTable {
+    type Target = Vec<MediumEnum>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for MediumTable {
+    fn deref_mut(&mut self) -> &mut Vec<MediumEnum> {
+        &mut self.0
+    }
+}

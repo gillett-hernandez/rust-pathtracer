@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::CurveDataOrReference;
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct HGMediumData {
     pub g: CurveDataOrReference,
     pub sigma_s: CurveDataOrReference,
@@ -15,12 +16,14 @@ pub struct HGMediumData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct RayleighData {
     pub ior: CurveDataOrReference,
     pub corrective_factor: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 pub enum MediumData {
     HG(HGMediumData),

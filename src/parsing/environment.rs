@@ -3,6 +3,7 @@ use crate::prelude::*;
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
+use std::thread::JoinHandle;
 
 use math::curves::InterpolationMode;
 use math::spectral::BOUNDED_VISIBLE_RANGE;
@@ -16,12 +17,14 @@ use super::instance::{AxisAngleData, Transform3Data};
 use super::{CurveDataOrReference, Vec3Data};
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConstantData {
     pub color: CurveDataOrReference,
     pub strength: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct SunData {
     pub color: CurveDataOrReference,
     pub strength: f32,
@@ -30,6 +33,7 @@ pub struct SunData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ImportanceMapData {
     pub width: usize,
     pub height: usize,
@@ -38,6 +42,7 @@ pub struct ImportanceMapData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct HDRIData {
     pub texture_name: String,
     pub strength: f32,
@@ -58,6 +63,7 @@ pub fn parse_environment(
     curves: &HashMap<String, Curve>,
     textures: &HashMap<String, TexStack>,
     error_color: &Curve,
+    mut handles: &mut Vec<JoinHandle<()>>,
 ) -> anyhow::Result<EnvironmentMap> {
     match env_data {
         EnvironmentData::Constant(data) => Ok(EnvironmentMap::Constant {
@@ -92,6 +98,7 @@ pub fn parse_environment(
                 translate: None,
             }
             .into();
+            let texture_name = &data.texture_name;
             let texture = textures
                 .get(&data.texture_name)
                 .cloned()
@@ -123,6 +130,8 @@ pub fn parse_environment(
                         path.push("importance_maps");
 
                         let mut hasher = DefaultHasher::new();
+                        // hash texture name and luminance curve, so if either change we can detect that and rebake
+                        texture_name.hash(&mut hasher);
                         data.luminance_curve.hash(&mut hasher);
                         let curve_hash = hasher.finish();
                         path.push(format!(
@@ -140,7 +149,7 @@ pub fn parse_environment(
                             let is_baked = unbaked.bake_in_place(&texture, BOUNDED_VISIBLE_RANGE);
                             assert!(is_baked);
                             let baked = unbaked;
-                            let res = baked.save_baked(path.clone());
+                            let res = baked.save_baked(path.clone(), &mut handles);
                             if res.is_err() {
                                 let e = res.unwrap_err();
                                 error!(

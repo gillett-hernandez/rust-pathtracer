@@ -1,6 +1,9 @@
 use crate::prelude::*;
 
-use std::marker::{Send, Sync};
+use std::{
+    marker::{Send, Sync},
+    ops::{Deref, DerefMut},
+};
 
 mod diffuse_light;
 mod ggx;
@@ -236,7 +239,7 @@ macro_rules! generate_enum {
         }
     };
     ( $name:ident, $( $s:ident),+) => {
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub enum $name {
             $(
                 $s($s),
@@ -290,7 +293,19 @@ generate_enum!(
 //     PassthroughFilter
 // );
 
-pub type MaterialTable = Vec<MaterialEnum>;
+#[derive(Debug, Clone)]
+pub struct MaterialTable(pub Vec<MaterialEnum>);
+impl Deref for MaterialTable {
+    type Target = Vec<MaterialEnum>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for MaterialTable {
+    fn deref_mut(&mut self) -> &mut Vec<MaterialEnum> {
+        &mut self.0
+    }
+}
 
 // #[cfg(test)]
 // mod tests {

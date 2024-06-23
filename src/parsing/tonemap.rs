@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::tonemap::{Clamp, Reinhard0, Reinhard0x3, Reinhard1, Reinhard1x3, Tonemapper};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 pub enum TonemapSettings {
     // clamp all colors to 0 to 1, multiplying by 10^exposure beforehand (exposure defaults to 0, not changing anything)

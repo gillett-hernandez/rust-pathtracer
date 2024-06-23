@@ -12,9 +12,9 @@ tile_size = [32, 32]
 [[render_settings]]
 threads = 20
 filename = "beauty"
-min_samples = 32
+min_samples = 256
 min_bounces = 1
-max_bounces = 12
+max_bounces = 2
 hwss = false
 camera_id = "main"
 russian_roulette = true

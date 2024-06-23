@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 use super::Medium;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Rayleigh {
     pub corrective_factor: f32,
     pub ior: Curve,

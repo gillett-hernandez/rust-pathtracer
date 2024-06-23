@@ -1,6 +1,6 @@
 use crate::{prelude::*, texture::EvalAt};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Lambertian {
     pub texture: TexStack,
 }

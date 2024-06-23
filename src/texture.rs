@@ -28,7 +28,7 @@ where
     fn eval_at(&self, lambda: T, uv: UV) -> T;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Texture4 {
     pub curves: [CurveWithCDF; 4],
     pub texture: Vec2D<f32x4>,
@@ -115,7 +115,7 @@ impl EvalAt<f32> for Texture4 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Texture1 {
     pub curve: CurveWithCDF,
     pub texture: Vec2D<f32>,
@@ -151,7 +151,7 @@ impl EvalAt<f32x4> for Texture1 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Texture {
     Texture1(Texture1),
     Texture4(Texture4),
@@ -200,7 +200,7 @@ pub fn replace_channel(tex4: &mut Texture4, tex1: Texture1, channel: u8) {
     tex4.curves[channel] = tex1.curve;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TexStack {
     pub textures: Vec<Texture>,
 }

@@ -18,6 +18,7 @@ use std::path::Path;
 use super::CurveDataOrReference;
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 pub enum TextureData {
     Texture1 {

@@ -1,14 +1,14 @@
 // use crate::prelude::*;
 
-use std::fs::read_to_string;
 use std::collections::HashMap;
+use std::fs::read_to_string;
 
 use crate::parsing::tonemap::TonemapSettings;
 
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Serialize, Deserialize, Copy, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Resolution {
     pub width: usize,
     pub height: usize,
@@ -16,6 +16,7 @@ pub struct Resolution {
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
+#[serde(deny_unknown_fields)]
 pub enum IntegratorKind {
     PT {
         light_samples: u16,
@@ -32,6 +33,7 @@ pub enum IntegratorKind {
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
+#[serde(deny_unknown_fields)]
 pub enum ColorSpaceSettings {
     sRGB,
     Rec709,
@@ -39,6 +41,7 @@ pub enum ColorSpaceSettings {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct RenderSettings {
     pub filename: Option<String>,
     pub resolution: Resolution,
@@ -59,6 +62,7 @@ pub struct RenderSettings {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct TOMLRenderSettings {
     pub filename: Option<String>,
     pub resolution: Resolution,
@@ -104,6 +108,7 @@ impl From<TOMLRenderSettings> for RenderSettings {
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(tag = "type")]
+#[serde(deny_unknown_fields)]
 pub enum RendererType {
     Naive,
     #[cfg(feature = "preview")]
@@ -116,6 +121,7 @@ pub enum RendererType {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct TOMLConfig {
     pub env_sampling_probability: Option<f32>, //defaults to 0.5
     pub default_scene_file: String,
