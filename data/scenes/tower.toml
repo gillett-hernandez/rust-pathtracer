@@ -34,6 +34,7 @@ type = "SimpleCamera"
 name = "main"
 look_from = [-3.5, -3.5, 0.0]
 look_at = [0, 0, 100]
-aperture_size = 0.01
+aperture_diameter = 0.01
+aperture = { type = "Circular" }
 focal_distance = 50.0
 vfov = 45.2

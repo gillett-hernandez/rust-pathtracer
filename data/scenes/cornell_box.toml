@@ -5,7 +5,7 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.0
 [environment]
-type="Constant"
+type = "Constant"
 strength = 0.0
 color = "flat_zero"
 
@@ -33,6 +33,7 @@ type = "SimpleCamera"
 name = "main"
 look_from = [-0.8, 0.278, 0.273]
 look_at = [0.0, 0.278, 0.273]
-aperture_size = 0.01
+aperture_diameter = 0.01
+aperture = { type = "Circular" }
 focal_distance = 1.1
 vfov = 37.8

@@ -5,7 +5,7 @@ meshes = "data/lib_meshes.toml"
 
 env_sampling_probability = 0.5
 [environment]
-type="Sun"
+type = "Sun"
 strength = 0.4
 angular_diameter = 0.0565
 sun_direction = [1.0, 0.0, 1.0]
@@ -84,6 +84,7 @@ type = "SimpleCamera"
 name = "main"
 look_from = [-5.0, 0.0, 0.0]
 look_at = [0.0, 0.0, 0.0]
-aperture_size = 0.02
+aperture_diameter = 0.02
+aperture = { type = "Circular" }
 focal_distance = 5.0
 vfov = 27.8
