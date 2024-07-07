@@ -1,8 +1,7 @@
 default_scene_file = "data/scenes/hdri_test.toml"
 [renderer]
-# type="Naive"
-type = "Preview"
-selected_preview_film_id = 0
+type = "Tiled"
+tile_size = [32, 32]
 
 [[render_settings]]
 threads = 22
@@ -17,10 +16,13 @@ only_direct = false
 [render_settings.tonemap_settings]
 type = "Clamp"
 exposure = 0.0
+luminance_only = true
+[render_settings.colorspace_settings]
+type = "Rec2020"
 [render_settings.integrator]
 type = "PT"
+medium_aware = false
 light_samples = 6
 [render_settings.resolution]
 width = 1024
 height = 1024
-

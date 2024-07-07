@@ -1,11 +1,8 @@
 default_scene_file = "data/scenes/cornell_box.toml"
 
-
-
 [renderer]
-type="Naive"
-# type="Preview"
-# selected_preview_film_id = 0
+type = "Tiled"
+tile_size = [32, 32]
 
 [[render_settings]]
 threads = 12
@@ -24,6 +21,8 @@ type = "Reinhard1"
 key_value = 0.18
 white_point = 1.0
 luminance_only = false
+[render_settings.colorspace_settings]
+type = "Rec2020"
 [render_settings.integrator]
 type = "PT"
 light_samples = 2

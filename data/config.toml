@@ -3,9 +3,9 @@ default_scene_file = "data/scenes/cornell_box.toml"
 [renderer]
 # naive is 23.6 mrays/sec
 # type="Naive"
-type = "Tiled"
 # tiled at 64 64 is 23.2 mrays/sec
 # tiled at 32 32 is 23.9 mrays/sec
+type = "Tiled"
 tile_size = [32, 32]
 # selected_preview_film_id = 0
 

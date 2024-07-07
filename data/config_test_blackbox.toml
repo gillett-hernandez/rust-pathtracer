@@ -4,8 +4,7 @@
 
 default_scene_file = "data/scenes/test_blackbox.toml"
 [renderer]
-type="Naive"
-
+type = "Naive"
 
 
 [[render_settings]]
@@ -41,7 +40,10 @@ russian_roulette = true
 only_direct = false
 [render_settings.tonemap_settings]
 type = "Clamp"
+luminance_only = true
 exposure = 0.0
+[render_settings.colorspace_settings]
+type = "Rec2020"
 [render_settings.integrator]
 type = "PT"
 light_samples = 6

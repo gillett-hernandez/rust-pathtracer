@@ -1,6 +1,7 @@
 default_scene_file = "data/scenes/white_furnace.toml"
 [renderer]
-type="Naive"
+type = "Tiled"
+tile_size = [32, 32]
 # type = "Preview"
 # selected_preview_film_id = 0
 
@@ -14,13 +15,16 @@ hwss = false
 camera_id = "camera"
 russian_roulette = false
 only_direct = false
+[render_settings.colorspace_settings]
+type = "Rec2020"
 [render_settings.tonemap_settings]
 type = "Clamp"
+luminance_only = true
 exposure = 0.0
 [render_settings.integrator]
 type = "PT"
+medium_aware = false
 light_samples = 6
 [render_settings.resolution]
 width = 1024
 height = 1024
-

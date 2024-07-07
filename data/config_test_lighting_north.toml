@@ -1,8 +1,8 @@
 default_scene_file = "data/scenes/test_lighting_north.toml"
 [renderer]
 # type="Naive"
-type = "Preview"
-selected_preview_film_id = 0
+type = "Tiled"
+tile_size = [32, 32]
 
 [[render_settings]]
 threads = 1
@@ -18,8 +18,11 @@ only_direct = false
 type = "Clamp"
 exposure = 5.0
 luminance_only = true
+[render_settings.colorspace_settings]
+type = "Rec2020"
 [render_settings.integrator]
 type = "PT"
+medium_aware = false
 light_samples = 4
 [render_settings.resolution]
 width = 512
