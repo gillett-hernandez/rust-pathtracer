@@ -15,6 +15,7 @@ use math::prelude::{Transform3, Vec3};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct AxisAngleData {
     pub axis: Vec3Data,
     pub angle: f32,

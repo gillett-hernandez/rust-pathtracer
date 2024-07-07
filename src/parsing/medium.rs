@@ -56,6 +56,7 @@ pub fn parse_medium(data: MediumData, curves: &HashMap<String, Curve>) -> Option
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct NamedMedium {
     pub data: MediumData,
     pub name: String,

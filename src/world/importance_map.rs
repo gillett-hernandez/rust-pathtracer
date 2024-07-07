@@ -25,6 +25,8 @@ use rayon::iter::ParallelIterator;
 // would change memory usage complexity from O(n*m) to O(k*n*m) where k is the number of channels in the texstack
 // which is 4 for every tex4, 1 for every tex1, etc.
 
+// serde(tag="type") unnecessary because this is not stored to disk in the TOML format, but rather using bincode.
+
 #[derive(Clone, Deserialize, Serialize, DeepSizeOf, Debug)]
 
 pub enum ImportanceMap {

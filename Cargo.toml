@@ -13,6 +13,7 @@ rust_2021_compatibility = "warn"
 assigning_clones = "deny"
 
 [features]
+fs_isolation = []
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 color_grad = ["colorgrad"]
 # for scenes with many non-dense meshes, disable sort_mesh_aabb_hits

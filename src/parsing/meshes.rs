@@ -7,6 +7,13 @@ use tobj;
 
 use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct MeshData {
+    pub filename: String,
+    pub mesh_index: Option<usize>,
+}
+
 pub fn load_obj_file(filename: &str, material_mapping: &mut HashMap<String, usize>) -> Vec<Mesh> {
     let data = tobj::load_obj(
         filename,
@@ -147,11 +154,4 @@ pub fn parse_obj_mesh(
     }
 
     Mesh::new(num_faces, indices, points, normals, mat_ids)
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct MeshData {
-    pub filename: String,
-    pub mesh_index: Option<usize>,
 }

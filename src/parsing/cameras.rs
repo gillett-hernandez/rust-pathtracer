@@ -18,9 +18,10 @@ use optics::parse_lenses_from;
 
 use super::Config;
 
-#[cfg(feature = "realistic_camera")]
 #[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
+
 pub enum ApertureData {
     Circular,
     /// only 6 blades are supported right now.
@@ -33,7 +34,6 @@ pub enum ApertureData {
     },
 }
 
-#[cfg(feature = "realistic_camera")]
 impl From<ApertureData> for ApertureEnum {
     fn from(data: ApertureData) -> ApertureEnum {
         match data {
@@ -47,6 +47,7 @@ impl From<ApertureData> for ApertureEnum {
 
 #[cfg(feature = "realistic_camera")]
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct RealisticCameraData {
     pub name: String,
     pub lens_spec: String,
@@ -66,6 +67,7 @@ pub struct RealisticCameraData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct SimpleCameraData {
     pub name: String,
     pub look_from: [f32; 3],
@@ -81,6 +83,7 @@ pub struct SimpleCameraData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct PanoramaCameraData {
     pub name: String,
     pub look_from: [f32; 3],
@@ -90,6 +93,7 @@ pub struct PanoramaCameraData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 pub enum CameraData {
     SimpleCamera(SimpleCameraData),
