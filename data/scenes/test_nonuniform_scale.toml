@@ -11,6 +11,7 @@ texture_name = "autumn_park_8k"
 [environment.importance_map]
 # width = 2048
 # height = 2048
+cache = true
 width = 1024
 height = 1024
 

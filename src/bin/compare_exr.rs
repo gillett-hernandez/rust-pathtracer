@@ -9,7 +9,7 @@ use root::{
     prelude::{f32x4, SimdFloat},
     vec2d::Vec2D,
 };
-use structopt::StructOpt;
+use clap::Parser;
 
 fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Vec2D<f32x4>> {
     read_first_rgba_layer_from_file(
@@ -23,16 +23,15 @@ fn read_exr_file<P: AsRef<Path>>(name: P) -> Option<Vec2D<f32x4>> {
     .map(|e| e.layer_data.channel_data.pixels)
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(Debug, Parser)]
 struct Opt {
-    #[structopt(long)]
+    #[arg(long)]
     pub compare_file: String,
-    #[structopt(long)]
+    #[arg(long)]
     pub ground_truth_file: String,
-    #[structopt(long)]
+    #[arg(long)]
     pub output_file: String,
-    #[structopt(long, default_value = "absolute_difference")]
+    #[arg(long, default_value = "absolute_difference")]
     pub mode: String,
 }
 
@@ -54,7 +53,7 @@ impl Mode {
 }
 
 fn main() {
-    let opts = Opt::from_args();
+    let opts = Opt::parse();
 
     let maybe_image0 = read_exr_file(opts.compare_file);
     let maybe_image1 = read_exr_file(opts.ground_truth_file);

@@ -3,7 +3,7 @@ extern crate rust_pathtracer as root;
 
 use root::parsing::config::*;
 use root::parsing::construct_world;
-use root::parsing::get_settings;
+use root::parsing::get_config;
 use root::renderer::TiledRenderer;
 use root::renderer::{NaiveRenderer, Renderer};
 
@@ -21,30 +21,28 @@ use std::{fs::File, sync::Arc};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::prelude::*;
 
-// TODO: switch to clap
-use structopt::StructOpt;
-
 #[cfg(all(target_os = "windows", feature = "notification"))]
 use std::time::{Duration, Instant};
 #[cfg(all(target_os = "windows", feature = "notification"))]
 use win32_notification::NotificationBuilder;
 
-#[derive(Debug, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+use clap::Parser;
+
+#[derive(Parser, Debug)]
 struct Opt {
-    #[structopt(long)]
+    #[arg(long)]
     pub scene: Option<String>,
 
-    #[structopt(long, default_value = "data/config.toml")]
+    #[arg(long, default_value = "data/config.toml")]
     pub config: String,
 
-    #[structopt(short = "n", long)]
+    #[arg(short = 'n', long)]
     pub dry_run: bool,
 
-    #[structopt(long, default_value = "warn")]
+    #[arg(long, default_value = "warn")]
     pub stdout_log_level: String,
 
-    #[structopt(long, default_value = "info")]
+    #[arg(long, default_value = "info")]
     pub write_log_level: String,
 }
 
@@ -82,7 +80,7 @@ fn parse_level_filter(level: String, default: LevelFilter) -> LevelFilter {
 }
 
 fn main() {
-    let opts = Opt::from_args();
+    let opts = Opt::parse();
     let stdout_log_level = parse_level_filter(opts.stdout_log_level, LevelFilter::WARN);
     let write_log_level = parse_level_filter(opts.write_log_level, LevelFilter::INFO);
 
@@ -118,7 +116,7 @@ fn main() {
             .expect("Failed to create cache directory. Does this process have permissions?");
     }
 
-    let mut toml_config: TOMLConfig = match get_settings(opts.config) {
+    let mut toml_config: TOMLConfig = match get_config(opts.config) {
         Ok(expr) => expr,
         Err(v) => {
             error!("couldn't read config.toml, {:?}", v);

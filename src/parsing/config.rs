@@ -106,7 +106,7 @@ impl From<TOMLRenderSettings> for RenderSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 #[serde(tag = "type")]
 #[serde(deny_unknown_fields)]
 pub enum RendererType {

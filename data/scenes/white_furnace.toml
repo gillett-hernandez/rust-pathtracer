@@ -7,10 +7,7 @@ env_sampling_probability = 1.0
 [environment]
 type = "Constant"
 strength = 1.0
-[environment.color]
-type = "Flat"
-strength = 1.0
-interpolation_mode = "Linear"
+color = "simple_sky_blue"
 
 
 [[instances]]

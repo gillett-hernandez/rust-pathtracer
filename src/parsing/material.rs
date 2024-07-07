@@ -10,13 +10,13 @@ use std::collections::HashMap;
 
 use super::CurveDataOrReference;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct LambertianData {
     pub texture_id: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct GGXData {
     pub alpha: f32,
@@ -28,7 +28,7 @@ pub struct GGXData {
     pub outer_medium_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct DiffuseLightData {
     pub bounce_color: CurveDataOrReference,
@@ -36,7 +36,7 @@ pub struct DiffuseLightData {
     pub sidedness: Sidedness,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct SharpLightData {
     pub bounce_color: CurveDataOrReference,
@@ -52,7 +52,7 @@ pub struct SharpLightData {
 //     pub inner_medium_id: String,
 // }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 #[serde(deny_unknown_fields)]
 pub enum MaterialData {

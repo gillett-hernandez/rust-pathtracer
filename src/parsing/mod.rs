@@ -123,11 +123,23 @@ pub fn load_scene<T: AsRef<Path>>(filepath: T) -> anyhow::Result<SceneData> {
 
     let read_count = File::open(filepath.as_ref())
         .and_then(|mut f| f.read_to_string(&mut input))
-        .context("failed to load filepath")?;
+        .context(format!(
+            "failed to load filepath {:#}",
+            filepath.as_ref().to_string_lossy()
+        ))?;
 
     info!("done: {} bytes", read_count);
 
-    let scene: SceneData = toml::from_str(&input).context("failed to parse as SceneData")?;
+    let scene: SceneData = toml::from_str(&input)
+        .context(format!(
+            "failed to parse {} as SceneData",
+            filepath.as_ref().to_string_lossy()
+        ))
+        .inspect_err(|error| {
+            for e in error.chain() {
+                println!("{}", e.to_string());
+            }
+        })?;
     Ok(scene)
 }
 
@@ -551,7 +563,7 @@ pub fn construct_world<P: AsRef<Path>>(
     Ok(world)
 }
 
-pub fn get_settings(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
+pub fn get_config(filepath: String) -> Result<TOMLConfig, toml::de::Error> {
     // will return None in the case that it can't read the settings file for whatever reason.
     // TODO: convert this to return Result<Settings, UnionOfErrors>
     let mut input = String::new();
@@ -654,7 +666,7 @@ mod test {
 
     #[test]
     fn test_parsing_config() {
-        let settings: TOMLConfig = match get_settings("data/config.toml".to_string()) {
+        let settings: TOMLConfig = match get_config("data/config.toml".to_string()) {
             Ok(expr) => expr,
             Err(v) => {
                 println!("{:?}", "couldn't read config.toml");

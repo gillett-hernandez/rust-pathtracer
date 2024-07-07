@@ -11,6 +11,7 @@ texture_name = "machine_shop_4k"
 [environment.importance_map]
 # width = 2048
 # height = 2048
+cache = true
 width = 1024
 height = 1024
 

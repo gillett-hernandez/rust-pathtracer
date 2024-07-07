@@ -17,7 +17,7 @@ use std::path::Path;
 
 use super::CurveDataOrReference;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 #[serde(tag = "type")]
 pub enum TextureData {
@@ -43,7 +43,7 @@ pub enum TextureData {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TextureStackData(pub Vec<TextureData>);
 
 pub fn parse_rgba(filepath: &str) -> anyhow::Result<Vec2D<f32x4>> {
@@ -126,7 +126,7 @@ pub fn parse_hdr(filepath: &str, alpha_fill: f32) -> anyhow::Result<Vec2D<f32x4>
         new_film.write_at(
             x as usize,
             y as usize,
-            f32x4::from_array([r, g, b , alpha_fill]),
+            f32x4::from_array([r, g, b, alpha_fill]),
         );
     }
     Ok(new_film)

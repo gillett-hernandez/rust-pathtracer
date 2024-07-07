@@ -20,18 +20,17 @@ use crossbeam::channel::{unbounded, Receiver, Sender};
 use eframe::egui;
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 use rayon::iter::ParallelIterator;
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(Debug, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(Debug, Parser)]
 struct Opt {
-    #[structopt(long, default_value = "data/config.toml")]
+    #[arg(long, default_value = "data/config.toml")]
     pub config_file: String,
     pub width: usize,
     pub height: usize,
-    #[structopt(long, default_value = "")]
+    #[arg(long, default_value = "")]
     pub initial_color: String,
-    #[structopt(long, default_value = "1.0")]
+    #[arg(long, default_value = "1.0")]
     pub dynamic_range: f32,
 }
 
@@ -503,7 +502,7 @@ impl View {
 }
 
 fn mvc(opts: Opt) -> Result<(Model, Controller), ()> {
-    let config: TOMLConfig = match get_settings(opts.config_file) {
+    let config: TOMLConfig = match get_config(opts.config_file) {
         Ok(expr) => expr,
         Err(v) => {
             error!("couldn't read config.toml, {:?}", v);
@@ -605,7 +604,7 @@ fn main() {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let opts = Opt::from_args();
+    let opts = Opt::parse();
 
     let (width, height) = (opts.width, opts.height);
     let (mut model, controller) = mvc(opts).expect("failed to construct MVC");

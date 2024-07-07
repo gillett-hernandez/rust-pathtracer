@@ -14,14 +14,14 @@ use crate::prelude::PI;
 use math::prelude::{Transform3, Vec3};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct AxisAngleData {
     pub axis: Vec3Data,
     pub angle: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Transform3Data {
     pub scale: Option<Vec3Data>,            // scale
@@ -29,7 +29,7 @@ pub struct Transform3Data {
     pub translate: Option<Vec3Data>,        // translation
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct InstanceData {
     pub aggregate: AggregateData,

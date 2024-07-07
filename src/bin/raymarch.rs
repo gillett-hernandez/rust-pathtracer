@@ -9,17 +9,17 @@ use std::fs::File;
 use std::path::PathBuf;
 
 // third party but non-subject-matter imports
+use clap::Parser;
 #[cfg(feature = "preview")]
 use minifb::WindowOptions;
 use pbr::ProgressBar;
 use rayon::iter::ParallelIterator;
-use structopt::StructOpt;
 
 // our imports
 use math::prelude::*;
 use root::hittable::{HasBoundingBox, AABB};
 use root::parsing::tonemap::TonemapSettings;
-use root::parsing::{config::*, construct_world, get_settings, parse_tonemap_settings};
+use root::parsing::{config::*, construct_world, get_config, parse_tonemap_settings};
 use root::prelude::*;
 use root::renderer::output_film;
 use root::world::{EnvironmentMap, Material, MaterialEnum};
@@ -58,12 +58,11 @@ fn deconvert(v: uvVec3) -> f32x4 {
     f32x4::from_array([v.x, v.y, v.z, 0.0])
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
+#[derive(Debug, Parser)]
 struct Opt {
-    #[structopt(long, default_value = "data/raymarch_config.toml")]
+    #[arg(long, default_value = "data/raymarch_config.toml")]
     pub config: String,
-    #[structopt(short = "n", long)]
+    #[arg(short = 'n', long)]
     pub dry_run: bool,
 }
 enum MarchResult {
@@ -403,9 +402,9 @@ fn main() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
-    let settings = get_settings(opt.config).unwrap();
+    let settings = get_config(opt.config).unwrap();
 
     let mut config = Config::from(settings);
     let render_settings = config.render_settings[0].clone();
