@@ -599,6 +599,8 @@ impl Material<f32, f32> for GGX {
 
 #[cfg(test)]
 mod test {
+    use proptest::prelude::*;
+    use crate::props::*;
 
     use math::spectral::BOUNDED_VISIBLE_RANGE;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -630,6 +632,127 @@ mod test {
         let flat_zero = curves::void();
         let flat_one = curves::cie_e(1.0);
         GGX::new(roughness, glass, flat_one, flat_zero, 0, 0)
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+        #[test]
+        fn test_ggx(roughness in valid_ggx_roughness(), wi in unit_vector(), lambda in 400.0..800.0f32, s in uniform_sample()) {
+            let ggx_glass = ggx_glass(roughness);
+            let fake_hit_record: HitRecord = HitRecord::new(
+                0.0,
+                Point3::ZERO,
+                UV(0.0f32, 0.0f32),
+                lambda,
+                Vec3::Z,
+                MaterialId::Material(0),
+                0,
+                None,
+            );
+
+            let maybe_wo = ggx_glass.generate(
+                fake_hit_record.lambda,
+                fake_hit_record.uv,
+                fake_hit_record.transport_mode,
+                s,
+                wi,
+            );
+            assert!(maybe_wo.is_some());
+
+            let wo = maybe_wo.unwrap();
+            let (orig_f, orig_pdf) = ggx_glass.bsdf(
+                fake_hit_record.lambda,
+                fake_hit_record.uv,
+                fake_hit_record.transport_mode,
+                wi,
+                wo,
+            );
+
+            // check swapping wi and wo
+            let (wi, wo) = (wo, wi);
+            let (sampled_f, sampled_pdf) = ggx_glass.bsdf(
+                fake_hit_record.lambda,
+                fake_hit_record.uv,
+                fake_hit_record.transport_mode,
+                wi,
+                wo,
+            );
+            assert!(sampled_f > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+            assert!(*sampled_pdf >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",  orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+            assert!(orig_f > 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+            assert!(*orig_pdf >= 0.0, "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}", orig_f, orig_pdf, sampled_f, sampled_pdf, wi, wo);
+
+        }
+
+        #[test]
+        fn test_ggx2(roughness in valid_ggx_roughness(), wi in unit_vector(), wo in unit_vector(), lambda in 400.0..800.0f32) {
+            let ggx_glass = ggx_glass(roughness);
+            let fake_hit_record: HitRecord = HitRecord::new(
+                0.0,
+                Point3::ZERO,
+                UV(0.0f32, 0.0f32),
+                lambda,
+                Vec3::Z,
+                MaterialId::Material(0),
+                0,
+                None,
+            );
+            let (orig_f, orig_pdf) = ggx_glass.bsdf(
+                fake_hit_record.lambda,
+                fake_hit_record.uv,
+                fake_hit_record.transport_mode,
+                wi,
+                wo,
+            );
+            let (wi, wo) = (wo, wi);
+            let (sampled_f, sampled_pdf) = ggx_glass.bsdf(
+                fake_hit_record.lambda,
+                fake_hit_record.uv,
+                fake_hit_record.transport_mode,
+                wi,
+                wo,
+            );
+            assert!(
+                sampled_f >= 0.0,
+                "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+                orig_f,
+                orig_pdf,
+                sampled_f,
+                sampled_pdf,
+                wi,
+                wo
+            );
+            assert!(
+                *sampled_pdf >= 0.0,
+                "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+                orig_f,
+                orig_pdf,
+                sampled_f,
+                sampled_pdf,
+                wi,
+                wo
+            );
+            assert!(
+                orig_f >= 0.0,
+                "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+                orig_f,
+                orig_pdf,
+                sampled_f,
+                sampled_pdf,
+                wi,
+                wo
+            );
+            assert!(
+                *orig_pdf >= 0.0,
+                "original f: {:?}, pdf: {:?}, swapped f: {:?}, pdf: {:?}, swapped wi: {:?}, wo: {:?}",
+                orig_f,
+                orig_pdf,
+                sampled_f,
+                sampled_pdf,
+                wi,
+                wo
+            );
+        }
     }
 
     #[test]

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9c0ae291d4fb1b0b7461c99518df9126afd836caa7b93dadd6772b8c1f81fb26 # shrinks to roughness = 8.736748, wi = Vec3(0.54826164, 0.0, -0.83630687), lambda = 400.0, s = Sample2D { x: 0.0, y: 0.0 }

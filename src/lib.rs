@@ -39,6 +39,9 @@ pub mod tonemap;
 pub mod vec2d;
 pub mod world;
 
+#[cfg(test)]
+pub mod props;
+
 // mauve. universal sign of danger
 pub const MAUVE: XYZColor = XYZColor::new(0.5199467, 51.48687, 1.0180528);
 
