@@ -221,7 +221,7 @@ pub fn construct_world<P: AsRef<Path>>(
         );
         let mut local_material_map = HashMap::new();
         assert!(
-            matches!(std::fs::try_exists(mesh_data.filename.as_str()), Ok(true)),
+            matches!(std::fs::exists(mesh_data.filename.as_str()), Ok(true)),
             "could not find obj file or mtl file {}",
             mesh_data.filename.as_str()
         );

@@ -1,4 +1,4 @@
-#![feature(fs_try_exists, portable_simd)]
+#![feature(portable_simd)]
 
 #[macro_use]
 extern crate smallvec;
