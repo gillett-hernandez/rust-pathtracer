@@ -11,7 +11,6 @@ use crate::world::World;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -222,7 +221,7 @@ pub fn construct_world<P: AsRef<Path>>(
         );
         let mut local_material_map = HashMap::new();
         assert!(
-            matches!(fs::try_exists(mesh_data.filename.as_str()), Ok(true)),
+            matches!(std::fs::try_exists(mesh_data.filename.as_str()), Ok(true)),
             "could not find obj file or mtl file {}",
             mesh_data.filename.as_str()
         );
@@ -639,6 +638,9 @@ mod test {
             &mut handles,
         )
         .unwrap();
+        for handle in handles {
+            let _ = handle.join();
+        }
         println!("constructed world");
         for mat in &*world.materials {
             let name = match mat {
@@ -662,6 +664,9 @@ mod test {
             &mut handles,
         )
         .unwrap();
+        for handle in handles {
+            let _ = handle.join();
+        }
     }
 
     #[test]

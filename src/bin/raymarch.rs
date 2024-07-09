@@ -437,6 +437,9 @@ fn main() {
     let mut handles = Vec::new();
     let world = construct_world(&mut config, PathBuf::from(scene_file_path), &mut handles).unwrap();
 
+    for handle in handles {
+        let _ = handle.join();
+    }
     let camera = world.cameras[0]
         .clone()
         .with_aspect_ratio(height as f32 / width as f32);

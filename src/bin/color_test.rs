@@ -640,6 +640,6 @@ adjust various sliders to change the EV offset.
     let _ = eframe::run_native(
         "the same color under different illuminants",
         options,
-        Box::new(|_cc| Box::new(controller)),
+        Box::new(|_cc| Ok(Box::new(controller))),
     );
 }

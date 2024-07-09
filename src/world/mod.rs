@@ -275,6 +275,9 @@ mod test {
             &mut handles,
         )
         .unwrap();
+        for handle in handles {
+            let _ = handle.join();
+        }
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 7.0), -Vec3::Z);
 

@@ -13,7 +13,6 @@ rust_2021_compatibility = "warn"
 assigning_clones = "deny"
 
 [features]
-fs_isolation = []
 build_raymarch = ["sdfu/ultraviolet", "ultraviolet"]
 color_grad = ["colorgrad"]
 # for scenes with many non-dense meshes, disable sort_mesh_aabb_hits
@@ -47,7 +46,7 @@ exr = "~1.72"
 image = { version = "~0.25", features = ["hdr"] }
 # log = "~0.4"
 # log-once = "~0.4"
-lazy_static = "~1.4"
+lazy_static = "~1.5"
 math = { git = "https://github.com/gillett-hernandez/rust_cg_math", features = [
     "serde",
     "deepsize",

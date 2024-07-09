@@ -494,6 +494,9 @@ mod test {
             &mut handles,
         )
         .unwrap();
+        for handle in handles {
+            let _ = handle.join();
+        }
 
         if let EnvironmentMap::HDR {
             importance_map,
@@ -653,6 +656,9 @@ mod test {
             &mut handles,
         )
         .unwrap();
+        for handle in handles {
+            let _ = handle.join();
+        }
         let env = &world.environment;
 
         let wavelength_range = BOUNDED_VISIBLE_RANGE;
@@ -753,6 +759,9 @@ mod test {
             &mut handles,
         )
         .unwrap();
+        for handle in handles {
+            let _ = handle.join();
+        }
 
         let wavelength_bounds = BOUNDED_VISIBLE_RANGE;
         if let EnvironmentMap::HDR {
